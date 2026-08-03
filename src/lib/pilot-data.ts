@@ -1,6 +1,16 @@
 export type JobStatus = "In progress" | "Scheduled" | "Pending" | "Completed";
 export type SupplierId = "lowes" | "home-depot";
 
+export type SupplyStore = {
+  id: string;
+  supplier: SupplierId;
+  name: string;
+  shortName: string;
+  address: string;
+  storeNumber?: string;
+  coordinates?: { lat: number; lng: number };
+};
+
 export type JobMaterial = {
   name: string;
   quantity: number;
@@ -228,8 +238,9 @@ export const serviceBase = {
   coordinates: { lat: 35.0428, lng: -120.476 },
 };
 
-export const pilotLowesStore = {
-  id: "lowes" as const,
+export const pilotLowesStore: SupplyStore = {
+  id: "lowes-santa-maria",
+  supplier: "lowes",
   name: "Lowe’s Home Improvement",
   shortName: "Lowe’s",
   address: "935 E Betteravia Road, Santa Maria, CA 93454",
@@ -237,8 +248,9 @@ export const pilotLowesStore = {
   coordinates: { lat: 34.922, lng: -120.436 },
 };
 
-export const pilotHomeDepotStore = {
-  id: "home-depot" as const,
+export const pilotHomeDepotStore: SupplyStore = {
+  id: "home-depot-santa-maria",
+  supplier: "home-depot",
   name: "The Home Depot",
   shortName: "Home Depot",
   address: "2120 S Bradley Road, Santa Maria, CA 93455",
@@ -249,7 +261,7 @@ export const pilotHomeDepotStore = {
 export const pilotSupplyStores = {
   lowes: pilotLowesStore,
   "home-depot": pilotHomeDepotStore,
-} satisfies Record<SupplierId, typeof pilotLowesStore | typeof pilotHomeDepotStore>;
+} satisfies Record<SupplierId, SupplyStore>;
 
 export function getPilotJob(id: string) {
   return pilotJobs.find((job) => job.id === id);
@@ -265,6 +277,15 @@ export function buildLowesSearchUrl(searchTerm: string) {
 
 export function buildHomeDepotSearchUrl(searchTerm: string) {
   return `https://www.homedepot.com/s/${encodeURIComponent(searchTerm)}`;
+}
+
+export function buildGoogleSupplierStoreSearchUrl(supplier: SupplierId, nearAddress: string) {
+  const retailer = supplier === "lowes" ? "Lowe's" : "The Home Depot";
+  const params = new URLSearchParams({
+    api: "1",
+    query: `${retailer} near ${nearAddress}`,
+  });
+  return `https://www.google.com/maps/search/?${params.toString()}`;
 }
 
 export function getPilotSupplyStore(supplier: SupplierId) {

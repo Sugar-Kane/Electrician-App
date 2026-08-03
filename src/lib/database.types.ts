@@ -677,6 +677,90 @@ export type Database = {
           },
         ]
       }
+      supplier_product_selections: {
+        Row: {
+          archived_at: string | null
+          availability: string
+          created_at: string
+          id: string
+          job_id: string | null
+          job_reference: string | null
+          material_name: string
+          organization_id: string
+          product_name: string
+          product_url: string
+          quantity: number
+          retailer_sku: string | null
+          store_address: string | null
+          store_name: string | null
+          store_number: string | null
+          supplier: string
+          unit_price_cents: number
+          updated_at: string
+          verified_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          availability?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_reference?: string | null
+          material_name: string
+          organization_id: string
+          product_name: string
+          product_url: string
+          quantity?: number
+          retailer_sku?: string | null
+          store_address?: string | null
+          store_name?: string | null
+          store_number?: string | null
+          supplier: string
+          unit_price_cents: number
+          updated_at?: string
+          verified_at: string
+          verified_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          availability?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_reference?: string | null
+          material_name?: string
+          organization_id?: string
+          product_name?: string
+          product_url?: string
+          quantity?: number
+          retailer_sku?: string | null
+          store_address?: string | null
+          store_name?: string | null
+          store_number?: string | null
+          supplier?: string
+          unit_price_cents?: number
+          updated_at?: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_product_selections_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_selections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technicians: {
         Row: {
           color: string
@@ -868,4 +952,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
