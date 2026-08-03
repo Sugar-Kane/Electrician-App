@@ -9,7 +9,9 @@ A field-first business operating system for small electrical contractors. The in
 - Tappable dashboard metrics linked to jobs, revenue, invoices, materials, and routes
 - Weekly schedule with selectable job cards and detailed field-ready job pages
 - Customer contact, property, work scope, access notes, documents, and material requirements
-- Material shortage review with Lowe’s live-search handoff and clearly labeled pilot pricing
+- Material shortage review with Lowe’s and Home Depot live-search handoffs and clearly labeled pilot pricing
+- Supplier integration status for Lowe’s Product Discovery and Home Depot’s affiliate catalog feed
+- Selectable Lowe’s or Home Depot supply stops before route optimization
 - Route builder that locks stop order before Google Maps or Apple Maps handoff
 - Today’s revenue, jobs, technicians, estimates, and unpaid invoices
 - Schedule, route, technician, inventory, and activity summaries
@@ -52,7 +54,18 @@ When no authenticated business is available, the dashboard intentionally display
 
 - Google Maps receives the full ordered route through a standard Maps URL.
 - Apple Maps opens the next stop because Apple Map Links do not support a full multi-stop waypoint list.
-- Lowe’s prices shown inside the pilot are estimates. Each sourcing link opens current Lowe’s search results. Store-level pricing and real-time availability require approved Lowe’s Product Discovery credentials.
+- Retailer prices shown inside the pilot are estimates. Each sourcing link opens current retailer search results.
+- Lowe’s store-level pricing and real-time availability require approved Product Discovery credentials.
+- Home Depot’s public partner route is its Impact affiliate program, which provides a daily product data feed. It is not advertised as a real-time local inventory API, so local stock remains a live retailer-page handoff unless Home Depot grants separate partner access.
+
+## Supplier onboarding
+
+Open `/settings/integrations` to see approval and configuration status.
+
+1. Apply for Lowe’s Product Discovery through the Lowe’s Developer Hub.
+2. Apply for The Home Depot Affiliate Program and request its daily product feed through Impact.
+3. Add the approved values to Vercel as server-only environment variables using the names in `.env.example`.
+4. Redeploy after adding credentials. Never prefix supplier secrets with `NEXT_PUBLIC_`.
 
 ## Database
 

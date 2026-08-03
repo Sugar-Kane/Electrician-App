@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Boxes, CheckCircle2, ChevronRight, ExternalLink, PackageSearch, Search, Store, TriangleAlert } from "lucide-react";
+import { Boxes, CheckCircle2, ChevronRight, ExternalLink, PackageSearch, Search, Settings2, Store, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { buildLowesSearchUrl, getPilotJob, pilotJobs, pilotLowesStore } from "@/lib/pilot-data";
+import { buildHomeDepotSearchUrl, buildLowesSearchUrl, getPilotJob, pilotHomeDepotStore, pilotJobs, pilotLowesStore } from "@/lib/pilot-data";
 
 export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ job?: string; query?: string }> }) {
   const { job: jobId, query = "" } = await searchParams;
@@ -24,7 +24,10 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
                 <article key={material.name} className="rounded-3xl border border-white/10 bg-white/[0.025] p-4">
                   <div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{material.name}</h2><p className="mt-1 text-xs text-slate-400">Need {material.quantity} {material.unit} · Truck has {material.truckStock}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${shortage > 0 ? "bg-amber-400/10 text-amber-300" : "bg-emerald-400/10 text-emerald-300"}`}>{shortage > 0 ? `Buy ${shortage}` : "On truck"}</span></div>
                   <div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-2xl bg-white/[0.035] p-3"><p className="text-[10px] text-slate-500">Pilot unit estimate</p><p className="mt-1 text-lg font-semibold">${material.estimatedUnitPrice.toFixed(2)}</p></div><div className="rounded-2xl bg-white/[0.035] p-3"><p className="text-[10px] text-slate-500">Estimated shortage cost</p><p className="mt-1 text-lg font-semibold">${estimatedTotal.toFixed(2)}</p></div></div>
-                  <a href={buildLowesSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target mt-3 flex min-h-12 items-center justify-between rounded-2xl border border-white/10 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-[#ffc21c]" aria-hidden /> Check live Lowe’s price and stock</span><ExternalLink className="h-4 w-4 text-slate-500" aria-hidden /></a>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <a href={buildLowesSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-2xl border border-white/10 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-[#ffc21c]" aria-hidden /> Lowe’s live results</span><ExternalLink className="h-4 w-4 text-slate-500" aria-hidden /></a>
+                    <a href={buildHomeDepotSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-2xl border border-white/10 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-orange-400" aria-hidden /> Home Depot live results</span><ExternalLink className="h-4 w-4 text-slate-500" aria-hidden /></a>
+                  </div>
                 </article>
               );
             })}
@@ -35,10 +38,15 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
         <div className="space-y-4">
           {selectedJob ? <Link href={`/jobs/${selectedJob.id}`} className="tap-row flex min-h-14 items-center justify-between rounded-3xl border border-white/10 bg-[#0b1b27] px-4"><span><span className="block text-xs text-slate-500">Return to job</span><span className="block text-sm font-semibold">{selectedJob.customer}</span></span><ChevronRight className="h-5 w-5 text-slate-500" aria-hidden /></Link> : null}
           <section className="rounded-3xl border border-amber-400/25 bg-amber-400/[0.06] p-5">
-            <div className="flex items-start gap-3"><TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden /><div><p className="font-semibold text-amber-200">Live Lowe’s connection required</p><p className="mt-2 text-sm leading-6 text-slate-300">The prices above are pilot estimates, not retailer claims. Each button opens Lowe’s current product results. Accurate store-level price and availability will appear inside Volterra after Product Discovery credentials are approved and connected.</p></div></div>
+            <div className="flex items-start gap-3"><TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden /><div><p className="font-semibold text-amber-200">Retailer approval required for in-app data</p><p className="mt-2 text-sm leading-6 text-slate-300">The prices above are pilot estimates, not retailer claims. The buttons open each retailer’s current results. Lowe’s store-level data requires Product Discovery approval; Home Depot offers a daily affiliate product feed, while live local inventory remains on its retailer page.</p><Link href="/settings/integrations" className="tap-target mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#ffc21c]"><Settings2 className="h-4 w-4" aria-hidden /> Manage supplier connections</Link></div></div>
           </section>
           <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5">
-            <div className="flex items-center gap-3"><Store className="h-5 w-5 text-[#ffc21c]" aria-hidden /><div><p className="text-xs text-slate-500">Preferred supply stop</p><h2 className="font-semibold">{pilotLowesStore.name}</h2></div></div><p className="mt-3 text-sm text-slate-400">{pilotLowesStore.address}</p><ul className="mt-4 space-y-2 text-xs text-slate-300"><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden />Added only when truck stock is short</li><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden />Placed before the first job needing materials</li></ul><Link href={selectedJob ? `/route?job=${selectedJob.id}` : "/route"} className="tap-target mt-4 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-4 text-sm font-semibold text-[#071723]"><Boxes className="h-4 w-4" aria-hidden /> Build route with supply stop</Link>
+            <div className="flex items-center gap-3"><Store className="h-5 w-5 text-[#ffc21c]" aria-hidden /><div><p className="text-xs text-slate-500">Choose a supply stop</p><h2 className="font-semibold">Route after product review</h2></div></div>
+            <ul className="mt-4 space-y-2 text-xs text-slate-300"><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden />Added only when truck stock is short</li><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden />Placed before the first job needing materials</li></ul>
+            <div className="mt-4 space-y-2">
+              <Link href={selectedJob ? `/route?job=${selectedJob.id}&supplier=lowes` : "/route?supplier=lowes"} className="tap-target flex min-h-13 items-center justify-between rounded-2xl bg-[#ffc21c] px-4 text-sm font-semibold text-[#071723]"><span className="flex items-center gap-2"><Boxes className="h-4 w-4" aria-hidden /> Route through Lowe’s</span><span className="text-[10px]">#{pilotLowesStore.storeNumber}</span></Link>
+              <Link href={selectedJob ? `/route?job=${selectedJob.id}&supplier=home-depot` : "/route?supplier=home-depot"} className="tap-target flex min-h-13 items-center justify-between rounded-2xl border border-white/10 px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Boxes className="h-4 w-4 text-orange-400" aria-hidden /> Route through Home Depot</span><span className="text-[10px] text-slate-500">#{pilotHomeDepotStore.storeNumber}</span></Link>
+            </div>
           </section>
         </div>
       </div>

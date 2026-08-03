@@ -11,6 +11,7 @@ import {
   Menu,
   MoreHorizontal,
   Plus,
+  PlugZap,
   ReceiptText,
   Route,
   Search,
@@ -38,6 +39,7 @@ const menuItems: NavItem[] = [
   { label: "Invoices", href: "/invoices", icon: ReceiptText, description: "Paid, unpaid, and overdue" },
   { label: "Materials", href: "/materials", icon: Boxes, description: "Needs, truck stock, and sourcing" },
   { label: "Route builder", href: "/route", icon: Route, description: "Optimize before opening maps" },
+  { label: "Supplier connections", href: "/settings/integrations", icon: PlugZap, description: "Lowe’s and Home Depot programs" },
 ];
 
 const bottomItems = [

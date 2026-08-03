@@ -8,10 +8,11 @@ import {
   buildAppleDirectionsUrl,
   buildGoogleDirectionsUrl,
   getPilotJob,
+  getPilotSupplyStore,
   pilotJobs,
-  pilotLowesStore,
   serviceBase,
   type PilotJob,
+  type SupplierId,
 } from "@/lib/pilot-data";
 
 type RouteStop = {
@@ -23,8 +24,10 @@ type RouteStop = {
   job?: PilotJob;
 };
 
-export function RouteOptimizer({ focusJobId }: { focusJobId?: string }) {
+export function RouteOptimizer({ focusJobId, initialSupplier = "lowes" }: { focusJobId?: string; initialSupplier?: SupplierId }) {
   const [built, setBuilt] = useState(false);
+  const [supplier, setSupplier] = useState<SupplierId>(initialSupplier);
+  const supplyStore = getPilotSupplyStore(supplier);
 
   const routeStops = useMemo<RouteStop[]>(() => {
     const today = pilotJobs.filter((job) => job.date === "2026-08-03");
@@ -35,10 +38,10 @@ export function RouteOptimizer({ focusJobId }: { focusJobId?: string }) {
 
     return [
       { id: "base", label: serviceBase.name, address: serviceBase.address, detail: "Route start", kind: "base" },
-      { id: "lowes", label: pilotLowesStore.name, address: pilotLowesStore.address, detail: "Supply pickup · verify live cart before departure", kind: "supply" },
+      { id: supplier, label: supplyStore.name, address: supplyStore.address, detail: `Supply pickup · Store #${supplyStore.storeNumber} · verify live cart`, kind: "supply" },
       ...selectedJobs.map((job) => ({ id: job.id, label: job.customer, address: `${job.address}, ${job.city}`, detail: `${job.time} · ${job.workType}`, kind: "job" as const, job })),
     ];
-  }, [focusJobId]);
+  }, [focusJobId, supplier, supplyStore]);
 
   const addresses = routeStops.map((stop) => stop.address);
   const googleUrl = buildGoogleDirectionsUrl(addresses);
@@ -48,6 +51,8 @@ export function RouteOptimizer({ focusJobId }: { focusJobId?: string }) {
     <div className="grid gap-4 lg:grid-cols-[1fr_.8fr]">
       <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-4 sm:p-6">
         <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-slate-500">Central Coast route</p><h2 className="mt-1 text-xl font-semibold">{built ? "Optimized route ready" : "Route waiting to be built"}</h2></div><span className={`grid h-11 w-11 place-items-center rounded-2xl ${built ? "bg-emerald-400 text-[#071723]" : "bg-[#ffc21c] text-[#071723]"}`}>{built ? <Check className="h-5 w-5" aria-hidden /> : <Route className="h-5 w-5" aria-hidden />}</span></div>
+
+        <div className="mt-5"><p className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Supply stop</p><div className="grid grid-cols-2 gap-2">{(["lowes", "home-depot"] as const).map((supplierId) => { const store = getPilotSupplyStore(supplierId); const selected = supplier === supplierId; return <button key={supplierId} type="button" onClick={() => { setSupplier(supplierId); setBuilt(false); }} className={`tap-target min-h-14 rounded-2xl border px-3 text-left ${selected ? "border-[#ffc21c]/60 bg-[#ffc21c]/10 text-[#ffc21c]" : "border-white/10 bg-white/[0.025] text-slate-300"}`} aria-pressed={selected}><span className="block text-sm font-semibold">{store.shortName}</span><span className="mt-0.5 block text-[10px] opacity-70">Store #{store.storeNumber}</span></button>; })}</div></div>
 
         <div className="mt-5 space-y-0">
           {routeStops.map((stop, index) => (

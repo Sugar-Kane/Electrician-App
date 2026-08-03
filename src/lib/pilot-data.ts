@@ -1,4 +1,5 @@
 export type JobStatus = "In progress" | "Scheduled" | "Pending" | "Completed";
+export type SupplierId = "lowes" | "home-depot";
 
 export type JobMaterial = {
   name: string;
@@ -228,10 +229,27 @@ export const serviceBase = {
 };
 
 export const pilotLowesStore = {
+  id: "lowes" as const,
   name: "Lowe’s Home Improvement",
-  address: "Santa Maria, CA 93455",
+  shortName: "Lowe’s",
+  address: "935 E Betteravia Road, Santa Maria, CA 93454",
+  storeNumber: "3352",
   coordinates: { lat: 34.922, lng: -120.436 },
 };
+
+export const pilotHomeDepotStore = {
+  id: "home-depot" as const,
+  name: "The Home Depot",
+  shortName: "Home Depot",
+  address: "2120 S Bradley Road, Santa Maria, CA 93455",
+  storeNumber: "6638",
+  coordinates: { lat: 34.918, lng: -120.419 },
+};
+
+export const pilotSupplyStores = {
+  lowes: pilotLowesStore,
+  "home-depot": pilotHomeDepotStore,
+} satisfies Record<SupplierId, typeof pilotLowesStore | typeof pilotHomeDepotStore>;
 
 export function getPilotJob(id: string) {
   return pilotJobs.find((job) => job.id === id);
@@ -243,6 +261,14 @@ export function jobNeedsMaterialStop(job: PilotJob) {
 
 export function buildLowesSearchUrl(searchTerm: string) {
   return `https://www.lowes.com/search?searchTerm=${encodeURIComponent(searchTerm)}`;
+}
+
+export function buildHomeDepotSearchUrl(searchTerm: string) {
+  return `https://www.homedepot.com/s/${encodeURIComponent(searchTerm)}`;
+}
+
+export function getPilotSupplyStore(supplier: SupplierId) {
+  return pilotSupplyStores[supplier];
 }
 
 export function buildGoogleDirectionsUrl(stops: string[]) {
