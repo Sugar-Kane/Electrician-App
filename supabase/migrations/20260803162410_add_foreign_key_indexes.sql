@@ -1,0 +1,12 @@
+create index activity_events_actor_user_id_idx on public.activity_events(actor_user_id);
+create index blackout_periods_created_by_idx on public.blackout_periods(created_by);
+create index blackout_periods_organization_id_idx on public.blackout_periods(organization_id);
+create index customers_created_by_idx on public.customers(created_by);
+create index estimates_job_id_idx on public.estimates(job_id);
+create index invoices_job_id_idx on public.invoices(job_id);
+create index jobs_created_by_idx on public.jobs(created_by);
+create index jobs_customer_id_idx on public.jobs(customer_id);
+create index jobs_property_id_idx on public.jobs(property_id);
+create index organizations_created_by_idx on public.organizations(created_by);
+create index properties_customer_id_idx on public.properties(customer_id);
+create index technicians_user_id_idx on public.technicians(user_id);
