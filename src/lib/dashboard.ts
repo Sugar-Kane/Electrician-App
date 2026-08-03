@@ -11,6 +11,7 @@ export type DashboardMetric = {
 };
 
 export type ScheduleItem = {
+  id: string;
   time: string;
   customer: string;
   summary: string;
@@ -64,6 +65,7 @@ const demoSnapshot: DashboardSnapshot = {
   ],
   schedule: [
     {
+      id: "1045",
       time: "8:00 AM",
       customer: "Smith Residence",
       summary: "Panel upgrade",
@@ -72,6 +74,7 @@ const demoSnapshot: DashboardSnapshot = {
       technician: "MD",
     },
     {
+      id: "1046",
       time: "10:30 AM",
       customer: "Johnson Commercial",
       summary: "Lighting retrofit",
@@ -80,6 +83,7 @@ const demoSnapshot: DashboardSnapshot = {
       technician: "JR",
     },
     {
+      id: "1047",
       time: "1:00 PM",
       customer: "Williams Home",
       summary: "EV charger install",
@@ -88,6 +92,7 @@ const demoSnapshot: DashboardSnapshot = {
       technician: "MS",
     },
     {
+      id: "1048",
       time: "3:30 PM",
       customer: "Davis Residence",
       summary: "Outlet repair",

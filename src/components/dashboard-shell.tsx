@@ -13,10 +13,7 @@ import {
   ClipboardCheck,
   FileCheck2,
   FileText,
-  Home,
   LayoutDashboard,
-  Menu,
-  MoreHorizontal,
   Navigation,
   PackageOpen,
   Plus,
@@ -27,7 +24,6 @@ import {
   Settings,
   ShieldCheck,
   ShoppingCart,
-  UserRound,
   UsersRound,
   WandSparkles,
   Wrench,
@@ -35,6 +31,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import type {
   DashboardMetric,
   DashboardSnapshot,
@@ -42,17 +39,17 @@ import type {
 } from "@/lib/dashboard";
 
 const navItems: { label: string; href: string; icon: LucideIcon }[] = [
-  { label: "Dashboard", href: "#dashboard", icon: LayoutDashboard },
-  { label: "Schedule", href: "#schedule", icon: CalendarDays },
-  { label: "Jobs", href: "#jobs", icon: BriefcaseBusiness },
-  { label: "Customers", href: "#customers", icon: UsersRound },
-  { label: "Estimates", href: "#estimates", icon: FileText },
-  { label: "Invoices", href: "#invoices", icon: ReceiptText },
-  { label: "Inventory", href: "#inventory", icon: Boxes },
-  { label: "Purchase orders", href: "#purchase-orders", icon: ShoppingCart },
-  { label: "Reports", href: "#reports", icon: ChartNoAxesCombined },
-  { label: "AI assistant", href: "#assistant", icon: Bot },
-  { label: "Settings", href: "#settings", icon: Settings },
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Schedule", href: "/schedule", icon: CalendarDays },
+  { label: "Jobs", href: "/schedule?view=jobs", icon: BriefcaseBusiness },
+  { label: "Customers", href: "/search?scope=customers", icon: UsersRound },
+  { label: "Estimates", href: "/search?scope=estimates", icon: FileText },
+  { label: "Invoices", href: "/invoices", icon: ReceiptText },
+  { label: "Inventory", href: "/materials", icon: Boxes },
+  { label: "Purchase orders", href: "/materials?view=orders", icon: ShoppingCart },
+  { label: "Reports", href: "/invoices?status=paid", icon: ChartNoAxesCombined },
+  { label: "AI assistant", href: "/#assistant", icon: Bot },
+  { label: "Settings", href: "/search?scope=settings", icon: Settings },
 ];
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -153,9 +150,9 @@ function Sparkline({ values, large = false }: { values: number[]; large?: boolea
   );
 }
 
-function MetricCard({ metric }: { metric: DashboardMetric }) {
+function MetricCard({ metric, href }: { metric: DashboardMetric; href: string }) {
   return (
-    <article className="panel metric-card min-w-[180px] p-4">
+    <Link href={href} className="panel metric-card tap-card block min-w-[180px] p-4" aria-label={`${metric.label}: ${metric.value}. Open details`}>
       <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-500">
         {metric.label}
       </p>
@@ -178,7 +175,7 @@ function MetricCard({ metric }: { metric: DashboardMetric }) {
         </div>
         {metric.chart ? <Sparkline values={metric.chart} /> : null}
       </div>
-    </article>
+    </Link>
   );
 }
 
@@ -207,7 +204,7 @@ function Header({ ownerName, source }: { ownerName: string; source: DashboardSna
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="hidden items-center gap-2 lg:flex">
         <Link
           href="#new-job"
           className="hidden h-10 items-center gap-2 rounded-xl bg-[#071723] px-4 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 sm:flex"
@@ -215,10 +212,10 @@ function Header({ ownerName, source }: { ownerName: string; source: DashboardSna
           <Plus className="h-4 w-4" aria-hidden />
           New
         </Link>
-        <Link href="#search" className="icon-button" aria-label="Search">
+        <Link href="/search" className="icon-button" aria-label="Search">
           <Search className="h-4 w-4" aria-hidden />
         </Link>
-        <Link href="#notifications" className="icon-button relative" aria-label="Notifications">
+        <Link href="/search?scope=notifications" className="icon-button relative" aria-label="Notifications">
           <Bell className="h-4 w-4" aria-hidden />
           <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#ffca28] px-1 text-[9px] font-bold text-slate-950">
             3
@@ -240,13 +237,13 @@ function SchedulePanel({ schedule }: Pick<DashboardSnapshot, "schedule">) {
     <section id="schedule" className="panel min-w-0 p-4">
       <div className="panel-heading">
         <h2>Today’s schedule</h2>
-        <Link href="#schedule" className="panel-link">
+        <Link href="/schedule" className="panel-link tap-target">
           View full schedule <ChevronRight className="h-3 w-3" aria-hidden />
         </Link>
       </div>
       <div className="mt-2 divide-y divide-slate-100">
         {schedule.map((item) => (
-          <article key={`${item.time}-${item.customer}`} className="grid grid-cols-[64px_1fr_auto] items-center gap-3 py-3">
+          <Link key={item.id} href={`/jobs/${item.id}`} className="tap-row grid grid-cols-[64px_1fr_auto] items-center gap-3 py-3" aria-label={`Open job ${item.id} for ${item.customer}`}>
             <time className="self-start pt-1 text-[11px] font-semibold text-blue-600">
               {item.time}
             </time>
@@ -263,7 +260,7 @@ function SchedulePanel({ schedule }: Pick<DashboardSnapshot, "schedule">) {
                 {item.technician}
               </span>
             </div>
-          </article>
+          </Link>
         ))}
       </div>
     </section>
@@ -299,9 +296,7 @@ function LiveMap({ technicians }: Pick<DashboardSnapshot, "technicians">) {
           <h2>Live route</h2>
           <p className="mt-1 text-[11px] text-slate-500">4 technicians · Central Coast</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live
-        </span>
+        <Link href="/route" className="tap-target inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700"><Route className="h-3 w-3" aria-hidden /> Build route</Link>
       </div>
       <div className="route-map relative mt-3 h-[246px] overflow-hidden rounded-xl border border-slate-200">
         <svg viewBox="0 0 500 260" className="absolute inset-0 h-full w-full" aria-hidden>
@@ -322,12 +317,12 @@ function LiveMap({ technicians }: Pick<DashboardSnapshot, "technicians">) {
           <span className="font-semibold text-slate-900">42 min</span> drive time saved today
         </div>
         <div className="absolute right-3 top-3 space-y-1.5">
-          <button className="map-control" aria-label="Center route map">
+          <Link href="/route" className="map-control tap-target" aria-label="Open route builder">
             <Navigation className="h-4 w-4" aria-hidden />
-          </button>
-          <button className="map-control" aria-label="Open route options">
+          </Link>
+          <Link href="/route" className="map-control tap-target" aria-label="Open route options">
             <Route className="h-4 w-4" aria-hidden />
-          </button>
+          </Link>
         </div>
       </div>
     </section>
@@ -335,10 +330,10 @@ function LiveMap({ technicians }: Pick<DashboardSnapshot, "technicians">) {
 }
 
 const aiActions = [
-  { label: "Create estimate from photos", icon: Camera },
-  { label: "Start diagnostic intake", icon: Wrench },
-  { label: "Check a code requirement", icon: ShieldCheck },
-  { label: "Generate an invoice", icon: FileCheck2 },
+  { label: "Create estimate from photos", icon: Camera, href: "/search?scope=estimates" },
+  { label: "Start diagnostic intake", icon: Wrench, href: "/search?scope=intake" },
+  { label: "Check a code requirement", icon: ShieldCheck, href: "/search?scope=code" },
+  { label: "Generate an invoice", icon: FileCheck2, href: "/invoices" },
 ];
 
 function AiAssistant() {
@@ -353,20 +348,20 @@ function AiAssistant() {
       </div>
       <p className="mt-5 text-xs text-slate-600">How can I help you today?</p>
       <div className="mt-3 space-y-2">
-        {aiActions.map(({ label, icon: Icon }) => (
-          <Link key={label} href="#assistant" className="ai-action">
+        {aiActions.map(({ label, icon: Icon, href }) => (
+          <Link key={label} href={href} className="ai-action tap-target">
             <Icon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden />
             <span>{label}</span>
             <ChevronRight className="ml-auto h-3 w-3 text-slate-400" aria-hidden />
           </Link>
         ))}
       </div>
-      <form className="mt-5 flex items-center gap-2" action="#assistant">
+      <form className="mt-5 flex items-center gap-2" action="/search">
         <label htmlFor="assistant-question" className="sr-only">
           Ask the AI assistant
         </label>
-        <input id="assistant-question" name="question" placeholder="Ask anything…" className="assistant-input" />
-        <button type="submit" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#102438] text-white" aria-label="Send question">
+        <input id="assistant-question" name="query" placeholder="Ask anything…" className="assistant-input" />
+        <button type="submit" className="tap-target grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-[#102438] text-white" aria-label="Send question">
           <Send className="h-4 w-4" aria-hidden />
         </button>
       </form>
@@ -376,7 +371,7 @@ function AiAssistant() {
 
 function InvoiceOverview({ invoiceAging }: Pick<DashboardSnapshot, "invoiceAging">) {
   return (
-    <section id="invoices" className="panel p-4">
+    <Link href="/invoices?status=unpaid" id="invoices" className="panel tap-card block p-4" aria-label="Open unpaid invoices">
       <div className="panel-heading">
         <h2>Invoices overview</h2>
         <CircleDollarSign className="h-4 w-4 text-slate-400" aria-hidden />
@@ -400,13 +395,13 @@ function InvoiceOverview({ invoiceAging }: Pick<DashboardSnapshot, "invoiceAging
           </div>
         ))}
       </div>
-    </section>
+    </Link>
   );
 }
 
 function ProfitOverview({ profit }: Pick<DashboardSnapshot, "profit">) {
   return (
-    <section id="reports" className="panel p-4">
+    <Link href="/invoices?status=paid" id="reports" className="panel tap-card block p-4" aria-label="Open paid invoices and revenue">
       <div className="panel-heading">
         <h2>Profit overview</h2>
         <span className="text-[10px] text-slate-500">MTD</span>
@@ -416,7 +411,7 @@ function ProfitOverview({ profit }: Pick<DashboardSnapshot, "profit">) {
       <div className="mt-2">
         <Sparkline values={profit.chart} large />
       </div>
-    </section>
+    </Link>
   );
 }
 
@@ -429,15 +424,15 @@ function InventoryOverview({ lowStock }: Pick<DashboardSnapshot, "lowStock">) {
       </div>
       <div className="mt-3 space-y-2.5">
         {lowStock.map((item) => (
-          <div key={item.name} className="flex items-center justify-between gap-3 text-xs">
+          <Link key={item.name} href={`/materials?query=${encodeURIComponent(item.name)}`} className="tap-row flex min-h-11 items-center justify-between gap-3 rounded-xl px-2 text-xs">
             <span className="truncate text-slate-700">{item.name}</span>
             <span className="shrink-0 font-semibold text-amber-600">
               {item.quantity} {item.unit}
             </span>
-          </div>
+          </Link>
         ))}
       </div>
-      <Link href="#inventory" className="mt-4 flex items-center justify-center gap-1 text-[10px] font-semibold text-blue-600">
+      <Link href="/materials" className="tap-target mt-2 flex items-center justify-center gap-1 text-[10px] font-semibold text-blue-600">
         View all inventory <ChevronRight className="h-3 w-3" aria-hidden />
       </Link>
     </section>
@@ -453,60 +448,29 @@ function RecentActivity({ activity }: Pick<DashboardSnapshot, "activity">) {
       </div>
       <div className="mt-3 space-y-3">
         {activity.map((item) => (
-          <div key={`${item.label}-${item.when}`} className="flex items-center gap-2 text-[11px]">
+          <Link key={`${item.label}-${item.when}`} href={item.label.includes("Invoice") ? "/invoices" : item.label.includes("Job") ? "/jobs/1048" : "/search"} className="tap-row flex min-h-11 items-center gap-2 rounded-xl px-1 text-[11px]">
             <span className={`h-2 w-2 rounded-full border-2 ${item.tone === "danger" ? "border-red-500" : "border-slate-400"}`} />
             <span className="min-w-0 flex-1 truncate text-slate-700">{item.label}</span>
             <time className="shrink-0 text-[9px] text-slate-400">{item.when}</time>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
   );
 }
 
-function MobileTopbar() {
-  return (
-    <div className="mb-5 flex items-center justify-between text-white lg:hidden">
-      <Brand compact />
-      <div className="flex items-center gap-2">
-        <button className="mobile-icon" aria-label="Search">
-          <Search className="h-5 w-5" aria-hidden />
-        </button>
-        <button className="mobile-icon" aria-label="Open menu">
-          <Menu className="h-5 w-5" aria-hidden />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function MobileNav() {
-  const items = [
-    { label: "Home", icon: Home },
-    { label: "Jobs", icon: BriefcaseBusiness },
-    { label: "New", icon: Plus, primary: true },
-    { label: "Customers", icon: UserRound },
-    { label: "More", icon: MoreHorizontal },
+export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
+  const metricDestinations = [
+    "/invoices?status=paid",
+    "/schedule?view=jobs",
+    "/route",
+    "/search?scope=estimates",
+    "/invoices?status=unpaid",
   ];
 
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 flex items-end justify-around rounded-2xl border border-white/10 bg-[#081824]/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 text-white shadow-2xl backdrop-blur lg:hidden" aria-label="Mobile navigation">
-      {items.map(({ label, icon: Icon, primary }) => (
-        <Link key={label} href={label === "New" ? "#new-job" : `#${label.toLowerCase()}`} className={`flex min-w-12 flex-col items-center gap-1 text-[9px] ${label === "Jobs" ? "text-[#ffc21c]" : "text-slate-400"}`}>
-          <span className={primary ? "-mt-7 grid h-12 w-12 place-items-center rounded-full bg-[#ffc21c] text-[#071723] shadow-lg shadow-yellow-500/20" : "grid h-7 place-items-center"}>
-            <Icon className={primary ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
-          </span>
-          <span>{label}</span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
-  return (
     <main id="dashboard" className="min-h-screen bg-[#06131d] p-2 sm:p-3">
-      <MobileTopbar />
+      <MobileAppChrome active="Home" />
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
         <Sidebar businessName={snapshot.businessName} />
         <div className="dashboard-canvas min-w-0 rounded-[24px] bg-[#f5f7f9] p-4 shadow-2xl shadow-black/15 sm:p-6 lg:min-h-[calc(100vh-24px)] lg:p-7">
@@ -518,8 +482,8 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
             aria-label="Business metrics"
             tabIndex={0}
           >
-            {snapshot.metrics.map((metric) => (
-              <MetricCard key={metric.label} metric={metric} />
+            {snapshot.metrics.map((metric, index) => (
+              <MetricCard key={metric.label} metric={metric} href={metricDestinations[index] ?? "/"} />
             ))}
           </div>
 
@@ -546,13 +510,12 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
                 <p className="mt-1 text-xs text-slate-600">Start adaptive intake, screen safety concerns, and offer the best diagnostic window.</p>
               </div>
             </div>
-            <Link href="#assistant" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#081824] px-4 text-xs font-semibold text-white">
+            <Link href="/search?scope=intake" className="tap-target inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#081824] px-4 text-xs font-semibold text-white">
               Start AI intake <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           </section>
         </div>
       </div>
-      <MobileNav />
     </main>
   );
 }

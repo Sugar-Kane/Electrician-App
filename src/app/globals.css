@@ -11,8 +11,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 * {
@@ -31,7 +31,7 @@ body {
     radial-gradient(circle at 14% 10%, rgba(32, 66, 88, 0.32), transparent 28rem),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 button,
@@ -42,6 +42,26 @@ input {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.tap-target {
+  min-height: 44px;
+}
+
+.tap-card,
+.tap-row {
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.tap-card:hover,
+.tap-row:hover {
+  border-color: rgba(255, 191, 24, 0.48);
+}
+
+.tap-card:active,
+.tap-row:active {
+  transform: scale(0.985);
 }
 
 button:focus-visible,
@@ -87,6 +107,10 @@ input:focus-visible {
 
 .dashboard-canvas .text-amber-600 {
   color: #92400e;
+}
+
+.field-page .text-slate-500 {
+  color: #94a3b8;
 }
 
 .panel-link {
@@ -192,8 +216,8 @@ input:focus-visible {
 
 .mobile-icon {
   display: grid;
-  height: 38px;
-  width: 38px;
+  height: 44px;
+  width: 44px;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 11px;
@@ -289,6 +313,11 @@ input:focus-visible {
   .metric-scroll {
     margin-inline: -4px;
     padding-inline: 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .metric-card {
+    scroll-snap-align: start;
   }
 }
 

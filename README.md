@@ -5,6 +5,12 @@ A field-first business operating system for small electrical contractors. The in
 ## Current MVP
 
 - Responsive desktop and mobile operations dashboard
+- Finger-friendly mobile search, navigation drawer, and bottom navigation
+- Tappable dashboard metrics linked to jobs, revenue, invoices, materials, and routes
+- Weekly schedule with selectable job cards and detailed field-ready job pages
+- Customer contact, property, work scope, access notes, documents, and material requirements
+- Material shortage review with Lowe’s live-search handoff and clearly labeled pilot pricing
+- Route builder that locks stop order before Google Maps or Apple Maps handoff
 - Today’s revenue, jobs, technicians, estimates, and unpaid invoices
 - Schedule, route, technician, inventory, and activity summaries
 - AI intake and workflow entry points
@@ -41,6 +47,12 @@ A field-first business operating system for small electrical contractors. The in
    ```
 
 When no authenticated business is available, the dashboard intentionally displays realistic pilot data. Once a signed-in user belongs to an organization, the same dashboard reads the permitted organization records from Supabase.
+
+## Pilot integration notes
+
+- Google Maps receives the full ordered route through a standard Maps URL.
+- Apple Maps opens the next stop because Apple Map Links do not support a full multi-stop waypoint list.
+- Lowe’s prices shown inside the pilot are estimates. Each sourcing link opens current Lowe’s search results. Store-level pricing and real-time availability require approved Lowe’s Product Discovery credentials.
 
 ## Database
 
