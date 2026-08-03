@@ -57,14 +57,14 @@ const navItems: { label: string; href: string; icon: LucideIcon }[] = [
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5" aria-label="Volterra home">
+    <Link href="#dashboard" className="flex items-center gap-2.5" aria-label="Volterra home">
       <span className="flex h-10 w-8 items-center justify-center text-[#ffbf18]">
         <Zap className="h-9 w-9 fill-current" strokeWidth={1.5} aria-hidden />
       </span>
       <span className={compact ? "text-lg font-bold" : "text-xl font-bold"}>
         VOLTERRA
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -512,7 +512,12 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
         <div className="dashboard-canvas min-w-0 rounded-[24px] bg-[#f5f7f9] p-4 shadow-2xl shadow-black/15 sm:p-6 lg:min-h-[calc(100vh-24px)] lg:p-7">
           <Header ownerName={snapshot.ownerName} source={snapshot.source} />
 
-          <div className="metric-scroll mt-6 grid gap-3 overflow-x-auto pb-2 lg:grid-cols-5 lg:overflow-visible lg:pb-0">
+          <div
+            className="metric-scroll mt-6 grid gap-3 overflow-x-auto pb-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffbf18] lg:grid-cols-5 lg:overflow-visible lg:pb-0"
+            role="region"
+            aria-label="Business metrics"
+            tabIndex={0}
+          >
             {snapshot.metrics.map((metric) => (
               <MetricCard key={metric.label} metric={metric} />
             ))}

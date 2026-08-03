@@ -198,9 +198,7 @@ input:focus-visible {
 
   .dashboard-canvas header h1,
   .dashboard-canvas .metric-card p:nth-child(2),
-  .dashboard-canvas .panel h2,
-  .dashboard-canvas .panel .font-semibold,
-  .dashboard-canvas .panel .font-bold {
+  .dashboard-canvas .panel h2 {
     color: #f8fafc;
   }
 
@@ -247,6 +245,16 @@ input:focus-visible {
 
   .ai-action:hover {
     background: #122733;
+  }
+
+  .panel-link,
+  .panel a.text-blue-600,
+  .panel time.text-blue-600 {
+    color: #60a5fa;
+  }
+
+  #new-job .text-slate-600 {
+    color: #475569;
   }
 
   .metric-scroll {
