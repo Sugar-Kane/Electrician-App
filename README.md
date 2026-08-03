@@ -10,8 +10,10 @@ A field-first business operating system for small electrical contractors. The in
 - Weekly schedule with selectable job cards and detailed field-ready job pages
 - Customer contact, property, work scope, access notes, documents, and material requirements
 - Material shortage review with Lowe’s and Home Depot live-search handoffs and clearly labeled pilot pricing
+- User-confirmed retailer products with saved links, quantities, prices, availability, store details, and verification timestamps
+- Offline-safe product confirmations that persist on the device and sync to the signed-in business through Supabase
 - Supplier integration status for Lowe’s Product Discovery and Home Depot’s affiliate catalog feed
-- Selectable Lowe’s or Home Depot supply stops before route optimization
+- Selectable Lowe’s or Home Depot supply stops, including the exact store confirmed with a saved product, before route optimization
 - Route builder that locks stop order before Google Maps or Apple Maps handoff
 - Today’s revenue, jobs, technicians, estimates, and unpaid invoices
 - Schedule, route, technician, inventory, and activity summaries
