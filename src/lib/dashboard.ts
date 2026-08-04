@@ -30,6 +30,7 @@ export type TechnicianMarker = {
 
 export type DashboardSnapshot = {
   source: "demo" | "supabase";
+  requiresOnboarding: boolean;
   businessName: string;
   ownerName: string;
   metrics: DashboardMetric[];
@@ -43,6 +44,7 @@ export type DashboardSnapshot = {
 
 const demoSnapshot: DashboardSnapshot = {
   source: "demo",
+  requiresOnboarding: false,
   businessName: "Pacific Plains Electric",
   ownerName: "Adam",
   metrics: [
@@ -137,6 +139,22 @@ function hasSupabaseEnvironment() {
   );
 }
 
+function formatRelativeTime(createdAt: string) {
+  const elapsedMinutes = Math.max(
+    0,
+    Math.round((Date.now() - new Date(createdAt).getTime()) / 60_000),
+  );
+  const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+  if (elapsedMinutes < 1) return "just now";
+  if (elapsedMinutes < 60) return relativeTime.format(-elapsedMinutes, "minute");
+
+  const elapsedHours = Math.round(elapsedMinutes / 60);
+  if (elapsedHours < 24) return relativeTime.format(-elapsedHours, "hour");
+
+  return relativeTime.format(-Math.round(elapsedHours / 24), "day");
+}
+
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!hasSupabaseEnvironment()) return demoSnapshot;
 
@@ -152,7 +170,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       .limit(1)
       .maybeSingle();
 
-    if (!membership) return demoSnapshot;
+    if (!membership) return { ...demoSnapshot, requiresOnboarding: true };
     const organizationId = membership.organization_id;
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);
@@ -178,7 +196,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .in("status", ["draft", "sent"]),
         supabase
           .from("technicians")
-          .select("id")
+          .select("id,user_id,display_name")
           .eq("organization_id", organizationId)
           .eq("is_active", true),
         supabase
@@ -215,9 +233,14 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     return {
       ...demoSnapshot,
       source: "supabase",
+      requiresOnboarding: false,
       businessName:
         (membership.organizations as unknown as { name?: string } | null)?.name ??
         demoSnapshot.businessName,
+      ownerName:
+        technicians.data?.find(
+          (technician) => technician.user_id === authData.user.id,
+        )?.display_name ?? demoSnapshot.ownerName,
       metrics: [
         { ...demoSnapshot.metrics[0], value: money.format(paidToday / 100) },
         {
@@ -236,6 +259,29 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         },
         { ...demoSnapshot.metrics[4], value: money.format(outstanding / 100) },
       ],
+      schedule: [],
+      technicians:
+        technicians.data?.map((technician, index) => ({
+          name: technician.display_name,
+          initials: technician.display_name
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? "")
+            .join(""),
+          status: "idle" as const,
+          x: 42 + (index % 3) * 14,
+          y: 44 + (index % 2) * 18,
+        })) ?? [],
+      invoiceAging: [
+        { label: "1–30 days", value: "$0", percent: 0 },
+        { label: "31–60 days", value: "$0", percent: 0 },
+        { label: "60+ days", value: "$0", percent: 0 },
+      ],
+      profit: {
+        value: money.format(paidToday / 100),
+        change: "No prior month data",
+        chart: [0, 0, 0, 0, 0, 0, 0, 0],
+      },
       lowStock:
         inventory.data?.map((item) => ({
           name: item.name,
@@ -245,15 +291,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       activity:
         activity.data?.map((event) => ({
           label: event.label,
-          when: new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(
-            -Math.max(
-              1,
-              Math.round(
-                (Date.now() - new Date(event.created_at).getTime()) / 3_600_000,
-              ),
-            ),
-            "hour",
-          ),
+          when: formatRelativeTime(event.created_at),
         })) ?? demoSnapshot.activity,
     };
   } catch {
