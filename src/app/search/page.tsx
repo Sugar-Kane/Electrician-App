@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Boxes, BriefcaseBusiness, CalendarDays, ChevronRight, ReceiptText, Route, Search } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { pilotJobs } from "@/lib/pilot-data";
+import { getJobs } from "@/lib/job-data";
 
 const shortcuts = [
   { label: "Schedule", description: "Open calendar view", href: "/schedule", icon: CalendarDays },
@@ -14,7 +14,8 @@ const shortcuts = [
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ query?: string; scope?: string }> }) {
   const { query = "", scope } = await searchParams;
   const normalized = query.trim().toLowerCase();
-  const jobs = pilotJobs.filter((job) => !normalized || `${job.customer} ${job.contactName} ${job.id} ${job.address} ${job.city} ${job.workType} ${job.materials.map((material) => material.name).join(" ")}`.toLowerCase().includes(normalized));
+  const { jobs: allJobs } = await getJobs();
+  const jobs = allJobs.filter((job) => !normalized || `${job.customer} ${job.contactName} ${job.id} ${job.address} ${job.city} ${job.workType} ${job.materials.map((material) => material.name).join(" ")}`.toLowerCase().includes(normalized));
   const title = scope === "customers" ? "Customers" : scope === "estimates" ? "Estimates" : scope === "settings" ? "Settings" : scope === "notifications" ? "Notifications" : "Search";
 
   return (

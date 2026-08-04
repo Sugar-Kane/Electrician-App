@@ -19,11 +19,11 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import {
   buildAppleDirectionsUrl,
   buildGoogleDirectionsUrl,
-  getPilotJob,
   jobNeedsMaterialStop,
   pilotJobs,
   serviceBase,
 } from "@/lib/pilot-data";
+import { getJob } from "@/lib/job-data";
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
@@ -31,7 +31,7 @@ export function generateStaticParams() {
 
 export default async function JobDetailPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
-  const job = getPilotJob(jobId);
+  const { job } = await getJob(jobId);
   if (!job) notFound();
 
   const fullAddress = `${job.address}, ${job.city}`;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, CircleDollarSign, Clock3, ReceiptText, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { pilotInvoices } from "@/lib/pilot-data";
+import { getInvoices } from "@/lib/job-data";
 
 const filters = [
   { label: "All", value: "all" },
@@ -19,7 +19,8 @@ const statusStyles = {
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status = "all" } = await searchParams;
-  const visible = status === "all" ? pilotInvoices : pilotInvoices.filter((invoice) => invoice.status.toLowerCase() === status);
+  const { invoices: allInvoices } = await getInvoices();
+  const visible = status === "all" ? allInvoices : allInvoices.filter((invoice) => invoice.status.toLowerCase() === status);
   const total = visible.reduce((sum, invoice) => sum + invoice.amount, 0);
 
   return (

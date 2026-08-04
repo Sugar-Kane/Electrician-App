@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarDays, ChevronRight, Clock3, MapPin, UserRound } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { pilotJobs } from "@/lib/pilot-data";
+import { getJobs } from "@/lib/job-data";
 
 const calendarDays = [
   { date: "2026-08-03", weekday: "Mon", day: "3" },
@@ -26,7 +26,8 @@ export default async function SchedulePage({
 }) {
   const query = await searchParams;
   const selectedDate = query.date ?? "2026-08-03";
-  const jobs = pilotJobs.filter((job) => job.date === selectedDate);
+  const { jobs: allJobs } = await getJobs();
+  const jobs = allJobs.filter((job) => job.date === selectedDate);
 
   return (
     <FieldPageShell title="Schedule" eyebrow="Calendar view" description="Tap any job to open the customer, address, scope, documents, material needs, and navigation." active="Jobs">
@@ -37,7 +38,7 @@ export default async function SchedulePage({
         </div>
         <div className="mt-4 grid grid-cols-5 gap-1.5" aria-label="Choose a schedule date">
           {calendarDays.map((item) => {
-            const count = pilotJobs.filter((job) => job.date === item.date).length;
+            const count = allJobs.filter((job) => job.date === item.date).length;
             const selected = item.date === selectedDate;
             return (
               <Link key={item.date} href={`/schedule?date=${item.date}`} className={`tap-target flex min-h-[76px] flex-col items-center justify-center rounded-2xl border px-1 ${selected ? "border-[#ffc21c] bg-[#ffc21c] text-[#071723]" : "border-white/10 bg-white/[0.03] text-slate-300 active:bg-white/10"}`} aria-current={selected ? "date" : undefined}>
