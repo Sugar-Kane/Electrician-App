@@ -242,7 +242,14 @@ function SchedulePanel({ schedule }: Pick<DashboardSnapshot, "schedule">) {
         </Link>
       </div>
       <div className="mt-2 divide-y divide-slate-100">
-        {schedule.map((item) => (
+        {schedule.length === 0 ? (
+          <div className="flex min-h-40 flex-col items-center justify-center px-4 text-center">
+            <CalendarDays className="h-7 w-7 text-slate-300" aria-hidden />
+            <p className="mt-3 text-sm font-semibold text-slate-700">No jobs scheduled yet</p>
+            <p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">Your first paid diagnostic will appear here.</p>
+            <Link href="/search?scope=intake" className="tap-target mt-3 inline-flex items-center text-xs font-semibold text-blue-600">Start an intake <ChevronRight className="h-3.5 w-3.5" aria-hidden /></Link>
+          </div>
+        ) : schedule.map((item) => (
           <Link key={item.id} href={`/jobs/${item.id}`} className="tap-row grid grid-cols-[64px_1fr_auto] items-center gap-3 py-3" aria-label={`Open job ${item.id} for ${item.customer}`}>
             <time className="self-start pt-1 text-[11px] font-semibold text-blue-600">
               {item.time}
@@ -288,13 +295,13 @@ function TechnicianPin({ technician }: { technician: TechnicianMarker }) {
   );
 }
 
-function LiveMap({ technicians }: Pick<DashboardSnapshot, "technicians">) {
+function LiveMap({ technicians, source }: Pick<DashboardSnapshot, "technicians" | "source">) {
   return (
     <section className="panel min-w-0 overflow-hidden p-4">
       <div className="panel-heading">
         <div>
           <h2>Live route</h2>
-          <p className="mt-1 text-[11px] text-slate-500">4 technicians · Central Coast</p>
+          <p className="mt-1 text-[11px] text-slate-500">{technicians.length} {technicians.length === 1 ? "technician" : "technicians"} · Central Coast</p>
         </div>
         <Link href="/route" className="tap-target inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700"><Route className="h-3 w-3" aria-hidden /> Build route</Link>
       </div>
@@ -314,7 +321,7 @@ function LiveMap({ technicians }: Pick<DashboardSnapshot, "technicians">) {
           <TechnicianPin key={technician.name} technician={technician} />
         ))}
         <div className="absolute bottom-3 left-3 rounded-lg border border-white/80 bg-white/90 px-2.5 py-2 text-[10px] text-slate-600 shadow-sm backdrop-blur">
-          <span className="font-semibold text-slate-900">42 min</span> drive time saved today
+          {source === "demo" ? <><span className="font-semibold text-slate-900">42 min</span> drive time saved today</> : <span className="font-semibold text-slate-900">Route optimization ready</span>}
         </div>
         <div className="absolute right-3 top-3 space-y-1.5">
           <Link href="/route" className="map-control tap-target" aria-label="Open route builder">
@@ -369,14 +376,14 @@ function AiAssistant() {
   );
 }
 
-function InvoiceOverview({ invoiceAging }: Pick<DashboardSnapshot, "invoiceAging">) {
+function InvoiceOverview({ invoiceAging, outstandingValue }: Pick<DashboardSnapshot, "invoiceAging"> & { outstandingValue: string }) {
   return (
     <Link href="/invoices?status=unpaid" id="invoices" className="panel tap-card block p-4" aria-label="Open unpaid invoices">
       <div className="panel-heading">
         <h2>Invoices overview</h2>
         <CircleDollarSign className="h-4 w-4 text-slate-400" aria-hidden />
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight">$12,430</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight">{outstandingValue}</p>
       <p className="text-[10px] text-slate-500">Outstanding</p>
       <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-slate-100">
         {invoiceAging.map((item, index) => (
@@ -423,7 +430,7 @@ function InventoryOverview({ lowStock }: Pick<DashboardSnapshot, "lowStock">) {
         <PackageOpen className="h-4 w-4 text-slate-400" aria-hidden />
       </div>
       <div className="mt-3 space-y-2.5">
-        {lowStock.map((item) => (
+        {lowStock.length === 0 ? <p className="py-6 text-center text-xs text-slate-500">No low-stock items yet.</p> : lowStock.map((item) => (
           <Link key={item.name} href={`/materials?query=${encodeURIComponent(item.name)}`} className="tap-row flex min-h-11 items-center justify-between gap-3 rounded-xl px-2 text-xs">
             <span className="truncate text-slate-700">{item.name}</span>
             <span className="shrink-0 font-semibold text-amber-600">
@@ -447,7 +454,7 @@ function RecentActivity({ activity }: Pick<DashboardSnapshot, "activity">) {
         <ClipboardCheck className="h-4 w-4 text-slate-400" aria-hidden />
       </div>
       <div className="mt-3 space-y-3">
-        {activity.map((item) => (
+        {activity.length === 0 ? <p className="py-6 text-center text-xs text-slate-500">Activity will appear as work is added.</p> : activity.map((item) => (
           <Link key={`${item.label}-${item.when}`} href={item.label.includes("Invoice") ? "/invoices" : item.label.includes("Job") ? "/jobs/1048" : "/search"} className="tap-row flex min-h-11 items-center gap-2 rounded-xl px-1 text-[11px]">
             <span className={`h-2 w-2 rounded-full border-2 ${item.tone === "danger" ? "border-red-500" : "border-slate-400"}`} />
             <span className="min-w-0 flex-1 truncate text-slate-700">{item.label}</span>
@@ -489,12 +496,12 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
 
           <div className="mt-4 grid min-w-0 gap-3 xl:grid-cols-[1.1fr_1.2fr_.9fr]">
             <SchedulePanel schedule={snapshot.schedule} />
-            <LiveMap technicians={snapshot.technicians} />
+            <LiveMap technicians={snapshot.technicians} source={snapshot.source} />
             <AiAssistant />
           </div>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <InvoiceOverview invoiceAging={snapshot.invoiceAging} />
+            <InvoiceOverview invoiceAging={snapshot.invoiceAging} outstandingValue={snapshot.metrics[4]?.value ?? "$0"} />
             <ProfitOverview profit={snapshot.profit} />
             <InventoryOverview lowStock={snapshot.lowStock} />
             <RecentActivity activity={snapshot.activity} />

@@ -20,6 +20,8 @@ A field-first business operating system for small electrical contractors. The in
 - AI intake and workflow entry points
 - Supabase Auth client and Next.js session proxy
 - Multi-tenant Postgres foundation with Row Level Security
+- Mobile-first owner onboarding that atomically creates the business, owner membership, technician profile, service settings, and activity record
+- Authenticated onboarding guard so new owners complete setup before entering the real dashboard
 - Pilot service settings for diagnostic, emergency, after-hours, cancellation, travel, and scheduling rules
 
 ## Stack

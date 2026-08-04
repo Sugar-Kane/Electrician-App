@@ -495,36 +495,45 @@ export type Database = {
       organizations: {
         Row: {
           archived_at: string | null
+          base_address_line_1: string | null
           base_city: string | null
+          base_postal_code: string | null
           base_state: string | null
           created_at: string
           created_by: string
           id: string
           name: string
+          phone: string | null
           slug: string
           timezone: string
           updated_at: string
         }
         Insert: {
           archived_at?: string | null
+          base_address_line_1?: string | null
           base_city?: string | null
+          base_postal_code?: string | null
           base_state?: string | null
           created_at?: string
           created_by: string
           id?: string
           name: string
+          phone?: string | null
           slug: string
           timezone?: string
           updated_at?: string
         }
         Update: {
           archived_at?: string | null
+          base_address_line_1?: string | null
           base_city?: string | null
+          base_postal_code?: string | null
           base_state?: string | null
           created_at?: string
           created_by?: string
           id?: string
           name?: string
+          phone?: string | null
           slug?: string
           timezone?: string
           updated_at?: string
@@ -616,6 +625,7 @@ export type Database = {
         Row: {
           after_hours_fee_cents: number
           automatic_booking_radius_miles: number
+          business_hours: Json
           cancellation_fee_cents: number
           created_at: string
           credit_diagnostic_to_repair: boolean
@@ -634,6 +644,7 @@ export type Database = {
         Insert: {
           after_hours_fee_cents?: number
           automatic_booking_radius_miles?: number
+          business_hours?: Json
           cancellation_fee_cents?: number
           created_at?: string
           credit_diagnostic_to_repair?: boolean
@@ -652,6 +663,7 @@ export type Database = {
         Update: {
           after_hours_fee_cents?: number
           automatic_booking_radius_miles?: number
+          business_hours?: Json
           cancellation_fee_cents?: number
           created_at?: string
           credit_diagnostic_to_repair?: boolean
@@ -819,7 +831,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_owner_workspace: {
+        Args: {
+          p_automatic_booking_radius_miles: number
+          p_base_address_line_1: string
+          p_base_city: string
+          p_base_postal_code: string
+          p_base_state: string
+          p_business_hours: Json
+          p_business_name: string
+          p_owner_display_name: string
+          p_phone: string
+          p_standard_pricing_radius_miles: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
