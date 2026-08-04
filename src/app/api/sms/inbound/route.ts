@@ -196,12 +196,7 @@ export async function POST(request: Request) {
       preferredTimes: parsed.preferred_times,
     };
     try {
-      await recordLead({
-        organizationId: profile.organizationId,
-        conversationId,
-        channel: "sms",
-        lead,
-      });
+      await recordLead({ profile, conversationId, channel: "sms", lead });
     } catch (error) {
       // The reply still goes out — a failed lead insert must not cost the reply.
       console.error("Lead capture failed", error);

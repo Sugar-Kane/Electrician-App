@@ -113,7 +113,7 @@ async function handleToolCalls(profile: BusinessProfile, context: { callId: stri
 
         const urgencyValue = stringOrNull(args.urgency);
         await recordLead({
-          organizationId: profile.organizationId,
+          profile,
           conversationId,
           channel: "voice",
           lead: {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { buildEmergencyAlert, sendOwnerAlert } from "@/lib/notify-owner";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export type InboundChannel = "voice" | "sms";
@@ -23,7 +24,11 @@ export type BusinessProfile = {
   licenseNumber: string | null;
   servicesOffered: string[];
   bookingPolicy: string;
+  /** The tenant's own number — the "from" on any outbound alert. */
+  inboundNumber: string;
   forwardToNumber: string | null;
+  /** True when the voice platform is configured to record calls. */
+  recordsCalls: boolean;
 };
 
 export type CapturedLead = {
@@ -110,7 +115,9 @@ export async function getBusinessProfileForNumber(toNumber: string): Promise<Bus
     bookingPolicy:
       process.env.RECEPTIONIST_BOOKING_POLICY?.trim() ||
       "You do not book appointments. You take the details and the owner calls back to schedule and price the work.",
+    inboundNumber: normalized,
     forwardToNumber: numberRow.forward_to_number ?? null,
+    recordsCalls: process.env.RECEPTIONIST_RECORDS_CALLS?.trim() === "true",
   };
 }
 
@@ -139,12 +146,20 @@ export function buildReceptionistSystemPrompt(profile: BusinessProfile, channel:
       ? `You are replying by text message. Keep each reply to one or two short sentences — this is a phone screen, not an email. Ask for one thing at a time; a text that asks four questions gets one answered. No markdown, no bullet lists, no emoji.`
       : `You are speaking on the phone. Talk the way a person does: short sentences, one question at a time, and let them finish. Read anything back that you are going to write down — addresses and phone numbers especially — so a mishearing gets corrected on the call rather than in a truck.`;
 
+  // California is a two-party consent state: every party must be told before
+  // recording starts, not after. This has to be the first thing said, before
+  // any greeting that invites the caller to start talking.
+  const recordingDisclosure =
+    channel === "voice" && profile.recordsCalls
+      ? `\n\n## Before anything else\nThis call is recorded. Your very first sentence must say so — "This call is recorded for quality" — before you ask them anything or invite them to speak. If they object to being recorded, tell them you will have ${profile.ownerFirstName} call them back directly instead, take a callback number, and end the call politely. Do not keep them talking on a recorded line after they have objected.`
+      : "";
+
   return `You answer the phone and texts for ${profile.businessName}, a licensed electrical contractor. Most people reaching you have never been a customer — they found the number and want to know if this business can help them.
 
 Your job is to find out who they are and what they need, answer what you can about the business, and take down enough that ${profile.ownerFirstName} can call back ready to help. You are not the electrician and you do not pretend to be.
 
 ## What you know
-${facts}
+${facts}${recordingDisclosure}
 
 ## What you must not do
 - Do not quote prices, ranges, or estimates. Electrical scope changes once someone sees the panel. If they ask what it costs, say honestly that ${profile.ownerFirstName} prices it after seeing the work, and that you will have him call.
@@ -243,17 +258,18 @@ export async function getConversationHistory(conversationId: string, limit = 20)
 }
 
 export async function recordLead(input: {
-  organizationId: string;
+  profile: BusinessProfile;
   conversationId: string | null;
   callId?: string | null;
   channel: InboundChannel;
   lead: CapturedLead;
 }) {
+  const organizationId = input.profile.organizationId;
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("inbound_leads")
     .insert({
-      organization_id: input.organizationId,
+      organization_id: organizationId,
       conversation_id: input.conversationId,
       call_id: input.callId ?? null,
       channel: input.channel,
@@ -272,7 +288,7 @@ export async function recordLead(input: {
   if (error) throw new Error(`Could not record lead: ${error.message}`);
 
   await supabase.from("activity_events").insert({
-    organization_id: input.organizationId,
+    organization_id: organizationId,
     event_type: "lead.captured",
     label: `${input.channel === "voice" ? "Call" : "Text"} from ${input.lead.contactName ?? formatPhone(input.lead.contactPhone)}`,
     entity_type: "inbound_lead",
@@ -280,5 +296,56 @@ export async function recordLead(input: {
     metadata: { urgency: input.lead.urgency, job_type: input.lead.jobType },
   });
 
+  if (input.lead.urgency === "emergency") {
+    await escalateEmergency(input.profile, input.lead, data.id as string);
+  }
+
   return data.id as string;
+}
+
+/**
+ * Pushes an emergency lead to the owner's phone.
+ *
+ * Deliberately never throws: the lead is already saved, and a caller reporting
+ * a burning smell must not get an error because an SMS gateway was down. A
+ * failed page is recorded as its own activity event so the gap is visible
+ * afterwards rather than silent.
+ */
+async function escalateEmergency(profile: BusinessProfile, lead: CapturedLead, leadId: string) {
+  const supabase = createServiceClient();
+
+  if (!profile.forwardToNumber) {
+    await supabase.from("activity_events").insert({
+      organization_id: profile.organizationId,
+      event_type: "lead.escalation_skipped",
+      label: "Emergency lead not paged — no forwarding number is set on this line",
+      entity_type: "inbound_lead",
+      entity_id: leadId,
+      metadata: {},
+    });
+    return;
+  }
+
+  const { ok, error } = await sendOwnerAlert({
+    fromNumber: profile.inboundNumber,
+    toNumber: profile.forwardToNumber,
+    body: buildEmergencyAlert({
+      businessName: profile.businessName,
+      contactName: lead.contactName,
+      contactPhone: lead.contactPhone,
+      serviceAddress: lead.serviceAddress,
+      summary: lead.summary,
+    }),
+  });
+
+  await supabase.from("activity_events").insert({
+    organization_id: profile.organizationId,
+    event_type: ok ? "lead.escalated" : "lead.escalation_failed",
+    label: ok
+      ? `Emergency lead paged to ${formatPhone(profile.forwardToNumber)}`
+      : `Emergency page failed: ${error ?? "unknown error"}`,
+    entity_type: "inbound_lead",
+    entity_id: leadId,
+    metadata: {},
+  });
 }
