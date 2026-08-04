@@ -94,10 +94,12 @@ function CheckoutButton({ amount, disabled }: { amount: number; disabled: boolea
 
 export function PublicBookingFlow({
   bookingPage,
+  messagingBusinessName,
   slots,
   checkoutCanceled,
 }: {
   bookingPage: PublicBookingPage;
+  messagingBusinessName: string;
   slots: PublicBookingSlot[];
   checkoutCanceled: boolean;
 }) {
@@ -124,7 +126,7 @@ export function PublicBookingFlow({
   const [acceptedPolicy, setAcceptedPolicy] = useState(false);
   // Never pre-checked: active, affirmative consent is required for A2P 10DLC.
   const [smsConsent, setSmsConsent] = useState(false);
-  const smsDisclosure = smsConsentDisclosure(bookingPage.display_name);
+  const smsDisclosure = smsConsentDisclosure(messagingBusinessName);
 
   const questions = useMemo(
     () => getAdaptiveSafetyQuestions(description, answers),

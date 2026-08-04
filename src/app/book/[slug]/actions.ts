@@ -10,7 +10,7 @@ import {
 import { attachCheckoutToBooking, getPublicBookingPage } from "@/lib/public-booking";
 import { checkServiceArea } from "@/lib/service-area";
 import { smsConsentRecord } from "@/lib/sms-consent";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createPublicClient, getMessagingBusinessName } from "@/lib/supabase/public";
 import { getStripe } from "@/lib/stripe";
 
 export type BookingActionState = {
@@ -115,6 +115,13 @@ export async function startPublicBooking(
   const bookingPage = await getPublicBookingPage(slug);
   if (!bookingPage) return { error: "This booking page is not currently available." };
 
+  // Resolved the same way the form resolved it, so the retained proof matches
+  // the business named on the checkbox the customer actually ticked.
+  const messagingBusinessName = await getMessagingBusinessName(
+    slug,
+    bookingPage.display_name,
+  );
+
   const safety = evaluateSafety(description, safetyAnswers);
   if (safety.outcome === "emergency_services") {
     return {
@@ -170,9 +177,7 @@ export async function startPublicBooking(
     // Rebuilt from the disclosure module rather than echoed back from the
     // browser: the retained consent proof has to be the wording this server
     // rendered, not whatever the client chose to post.
-    p_sms_consent_disclosure: smsConsent
-      ? smsConsentRecord(bookingPage.display_name)
-      : null,
+    p_sms_consent_disclosure: smsConsent ? smsConsentRecord(messagingBusinessName) : null,
     p_customer_description: description,
     p_category: categoryFromDescription(description),
     p_safety_answers: safetyAnswers,

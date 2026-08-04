@@ -63,6 +63,16 @@ repo is still outstanding and should be done separately.
     with `organizations.slug` so a rename cannot orphan a URL already filed with
     the carrier. Tenants missing a required detail get no row and keep 404'ing
     rather than serving a page with a blank phone number.
+  - Derives `tenant_legal_pages.slug` from the organization on every insert and
+    update. Members can write their own legal row, and a freely chosen slug
+    would let one tenant publish its policies at another tenant's URL.
+- `src/lib/supabase/public.ts` — `getMessagingBusinessName` resolves the name
+  used in the disclosure from the legal pages (`dba_name` before
+  `legal_business_name`), so the checkbox, the stored proof, and the quoted
+  terms all name the same business. `organizations.name` is the sole trader's
+  own name for the live tenant ("Nicholas Kane") while they trade as "Pacific
+  Plains Electric"; quoting different names across those three places reads as
+  two different programs under review.
 - `src/lib/sms-consent.ts` — one source of truth for the disclosure wording,
   used by the checkbox, the stored consent record, and the published SMS terms.
 - `src/components/public-booking-flow.tsx` — the messaging opt-in is now its own

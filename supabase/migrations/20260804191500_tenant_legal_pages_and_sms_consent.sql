@@ -165,8 +165,39 @@ create trigger create_tenant_legal_page
 after insert on public.organizations
 for each row execute function public.create_tenant_legal_page();
 
+-- The legal slug is derived, never supplied. Members can write their own
+-- tenant_legal_pages row, and a member who could choose the slug freely could
+-- claim a path that does not belong to their organization — publishing their
+-- own privacy policy and SMS terms at another tenant's URL. Forcing the value
+-- from organizations on every insert and update removes the choice.
+create or replace function public.bind_tenant_legal_page_slug()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  select organization.slug into new.slug
+  from public.organizations as organization
+  where organization.id = new.organization_id;
+
+  if new.slug is null then
+    raise exception using errcode = 'P0002', message = 'Organization not found.';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.bind_tenant_legal_page_slug() from public, anon, authenticated;
+
+drop trigger if exists bind_tenant_legal_page_slug on public.tenant_legal_pages;
+create trigger bind_tenant_legal_page_slug
+before insert or update on public.tenant_legal_pages
+for each row execute function public.bind_tenant_legal_page_slug();
+
 -- A renamed organization must not orphan URLs already filed with the carrier,
--- so the legal slug follows organizations.slug.
+-- so a rename touches the legal row and the bind trigger above recomputes it.
 create or replace function public.sync_tenant_legal_page_slug()
 returns trigger
 language plpgsql
@@ -190,6 +221,14 @@ create trigger sync_tenant_legal_page_slug
 after update of slug on public.organizations
 for each row execute function public.sync_tenant_legal_page_slug();
 
+-- Repair any row whose slug drifted from its organization before the bind
+-- trigger existed.
+update public.tenant_legal_pages as legal_page
+set slug = organization.slug
+from public.organizations as organization
+where organization.id = legal_page.organization_id
+  and legal_page.slug is distinct from organization.slug;
+
 -- Backfill anything onboarded before the trigger existed.
 insert into public.tenant_legal_pages (
   organization_id, slug, legal_business_name, support_phone, support_email,
@@ -212,6 +251,11 @@ alter table public.booking_intakes
   add column if not exists sms_consent_source text,
   add column if not exists sms_consent_disclosure text;
 
+-- Added NOT VALID and validated separately: ADD CONSTRAINT would scan the whole
+-- table while holding a lock that blocks concurrent bookings, whereas VALIDATE
+-- CONSTRAINT takes a weaker lock that lets writes continue. Every existing row
+-- has sms_consent false, so validation passes immediately and the constraints
+-- do not need to be left unvalidated.
 alter table public.booking_intakes
   drop constraint if exists booking_intakes_sms_consent_source_valid;
 alter table public.booking_intakes
@@ -219,7 +263,9 @@ alter table public.booking_intakes
   check (
     sms_consent_source is null
     or sms_consent_source in ('web_booking_form', 'phone', 'in_person')
-  );
+  ) not valid;
+alter table public.booking_intakes
+  validate constraint booking_intakes_sms_consent_source_valid;
 
 -- Every branch is spelled out as `is not null`: a CHECK that evaluates to
 -- UNKNOWN passes, so `char_length(null) between 40 and 1000` alone would let a
@@ -236,7 +282,9 @@ alter table public.booking_intakes
       and sms_consent_disclosure is not null
       and char_length(sms_consent_disclosure) between 40 and 1000
     )
-  );
+  ) not valid;
+alter table public.booking_intakes
+  validate constraint booking_intakes_sms_consent_evidenced;
 
 -- Recreate the intake RPC with the messaging consent fields. The consent source
 -- is hardcoded rather than passed in: this function is the web form's path, and
