@@ -26,21 +26,34 @@ published row for the live tenant with a real business name, phone, email, and
 mailing address, so `/legal/{slug}/privacy` and `/legal/{slug}/terms` render
 for a signed-out reviewer today.
 
-## Schema drift — read before applying anything
+## Schema drift — captured
 
-The deployed database contains four migrations that do not exist in this repo:
+The deployed database had four migrations with no file in this repo:
 `messaging_foundation`, `messaging_isv_tenancy`, `tenant_legal_pages_public_table`,
 and `tenant_legal_pages_slug`. They created `conversations`, `messages`,
 `message_templates`, `messaging_settings`, `messaging_consent`, and
-`tenant_legal_pages`. This repo therefore **cannot rebuild the deployed schema
-from scratch**, and anyone reading only the repo would conclude the legal pages
-are broken when they are not.
+`tenant_legal_pages`. The repo could not rebuild the deployed schema, and anyone
+reading only the repo would conclude the legal pages were broken when they were
+not.
 
-The migration here is written to work either way: the `tenant_legal_pages`
-block only creates the table where it is missing (a no-op against production,
-reproducing the deployed shape elsewhere), and the `messaging_consent` write is
-skipped when that table is absent. Capturing those four migrations into the
-repo is still outstanding and should be done separately.
+Those four are now captured as files under their deployed version numbers, so
+`supabase migration list` reconciles and a fresh environment builds the same
+schema. Each is written to be a no-op where the objects already exist, so
+applying them against the deployed database changes nothing. They are faithful
+captures: two things found along the way are deliberately *not* silently fixed
+inside them, and are called out in comments instead.
+
+- `public.sync_tenant_legal_slug()` exists in the deployed database with **no
+  trigger attached**, so renaming an organization never moved its legal slug
+  there. The A2P remediation migration supersedes it.
+- `anon` holds `select, insert, update` on `public.messages`. No anon policy
+  exists, so RLS denies every row and the grant is unreachable — but it is one
+  accidental `disable row level security` away from exposing every customer's
+  message history. `20260804213000_confirm_tenant_legal_contact.sql` revokes it.
+
+Repo and deployed migration *timestamps* still differ for several older
+migrations (for example the foundation is `20260803161114` here and
+`20260803162315` there). That predates this work and is left alone.
 
 ## What changed
 
@@ -86,6 +99,21 @@ repo is still outstanding and should be done separately.
   consent is collected, and adds sample messages.
 - `src/app/legal/[org]/privacy/page.tsx` — states how consent is obtained and
   that it is neither pre-checked, bundled, nor required to book.
+
+## Publishing a tenant's legal pages
+
+A tenant's legal-page row is seeded at signup from onboarding data, but it is
+**not published automatically**. The support email is prefilled from the owner's
+login address, which for a sole trader is usually personal, and publishing that
+to a page carriers read without ever asking is the wrong default.
+
+The owner reviews and publishes at **Settings → Legal pages**
+(`/settings/legal`), which warns while the support email is still the login
+address and links to previews of both pages. A campaign cannot be approved until
+the pages are published, since the reviewer has to open them signed out.
+
+Tenants already published before this change are untouched — their pages are
+live and a carrier may be mid-review.
 
 ## Before resubmitting
 
