@@ -65,10 +65,17 @@ export function displayNameFor(info: TenantLegalInfo): string {
   return info.dba_name ?? info.legal_business_name;
 }
 
-/** "Acme Electric, a d/b/a of Acme Holdings LLC" — or just the legal name. */
+/**
+ * Attribution line shown on the legal pages.
+ *
+ * Deliberately says "operated by" rather than "a d/b/a of": a d/b/a asserts a
+ * registered fictitious business name, which many sole proprietors have not
+ * filed. "Operated by" is accurate whether or not an FBN exists, and still
+ * names the legal entity carriers verify against.
+ */
 export function legalAttributionFor(info: TenantLegalInfo): string {
-  return info.dba_name
-    ? `${info.dba_name}, a d/b/a of ${info.legal_business_name}`
+  return info.dba_name && info.dba_name !== info.legal_business_name
+    ? `${info.dba_name}, operated by ${info.legal_business_name}`
     : info.legal_business_name;
 }
 
