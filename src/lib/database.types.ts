@@ -814,6 +814,313 @@ export type Database = {
           },
         ]
       }
+      inbound_numbers: {
+        Row: {
+          created_at: string
+          forward_to_number: string | null
+          id: string
+          label: string | null
+          organization_id: string
+          phone_number: string
+          sms_enabled: boolean
+          updated_at: string
+          voice_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          forward_to_number?: string | null
+          id?: string
+          label?: string | null
+          organization_id: string
+          phone_number: string
+          sms_enabled?: boolean
+          updated_at?: string
+          voice_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          forward_to_number?: string | null
+          id?: string
+          label?: string | null
+          organization_id?: string
+          phone_number?: string
+          sms_enabled?: boolean
+          updated_at?: string
+          voice_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_numbers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_conversations: {
+        Row: {
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          last_channel: Database["public"]["Enums"]["inbound_channel"]
+          last_message_at: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          last_channel: Database["public"]["Enums"]["inbound_channel"]
+          last_message_at?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          last_channel?: Database["public"]["Enums"]["inbound_channel"]
+          last_message_at?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_conversations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_messages: {
+        Row: {
+          body: string
+          channel: Database["public"]["Enums"]["inbound_channel"]
+          conversation_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          provider_message_id: string | null
+          role: string
+        }
+        Insert: {
+          body: string
+          channel: Database["public"]["Enums"]["inbound_channel"]
+          conversation_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          provider_message_id?: string | null
+          role: string
+        }
+        Update: {
+          body?: string
+          channel?: Database["public"]["Enums"]["inbound_channel"]
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          provider_message_id?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_calls: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          ended_reason: string | null
+          from_number: string
+          id: string
+          organization_id: string
+          provider: string
+          provider_call_id: string
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          summary: string | null
+          to_number: string
+          transcript: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          ended_reason?: string | null
+          from_number: string
+          id?: string
+          organization_id: string
+          provider: string
+          provider_call_id: string
+          recording_url?: string | null
+          started_at?: string | null
+          status: string
+          summary?: string | null
+          to_number: string
+          transcript?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          ended_reason?: string | null
+          from_number?: string
+          id?: string
+          organization_id?: string
+          provider?: string
+          provider_call_id?: string
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          summary?: string | null
+          to_number?: string
+          transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_leads: {
+        Row: {
+          call_id: string | null
+          captured_by: string
+          channel: Database["public"]["Enums"]["inbound_channel"]
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string
+          conversation_id: string | null
+          converted_job_id: string | null
+          created_at: string
+          id: string
+          job_type: string | null
+          organization_id: string
+          preferred_times: string | null
+          service_address: string | null
+          status: Database["public"]["Enums"]["lead_status"]
+          summary: string
+          updated_at: string
+          urgency: Database["public"]["Enums"]["lead_urgency"]
+        }
+        Insert: {
+          call_id?: string | null
+          captured_by?: string
+          channel: Database["public"]["Enums"]["inbound_channel"]
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone: string
+          conversation_id?: string | null
+          converted_job_id?: string | null
+          created_at?: string
+          id?: string
+          job_type?: string | null
+          organization_id: string
+          preferred_times?: string | null
+          service_address?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          summary: string
+          updated_at?: string
+          urgency?: Database["public"]["Enums"]["lead_urgency"]
+        }
+        Update: {
+          call_id?: string | null
+          captured_by?: string
+          channel?: Database["public"]["Enums"]["inbound_channel"]
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string
+          conversation_id?: string | null
+          converted_job_id?: string | null
+          created_at?: string
+          id?: string
+          job_type?: string | null
+          organization_id?: string
+          preferred_times?: string | null
+          service_address?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          summary?: string
+          updated_at?: string
+          urgency?: Database["public"]["Enums"]["lead_urgency"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_leads_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_leads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "inbound_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_leads_converted_job_id_fkey"
+            columns: ["converted_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -822,7 +1129,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      inbound_channel: "voice" | "sms"
+      lead_status: "new" | "contacted" | "scheduled" | "converted" | "closed"
+      lead_urgency: "emergency" | "urgent" | "routine" | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
