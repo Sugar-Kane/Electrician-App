@@ -62,7 +62,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           </section>
 
           <section id="documents" className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5">
-            <div className="flex items-center justify-between"><div><p className="text-xs text-slate-500">Job files</p><h2 className="mt-1 text-lg font-semibold">Documentation</h2></div><FileText className="h-5 w-5 text-[#ffc21c]" aria-hidden /></div>
+            <div className="flex items-center justify-between gap-3"><div><p className="text-xs text-slate-500">Job files</p><h2 className="mt-1 text-lg font-semibold">Documentation</h2></div><Link href={`/files?job=${job.id}`} className="tap-target inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[#ffc21c]">Open files <ChevronRight className="h-4 w-4" aria-hidden /></Link></div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {job.documents.map((document) => (
                 <Link key={document.name} href={`/jobs/${job.id}?document=${encodeURIComponent(document.name)}#documents`} className="tap-row flex min-h-14 items-center gap-3 rounded-2xl border border-white/10 px-3 active:bg-white/5">

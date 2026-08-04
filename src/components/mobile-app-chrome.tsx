@@ -7,6 +7,7 @@ import {
   Boxes,
   BriefcaseBusiness,
   CalendarDays,
+  FolderOpen,
   Home,
   Menu,
   MoreHorizontal,
@@ -15,6 +16,7 @@ import {
   ReceiptText,
   Route,
   Search,
+  Settings,
   UserRound,
   UsersRound,
   X,
@@ -23,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { pilotJobs } from "@/lib/pilot-data";
+import { AccountMenu } from "@/components/account-menu";
 
 type NavItem = {
   label: string;
@@ -37,9 +40,11 @@ const menuItems: NavItem[] = [
   { label: "Jobs", href: "/schedule?view=jobs", icon: BriefcaseBusiness, description: "Open and upcoming work" },
   { label: "Customers", href: "/search?scope=customers", icon: UsersRound, description: "Customer and property records" },
   { label: "Invoices", href: "/invoices", icon: ReceiptText, description: "Paid, unpaid, and overdue" },
+  { label: "Files", href: "/files", icon: FolderOpen, description: "Job documents and cloud sync" },
   { label: "Materials", href: "/materials", icon: Boxes, description: "Needs, truck stock, and sourcing" },
   { label: "Route builder", href: "/route", icon: Route, description: "Optimize before opening maps" },
   { label: "Supplier connections", href: "/settings/integrations", icon: PlugZap, description: "Lowe’s and Home Depot programs" },
+  { label: "Account settings", href: "/account", icon: Settings, description: "Profile, premium, app, and Square" },
 ];
 
 const bottomItems = [
@@ -113,6 +118,7 @@ export function MobileAppChrome({
           <button type="button" className="mobile-icon tap-target" aria-label="Search jobs and customers" onClick={() => setSearchOpen(true)}>
             <Search className="h-5 w-5" aria-hidden />
           </button>
+          <AccountMenu />
           <button type="button" className="mobile-icon tap-target" aria-label="Open main menu" onClick={() => setMenuOpen(true)}>
             <Menu className="h-5 w-5" aria-hidden />
           </button>
