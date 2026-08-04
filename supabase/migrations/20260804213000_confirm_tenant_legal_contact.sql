@@ -46,10 +46,16 @@ $$;
 
 revoke all on function public.create_tenant_legal_page() from public, anon, authenticated;
 
--- Captured in 20260803173933_messaging_foundation.sql as it stands in the
--- deployed database: anon holds select, insert, and update on public.messages.
--- No anon policy exists there, so RLS denies every row and the grant is
--- unreachable today — but it is one accidental `disable row level security`
--- away from exposing every customer's message history, and nothing anonymous
--- has any business reading or writing messages.
+-- Defensive only, and a no-op against the deployed database.
+--
+-- This revoke was added believing anon held select, insert, and update on
+-- public.messages. It did not: the audit query behind that claim filtered on
+-- table_name without a schema, and matched Supabase's own realtime.messages,
+-- which grants those privileges to anon by design. public.messages has never
+-- had them.
+--
+-- The statement is kept because an earlier revision of
+-- 20260803173933_messaging_foundation.sql did grant them, so any environment
+-- built from that revision needs them taken back off. Nothing anonymous has
+-- any business reading or writing messages.
 revoke select, insert, update on table public.messages from anon;
