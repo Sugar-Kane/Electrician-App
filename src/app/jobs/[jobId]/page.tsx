@@ -7,8 +7,6 @@ import {
   ClipboardList,
   FileText,
   Mail,
-  MapPin,
-  Navigation,
   Phone,
   Route,
   ShieldAlert,
@@ -16,13 +14,11 @@ import {
 } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { JobAddressLink, JobDirectionsButtons } from "@/components/job-directions";
 import {
-  buildAppleDirectionsUrl,
-  buildGoogleDirectionsUrl,
   getPilotJob,
   jobNeedsMaterialStop,
   pilotJobs,
-  serviceBase,
 } from "@/lib/pilot-data";
 
 export function generateStaticParams() {
@@ -36,8 +32,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
   const fullAddress = `${job.address}, ${job.city}`;
   const needsStop = jobNeedsMaterialStop(job);
-  const googleMapsUrl = buildGoogleDirectionsUrl([serviceBase.address, fullAddress]);
-  const appleMapsUrl = buildAppleDirectionsUrl(fullAddress);
 
   return (
     <FieldPageShell title={job.customer} eyebrow={`Job #${job.id}`} description={`${job.workType} · ${job.dateLabel}, ${job.time}–${job.endTime}`} active="Jobs">
@@ -48,7 +42,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             <div className="mt-4 space-y-2">
               <a href={`tel:${job.phone.replace(/[^\d+]/g, "")}`} className="tap-row flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 px-3"><Phone className="h-5 w-5 text-[#ffc21c]" aria-hidden /><span className="flex-1 text-sm">{job.phone}</span><ChevronRight className="h-4 w-4 text-slate-500" aria-hidden /></a>
               <a href={`mailto:${job.email}`} className="tap-row flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 px-3"><Mail className="h-5 w-5 text-[#ffc21c]" aria-hidden /><span className="min-w-0 flex-1 truncate text-sm">{job.email}</span><ChevronRight className="h-4 w-4 text-slate-500" aria-hidden /></a>
-              <a href={appleMapsUrl} target="_blank" rel="noreferrer" className="tap-row flex min-h-14 items-center gap-3 rounded-2xl border border-white/10 px-3"><MapPin className="h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{job.address}</span><span className="block text-xs text-slate-400">{job.city}</span></span><ChevronRight className="h-4 w-4 text-slate-500" aria-hidden /></a>
+              <JobAddressLink address={job.address} city={job.city} />
             </div>
           </section>
 
@@ -97,7 +91,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5">
             <p className="text-xs text-slate-500">Navigation</p><h2 className="mt-1 text-lg font-semibold">Build the route first</h2>
             <Link href={`/route?job=${job.id}`} className="tap-target mt-4 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-4 text-sm font-semibold text-[#071723]"><Route className="h-4 w-4" aria-hidden /> Optimize route</Link>
-            <div className="mt-2 grid grid-cols-2 gap-2"><a href={googleMapsUrl} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-center gap-1.5 rounded-2xl border border-white/10 text-xs"><Navigation className="h-4 w-4" aria-hidden /> Google</a><a href={appleMapsUrl} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-center gap-1.5 rounded-2xl border border-white/10 text-xs"><Navigation className="h-4 w-4" aria-hidden /> Apple</a></div>
+            <JobDirectionsButtons destination={fullAddress} />
           </section>
         </div>
       </div>
