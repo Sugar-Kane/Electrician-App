@@ -18,15 +18,18 @@ export type LeadUrgency = "emergency" | "urgent" | "routine" | "unknown";
 export type BusinessProfile = {
   organizationId: string;
   businessName: string;
+  ownerFullName: string | null;
   ownerFirstName: string;
-  serviceArea: string;
-  hours: string;
+  /** Null fields are answered with "I'll have the owner confirm", never a guess. */
+  serviceArea: string | null;
+  hours: string | null;
   licenseNumber: string | null;
-  servicesOffered: string[];
+  servicesDescription: string | null;
   bookingPolicy: string;
   /** The tenant's own number — the "from" on any outbound alert. */
   inboundNumber: string;
-  forwardToNumber: string | null;
+  /** Where an emergency pages: this line's forward number, else the org default. */
+  escalationPhone: string | null;
   /** True when the voice platform is configured to record calls. */
   recordsCalls: boolean;
 };
@@ -93,31 +96,42 @@ export async function getBusinessProfileForNumber(toNumber: string): Promise<Bus
   if (error) throw new Error(`Inbound number lookup failed: ${error.message}`);
   if (!numberRow) return null;
 
-  const [{ data: organization }, { data: legal }] = await Promise.all([
+  const [{ data: organization }, { data: legal }, { data: settings }] = await Promise.all([
     supabase.from("organizations").select("name").eq("id", numberRow.organization_id).maybeSingle(),
     supabase
       .from("tenant_legal_pages")
       .select("legal_business_name, dba_name")
       .eq("organization_id", numberRow.organization_id)
       .maybeSingle(),
+    supabase
+      .from("service_settings")
+      .select(
+        "receptionist_owner_name, receptionist_service_area, receptionist_hours, receptionist_license_number, receptionist_services, receptionist_records_calls, receptionist_escalation_phone",
+      )
+      .eq("organization_id", numberRow.organization_id)
+      .maybeSingle(),
   ]);
 
   const businessName = legal?.dba_name ?? legal?.legal_business_name ?? organization?.name ?? "this electrical company";
+  const ownerFullName = settings?.receptionist_owner_name?.trim() || null;
 
   return {
     organizationId: numberRow.organization_id,
     businessName,
-    ownerFirstName: process.env.RECEPTIONIST_OWNER_FIRST_NAME?.trim() || "the owner",
-    serviceArea: process.env.RECEPTIONIST_SERVICE_AREA?.trim() || "the local service area",
-    hours: process.env.RECEPTIONIST_HOURS?.trim() || "regular business hours, Monday through Friday",
-    licenseNumber: process.env.RECEPTIONIST_LICENSE_NUMBER?.trim() || null,
-    servicesOffered: (process.env.RECEPTIONIST_SERVICES?.split(",").map((entry) => entry.trim()).filter(Boolean)) ?? [],
+    ownerFullName,
+    ownerFirstName: ownerFullName?.split(/\s+/)[0] ?? "the owner",
+    serviceArea: settings?.receptionist_service_area?.trim() || null,
+    hours: settings?.receptionist_hours?.trim() || null,
+    licenseNumber: settings?.receptionist_license_number?.trim() || null,
+    servicesDescription: settings?.receptionist_services?.trim() || null,
     bookingPolicy:
-      process.env.RECEPTIONIST_BOOKING_POLICY?.trim() ||
       "You do not book appointments. You take the details and the owner calls back to schedule and price the work.",
     inboundNumber: normalized,
-    forwardToNumber: numberRow.forward_to_number ?? null,
-    recordsCalls: process.env.RECEPTIONIST_RECORDS_CALLS?.trim() === "true",
+    // A line-level forward wins; the org default keeps paging working before
+    // anyone configures a per-line override.
+    escalationPhone:
+      normalizePhone(numberRow.forward_to_number) ?? normalizePhone(settings?.receptionist_escalation_phone) ?? null,
+    recordsCalls: settings?.receptionist_records_calls === true,
   };
 }
 
@@ -132,11 +146,28 @@ export async function getBusinessProfileForNumber(toNumber: string): Promise<Bus
 export function buildReceptionistSystemPrompt(profile: BusinessProfile, channel: InboundChannel) {
   const facts = [
     `Business name: ${profile.businessName}`,
-    `Owner: ${profile.ownerFirstName}`,
-    `Service area: ${profile.serviceArea}`,
-    `Hours: ${profile.hours}`,
+    `Owner: ${profile.ownerFullName ?? "the owner"}`,
+    profile.serviceArea ? `Service area: ${profile.serviceArea}` : null,
+    profile.hours ? `Hours: ${profile.hours}` : null,
     profile.licenseNumber ? `License number: ${profile.licenseNumber}` : null,
-    profile.servicesOffered.length > 0 ? `Work they take on: ${profile.servicesOffered.join(", ")}` : null,
+    profile.servicesDescription ? `Work they take on: ${profile.servicesDescription}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  // Each unknown gets an explicit instruction. Without one the model fills the
+  // gap from general knowledge of what an electrical company is like, which is
+  // exactly the invented answer that gets a business into trouble.
+  const unknowns = [
+    profile.serviceArea
+      ? null
+      : `You have not been told the service area. If someone asks whether you cover their town, take their address and say ${profile.ownerFirstName} will confirm — do not guess a boundary.`,
+    profile.hours
+      ? null
+      : `You have not been told the business hours. If asked, say ${profile.ownerFirstName} will confirm rather than naming times.`,
+    profile.licenseNumber
+      ? null
+      : `You do not have the license number. If asked whether the business is licensed, or for the license number, say you do not have the license details in front of you and ${profile.ownerFirstName} will provide them directly. Do not state a number, and do not claim or deny that the business is licensed — in California the license number belongs in that answer, and guessing at it is not something you can undo.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -159,13 +190,15 @@ export function buildReceptionistSystemPrompt(profile: BusinessProfile, channel:
 Your job is to find out who they are and what they need, answer what you can about the business, and take down enough that ${profile.ownerFirstName} can call back ready to help. You are not the electrician and you do not pretend to be.
 
 ## What you know
-${facts}${recordingDisclosure}
+${facts}
+${unknowns ? `\n## What you have not been told\n${unknowns}\n` : ""}${recordingDisclosure}
 
 ## What you must not do
 - Do not quote prices, ranges, or estimates. Electrical scope changes once someone sees the panel. If they ask what it costs, say honestly that ${profile.ownerFirstName} prices it after seeing the work, and that you will have him call.
 - ${profile.bookingPolicy}
 - Do not diagnose the electrical problem or advise them on a fix. If someone describes something dangerous — burning smell, smoke, sparking, a hot panel, water in an electrical box — tell them to stop using that circuit, and if there is any sign of fire or immediate danger, to call 911 and the utility. Then flag it as an emergency.
-- Do not claim work, certifications, or coverage areas that are not in the facts above. If you do not know, say you will have ${profile.ownerFirstName} confirm.
+- Do not claim work, certifications, or coverage areas beyond the facts above. If you do not know, say you will have ${profile.ownerFirstName} confirm.
+- Do not screen callers out. Deciding a job is too small, too large, or the wrong kind is ${profile.ownerFirstName}'s call, not yours — take the details either way.
 - Do not agree to a specific arrival time or promise how soon someone can be there.
 
 ## What to get
@@ -314,11 +347,11 @@ export async function recordLead(input: {
 async function escalateEmergency(profile: BusinessProfile, lead: CapturedLead, leadId: string) {
   const supabase = createServiceClient();
 
-  if (!profile.forwardToNumber) {
+  if (!profile.escalationPhone) {
     await supabase.from("activity_events").insert({
       organization_id: profile.organizationId,
       event_type: "lead.escalation_skipped",
-      label: "Emergency lead not paged — no forwarding number is set on this line",
+      label: "Emergency lead not paged — no escalation number is configured",
       entity_type: "inbound_lead",
       entity_id: leadId,
       metadata: {},
@@ -328,7 +361,7 @@ async function escalateEmergency(profile: BusinessProfile, lead: CapturedLead, l
 
   const { ok, error } = await sendOwnerAlert({
     fromNumber: profile.inboundNumber,
-    toNumber: profile.forwardToNumber,
+    toNumber: profile.escalationPhone,
     body: buildEmergencyAlert({
       businessName: profile.businessName,
       contactName: lead.contactName,
@@ -342,7 +375,7 @@ async function escalateEmergency(profile: BusinessProfile, lead: CapturedLead, l
     organization_id: profile.organizationId,
     event_type: ok ? "lead.escalated" : "lead.escalation_failed",
     label: ok
-      ? `Emergency lead paged to ${formatPhone(profile.forwardToNumber)}`
+      ? `Emergency lead paged to ${formatPhone(profile.escalationPhone)}`
       : `Emergency page failed: ${error ?? "unknown error"}`,
     entity_type: "inbound_lead",
     entity_id: leadId,

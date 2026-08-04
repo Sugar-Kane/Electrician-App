@@ -43,7 +43,7 @@ export function getReceptionistIntegrations(): ReceptionistIntegration[] {
       capabilities: ["Business phone number", "Inbound SMS", "Inbound voice", "Emergency paging"],
       missingConfiguration: telephonyMissing,
       caveat:
-        "US A2P 10DLC registration is required before texting mainstream carriers, and it takes days. Emergency leads page the number in inbound_numbers.forward_to_number — without it they wait in the app.",
+        "US A2P 10DLC registration is required before texting mainstream carriers, and it takes days. Emergency leads page inbound_numbers.forward_to_number, falling back to service_settings.receptionist_escalation_phone — without either, they wait in the app.",
     },
     {
       id: "voice-agent",
@@ -58,7 +58,7 @@ export function getReceptionistIntegrations(): ReceptionistIntegration[] {
       capabilities: ["Speech-to-speech", "Barge-in", "Live transfer", "Call transcript and summary"],
       missingConfiguration: voiceMissing,
       caveat:
-        "Point the platform's server URL at /api/voice/agent and set the same secret there. Tools to register: business_info, check_service_area, capture_lead, request_callback_transfer. If you turn call recording on at the platform, also set RECEPTIONIST_RECORDS_CALLS=true so the agent discloses it — California requires consent from every party.",
+        "Point the platform's server URL at /api/voice/agent and set the same secret there. Tools to register: business_info, check_service_area, capture_lead, request_callback_transfer. If call recording is on at the platform, set service_settings.receptionist_records_calls so the agent discloses it — California requires consent from every party.",
     },
     {
       id: "assistant-model",

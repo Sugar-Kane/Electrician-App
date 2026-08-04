@@ -614,6 +614,13 @@ export type Database = {
       }
       service_settings: {
         Row: {
+          receptionist_escalation_phone: string | null
+          receptionist_hours: string | null
+          receptionist_license_number: string | null
+          receptionist_owner_name: string | null
+          receptionist_records_calls: boolean
+          receptionist_service_area: string | null
+          receptionist_services: string | null
           after_hours_fee_cents: number
           automatic_booking_radius_miles: number
           cancellation_fee_cents: number
@@ -632,6 +639,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          receptionist_escalation_phone?: string | null
+          receptionist_hours?: string | null
+          receptionist_license_number?: string | null
+          receptionist_owner_name?: string | null
+          receptionist_records_calls?: boolean
+          receptionist_service_area?: string | null
+          receptionist_services?: string | null
           after_hours_fee_cents?: number
           automatic_booking_radius_miles?: number
           cancellation_fee_cents?: number
@@ -650,6 +664,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          receptionist_escalation_phone?: string | null
+          receptionist_hours?: string | null
+          receptionist_license_number?: string | null
+          receptionist_owner_name?: string | null
+          receptionist_records_calls?: boolean
+          receptionist_service_area?: string | null
+          receptionist_services?: string | null
           after_hours_fee_cents?: number
           automatic_booking_radius_miles?: number
           cancellation_fee_cents?: number

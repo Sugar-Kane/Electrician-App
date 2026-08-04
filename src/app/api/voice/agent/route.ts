@@ -54,6 +54,9 @@ function stringOrNull(value: unknown): string | null {
  * the only claim the business has authorized.
  */
 function describeServiceArea(profile: BusinessProfile, askedAbout: string | null) {
+  if (!profile.serviceArea) {
+    return `The service area is not on file. Take the address and say ${profile.ownerFirstName} will confirm whether he covers it — do not guess a boundary.`;
+  }
   const scope = `${profile.businessName} covers ${profile.serviceArea}.`;
   return askedAbout
     ? `${scope} If ${askedAbout} is outside that, say you will have ${profile.ownerFirstName} confirm whether he can get out there rather than promising either way.`
@@ -73,11 +76,13 @@ async function handleToolCalls(profile: BusinessProfile, context: { callId: stri
         const topic = stringOrNull(args.topic);
         result = [
           `Business: ${profile.businessName}`,
-          `Owner: ${profile.ownerFirstName}`,
-          `Service area: ${profile.serviceArea}`,
-          `Hours: ${profile.hours}`,
-          profile.licenseNumber ? `License: ${profile.licenseNumber}` : null,
-          profile.servicesOffered.length > 0 ? `Work taken on: ${profile.servicesOffered.join(", ")}` : null,
+          `Owner: ${profile.ownerFullName ?? profile.ownerFirstName}`,
+          profile.serviceArea ? `Service area: ${profile.serviceArea}` : null,
+          profile.hours ? `Hours: ${profile.hours}` : "Hours: not on file — say you will have the owner confirm.",
+          profile.licenseNumber
+            ? `License: ${profile.licenseNumber}`
+            : "License: not on file. Do not state a number, and do not claim or deny licensure — say the owner will provide the license details directly.",
+          profile.servicesDescription ? `Work taken on: ${profile.servicesDescription}` : null,
           topic ? `The caller asked about: ${topic}. If that is not covered above, say you will have ${profile.ownerFirstName} confirm.` : null,
         ]
           .filter(Boolean)
@@ -133,8 +138,8 @@ async function handleToolCalls(profile: BusinessProfile, context: { callId: stri
       }
 
       case "request_callback_transfer": {
-        result = profile.forwardToNumber
-          ? `Transfer available to ${profile.forwardToNumber}.`
+        result = profile.escalationPhone
+          ? `Transfer available to ${profile.escalationPhone}.`
           : `No live transfer is set up on this line. Take a message instead and tell them ${profile.ownerFirstName} will call back.`;
         break;
       }
