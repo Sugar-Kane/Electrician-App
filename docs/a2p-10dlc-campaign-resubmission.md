@@ -6,37 +6,63 @@ consent to receive messages.
 
 ## Why it was rejected
 
-Two defects, both fixed on this branch:
+**The web opt-in was not a valid opt-in.** The booking form's only checkbox
+mixed the cancellation policy with "I agree to receive transactional calls,
+texts, or emails," and the checkout button stayed disabled until it was ticked.
+Messaging consent bundled with another agreement and required to complete a
+purchase is rejected under 30924 and 30925. The booking page — the one place
+customers actually opt in online — was not described as an opt-in path in the
+published SMS terms at all (30917), so nothing the reviewer could read
+explained how consent was collected.
 
-1. **The legal URLs filed with the campaign returned 404.** `/legal/{org}/privacy`
-   and `/legal/{org}/terms` read `public.tenant_legal_pages`, a table no migration
-   ever created. `getTenantLegalInfo` returned `null` and both pages called
-   `notFound()`, so a reviewer opening the Privacy Policy or SMS terms saw a 404.
-   That alone triggers the companion codes 30907, 30908, 30933, and 30934.
-2. **The web opt-in was not a valid opt-in.** The booking form's only checkbox
-   mixed the cancellation policy with "I agree to receive transactional calls,
-   texts, or emails," and checkout was blocked until it was ticked. Messaging
-   consent bundled with another agreement and required to complete a purchase is
-   rejected under 30924 and 30925, and the booking page was not described as an
-   opt-in path in the SMS terms at all (30917).
+Consent also went nowhere. `confirm_public_booking_payment` created every
+booked customer with `preferred_contact = 'sms'` regardless of what they
+agreed to, and never wrote a row to `messaging_consent`, the ledger the
+sending path reads. The business would have been texting customers with no
+consent record to show.
+
+The published legal pages themselves check out: `tenant_legal_pages` holds a
+published row for the live tenant with a real business name, phone, email, and
+mailing address, so `/legal/{slug}/privacy` and `/legal/{slug}/terms` render
+for a signed-out reviewer today.
+
+## Schema drift — read before applying anything
+
+The deployed database contains four migrations that do not exist in this repo:
+`messaging_foundation`, `messaging_isv_tenancy`, `tenant_legal_pages_public_table`,
+and `tenant_legal_pages_slug`. They created `conversations`, `messages`,
+`message_templates`, `messaging_settings`, `messaging_consent`, and
+`tenant_legal_pages`. This repo therefore **cannot rebuild the deployed schema
+from scratch**, and anyone reading only the repo would conclude the legal pages
+are broken when they are not.
+
+The migration here is written to work either way: the `tenant_legal_pages`
+block only creates the table where it is missing (a no-op against production,
+reproducing the deployed shape elsewhere), and the `messaging_consent` write is
+skipped when that table is absent. Capturing those four migrations into the
+repo is still outstanding and should be done separately.
 
 ## What changed
 
 - `supabase/migrations/20260804191500_tenant_legal_pages_and_sms_consent.sql`
-  - Creates `public.tenant_legal_pages` with anon-readable RLS for published
-    rows, so the legal pages render for a signed-out reviewer.
-  - Backfills a published row per onboarded organization from its business
-    name, phone, address, and owner email. Tenants missing any of those stay
-    unpublished and continue to 404 rather than showing placeholder text.
-  - Keeps `tenant_legal_pages.slug` in sync with `organizations.slug` so a
-    rename never orphans a URL already filed with the carrier.
   - Adds `sms_consent`, `sms_consent_at`, `sms_consent_source`, and
     `sms_consent_disclosure` to `booking_intakes`, with a check constraint that
-    an opt-in cannot be stored without its evidence.
+    an opt-in cannot be stored without its evidence. Every branch of that
+    constraint is an explicit `is not null` test, because a CHECK that
+    evaluates to UNKNOWN passes.
   - Recreates `create_public_booking_intake` to record messaging consent
     separately from the cancellation policy. The consent source is hardcoded to
     `web_booking_form` inside the function so an anon caller cannot claim a
     verbal opt-in.
+  - Recreates `confirm_public_booking_payment` to set `preferred_contact` from
+    the actual consent and to upsert the opt-in into `messaging_consent` with
+    `source = 'booking_form'` and the disclosure as `proof_text`. A customer who
+    had replied STOP is not silently resurrected by a stale intake.
+  - Creates a tenant's legal-page row on organization insert, backfills any
+    organization that predates the trigger, and keeps the legal slug in sync
+    with `organizations.slug` so a rename cannot orphan a URL already filed with
+    the carrier. Tenants missing a required detail get no row and keep 404'ing
+    rather than serving a page with a blank phone number.
 - `src/lib/sms-consent.ts` — one source of truth for the disclosure wording,
   used by the checkbox, the stored consent record, and the published SMS terms.
 - `src/components/public-booking-flow.tsx` — the messaging opt-in is now its own
@@ -56,8 +82,8 @@ Two defects, both fixed on this branch:
 1. Apply the migration to the production project.
 2. Open `https://<app-domain>/legal/<org-slug>/privacy` and
    `https://<app-domain>/legal/<org-slug>/terms` **signed out** and confirm both
-   render with the real business name, phone, email, and mailing address — no
-   404, no login wall (30921), no placeholder text.
+   still render with the real business name, phone, email, and mailing address —
+   no login wall (30921), no placeholder text.
 3. Open `https://<app-domain>/book/<org-slug>` signed out and confirm the
    messaging checkbox is visible, empty, and that checkout works with it left
    empty.
