@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { Json } from "@/lib/database.types";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 export type OnboardingActionState = {
@@ -120,6 +121,17 @@ export async function createOwnerWorkspace(
           "We couldn’t create the business workspace. Your information was not partially saved—please try again.",
       };
     }
+
+    await asFlexibleClient(supabase).from("user_profiles").upsert(
+      {
+        user_id: authData.user.id,
+        display_name: ownerName,
+        phone,
+        job_title: "Owner",
+        timezone: "America/Los_Angeles",
+      },
+      { onConflict: "user_id" },
+    );
   } catch {
     return {
       error:

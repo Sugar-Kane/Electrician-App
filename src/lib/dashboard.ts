@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 
 export type DashboardMetric = {
   label: string;
@@ -32,6 +33,7 @@ export type DashboardSnapshot = {
   source: "demo" | "supabase";
   requiresOnboarding: boolean;
   businessName: string;
+  businessSlug: string | null;
   ownerName: string;
   metrics: DashboardMetric[];
   schedule: ScheduleItem[];
@@ -46,6 +48,7 @@ const demoSnapshot: DashboardSnapshot = {
   source: "demo",
   requiresOnboarding: false,
   businessName: "Pacific Plains Electric",
+  businessSlug: null,
   ownerName: "Adam",
   metrics: [
     {
@@ -165,19 +168,20 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
     const { data: membership } = await supabase
       .from("organization_members")
-      .select("organization_id, organizations(name)")
+      .select("organization_id, organizations(name,slug)")
       .eq("user_id", authData.user.id)
       .limit(1)
       .maybeSingle();
 
     if (!membership) return { ...demoSnapshot, requiresOnboarding: true };
     const organizationId = membership.organization_id;
+    const accountDatabase = asFlexibleClient(supabase);
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayEnd.getDate() + 1);
 
-    const [jobs, invoices, estimates, technicians, inventory, activity] =
+    const [jobs, invoices, estimates, technicians, inventory, activity, profile] =
       await Promise.all([
         supabase
           .from("jobs")
@@ -211,6 +215,11 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .eq("organization_id", organizationId)
           .order("created_at", { ascending: false })
           .limit(4),
+        accountDatabase
+          .from("user_profiles")
+          .select("display_name")
+          .eq("user_id", authData.user.id)
+          .maybeSingle(),
       ]);
 
     const paidToday = (invoices.data ?? [])
@@ -235,12 +244,17 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       source: "supabase",
       requiresOnboarding: false,
       businessName:
-        (membership.organizations as unknown as { name?: string } | null)?.name ??
+        (membership.organizations as unknown as { name?: string; slug?: string } | null)?.name ??
         demoSnapshot.businessName,
+      businessSlug:
+        (membership.organizations as unknown as { name?: string; slug?: string } | null)?.slug ??
+        null,
       ownerName:
+        (typeof profile.data?.display_name === "string" ? profile.data.display_name : null) ??
         technicians.data?.find(
           (technician) => technician.user_id === authData.user.id,
-        )?.display_name ?? demoSnapshot.ownerName,
+        )?.display_name ??
+        demoSnapshot.ownerName,
       metrics: [
         { ...demoSnapshot.metrics[0], value: money.format(paidToday / 100) },
         {

@@ -23,6 +23,14 @@ A field-first business operating system for small electrical contractors. The in
 - Mobile-first owner onboarding that atomically creates the business, owner membership, technician profile, service settings, and activity record
 - Authenticated onboarding guard so new owners complete setup before entering the real dashboard
 - Pilot service settings for diagnostic, emergency, after-hours, cancellation, travel, and scheduling rules
+- Public mobile booking page with deterministic adaptive safety screening
+- Service-area checks, technician capacity, scheduled-job conflicts, and blackout-aware arrival windows
+- Stripe test checkout for paid diagnostics with idempotent customer, property, job, and payment creation
+- Signed Stripe webhook plus success-page fulfillment fallback
+- Standard business → customer → property → job document hierarchy
+- Private Supabase document metadata and Storage policies isolated by organization
+- Google Drive folder mirroring with narrow per-file OAuth access and encrypted refresh-token storage
+- Top-right user menu and account center for profiles, preferences, Premium billing, security, and Square information
 
 ## Stack
 
@@ -44,6 +52,14 @@ A field-first business operating system for small electrical contractors. The in
    ```text
    NEXT_PUBLIC_SUPABASE_URL=
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   STRIPE_SECRET_KEY=
+   STRIPE_WEBHOOK_SECRET=
+   STRIPE_PREMIUM_PRICE_ID=
+   SUPABASE_SECRET_KEY=
+   DOCUMENT_SYNC_ENCRYPTION_KEY=
+   GOOGLE_DRIVE_CLIENT_ID=
+   GOOGLE_DRIVE_CLIENT_SECRET=
    ```
 
 3. Start the app:
@@ -76,3 +92,11 @@ Open `/settings/integrations` to see approval and configuration status.
 The initial migration is in `supabase/migrations`. It creates organizations, members, customers, properties, technicians, jobs, blackout periods, service settings, estimates, invoices, inventory, and activity history.
 
 Every tenant-owned table has Row Level Security enabled. Frontend access uses the publishable key; secret and service-role keys must never be exposed to the browser.
+
+The customer booking page is available at `/book/[organization-slug]`. Public visitors only receive business-safe booking settings and open arrival windows. Customer contact details remain in RLS-protected intake records until Stripe confirms payment, then a database transaction creates or matches the customer and property and creates the paid diagnostic job.
+
+## Document storage and Google Drive
+
+Open `/files` to preview the standard folder system and check cloud connection readiness. Supabase remains the private source of truth; Google Drive mirrors only the folders and files created by the app or explicitly shared with it.
+
+The Drive activation checklist and OAuth callback URLs are documented in `docs/document-storage-and-sync.md`.

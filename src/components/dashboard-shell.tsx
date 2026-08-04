@@ -7,12 +7,12 @@ import {
   CalendarDays,
   Camera,
   ChartNoAxesCombined,
-  ChevronDown,
   ChevronRight,
   CircleDollarSign,
   ClipboardCheck,
   FileCheck2,
   FileText,
+  FolderOpen,
   LayoutDashboard,
   Navigation,
   PackageOpen,
@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
+import { AccountMenu } from "@/components/account-menu";
 import type {
   DashboardMetric,
   DashboardSnapshot,
@@ -45,11 +46,12 @@ const navItems: { label: string; href: string; icon: LucideIcon }[] = [
   { label: "Customers", href: "/search?scope=customers", icon: UsersRound },
   { label: "Estimates", href: "/search?scope=estimates", icon: FileText },
   { label: "Invoices", href: "/invoices", icon: ReceiptText },
+  { label: "Files", href: "/files", icon: FolderOpen },
   { label: "Inventory", href: "/materials", icon: Boxes },
   { label: "Purchase orders", href: "/materials?view=orders", icon: ShoppingCart },
   { label: "Reports", href: "/invoices?status=paid", icon: ChartNoAxesCombined },
   { label: "AI assistant", href: "/#assistant", icon: Bot },
-  { label: "Settings", href: "/search?scope=settings", icon: Settings },
+  { label: "Settings", href: "/account?section=preferences#preferences", icon: Settings },
 ];
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -65,7 +67,13 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function Sidebar({ businessName }: { businessName: string }) {
+function Sidebar({ businessName, ownerName }: { businessName: string; ownerName: string }) {
+  const initials = ownerName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
   return (
     <aside className="hidden min-h-[calc(100vh-16px)] flex-col rounded-[24px] border border-white/10 bg-[#071723] px-3 py-5 text-white shadow-2xl shadow-black/20 lg:flex">
       <div className="px-3 pb-6">
@@ -92,18 +100,18 @@ function Sidebar({ businessName }: { businessName: string }) {
         ))}
       </nav>
 
-      <div className="mt-6 rounded-2xl border border-white/10 bg-[#0b1d2b] p-3">
+      <Link href="/account" className="tap-row mt-6 rounded-2xl border border-white/10 bg-[#0b1d2b] p-3" aria-label="Open account settings">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#ffcb34] to-[#f7931d] text-sm font-bold text-[#071723]">
-            AK
+            {initials || "U"}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">Adam Kane</p>
+            <p className="truncate text-sm font-semibold">{ownerName}</p>
             <p className="truncate text-[11px] text-slate-400">{businessName}</p>
           </div>
-          <ChevronDown className="h-4 w-4 text-slate-500" aria-hidden />
+          <ChevronRight className="h-4 w-4 text-slate-500" aria-hidden />
         </div>
-      </div>
+      </Link>
     </aside>
   );
 }
@@ -221,6 +229,7 @@ function Header({ ownerName, source }: { ownerName: string; source: DashboardSna
             3
           </span>
         </Link>
+        <AccountMenu tone="light" />
       </div>
     </header>
   );
@@ -479,7 +488,7 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
     <main id="dashboard" className="min-h-screen bg-[#06131d] p-2 sm:p-3">
       <MobileAppChrome active="Home" />
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
-        <Sidebar businessName={snapshot.businessName} />
+        <Sidebar businessName={snapshot.businessName} ownerName={snapshot.ownerName} />
         <div className="dashboard-canvas min-w-0 rounded-[24px] bg-[#f5f7f9] p-4 shadow-2xl shadow-black/15 sm:p-6 lg:min-h-[calc(100vh-24px)] lg:p-7">
           <Header ownerName={snapshot.ownerName} source={snapshot.source} />
 
@@ -517,8 +526,8 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
                 <p className="mt-1 text-xs text-slate-600">Start adaptive intake, screen safety concerns, and offer the best diagnostic window.</p>
               </div>
             </div>
-            <Link href="/search?scope=intake" className="tap-target inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#081824] px-4 text-xs font-semibold text-white">
-              Start AI intake <ChevronRight className="h-4 w-4" aria-hidden />
+            <Link href={snapshot.businessSlug ? `/book/${snapshot.businessSlug}` : "/search?scope=intake"} className="tap-target inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#081824] px-4 text-xs font-semibold text-white">
+              {snapshot.businessSlug ? "Preview booking page" : "Start AI intake"} <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           </section>
         </div>
