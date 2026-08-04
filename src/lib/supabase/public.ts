@@ -66,6 +66,26 @@ export function displayNameFor(info: TenantLegalInfo): string {
 }
 
 /**
+ * The business name used in the text-message consent disclosure.
+ *
+ * Deliberately the legal pages' display name rather than organizations.name:
+ * a sole proprietor onboards under their own name ("Nicholas Kane") while
+ * trading as something else ("Pacific Plains Electric"), and the two differ
+ * today. The wording beside the checkbox, the consent record kept as proof,
+ * and the disclosure quoted in the published SMS terms have to name the same
+ * business, or carrier review reads them as describing different programs.
+ *
+ * Falls back to the caller's name when a tenant has not published legal pages.
+ */
+export async function getMessagingBusinessName(
+  slug: string,
+  fallback: string,
+): Promise<string> {
+  const info = await getTenantLegalInfo(slug);
+  return info ? displayNameFor(info) : fallback;
+}
+
+/**
  * Attribution line shown on the legal pages.
  *
  * Deliberately says "operated by" rather than "a d/b/a of": a d/b/a asserts a

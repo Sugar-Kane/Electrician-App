@@ -15,6 +15,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   MapPin,
+  MessageSquare,
   PhoneCall,
   ShieldCheck,
   UserRound,
@@ -31,6 +32,7 @@ import {
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
 import type { PublicBookingPage, PublicBookingSlot } from "@/lib/public-booking";
+import { smsConsentDisclosure } from "@/lib/sms-consent";
 
 const initialActionState: BookingActionState = { error: "" };
 const inputClass =
@@ -92,10 +94,12 @@ function CheckoutButton({ amount, disabled }: { amount: number; disabled: boolea
 
 export function PublicBookingFlow({
   bookingPage,
+  messagingBusinessName,
   slots,
   checkoutCanceled,
 }: {
   bookingPage: PublicBookingPage;
+  messagingBusinessName: string;
   slots: PublicBookingSlot[];
   checkoutCanceled: boolean;
 }) {
@@ -120,6 +124,9 @@ export function PublicBookingFlow({
   });
   const [selectedSlot, setSelectedSlot] = useState("");
   const [acceptedPolicy, setAcceptedPolicy] = useState(false);
+  // Never pre-checked: active, affirmative consent is required for A2P 10DLC.
+  const [smsConsent, setSmsConsent] = useState(false);
+  const smsDisclosure = smsConsentDisclosure(messagingBusinessName);
 
   const questions = useMemo(
     () => getAdaptiveSafetyQuestions(description, answers),
@@ -238,6 +245,7 @@ export function PublicBookingFlow({
       <input type="hidden" name="slotStart" value={selected?.slot_start ?? ""} />
       <input type="hidden" name="slotEnd" value={selected?.slot_end ?? ""} />
       <input type="hidden" name="acceptedPolicy" value={acceptedPolicy ? "yes" : "no"} />
+      <input type="hidden" name="smsConsent" value={smsConsent ? "yes" : "no"} />
 
       <div className="grid grid-cols-4 gap-2" aria-label={`Booking step ${step} of 4`}>
         {["Issue", "Safety", "Details", "Time"].map((label, index) => {
@@ -488,7 +496,40 @@ export function PublicBookingFlow({
               />
               <span className="text-sm leading-6 text-slate-300">
                 I understand payment confirms the diagnostic visit. Canceling or rescheduling inside {bookingPage.free_reschedule_hours} hours may retain {formatCurrency(bookingPage.cancellation_fee_cents)}.
-                I agree to receive transactional calls, texts, or emails about this request; message and data rates may apply.
+                I agree that {bookingPage.display_name} may contact me by phone or email about this request.
+              </span>
+            </label>
+
+            {/*
+              Text message consent is a separate, optional, unchecked box. Carrier
+              review rejects a campaign whose opt-in is pre-checked, bundled with
+              another agreement, or required to complete a purchase, so this box
+              never gates the checkout button and carries the full disclosure.
+            */}
+            <label className="tap-target mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-[#0d202d] p-4">
+              <input
+                type="checkbox"
+                checked={smsConsent}
+                onChange={(event) => setSmsConsent(event.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 accent-[#ffc21c]"
+              />
+              <span className="text-sm leading-6 text-slate-300">
+                <span className="flex items-center gap-2 font-semibold text-white">
+                  <MessageSquare className="h-4 w-4 text-[#ffc21c]" aria-hidden />
+                  Text me about this appointment <span className="font-normal text-slate-500">(optional)</span>
+                </span>
+                <span className="mt-2 block">{smsDisclosure}</span>
+                <span className="mt-2 block text-xs text-slate-500">
+                  See the{" "}
+                  <a href={`/legal/${bookingPage.slug}/terms`} target="_blank" rel="noreferrer" className="text-[#ffc21c] underline">
+                    Text Message Terms
+                  </a>{" "}
+                  and{" "}
+                  <a href={`/legal/${bookingPage.slug}/privacy`} target="_blank" rel="noreferrer" className="text-[#ffc21c] underline">
+                    Privacy Policy
+                  </a>
+                  . We never share your mobile number or messaging consent with third parties for marketing.
+                </span>
               </span>
             </label>
 

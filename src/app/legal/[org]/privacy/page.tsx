@@ -61,6 +61,10 @@ export default async function TenantPrivacyPage({ params }: Params) {
 
       <h2 className="mt-8 text-lg font-semibold">Text messaging</h2>
       <p className="mt-3 text-sm leading-6 text-slate-300">
+        We text you only if you asked us to — by ticking the optional, empty-by-default
+        text message box on our online booking page, or by agreeing when we read you the
+        same disclosure on the phone or in person. Consent is never pre-checked, never
+        bundled with another agreement, and is not required to book or pay for service.{" "}
         We send text messages only about service you have requested. We do not send
         marketing or promotional text messages. Reply <strong className="text-white">STOP</strong> to
         any message to stop receiving them, or <strong className="text-white">HELP</strong> for

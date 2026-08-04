@@ -11,6 +11,7 @@ import {
 
 import { PublicBookingFlow } from "@/components/public-booking-flow";
 import { getPublicBookingPage, getPublicBookingSlots } from "@/lib/public-booking";
+import { getMessagingBusinessName } from "@/lib/supabase/public";
 
 export const metadata: Metadata = {
   title: "Book an electrical diagnostic | Volterra",
@@ -31,6 +32,11 @@ export default async function PublicBookingPageRoute({
   ]);
 
   if (!bookingPage) notFound();
+
+  const messagingBusinessName = await getMessagingBusinessName(
+    slug,
+    bookingPage.display_name,
+  );
 
   return (
     <main className="min-h-screen bg-[#06131d] px-3 py-4 text-white sm:px-5 sm:py-6 lg:px-8 lg:py-8">
@@ -103,6 +109,7 @@ export default async function PublicBookingPageRoute({
 
           <PublicBookingFlow
             bookingPage={bookingPage}
+            messagingBusinessName={messagingBusinessName}
             slots={slots}
             checkoutCanceled={query.checkout === "canceled"}
           />

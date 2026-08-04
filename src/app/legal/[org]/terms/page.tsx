@@ -7,6 +7,7 @@ import {
   getTenantLegalInfo,
   legalAttributionFor,
 } from "@/lib/supabase/public";
+import { smsConsentDisclosure } from "@/lib/sms-consent";
 
 type Params = { params: Promise<{ org: string }> };
 
@@ -27,6 +28,10 @@ export default async function TenantSmsTermsPage({ params }: Params) {
   if (!info) notFound();
 
   const name = displayNameFor(info);
+  // The reviewer needs to be able to open the opt-in page and see the checkbox
+  // for themselves, so the terms name the exact URL where consent is collected.
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
+  const bookingUrl = `${appOrigin ?? ""}/book/${info.slug}`;
 
   return (
     <>
@@ -66,6 +71,20 @@ export default async function TenantSmsTermsPage({ params }: Params) {
       </p>
       <ul className="mt-3 space-y-3 text-sm leading-6 text-slate-300">
         <li>
+          • <strong className="text-white">On the online booking page.</strong> At{" "}
+          <span className="break-all">{bookingUrl}</span> you describe the
+          electrical problem, answer a short safety check, enter your contact and
+          service details, and choose an arrival window. On the final step, below
+          the appointment summary, there is a checkbox that is{" "}
+          <strong className="text-white">empty by default</strong> and separate
+          from every other agreement on the page. Its label reads, in full:{" "}
+          <em>&ldquo;{smsConsentDisclosure(name)}&rdquo;</em> You are enrolled only
+          if you tick that box yourself before submitting the form. Leaving it
+          empty does not stop the booking or the payment — the checkout button
+          works either way — and we record the date, the wording above, and the
+          fact that consent came from this form.
+        </li>
+        <li>
           • <strong className="text-white">By phone.</strong> When you call {name} to book
           a service, our scheduler asks for your mobile number and reads the following
           disclosure: <em>&ldquo;May we send you text message updates about this
@@ -84,6 +103,22 @@ export default async function TenantSmsTermsPage({ params }: Params) {
         Consent to receive text messages is not a condition of purchasing any goods or
         services. Declining does not affect your appointment — we will reach you by phone.
       </p>
+
+      <h2 className="mt-8 text-lg font-semibold">Sample messages</h2>
+      <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
+        <li>
+          • <em>&ldquo;{name}: your electrical diagnostic is confirmed for Tue Aug 11,
+          8:00–10:00 AM at 214 Oak St. Reply STOP to opt out, HELP for help.&rdquo;</em>
+        </li>
+        <li>
+          • <em>&ldquo;{name}: your technician is on the way and should arrive in about
+          20 minutes. Reply STOP to opt out, HELP for help.&rdquo;</em>
+        </li>
+        <li>
+          • <em>&ldquo;{name}: your estimate for the panel repair is ready. Reply with any
+          questions. Reply STOP to opt out, HELP for help.&rdquo;</em>
+        </li>
+      </ul>
 
       <h2 className="mt-8 text-lg font-semibold">Message frequency</h2>
       <p className="mt-3 text-sm leading-6 text-slate-300">
