@@ -17,17 +17,17 @@ import {
 } from "@/lib/pilot-data";
 import {
   cleanStartAddress,
-  describeGeolocationError,
   formatAccuracy,
   formatCoordinates,
   getRouteStartServerSnapshot,
   getRouteStartSnapshot,
   maximumStartAddressLength,
+  resolveRouteStart,
   subscribeRouteStart,
   writeStoredRouteStart,
   type RouteStartMode,
-  type RouteStartPosition,
 } from "@/lib/route-start";
+import { useCurrentPosition } from "@/lib/use-current-position";
 import {
   buildRouteKey,
   getRouteProgressServerSnapshot,
@@ -45,8 +45,6 @@ type RouteStop = {
   kind: "base" | "supply" | "job";
   job?: PilotJob;
 };
-
-type GeolocationStatus = "idle" | "locating" | "ready" | "error";
 
 const startModeOptions: { id: RouteStartMode; label: string; icon: typeof Home }[] = [
   { id: "base", label: "Shop", icon: Store },
@@ -77,40 +75,10 @@ export function RouteOptimizer({
 
   const [addressDraft, setAddressDraft] = useState<string | undefined>();
   const startAddressDraft = addressDraft ?? savedStartAddress;
-  const [position, setPosition] = useState<RouteStartPosition | undefined>();
-  const [geoStatus, setGeoStatus] = useState<GeolocationStatus>("idle");
-  const [geoError, setGeoError] = useState("");
+  const { position, status: geoStatus, error: geoError, request } = useCurrentPosition();
 
   function requestCurrentPosition() {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setGeoStatus("error");
-      setGeoError("This browser cannot share a location. Type a start address instead.");
-      return;
-    }
-    if (!window.isSecureContext) {
-      setGeoStatus("error");
-      setGeoError("Location needs a secure (https) connection. Type a start address instead.");
-      return;
-    }
-    setGeoStatus("locating");
-    setGeoError("");
-    navigator.geolocation.getCurrentPosition(
-      (result) => {
-        setPosition({
-          lat: result.coords.latitude,
-          lng: result.coords.longitude,
-          accuracyMeters: result.coords.accuracy,
-          capturedAt: new Date().toISOString(),
-        });
-        setGeoStatus("ready");
-        setBuilt(false);
-      },
-      (error) => {
-        setGeoStatus("error");
-        setGeoError(describeGeolocationError(error));
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
+    request(() => setBuilt(false));
   }
 
   function selectStartMode(mode: RouteStartMode) {
@@ -127,25 +95,18 @@ export function RouteOptimizer({
     setBuilt(false);
   }
 
-  // Falls back to the shop whenever the chosen start is not usable yet, so the
-  // route never hands a blank origin to a map link.
+  const resolvedStart = resolveRouteStart(storedStart, position, serviceBase);
+  const usingFallbackStart = resolvedStart.usingFallback;
+
   const startStop = useMemo<RouteStop>(() => {
     if (startMode === "current" && position) {
-      return {
-        id: "start-current",
-        label: "My current location",
-        address: formatCoordinates(position),
-        detail: `Route start · GPS ${formatAccuracy(position.accuracyMeters)}`,
-        kind: "base",
-      };
+      return { id: "start-current", label: resolvedStart.label, address: resolvedStart.address, detail: `Route start · GPS ${formatAccuracy(position.accuracyMeters)}`, kind: "base" };
     }
     if (startMode === "custom" && savedStartAddress) {
-      return { id: "start-custom", label: "Home address", address: savedStartAddress, detail: "Route start · saved on this device", kind: "base" };
+      return { id: "start-custom", label: resolvedStart.label, address: resolvedStart.address, detail: "Route start · saved on this device", kind: "base" };
     }
-    return { id: "start-base", label: serviceBase.name, address: serviceBase.address, detail: "Route start · shop", kind: "base" };
-  }, [position, savedStartAddress, startMode]);
-
-  const usingFallbackStart = (startMode === "current" && !position) || (startMode === "custom" && !savedStartAddress);
+    return { id: "start-base", label: resolvedStart.label, address: resolvedStart.address, detail: "Route start · shop", kind: "base" };
+  }, [position, resolvedStart.address, resolvedStart.label, savedStartAddress, startMode]);
 
   const routeStops = useMemo<RouteStop[]>(() => {
     const today = pilotJobs.filter((job) => job.date === "2026-08-03");
@@ -165,10 +126,10 @@ export function RouteOptimizer({
   const googleUrl = buildGoogleDirectionsUrl(addresses);
 
   // Apple Map Links accept a single destination, so the route is handed over one
-  // leg at a time. Progress lives in sessionStorage, keyed to this exact stop
-  // list, so leaving for Apple Maps and coming back resumes the right leg.
-  // Keyed on the destinations only. A GPS start is not restored after a reload,
-  // and that change of origin must not throw away progress through the stops.
+  // leg at a time. Progress lives in sessionStorage so leaving for Apple Maps and
+  // coming back resumes the right leg. It is keyed on the destinations only: a
+  // GPS start is not restored after a reload, and that change of origin must not
+  // throw away progress through the stops.
   const routeKey = buildRouteKey(routeStops.slice(1).map((stop) => stop.id));
   const storedProgress = useSyncExternalStore(subscribeRouteProgress, getRouteProgressSnapshot, getRouteProgressServerSnapshot);
   const legIndex = resolveLegIndex(storedProgress, routeKey, routeStops.length);
@@ -253,7 +214,7 @@ export function RouteOptimizer({
           <button type="button" onClick={() => setBuilt(true)} className="tap-target flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] shadow-lg shadow-yellow-500/10"><Route className="h-5 w-5" aria-hidden /> Build optimized route</button>
         ) : (
           <section className="rounded-3xl border border-[#ffc21c]/30 bg-[#0b1b27] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#ffc21c]">Route built</p><p className="mt-2 text-sm leading-6 text-slate-300">The order above is locked before navigation opens, starting from {startStop.label.toLowerCase()}. Google receives the full ordered route. Apple Map Links carry one destination each, so Apple runs the same route leg by leg.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#ffc21c]">Route built</p><p className="mt-2 text-sm leading-6 text-slate-300">The order above is locked before navigation opens, starting from {resolvedStart.phrase}. Google receives the full ordered route. Apple Map Links carry one destination each, so Apple runs the same route leg by leg.</p>
             <div className="mt-4 space-y-2"><a href={googleUrl} target="_blank" rel="noreferrer" className="tap-target flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-4 text-sm font-semibold text-[#071723]"><Navigation className="h-4 w-4" aria-hidden /> Open full route in Google Maps</a></div>
 
             <div className="mt-5 border-t border-white/10 pt-4">

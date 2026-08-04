@@ -113,6 +113,36 @@ export function formatAccuracy(accuracyMeters: number) {
   return feet >= 1000 ? `±${(feet / 5280).toFixed(1)} mi` : `±${feet} ft`;
 }
 
+export type ResolvedRouteStart = {
+  /** Title form, for a stop row or heading. */
+  label: string;
+  /** Sentence form, for "Starting from ..." / "Departing from ...". */
+  phrase: string;
+  address: string;
+  /** True when the chosen start is not usable yet and the shop stood in for it. */
+  usingFallback: boolean;
+};
+
+/**
+ * Single definition of "where does this route begin", shared by the route
+ * builder and the job detail page so the two never disagree. Falls back to the
+ * shop whenever the chosen start is not usable yet, so a blank origin can never
+ * reach a map link.
+ */
+export function resolveRouteStart(
+  stored: StoredRouteStart,
+  position: { lat: number; lng: number } | undefined,
+  base: { name: string; address: string },
+): ResolvedRouteStart {
+  if (stored.mode === "current" && position) {
+    return { label: "My current location", phrase: "your current location", address: formatCoordinates(position), usingFallback: false };
+  }
+  if (stored.mode === "custom" && stored.customAddress) {
+    return { label: "Home address", phrase: "your home address", address: stored.customAddress, usingFallback: false };
+  }
+  return { label: base.name, phrase: base.name, address: base.address, usingFallback: stored.mode !== "base" };
+}
+
 export function describeGeolocationError(error: unknown) {
   const code = typeof error === "object" && error !== null ? (error as GeolocationPositionError).code : undefined;
   if (code === 1) return "Location permission is off. Allow it in your browser settings, or type a start address instead.";
