@@ -9,6 +9,7 @@ import {
 } from "@/lib/booking-safety";
 import { attachCheckoutToBooking, getPublicBookingPage } from "@/lib/public-booking";
 import { checkServiceArea } from "@/lib/service-area";
+import { smsConsentRecord } from "@/lib/sms-consent";
 import { createPublicClient } from "@/lib/supabase/public";
 import { getStripe } from "@/lib/stripe";
 
@@ -84,6 +85,7 @@ export async function startPublicBooking(
   const slotEnd = getText(formData, "slotEnd", 40);
   const safetyAnswers = parseSafetyAnswers(getText(formData, "safetyAnswers", 4_000));
   const acceptedPolicy = formData.get("acceptedPolicy") === "yes";
+  const smsConsent = formData.get("smsConsent") === "yes";
 
   if (customerType !== "residential" && customerType !== "commercial") {
     return { error: "Choose residential or commercial service." };
@@ -164,6 +166,13 @@ export async function startPublicBooking(
     p_postal_code: postalCode,
     p_access_notes: accessNotes,
     p_transactional_contact_consent: acceptedPolicy,
+    p_sms_consent: smsConsent,
+    // Rebuilt from the disclosure module rather than echoed back from the
+    // browser: the retained consent proof has to be the wording this server
+    // rendered, not whatever the client chose to post.
+    p_sms_consent_disclosure: smsConsent
+      ? smsConsentRecord(bookingPage.display_name)
+      : null,
     p_customer_description: description,
     p_category: categoryFromDescription(description),
     p_safety_answers: safetyAnswers,
