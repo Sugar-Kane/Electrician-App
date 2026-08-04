@@ -40,16 +40,21 @@ Those four are now captured as files under their deployed version numbers, so
 `supabase migration list` reconciles and a fresh environment builds the same
 schema. Each is written to be a no-op where the objects already exist, so
 applying them against the deployed database changes nothing. They are faithful
-captures: two things found along the way are deliberately *not* silently fixed
-inside them, and are called out in comments instead.
+captures: one thing found along the way is deliberately *not* silently fixed
+inside them, and is called out in a comment instead.
 
 - `public.sync_tenant_legal_slug()` exists in the deployed database with **no
   trigger attached**, so renaming an organization never moved its legal slug
   there. The A2P remediation migration supersedes it.
-- `anon` holds `select, insert, update` on `public.messages`. No anon policy
-  exists, so RLS denies every row and the grant is unreachable — but it is one
-  accidental `disable row level security` away from exposing every customer's
-  message history. `20260804213000_confirm_tenant_legal_contact.sql` revokes it.
+
+An earlier revision of this documentation and of
+`20260803173933_messaging_foundation.sql` also claimed `anon` held
+`select, insert, update` on `public.messages`. **That was wrong.** The audit
+query behind it filtered on `table_name` without a schema, and matched
+Supabase's own `realtime.messages`, which grants those privileges to anon by
+design. `public.messages` has never had them. The capture no longer creates the
+grant, and the revoke in `20260804213000_confirm_tenant_legal_contact.sql` is
+kept only to clean up any environment built from that earlier revision.
 
 Repo and deployed migration *timestamps* still differ for several older
 migrations (for example the foundation is `20260803161114` here and

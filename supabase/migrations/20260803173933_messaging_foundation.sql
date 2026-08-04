@@ -187,8 +187,9 @@ grant select, insert, update, delete on table public.message_templates to authen
 grant select, insert, update, delete on table public.messaging_settings to authenticated, service_role;
 grant select, insert, update, delete on table public.messaging_consent to authenticated, service_role;
 
--- Captured as found: the deployed database also grants anon select, insert, and
--- update on public.messages. No anon policy exists on that table, so RLS denies
--- every row today and the grant is unreachable. It is revoked in a later
--- migration rather than here, to keep this file a faithful capture.
-grant select, insert, update on table public.messages to anon;
+-- No anon grants here. An earlier revision of this file granted anon select,
+-- insert, and update on public.messages, on the strength of an audit query that
+-- filtered on table_name alone. Two tables are named "messages" — this one and
+-- Supabase's own realtime.messages, which legitimately grants those privileges
+-- to anon. The grants belonged to realtime.messages; public.messages has never
+-- had them, and the capture must not invent one.
