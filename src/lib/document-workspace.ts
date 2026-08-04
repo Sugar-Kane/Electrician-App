@@ -8,7 +8,7 @@ export type DocumentFolderNode = {
   id: string;
   folderKey: string;
   name: string;
-  type: "root" | "system" | "customer" | "property" | "job" | "category" | "custom";
+  type: "root" | "system" | "year" | "month" | "job" | "custom";
   children: DocumentFolderNode[];
 };
 
@@ -37,6 +37,22 @@ type BlueprintNode = {
   children?: BlueprintNode[];
 };
 
+/**
+ * The Drive mirror is deliberately shallow: Jobs -> Year -> Month -> Job.
+ *
+ * It is NOT organised by customer or property, and job folders have no
+ * document-type subfolders. Two reasons:
+ *
+ *  - Repeat customers would fragment across months and years under a customer
+ *    tree, and every job would multiply into a dozen near-empty category
+ *    folders.
+ *  - Customer, property, payment status, and document type are app concerns.
+ *    They are filters over the database, not physical directories. A file
+ *    exists exactly once; paying an invoice changes metadata, never location.
+ *
+ * The customer name and address go in the job folder's own name so Drive's
+ * search stays useful to an owner poking around outside the app.
+ */
 export const DOCUMENT_FOLDER_BLUEPRINT: BlueprintNode[] = [
   {
     key: "root",
@@ -44,57 +60,26 @@ export const DOCUMENT_FOLDER_BLUEPRINT: BlueprintNode[] = [
     type: "root",
     children: [
       {
-        key: "company",
-        name: "Company",
-        type: "system",
-        children: [
-          { key: "company:business-info", name: "Business Information" },
-          { key: "company:licenses-insurance", name: "Licenses & Insurance" },
-          { key: "company:templates", name: "Templates" },
-          { key: "company:price-book", name: "Price Book" },
-        ],
-      },
-      {
-        key: "customers",
-        name: "Customers",
+        key: "jobs",
+        name: "Jobs",
         type: "system",
         children: [
           {
-            key: "example:customer",
-            name: "Customer or Company",
-            type: "customer",
+            // Year and month folders are created on demand as jobs are opened.
+            // This entry is the shape, shown before any job exists.
+            key: "jobs:year",
+            name: "2026",
+            type: "year",
             children: [
               {
-                key: "example:properties",
-                name: "Properties",
+                key: "jobs:year:month",
+                name: "08 – August",
+                type: "month",
                 children: [
                   {
-                    key: "example:property",
-                    name: "Service Address",
-                    type: "property",
-                    children: [
-                      {
-                        key: "example:job",
-                        name: "Job #1045 – Panel Upgrade",
-                        type: "job",
-                        children: [
-                          { key: "example:intake", name: "01 Intake" },
-                          { key: "example:estimates", name: "02 Estimates" },
-                          { key: "example:permits", name: "03 Permits" },
-                          {
-                            key: "example:photos",
-                            name: "04 Photos",
-                            children: [
-                              { key: "example:before", name: "Before" },
-                              { key: "example:after", name: "After" },
-                            ],
-                          },
-                          { key: "example:invoices", name: "05 Invoices & Payments" },
-                          { key: "example:warranties", name: "06 Warranties" },
-                          { key: "example:completion", name: "07 Completion" },
-                        ],
-                      },
-                    ],
+                    key: "jobs:year:month:job",
+                    name: "JOB-1045 – John Smith – 123 Maple – Panel Upgrade",
+                    type: "job",
                   },
                 ],
               },
@@ -103,22 +88,37 @@ export const DOCUMENT_FOLDER_BLUEPRINT: BlueprintNode[] = [
         ],
       },
       {
-        key: "operations",
-        name: "Operations",
+        key: "business",
+        name: "Business",
         type: "system",
         children: [
-          { key: "operations:inventory", name: "Inventory" },
-          { key: "operations:purchase-orders", name: "Purchase Orders" },
-          { key: "operations:vendors", name: "Vendors" },
+          { key: "business:company-documents", name: "Company Documents", type: "system" },
+          { key: "business:templates", name: "Templates", type: "system" },
+          {
+            key: "business:expenses",
+            name: "Expenses",
+            type: "system",
+            children: [
+              {
+                key: "business:expenses:year",
+                name: "2026",
+                type: "year",
+                children: [
+                  { key: "business:expenses:year:month", name: "08 – August", type: "month" },
+                ],
+              },
+            ],
+          },
         ],
       },
       {
-        key: "team",
-        name: "Team",
+        key: "accountant-exports",
+        name: "Accountant Exports",
         type: "system",
-        children: [{ key: "team:certifications", name: "Certifications" }],
+        children: [
+          { key: "accountant-exports:year", name: "2026", type: "year" },
+        ],
       },
-      { key: "reports", name: "Reports", type: "system" },
     ],
   },
 ];
@@ -128,7 +128,7 @@ function blueprintFolders(nodes: BlueprintNode[]): DocumentFolderNode[] {
     id: `blueprint-${node.key}`,
     folderKey: node.key,
     name: node.name,
-    type: node.type ?? "category",
+    type: node.type ?? "custom",
     children: blueprintFolders(node.children ?? []),
   }));
 }
@@ -280,23 +280,76 @@ function cleanFileSegment(value: string) {
     .normalize("NFKD")
     .replace(/[^a-zA-Z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .toLowerCase()
     .slice(0, 60);
 }
 
+/** Title-Case-With-Hyphens, e.g. "john smith" -> "John-Smith". */
+function titleSegment(value: string) {
+  return cleanFileSegment(value)
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase() + part.slice(1).toLowerCase())
+    .join("-");
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** "08 – August" — zero-padded so Drive sorts chronologically. */
+export function buildMonthFolderName(month: number) {
+  const index = Math.min(Math.max(month, 1), 12);
+  return `${String(index).padStart(2, "0")} – ${MONTH_NAMES[index - 1]}`;
+}
+
+/**
+ * "JOB-1045 – John Smith – 123 Maple – Panel Upgrade"
+ *
+ * Customer and address are included so Drive's own search remains useful to an
+ * owner browsing outside the app. Built only from database values — never from
+ * anything a model inferred.
+ */
+export function buildJobFolderName(input: {
+  jobNumber: string | number;
+  customerName: string;
+  addressLine: string;
+  workType: string;
+}) {
+  return [
+    `JOB-${String(input.jobNumber).trim()}`,
+    input.customerName.trim(),
+    input.addressLine.trim(),
+    input.workType.trim(),
+  ]
+    .filter(Boolean)
+    .join(" – ");
+}
+
+/**
+ * YYYY-MM-DD_JOB-NUMBER_CUSTOMER_DOCUMENT-TYPE_DESCRIPTION.ext
+ * e.g. 2026-08-01_JOB-1045_John-Smith_Estimate.pdf
+ *
+ * Every segment comes from trusted database values. A model may suggest a
+ * document type, but the job number, customer, and date are read from records
+ * — never inferred — so a misclassification can never invent an identifier.
+ * `description` is optional and omitted when absent rather than padded.
+ */
 export function buildStandardDocumentName(input: {
   date: string;
   jobNumber: string;
+  customerName: string;
   documentType: string;
-  description: string;
+  description?: string;
   extension: string;
 }) {
   const extension = input.extension.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "pdf";
   return [
     input.date,
-    `job-${cleanFileSegment(input.jobNumber)}`,
-    cleanFileSegment(input.documentType),
-    cleanFileSegment(input.description),
+    `JOB-${cleanFileSegment(String(input.jobNumber))}`,
+    titleSegment(input.customerName),
+    titleSegment(input.documentType),
+    input.description ? titleSegment(input.description) : "",
   ]
     .filter(Boolean)
     .join("_")

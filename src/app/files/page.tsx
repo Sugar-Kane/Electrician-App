@@ -83,6 +83,7 @@ export default async function FilesPage({
   const namingExample = buildStandardDocumentName({
     date: "2026-08-03",
     jobNumber: query.job ?? "1045",
+    customerName: "John Smith",
     documentType: "photo-before",
     description: "main-panel",
     extension: "jpg",
@@ -92,7 +93,7 @@ export default async function FilesPage({
     <FieldPageShell
       title={query.job ? `Job #${query.job} files` : "Files"}
       eyebrow="Documents and cloud sync"
-      description="Every customer, property, and job follows the same filing system. Supabase stores the private record and Google Drive mirrors the folders your business owns."
+      description="Files are filed by year, month, and job. Customer, property, payment status, and document type are filters in the app, not folders — so each file exists exactly once."
       active="More"
     >
       {query.connected === "google_drive" ? (
