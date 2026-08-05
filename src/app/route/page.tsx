@@ -33,7 +33,7 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
   } : undefined;
 
   return (
-    <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="Volterra builds and locks the stop order first. Navigation opens only after you approve the route." active="More">
+    <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="Volteira builds and locks the stop order first. Navigation opens only after you approve the route." active="More">
       <RouteOptimizer focusJobId={job || undefined} initialSupplier={initialSupplier} initialSupplyStore={initialSupplyStore} />
     </FieldPageShell>
   );

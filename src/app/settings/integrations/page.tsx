@@ -39,7 +39,7 @@ export default function SupplierIntegrationsPage() {
       </div>
 
       <section className="mt-4 rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.045] p-5 sm:p-6">
-        <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden /><div><h2 className="font-semibold">Add credentials securely</h2><p className="mt-2 text-sm leading-6 text-slate-300">When either application is approved, add the supplied values to the Electrician App’s Vercel environment variables. Do not paste client secrets into chat or put them in a public variable. Volterra reads them only on the server.</p></div></div>
+        <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden /><div><h2 className="font-semibold">Add credentials securely</h2><p className="mt-2 text-sm leading-6 text-slate-300">When either application is approved, add the supplied values to the Electrician App’s Vercel environment variables. Do not paste client secrets into chat or put them in a public variable. Volteira reads them only on the server.</p></div></div>
       </section>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">

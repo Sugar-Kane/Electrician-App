@@ -5,7 +5,7 @@ export type StoredRouteProgress = {
   legIndex: number;
 };
 
-export const routeProgressStorageKey = "volterra:route-progress:v1";
+export const routeProgressStorageKey = "volteira:route-progress:v1";
 
 const defaultRouteProgress: StoredRouteProgress = { routeKey: "", legIndex: 1 };
 

@@ -5,7 +5,7 @@ import { CheckCircle2, LockKeyhole, Zap } from "lucide-react";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Set up your business | Volterra" };
+export const metadata: Metadata = { title: "Set up your business | Volteira" };
 
 export default async function OnboardingPage() {
   const supabase = await createClient();
@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
         <header className="flex min-h-14 items-center justify-between gap-4">
           <div className="inline-flex items-center gap-2 text-lg font-bold tracking-[0.04em]">
             <Zap className="h-7 w-7 fill-[#ffc21c] text-[#ffc21c]" aria-hidden />
-            VOLTERRA
+            VOLTEIRA
           </div>
           <p className="hidden items-center gap-2 text-xs text-slate-400 sm:flex">
             <LockKeyhole className="h-4 w-4 text-emerald-400" aria-hidden /> Secure owner setup

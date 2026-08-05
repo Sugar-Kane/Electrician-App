@@ -7,7 +7,7 @@
 - Preferred maps application and starting screen
 - Personal display preferences
 - Password changes using Supabase Auth
-- Volterra Premium checkout and Stripe-hosted billing management
+- Volteira Premium checkout and Stripe-hosted billing management
 - Square merchant, default location, environment, account email, and currency
 
 Personal settings are stored per authenticated user. Subscription and Square records belong to the organization. Only organization owners and administrators can change organization billing or Square information.

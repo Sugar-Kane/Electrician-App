@@ -5,7 +5,7 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { TenantLegalForm } from "@/components/tenant-legal-form";
 import { getOwnTenantLegalPage } from "@/lib/tenant-legal";
 
-export const metadata: Metadata = { title: "Legal pages | Volterra" };
+export const metadata: Metadata = { title: "Legal pages | Volteira" };
 
 export default async function TenantLegalSettingsPage() {
   const page = await getOwnTenantLegalPage();

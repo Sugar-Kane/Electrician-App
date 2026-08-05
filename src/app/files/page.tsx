@@ -25,7 +25,7 @@ import {
 } from "@/lib/document-workspace";
 
 export const metadata: Metadata = {
-  title: "Files | Volterra",
+  title: "Files | Volteira",
 };
 
 function FolderBranch({ node, depth = 0 }: { node: DocumentFolderNode; depth?: number }) {

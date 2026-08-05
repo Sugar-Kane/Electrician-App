@@ -12,7 +12,7 @@ export type RouteStartPosition = {
   capturedAt: string;
 };
 
-export const routeStartStorageKey = "volterra:route-start:v1";
+export const routeStartStorageKey = "volteira:route-start:v1";
 
 export const maximumStartAddressLength = 240;
 

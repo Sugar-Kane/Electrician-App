@@ -32,7 +32,7 @@ import {
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
 
-export const metadata: Metadata = { title: "Account | Volterra" };
+export const metadata: Metadata = { title: "Account | Volteira" };
 
 const sections = [
   { id: "profile", label: "Profile", icon: UserRound },
@@ -251,7 +251,7 @@ export default async function AccountPage({
               <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
               <div>
                 <h2 className="font-semibold">Premium subscription</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-400">Billing for Volterra is handled securely through Stripe. Square remains available for your customer payments.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Billing for Volteira is handled securely through Stripe. Square remains available for your customer payments.</p>
               </div>
             </div>
             <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${subscriptionActive ? "bg-emerald-400/10 text-emerald-300" : "bg-white/5 text-slate-300"}`}>
@@ -366,7 +366,7 @@ export default async function AccountPage({
               <Store className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
               <div>
                 <h2 className="font-semibold">Square information</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-400">Choose the Square business and location Volterra should use when Square payment support is activated.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Choose the Square business and location Volteira should use when Square payment support is activated.</p>
               </div>
             </div>
             <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${account.square.status === "connected" ? "bg-emerald-400/10 text-emerald-300" : account.square.status === "pending" ? "bg-amber-400/10 text-amber-300" : "bg-white/5 text-slate-300"}`}>

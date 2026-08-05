@@ -53,7 +53,7 @@ export function AuthForm({ mode, nextPath, initialError }: { mode: AuthMode; nex
           router.refresh();
           return;
         }
-        setMessage("Check your email to confirm your account. The confirmation link will bring you back to Volterra.");
+        setMessage("Check your email to confirm your account. The confirmation link will bring you back to Volteira.");
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) throw authError;
@@ -83,7 +83,7 @@ export function AuthForm({ mode, nextPath, initialError }: { mode: AuthMode; nex
         <button type="submit" disabled={submitting || Boolean(message)} className="tap-target flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] shadow-lg shadow-yellow-500/10 disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}{submitting ? (isSignup ? "Creating account…" : "Signing in…") : (isSignup ? "Create account" : "Sign in")} {!submitting ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}</button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-400">{isSignup ? "Already have an account?" : "New to Volterra?"} <Link href={alternateHref} className="tap-target inline-flex items-center font-semibold text-[#ffc21c] hover:text-yellow-300">{isSignup ? "Sign in" : "Create an account"}</Link></p>
+      <p className="mt-6 text-center text-sm text-slate-400">{isSignup ? "Already have an account?" : "New to Volteira?"} <Link href={alternateHref} className="tap-target inline-flex items-center font-semibold text-[#ffc21c] hover:text-yellow-300">{isSignup ? "Sign in" : "Create an account"}</Link></p>
     </>
   );
 }
