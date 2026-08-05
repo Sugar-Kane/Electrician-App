@@ -47,7 +47,7 @@ export function getSupplierIntegrations(): SupplierIntegration[] {
       applicationLabel: "Apply through Lowe’s Developer Hub",
       capabilities: ["Product catalog", "Local price", "Real-time availability", "Current promotions"],
       missingConfiguration: lowesMissing,
-      caveat: "The final endpoint and response mapping are supplied during Lowe’s partner onboarding. Until approval, Volterra opens the retailer’s live product results.",
+      caveat: "The final endpoint and response mapping are supplied during Lowe’s partner onboarding. Until approval, Volteira opens the retailer’s live product results.",
     },
     {
       id: "home-depot",
@@ -60,7 +60,7 @@ export function getSupplierIntegrations(): SupplierIntegration[] {
       applicationLabel: "Apply to The Home Depot Affiliate Program",
       capabilities: ["Daily product feed", "Product links", "Affiliate tracking", "Online product pricing"],
       missingConfiguration: homeDepotMissing,
-      caveat: "The affiliate feed is not a documented real-time store inventory API. Volterra keeps local stock claims on Home Depot’s live product page unless a separate partner agreement supplies inventory access.",
+      caveat: "The affiliate feed is not a documented real-time store inventory API. Volteira keeps local stock claims on Home Depot’s live product page unless a separate partner agreement supplies inventory access.",
     },
   ];
 }

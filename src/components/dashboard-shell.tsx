@@ -56,12 +56,12 @@ const navItems: { label: string; href: string; icon: LucideIcon }[] = [
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="#dashboard" className="flex items-center gap-2.5" aria-label="Volterra home">
+    <Link href="#dashboard" className="flex items-center gap-2.5" aria-label="Volteira home">
       <span className="flex h-10 w-8 items-center justify-center text-[#ffbf18]">
         <Zap className="h-9 w-9 fill-current" strokeWidth={1.5} aria-hidden />
       </span>
       <span className={compact ? "text-lg font-bold" : "text-xl font-bold"}>
-        VOLTERRA
+        VOLTEIRA
       </span>
     </Link>
   );

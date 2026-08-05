@@ -24,7 +24,7 @@ export function FieldPageShell({
         <div className="hidden items-center justify-between lg:flex">
           <Link href="/" className="tap-target inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white"><ArrowLeft className="h-4 w-4" aria-hidden /> Dashboard</Link>
           <div className="flex items-center gap-3">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold"><Zap className="h-5 w-5 fill-[#ffbf18] text-[#ffbf18]" aria-hidden /> VOLTERRA</Link>
+            <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold"><Zap className="h-5 w-5 fill-[#ffbf18] text-[#ffbf18]" aria-hidden /> VOLTEIRA</Link>
             <AccountMenu />
           </div>
         </div>

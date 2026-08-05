@@ -15,7 +15,7 @@ import { fulfillPaidBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
 
 export const metadata: Metadata = {
-  title: "Diagnostic confirmed | Volterra",
+  title: "Diagnostic confirmed | Volteira",
 };
 
 function formatCurrency(cents: number) {

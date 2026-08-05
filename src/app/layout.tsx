@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Volterra | Electrical Business Operations",
+  title: "Volteira | Electrical Business Operations",
   description:
     "A field-first operating system for electrical contractors to run scheduling, jobs, estimates, invoices, and inventory.",
 };

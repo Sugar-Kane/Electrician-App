@@ -34,7 +34,7 @@ import {
 } from "@/lib/pilot-data";
 import { createClient } from "@/lib/supabase/client";
 
-const STORAGE_KEY = "volterra:supplier-products:v1";
+const STORAGE_KEY = "volteira:supplier-products:v1";
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const dateTime = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -219,7 +219,7 @@ function ProductConfirmationForm({
   return (
     <form onSubmit={handleSubmit} className="mt-4 rounded-3xl border border-[#ffc21c]/30 bg-[#071723] p-4" noValidate>
       <div className="flex items-start justify-between gap-3">
-        <div><p className="text-xs font-semibold text-[#ffc21c]">Save the product you chose</p><p className="mt-1 text-[11px] leading-5 text-slate-400">Volterra stores only the values you personally confirm.</p></div>
+        <div><p className="text-xs font-semibold text-[#ffc21c]">Save the product you chose</p><p className="mt-1 text-[11px] leading-5 text-slate-400">Volteira stores only the values you personally confirm.</p></div>
         <button type="button" onClick={onCancel} className="tap-target min-h-11 rounded-xl px-3 text-xs text-slate-300">Cancel</button>
       </div>
 

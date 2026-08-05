@@ -57,9 +57,9 @@ const bottomItems = [
 
 function Brand() {
   return (
-    <Link href="/" className="flex min-h-11 items-center gap-2 text-white" aria-label="Volterra dashboard">
+    <Link href="/" className="flex min-h-11 items-center gap-2 text-white" aria-label="Volteira dashboard">
       <Zap className="h-7 w-7 fill-[#ffbf18] text-[#ffbf18]" aria-hidden />
-      <span className="text-lg font-bold">VOLTERRA</span>
+      <span className="text-lg font-bold">VOLTEIRA</span>
     </Link>
   );
 }

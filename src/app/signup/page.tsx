@@ -4,7 +4,7 @@ import { AuthForm } from "@/components/auth-form";
 import { AuthShell } from "@/components/auth-shell";
 import { getSafeNextPath } from "@/lib/auth-redirect";
 
-export const metadata: Metadata = { title: "Create account | Volterra" };
+export const metadata: Metadata = { title: "Create account | Volteira" };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;

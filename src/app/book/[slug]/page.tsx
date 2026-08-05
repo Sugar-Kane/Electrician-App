@@ -14,7 +14,7 @@ import { getPublicBookingPage, getPublicBookingSlots } from "@/lib/public-bookin
 import { getMessagingBusinessName } from "@/lib/supabase/public";
 
 export const metadata: Metadata = {
-  title: "Book an electrical diagnostic | Volterra",
+  title: "Book an electrical diagnostic | Volteira",
   description: "Request and securely pay for an onsite electrical diagnostic.",
 };
 
@@ -116,7 +116,7 @@ export default async function PublicBookingPageRoute({
         </div>
 
         <footer className="mt-8 border-t border-white/10 py-6 text-center text-xs text-slate-600">
-          Booking powered by Volterra · Your information is used to schedule service, verify the service area, and process payment securely with Stripe.
+          Booking powered by Volteira · Your information is used to schedule service, verify the service area, and process payment securely with Stripe.
         </footer>
       </div>
     </main>
