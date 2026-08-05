@@ -161,16 +161,17 @@ the submission.
 > affect this booking." Links to the Privacy Policy and the Text Message Terms
 > appear directly beneath it. The customer must tick the box themselves; leaving
 > it empty does not block booking or payment. The opt-in date, the exact
-> disclosure text, and the opt-in source are stored with the booking record.
->
-> Customers who book by phone opt in verbally: the scheduler asks, "May we send
-> you text message updates about this appointment? Message and data rates may
-> apply, message frequency varies, and you can reply STOP at any time to opt
-> out." The same disclosure is read in person when a technician books follow-up
-> work. Both are recorded against the customer record with the date and the
-> disclosure given. No numbers are purchased, rented, or obtained from third
-> parties.
+> disclosure text, and the opt-in source are stored with the booking record. No
+> phone numbers are purchased, rented, or obtained from third parties.
 
+The web checkbox is the **only** opt-in path, and the published SMS terms say so.
+An earlier draft of both also described a verbal opt-in taken over the phone. It
+was removed: there is no phone-booking screen and nothing writes a verbal
+consent record, so the claim had nothing behind it. Do not put it back until
+phone intake exists and records the disclosure, the date, and the source — a
+consent path a carrier can ask about and you cannot evidence is worse than not
+claiming it.
+>
 **Sample messages:**
 
 1. `{Business Name}: your electrical diagnostic is confirmed for Tue Aug 11, 8:00-10:00 AM at 214 Oak St. Reply STOP to opt out, HELP for help.`
