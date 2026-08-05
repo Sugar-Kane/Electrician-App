@@ -120,17 +120,26 @@ the pages are published, since the reviewer has to open them signed out.
 Tenants already published before this change are untouched — their pages are
 live and a carrier may be mid-review.
 
+## Hostname
+
+`www.volteira.com` is the hostname attached to the project, so it is what the
+campaign is filed against and what `NEXT_PUBLIC_APP_URL` is set to. Attach the
+apex `volteira.com` as well and let it redirect to `www` — a customer typing the
+bare domain must not land on nothing. File the `www` URLs rather than the apex:
+a reviewer following a redirect sometimes reads it as a mismatch with the URL on
+the submission.
+
 ## Before resubmitting
 
 1. Apply the migration to the production project.
-2. Open `https://volteira.com/legal/<org-slug>/privacy` and
-   `https://volteira.com/legal/<org-slug>/terms` **signed out** and confirm both
+2. Open `https://www.volteira.com/legal/<org-slug>/privacy` and
+   `https://www.volteira.com/legal/<org-slug>/terms` **signed out** and confirm both
    still render with the real business name, phone, email, and mailing address —
    no login wall (30921), no placeholder text.
-3. Open `https://volteira.com/book/<org-slug>` signed out and confirm the
+3. Open `https://www.volteira.com/book/<org-slug>` signed out and confirm the
    messaging checkbox is visible, empty, and that checkout works with it left
    empty.
-4. Set `NEXT_PUBLIC_APP_URL` to `https://volteira.com` in the deployment, so the
+4. Set `NEXT_PUBLIC_APP_URL` to `https://www.volteira.com` in the deployment, so the
    SMS terms print the full opt-in URL rather than a bare path.
 5. Capture a screenshot of the final booking step showing the unchecked box and
    its full label; attach it to the campaign.
@@ -140,7 +149,7 @@ live and a carrier may be mid-review.
 **Call to Action / Message Flow:**
 
 > End users opt in on the business's own web booking page at
-> https://volteira.com/book/<org-slug>. After describing the electrical problem,
+> https://www.volteira.com/book/<org-slug>. After describing the electrical problem,
 > completing a safety check, entering their contact and service address details,
 > and selecting an arrival window, the customer reaches the final step, which
 > shows a checkbox that is unchecked by default and separate from every other
@@ -171,8 +180,8 @@ live and a carrier may be mid-review.
 **Opt-in keywords:** START · **Opt-out keywords:** STOP, STOPALL, UNSUBSCRIBE,
 CANCEL, END, QUIT · **Help keywords:** HELP
 
-**Privacy Policy URL:** `https://volteira.com/legal/<org-slug>/privacy`
-**Terms and Conditions URL:** `https://volteira.com/legal/<org-slug>/terms`
+**Privacy Policy URL:** `https://www.volteira.com/legal/<org-slug>/privacy`
+**Terms and Conditions URL:** `https://www.volteira.com/legal/<org-slug>/terms`
 
 Replace `<org-slug>` with the tenant's slug (`pacific-plains-electric` for the
 first tenant) before submitting. Both pages must be publicly reachable at the
