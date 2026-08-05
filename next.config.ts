@@ -6,7 +6,7 @@ import type { NextConfig } from "next";
  * The public booking page collects a home address and hands off to Stripe, and
  * it carries the text-message consent checkbox an A2P campaign is reviewed
  * against. Framed on someone else's domain, that checkbox can be overlaid or
- * hidden, and Volterra could no longer say what the customer actually saw when
+ * hidden, and Volteira could no longer say what the customer actually saw when
  * they consented. The dashboard has the usual clickjacking reasons.
  *
  * A tenant who wants the form on their own site links to it. If per-tenant
