@@ -65,9 +65,9 @@ export default async function TenantSmsTermsPage({ params }: Params) {
 
       <h2 className="mt-8 text-lg font-semibold">How you join (opt-in)</h2>
       <p className="mt-3 text-sm leading-6 text-slate-300">
-        You are enrolled only by giving your express consent through one of the paths
-        below. Consent is never pre-checked, never assumed, and never obtained from a
-        third party or purchased list.
+        There is one way to join, and it is described in full below. Consent is
+        never pre-checked, never assumed, and never obtained from a third party or
+        purchased list.
       </p>
       <ul className="mt-3 space-y-3 text-sm leading-6 text-slate-300">
         <li>
@@ -84,24 +84,15 @@ export default async function TenantSmsTermsPage({ params }: Params) {
           works either way — and we record the date, the wording above, and the
           fact that consent came from this form.
         </li>
-        <li>
-          • <strong className="text-white">By phone.</strong> When you call {name} to book
-          a service, our scheduler asks for your mobile number and reads the following
-          disclosure: <em>&ldquo;May we send you text message updates about this
-          appointment? Message and data rates may apply, message frequency varies, and you
-          can reply STOP at any time to opt out.&rdquo;</em> We record your verbal
-          agreement, the date, and the disclosure given. If you decline, we call you
-          instead.
-        </li>
-        <li>
-          • <strong className="text-white">In person.</strong> When a technician books
-          follow-up work at your property, the same disclosure is read and your agreement
-          is recorded against your customer record.
-        </li>
       </ul>
       <p className="mt-3 text-sm leading-6 text-slate-300">
         Consent to receive text messages is not a condition of purchasing any goods or
         services. Declining does not affect your appointment — we will reach you by phone.
+      </p>
+      <p className="mt-3 text-sm leading-6 text-slate-300">
+        <strong className="text-white">Booking by phone does not enroll you.</strong> If
+        you call {name} to book, we arrange the appointment and reach you by phone about
+        it. We text you only if you opt in yourself through the booking page above.
       </p>
 
       <h2 className="mt-8 text-lg font-semibold">Sample messages</h2>
