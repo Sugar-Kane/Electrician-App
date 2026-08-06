@@ -2,7 +2,46 @@
 
 Campaign `CM6e23febad99f84935d27817022309529` was rejected with error 30909:
 the Message Flow / Call to Action did not let the reviewer verify how end users
-consent to receive messages.
+consent to receive messages. It was resubmitted on 2026-08-05 as a new campaign.
+
+## Submission record — 2026-08-05
+
+| | |
+| --- | --- |
+| Campaign | `CMaa33ee980cf5f8c323da7384f95d38e3` — in review |
+| Replaces | `CM6e23febad99f84935d27817022309529` — rejected, deleted |
+| Brand | `BNeae88676456dd1bf038e23f484206c55` — Pacific Plains Electric (Nicholas Kane), registered |
+| Customer profile | `BU867b067affcd19bcc3c8109b2b5d6dec` |
+| Messaging service | `MG40d8eaeb07619b39388dc7f1464f17aa` |
+| Use case | Sole Proprietor |
+| Vetting | 2-3 weeks via TCR; throughput limits assigned on approval |
+
+The rejected campaign had to be **deleted** before the new one could be created:
+a Sole Proprietor brand carries exactly one campaign, and the rejected one held
+both that slot and the messaging service. Deleting a rejected campaign does not
+affect the brand, the messaging service, or the numbers in its sender pool.
+
+Nick is a sole proprietor with no EIN, which is why the brand is Sole Proprietor
+rather than Standard. That caps the account at one campaign and at low
+throughput. Getting an EIN and re-registering as a Standard brand is the way out
+of both, and is worth doing before a second tenant is onboarded.
+
+### What was filed
+
+The campaign describes **one opt-in path**: the checkbox on the public booking
+page. The consent field quotes the checkbox label verbatim, states that it is
+unchecked by default, that it is separate from every other agreement, that
+leaving it empty blocks neither the booking nor the payment, and that the date,
+the disclosure text, and the source are stored with the booking record.
+
+Message content flags were all left **unchecked** — no embedded links, no phone
+numbers, no lending, no age-gated content. The sample messages match. Adding a
+link to an estimate or invoice text later means updating the campaign first.
+
+`START` is registered as an opt-in keyword with an auto-reply. Nothing in this
+repo handles inbound messages, so Twilio's Advanced Opt-Out has to be the thing
+answering it; if that is ever turned off, the keyword should come off the
+campaign at the same time.
 
 ## Why it was rejected
 
@@ -129,7 +168,7 @@ bare domain must not land on nothing. File the `www` URLs rather than the apex:
 a reviewer following a redirect sometimes reads it as a mismatch with the URL on
 the submission.
 
-## Before resubmitting
+## Pre-submission checks (kept for the next tenant)
 
 1. Apply the migration to the production project.
 2. Open `https://www.volteira.com/legal/<org-slug>/privacy` and
@@ -144,7 +183,7 @@ the submission.
 5. Capture a screenshot of the final booking step showing the unchecked box and
    its full label; attach it to the campaign.
 
-## Campaign fields to submit
+## Campaign fields as filed
 
 **Call to Action / Message Flow:**
 
@@ -185,7 +224,7 @@ CANCEL, END, QUIT · **Help keywords:** HELP
 **Terms and Conditions URL:** `https://www.volteira.com/legal/<org-slug>/terms`
 
 Replace `<org-slug>` with the tenant's slug (`pacific-plains-electric` for the
-first tenant) before submitting. Both pages must be publicly reachable at the
+first tenant). Both pages must be publicly reachable at the
 exact URLs filed — check them signed out, in a private window. A page behind
 Vercel's deployment protection reads as error 30921, "website requires
 authentication and cannot be reviewed".
