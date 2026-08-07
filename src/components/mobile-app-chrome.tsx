@@ -45,6 +45,7 @@ const menuItems: NavItem[] = [
   { label: "Materials", href: "/materials", icon: Boxes, description: "Needs, truck stock, and sourcing" },
   { label: "Route builder", href: "/route", icon: Route, description: "Optimize before opening maps" },
   { label: "Supplier connections", href: "/settings/integrations", icon: PlugZap, description: "Lowe’s and Home Depot programs" },
+  { label: "Automatic messages", href: "/settings/messages", icon: MessagesSquare, description: "What gets texted, and when" },
   { label: "Account settings", href: "/account", icon: Settings, description: "Profile, premium, app, and Square" },
 ];
 
