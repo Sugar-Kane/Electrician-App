@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { phoneMatches } from "@/lib/messaging-rules";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { verifyTwilioSignature } from "@/lib/twilio";
 
@@ -21,10 +22,6 @@ const OPT_OUT_KEYWORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "e
 const OPT_IN_KEYWORDS = new Set(["start", "unstop", "yes"]);
 
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
-
-function digits(value: string) {
-  return value.replace(/\D/g, "");
-}
 
 function requestUrl(request: Request) {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
@@ -81,9 +78,8 @@ export async function POST(request: Request) {
     .is("archived_at", null)
     .limit(5000);
 
-  const fromDigits = digits(from).slice(-10);
-  const customer = (customers ?? []).find(
-    (row) => digits(String(row.phone ?? "")).slice(-10) === fromDigits,
+  const customer = (customers ?? []).find((row) =>
+    phoneMatches(String(row.phone ?? ""), from),
   );
 
   if (!customer) {

@@ -1,5 +1,12 @@
 import "server-only";
 
+import {
+  blockedReasonFor,
+  consentIsActive,
+  displayNameFor,
+  evaluateQuietHours,
+  initialsFor,
+} from "@/lib/messaging-rules";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -73,25 +80,6 @@ function text(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
-/**
- * Customers may be a person, a company, or both: the table only requires that
- * one of first_name, last_name, or company_name is present. Falling back to
- * "Unknown customer" for a commercial customer with just a company name would
- * be wrong on every commercial thread.
- */
-function displayNameFor(customer: Record<string, unknown>) {
-  const person = `${text(customer.first_name)} ${text(customer.last_name)}`.trim();
-  return person || text(customer.company_name) || "Unknown customer";
-}
-
-function initialsFor(customer: Record<string, unknown>) {
-  const first = text(customer.first_name);
-  const last = text(customer.last_name);
-  if (first || last) return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
-  const company = text(customer.company_name);
-  return company ? company.slice(0, 2).toUpperCase() : "?";
-}
-
 export async function getMessagingContext(): Promise<MessagingContext | null> {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
@@ -147,45 +135,12 @@ export async function getConsent(
   const optedOutAt = data?.opted_out_at ? String(data.opted_out_at) : null;
 
   return {
-    optedIn: Boolean(optedInAt) && !optedOutAt,
+    optedIn: consentIsActive({ optedInAt, optedOutAt }),
     optedInAt,
     optedOutAt,
     source: data?.source ? String(data.source) : null,
     proofText: data?.proof_text ? String(data.proof_text) : null,
   };
-}
-
-type QuietHours = { start: string; end: string; timezone: string; currentlyQuiet: boolean };
-
-/**
- * Quiet hours are stored as local wall-clock times and compared in the
- * organization's timezone, not the server's. A window that wraps midnight
- * (21:00 to 08:00, the default) is the normal case, not the exception.
- */
-export function evaluateQuietHours(
-  start: string,
-  end: string,
-  timezone: string,
-  now = new Date(),
-): QuietHours {
-  const localTime = new Intl.DateTimeFormat("en-GB", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(now);
-
-  const minutes = (value: string) => {
-    const [hours, mins] = value.split(":");
-    return Number(hours) * 60 + Number(mins);
-  };
-
-  const current = minutes(localTime);
-  const from = minutes(start);
-  const to = minutes(end);
-  const currentlyQuiet = from > to ? current >= from || current < to : current >= from && current < to;
-
-  return { start, end, timezone, currentlyQuiet };
 }
 
 async function getMessagingSettings(context: MessagingContext) {
@@ -300,13 +255,10 @@ export async function getConversationThread(
     settings.timezone,
   );
 
-  const blockedReason = !consent.optedIn
-    ? consent.optedOutAt
-      ? "This customer replied STOP. They have to opt in again themselves before you can text them."
-      : "This customer has not opted in to text messages. Ask them to opt in on the booking page."
-    : !settings.messagingServiceSid
-      ? "No messaging service is connected for this business yet."
-      : null;
+  const blockedReason = blockedReasonFor({
+    consent: { optedInAt: consent.optedInAt, optedOutAt: consent.optedOutAt },
+    hasMessagingService: Boolean(settings.messagingServiceSid),
+  });
 
   return {
     id: text(conversation.id),

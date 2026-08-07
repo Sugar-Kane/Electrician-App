@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { SENT_OVERWRITABLE_STATUSES } from "@/lib/messaging-rules";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { verifyTwilioSignature } from "@/lib/twilio";
 
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
       ? query.eq("provider_message_id", providerMessageId)
       : query.eq("id", "");
 
-  if (status === "sent") query = query.in("status", ["queued", "sending"]);
+  if (status === "sent") query = query.in("status", [...SENT_OVERWRITABLE_STATUSES]);
 
   await query;
 
