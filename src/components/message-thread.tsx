@@ -22,22 +22,37 @@ import type { ConversationThread } from "@/lib/messaging";
 
 const initialState: SendMessageState = { error: "" };
 
-function formatTime(iso: string) {
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(
-    new Date(iso),
-  );
+// Every date here is formatted in the business timezone, explicitly. Left to
+// the ambient zone these render as UTC on the server and local in the browser,
+// which is both a hydration mismatch and the wrong day on the separators.
+function formatTime(iso: string, timeZone: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
-function formatDayLabel(iso: string) {
-  const date = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
+function dayKey(date: Date, timeZone: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
 
-  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (sameDay(date, today)) return "Today";
-  if (sameDay(date, yesterday)) return "Yesterday";
+function formatDayLabel(iso: string, timeZone: string) {
+  const date = new Date(iso);
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  const key = dayKey(date, timeZone);
+  if (key === dayKey(now, timeZone)) return "Today";
+  if (key === dayKey(yesterday, timeZone)) return "Yesterday";
+
   return new Intl.DateTimeFormat("en-US", {
+    timeZone,
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -122,9 +137,11 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
 
   // Day separators are worked out before render rather than by mutating a
   // variable while mapping.
+  const timeZone = thread.quietHours.timezone;
   const rendered = thread.messages.map((message, index) => {
-    const day = formatDayLabel(message.createdAt);
-    const previous = index > 0 ? formatDayLabel(thread.messages[index - 1].createdAt) : "";
+    const day = formatDayLabel(message.createdAt, timeZone);
+    const previous =
+      index > 0 ? formatDayLabel(thread.messages[index - 1].createdAt, timeZone) : "";
     return { message, day, showDay: day !== previous };
   });
 
@@ -159,7 +176,9 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
                     {message.body}
                   </div>
                   <div className="flex items-center gap-2 px-1">
-                    <span className="text-[11px] text-slate-600">{formatTime(message.createdAt)}</span>
+                    <span className="text-[11px] text-slate-600">
+                      {formatTime(message.createdAt, timeZone)}
+                    </span>
                     {outbound ? (
                       <DeliveryState status={message.status} errorDetail={message.errorDetail} />
                     ) : null}
@@ -187,7 +206,7 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
               <input
                 type="hidden"
                 name="overrideQuietHours"
-                value={overrideQuietHours || thread.quietHours.currentlyQuiet ? "yes" : "no"}
+                value={overrideQuietHours ? "yes" : "no"}
               />
               <label className="sr-only" htmlFor="message-body">
                 Message

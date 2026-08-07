@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import {
   getConsent,
@@ -91,7 +92,10 @@ export async function sendConversationMessage(
     to: thread.phone,
     body,
     messagingServiceSid: settings.messagingServiceSid,
-    statusCallbackUrl: origin ? `${origin}/api/twilio/status` : undefined,
+    // Our own row id travels with the callback. Twilio can deliver a receipt
+    // before the REST response lands here, and a callback that could only match
+    // on provider_message_id would find no row and be dropped.
+    statusCallbackUrl: origin ? `${origin}/api/twilio/status?message=${messageId}` : undefined,
   });
 
   if (result.ok) {
@@ -138,4 +142,52 @@ export async function sendConversationMessage(
   revalidatePath("/messages");
   revalidatePath(`/messages/${conversationId}`);
   return { error: "", sent: true };
+}
+
+
+/**
+ * Open a conversation with a customer who has opted in but never texted.
+ *
+ * Only the inbound webhook creates conversations otherwise, which leaves the
+ * inbox unreachable until a customer happens to text first.
+ */
+export async function startConversation(formData: FormData): Promise<void> {
+  const customerId = String(formData.get("customerId") ?? "");
+  if (!customerId) return;
+
+  const context = await getMessagingContext();
+  if (!context) return;
+
+  const consent = await getConsent(context, customerId);
+  if (!consent.optedIn) return;
+
+  const { data: existing } = await context.database
+    .from("conversations")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("customer_id", customerId)
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+
+  let conversationId = existing?.id ? String(existing.id) : "";
+
+  if (!conversationId) {
+    const { data: created } = await context.database
+      .from("conversations")
+      .insert({
+        organization_id: context.organizationId,
+        customer_id: customerId,
+        channel: "sms",
+        status: "open",
+      })
+      .select("id")
+      .single();
+
+    if (!created) return;
+    conversationId = String(created.id);
+  }
+
+  revalidatePath("/messages");
+  redirect(`/messages/${conversationId}`);
 }

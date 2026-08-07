@@ -94,17 +94,22 @@ export async function POST(request: Request) {
   const keyword = body.toLowerCase().replace(/[^a-z]/g, "");
   const now = new Date().toISOString();
 
-  // Consent first: a STOP has to land even if everything below fails.
+  // Consent first: a STOP has to land even if everything below fails. These are
+  // the only writes here whose failure is reported back to Twilio, because a
+  // 200 tells Twilio never to retry — and a dropped STOP means continuing to
+  // text someone who asked us not to.
   if (OPT_OUT_KEYWORDS.has(keyword)) {
-    await database
+    const { error } = await database
       .from("messaging_consent")
       .update({ opted_out_at: now })
       .eq("organization_id", organizationId)
       .eq("customer_id", customerId)
       .eq("channel", "sms")
       .eq("scope", "transactional");
+
+    if (error) return new NextResponse("Could not record opt-out", { status: 500 });
   } else if (OPT_IN_KEYWORDS.has(keyword)) {
-    await database
+    const { error } = await database
       .from("messaging_consent")
       .upsert(
         {
@@ -119,6 +124,8 @@ export async function POST(request: Request) {
         },
         { onConflict: "customer_id,channel,scope" },
       );
+
+    if (error) return new NextResponse("Could not record opt-in", { status: 500 });
   }
 
   let { data: conversation } = await database

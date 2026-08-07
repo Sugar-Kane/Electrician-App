@@ -10,11 +10,13 @@ import { verifyTwilioSignature } from "@/lib/twilio";
  * tell a delivered text from one the carrier dropped.
  */
 
-const TERMINAL_STATUSES = new Set(["delivered", "failed", "undelivered", "sent"]);
+const TRACKED_STATUSES = new Set(["delivered", "failed", "undelivered", "sent"]);
 
 function requestUrl(request: Request) {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
-  if (configured) return `${configured}/api/twilio/status`;
+  // Twilio signs the exact URL it was given, query string included.
+  const search = new URL(request.url).search;
+  if (configured) return `${configured}/api/twilio/status${search}`;
   return request.url;
 }
 
@@ -37,9 +39,7 @@ export async function POST(request: Request) {
 
   const providerMessageId = params.MessageSid ?? "";
   const status = (params.MessageStatus ?? "").toLowerCase();
-  if (!providerMessageId || !TERMINAL_STATUSES.has(status)) {
-    return NextResponse.json({ ok: true });
-  }
+  if (!TRACKED_STATUSES.has(status)) return NextResponse.json({ ok: true });
 
   const database = getSupabaseAdmin();
   const update: Record<string, unknown> = { status };
@@ -52,7 +52,19 @@ export async function POST(request: Request) {
       : "The carrier did not deliver this message.";
   }
 
-  await database.from("messages").update(update).eq("provider_message_id", providerMessageId);
+  // Callbacks are not ordered. A late "sent" must not walk a message back from
+  // delivered or failed to looking like it is still in flight.
+  const messageId = new URL(request.url).searchParams.get("message");
+  let query = database.from("messages").update(update);
+  query = messageId
+    ? query.eq("id", messageId)
+    : providerMessageId
+      ? query.eq("provider_message_id", providerMessageId)
+      : query.eq("id", "");
+
+  if (status === "sent") query = query.in("status", ["queued", "sending"]);
+
+  await query;
 
   return NextResponse.json({ ok: true });
 }

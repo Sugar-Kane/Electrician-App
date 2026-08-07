@@ -26,7 +26,7 @@ export default async function ConversationPage({
       title={thread.customerName}
       eyebrow="Conversation"
       description={thread.phone}
-      active="More"
+      active="Messages"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <Link
