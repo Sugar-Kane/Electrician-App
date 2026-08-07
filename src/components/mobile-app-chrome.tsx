@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Home,
   Menu,
+  MessagesSquare,
   MoreHorizontal,
   Plus,
   PlugZap,
@@ -17,7 +18,6 @@ import {
   Route,
   Search,
   Settings,
-  UserRound,
   UsersRound,
   X,
   Zap,
@@ -38,6 +38,7 @@ const menuItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: Home, description: "Today’s business overview" },
   { label: "Full schedule", href: "/schedule", icon: CalendarDays, description: "Calendar and every job" },
   { label: "Jobs", href: "/schedule?view=jobs", icon: BriefcaseBusiness, description: "Open and upcoming work" },
+  { label: "Messages", href: "/messages", icon: MessagesSquare, description: "Texts with customers" },
   { label: "Customers", href: "/search?scope=customers", icon: UsersRound, description: "Customer and property records" },
   { label: "Invoices", href: "/invoices", icon: ReceiptText, description: "Paid, unpaid, and overdue" },
   { label: "Files", href: "/files", icon: FolderOpen, description: "Job documents and cloud sync" },
@@ -51,7 +52,7 @@ const bottomItems = [
   { label: "Home", href: "/", icon: Home },
   { label: "Jobs", href: "/schedule?view=jobs", icon: BriefcaseBusiness },
   { label: "New", href: "/#new-job", icon: Plus, primary: true },
-  { label: "Customers", href: "/search?scope=customers", icon: UserRound },
+  { label: "Messages", href: "/messages", icon: MessagesSquare },
   { label: "More", href: "/search", icon: MoreHorizontal },
 ];
 
