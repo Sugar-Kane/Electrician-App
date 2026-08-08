@@ -7,7 +7,6 @@ import { Boxes, Check, ChevronLeft, Clock3, Crosshair, Home, MapPin, Navigation,
 import {
   buildAppleDirectionsUrl,
   buildGoogleDirectionsUrl,
-  getPilotJob,
   getPilotSupplyStore,
   pilotJobs,
   serviceBase,
@@ -58,10 +57,20 @@ export function RouteOptimizer({
   focusJobId,
   initialSupplier = "lowes",
   initialSupplyStore,
+  jobs = pilotJobs,
+  today = "",
 }: {
   focusJobId?: string;
   initialSupplier?: SupplierId;
   initialSupplyStore?: SupplyStore;
+  /** The day's jobs. Passed in from the server so the route follows real work. */
+  jobs?: PilotJob[];
+  /**
+   * Today's date in the business's timezone, resolved on the server. Computing
+   * it here would render one day on the server and possibly another in the
+   * browser, which is a hydration mismatch on every van at midnight.
+   */
+  today?: string;
 }) {
   const [built, setBuilt] = useState(false);
   const [supplier, setSupplier] = useState<SupplierId>(initialSupplier);
@@ -148,18 +157,24 @@ export function RouteOptimizer({
   const usingFallbackStart = (startMode === "current" && !position) || (startMode === "custom" && !savedStartAddress);
 
   const routeStops = useMemo<RouteStop[]>(() => {
-    const today = pilotJobs.filter((job) => job.date === "2026-08-03");
-    const focusJob = focusJobId ? getPilotJob(focusJobId) : undefined;
+    // Today's work, and when nothing is booked today the next day that has
+    // jobs — an empty route builder is no use to a driver.
+    const dayWithWork =
+      jobs.find((job) => job.date === today)?.date ??
+      jobs.find((job) => job.date >= today)?.date ??
+      jobs[0]?.date;
+    const dayJobs = jobs.filter((job) => job.date === dayWithWork);
+    const focusJob = focusJobId ? jobs.find((job) => job.id === focusJobId) : undefined;
     const selectedJobs = focusJob
-      ? [focusJob, ...today.filter((job) => job.id !== focusJob.id).slice(0, 2)]
-      : [today[0], today[2], today[3]].filter(Boolean);
+      ? [focusJob, ...dayJobs.filter((job) => job.id !== focusJob.id).slice(0, 2)]
+      : dayJobs.slice(0, 3);
 
     return [
       startStop,
       { id: supplyStore.id, label: supplyStore.name, address: supplyStore.address, detail: `Supply pickup${supplyStore.storeNumber ? ` · Store #${supplyStore.storeNumber}` : ""} · user-confirmed retailer stop`, kind: "supply" },
       ...selectedJobs.map((job) => ({ id: job.id, label: job.customer, address: `${job.address}, ${job.city}`, detail: `${job.time} · ${job.workType}`, kind: "job" as const, job })),
     ];
-  }, [focusJobId, startStop, supplyStore]);
+  }, [focusJobId, jobs, startStop, supplyStore, today]);
 
   const addresses = routeStops.map((stop) => stop.address);
   const googleUrl = buildGoogleDirectionsUrl(addresses);

@@ -4,50 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Boxes,
   BriefcaseBusiness,
-  CalendarDays,
-  FolderOpen,
   Home,
   Menu,
   MessagesSquare,
   MoreHorizontal,
   Plus,
-  PlugZap,
-  ReceiptText,
-  Route,
   Search,
-  Settings,
-  UsersRound,
   X,
   Zap,
-  type LucideIcon,
 } from "lucide-react";
 
+import { ALL_NAV_ITEMS } from "@/components/app-sidebar";
 import { pilotJobs } from "@/lib/pilot-data";
 import { AccountMenu } from "@/components/account-menu";
-
-type NavItem = {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  description: string;
-};
-
-const menuItems: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: Home, description: "Today’s business overview" },
-  { label: "Full schedule", href: "/schedule", icon: CalendarDays, description: "Calendar and every job" },
-  { label: "Jobs", href: "/schedule?view=jobs", icon: BriefcaseBusiness, description: "Open and upcoming work" },
-  { label: "Messages", href: "/messages", icon: MessagesSquare, description: "Texts with customers" },
-  { label: "Customers", href: "/search?scope=customers", icon: UsersRound, description: "Customer and property records" },
-  { label: "Invoices", href: "/invoices", icon: ReceiptText, description: "Paid, unpaid, and overdue" },
-  { label: "Files", href: "/files", icon: FolderOpen, description: "Job documents and cloud sync" },
-  { label: "Materials", href: "/materials", icon: Boxes, description: "Needs, truck stock, and sourcing" },
-  { label: "Route builder", href: "/route", icon: Route, description: "Optimize before opening maps" },
-  { label: "Supplier connections", href: "/settings/integrations", icon: PlugZap, description: "Lowe’s and Home Depot programs" },
-  { label: "Automatic messages", href: "/settings/messages", icon: MessagesSquare, description: "What gets texted, and when" },
-  { label: "Account settings", href: "/account", icon: Settings, description: "Profile, premium, app, and Square" },
-];
 
 const bottomItems = [
   { label: "Home", href: "/", icon: Home },
@@ -98,7 +68,7 @@ export function MobileAppChrome({
       href: `/jobs/${job.id}`,
       icon: BriefcaseBusiness,
     }));
-    const allResults = [...jobResults, ...menuItems];
+    const allResults = [...jobResults, ...ALL_NAV_ITEMS];
     if (!normalized) return allResults.slice(0, 8);
     return allResults.filter((item) =>
       `${item.label} ${item.description}`.toLowerCase().includes(normalized),
@@ -171,7 +141,7 @@ export function MobileAppChrome({
             <div className="flex items-center justify-between"><Brand /><button type="button" onClick={() => setMenuOpen(false)} className="tap-target grid h-11 w-11 place-items-center rounded-xl border border-white/10" aria-label="Close menu"><X className="h-5 w-5" aria-hidden /></button></div>
             <p className="mb-3 mt-7 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Run the business</p>
             <nav className="space-y-2" aria-label="Main menu links">
-              {menuItems.map(({ label, href, icon: Icon, description }) => (
+              {ALL_NAV_ITEMS.map(({ label, href, icon: Icon, description }) => (
                 <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="flex min-h-14 items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2 active:bg-white/10">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/5 text-[#ffc21c]"><Icon className="h-[18px] w-[18px]" aria-hidden /></span>
                   <span className="min-w-0"><span className="block text-sm font-semibold">{label}</span><span className="block truncate text-[11px] text-slate-400">{description}</span></span>

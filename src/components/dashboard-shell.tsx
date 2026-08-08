@@ -1,36 +1,25 @@
 import Link from "next/link";
 import {
   Bell,
-  Bot,
-  Boxes,
-  BriefcaseBusiness,
   CalendarDays,
   Camera,
-  ChartNoAxesCombined,
   ChevronRight,
   CircleDollarSign,
   ClipboardCheck,
   FileCheck2,
-  FileText,
-  FolderOpen,
-  LayoutDashboard,
   Navigation,
   PackageOpen,
   Plus,
-  ReceiptText,
   Route,
   Search,
   Send,
-  Settings,
   ShieldCheck,
-  ShoppingCart,
-  UsersRound,
   WandSparkles,
   Wrench,
   Zap,
-  type LucideIcon,
 } from "lucide-react";
 
+import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { AccountMenu } from "@/components/account-menu";
 import type {
@@ -39,82 +28,6 @@ import type {
   TechnicianMarker,
 } from "@/lib/dashboard";
 
-const navItems: { label: string; href: string; icon: LucideIcon }[] = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Schedule", href: "/schedule", icon: CalendarDays },
-  { label: "Jobs", href: "/schedule?view=jobs", icon: BriefcaseBusiness },
-  { label: "Customers", href: "/search?scope=customers", icon: UsersRound },
-  { label: "Estimates", href: "/search?scope=estimates", icon: FileText },
-  { label: "Invoices", href: "/invoices", icon: ReceiptText },
-  { label: "Files", href: "/files", icon: FolderOpen },
-  { label: "Inventory", href: "/materials", icon: Boxes },
-  { label: "Purchase orders", href: "/materials?view=orders", icon: ShoppingCart },
-  { label: "Reports", href: "/invoices?status=paid", icon: ChartNoAxesCombined },
-  { label: "AI assistant", href: "/#assistant", icon: Bot },
-  { label: "Settings", href: "/account?section=preferences#preferences", icon: Settings },
-];
-
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <Link href="#dashboard" className="flex items-center gap-2.5" aria-label="Volteira home">
-      <span className="flex h-10 w-8 items-center justify-center text-[#ffbf18]">
-        <Zap className="h-9 w-9 fill-current" strokeWidth={1.5} aria-hidden />
-      </span>
-      <span className={compact ? "text-lg font-bold" : "text-xl font-bold"}>
-        VOLTEIRA
-      </span>
-    </Link>
-  );
-}
-
-function Sidebar({ businessName, ownerName }: { businessName: string; ownerName: string }) {
-  const initials = ownerName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-
-  return (
-    <aside className="hidden min-h-[calc(100vh-16px)] flex-col rounded-[24px] border border-white/10 bg-[#071723] px-3 py-5 text-white shadow-2xl shadow-black/20 lg:flex">
-      <div className="px-3 pb-6">
-        <Brand />
-        <p className="mt-1 pl-[42px] text-[8px] font-semibold tracking-[0.12em] text-slate-400">
-          ELECTRICAL BUSINESS MANAGEMENT
-        </p>
-      </div>
-
-      <nav className="flex-1 space-y-1" aria-label="Primary navigation">
-        {navItems.map(({ label, href, icon: Icon }, index) => (
-          <Link
-            key={label}
-            href={href}
-            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
-              index === 0
-                ? "bg-white/10 font-semibold text-[#ffc21c] shadow-inner shadow-white/5"
-                : "text-slate-300 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
-            <span>{label}</span>
-          </Link>
-        ))}
-      </nav>
-
-      <Link href="/account" className="tap-row mt-6 rounded-2xl border border-white/10 bg-[#0b1d2b] p-3" aria-label="Open account settings">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#ffcb34] to-[#f7931d] text-sm font-bold text-[#071723]">
-            {initials || "U"}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{ownerName}</p>
-            <p className="truncate text-[11px] text-slate-400">{businessName}</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-slate-500" aria-hidden />
-        </div>
-      </Link>
-    </aside>
-  );
-}
 
 function Sparkline({ values, large = false }: { values: number[]; large?: boolean }) {
   const max = Math.max(...values);
@@ -187,12 +100,29 @@ function MetricCard({ metric, href }: { metric: DashboardMetric; href: string })
   );
 }
 
-function Header({ ownerName, source }: { ownerName: string; source: DashboardSnapshot["source"] }) {
+function Header({
+  ownerName,
+  source,
+  timeZone,
+}: {
+  ownerName: string;
+  source: DashboardSnapshot["source"];
+  timeZone: string;
+}) {
+  // The business's day and hour, not the server's — production runs in UTC,
+  // which would wish a Pacific crew good morning at 5pm and date the page a
+  // day ahead of the schedule.
+  const now = new Date();
   const dateLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone,
     weekday: "long",
     month: "short",
     day: "numeric",
-  }).format(new Date());
+  }).format(now);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hour12: false }).format(now),
+  );
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <header className="flex items-center justify-between gap-4">
@@ -200,7 +130,7 @@ function Header({ ownerName, source }: { ownerName: string; source: DashboardSna
         <div className="flex items-center gap-2.5">
           <Zap className="h-7 w-7 fill-[#ffbf18] text-[#ffbf18]" aria-hidden />
           <h1 className="text-[26px] font-semibold tracking-[-0.035em]">
-            Good morning, {ownerName}
+            {greeting}, {ownerName}
           </h1>
         </div>
         <div className="mt-1 flex items-center gap-2 pl-10 text-xs text-slate-500">
@@ -488,9 +418,9 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
     <main id="dashboard" className="min-h-screen bg-[#06131d] p-2 sm:p-3">
       <MobileAppChrome active="Home" />
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
-        <Sidebar businessName={snapshot.businessName} ownerName={snapshot.ownerName} />
+        <AppSidebar businessName={snapshot.businessName} ownerName={snapshot.ownerName} />
         <div className="dashboard-canvas min-w-0 rounded-[24px] bg-[#f5f7f9] p-4 shadow-2xl shadow-black/15 sm:p-6 lg:min-h-[calc(100vh-24px)] lg:p-7">
-          <Header ownerName={snapshot.ownerName} source={snapshot.source} />
+          <Header ownerName={snapshot.ownerName} source={snapshot.source} timeZone={snapshot.timezone} />
 
           <div
             className="metric-scroll mt-6 grid gap-3 overflow-x-auto pb-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffbf18] lg:grid-cols-5 lg:overflow-visible lg:pb-0"

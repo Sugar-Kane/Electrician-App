@@ -1,5 +1,8 @@
 import { FieldPageShell } from "@/components/field-page-shell";
 import { RouteOptimizer } from "@/components/route-optimizer";
+import { todayInZone } from "@/lib/calendar";
+import { getJobs } from "@/lib/job-data";
+import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import type { SupplierId, SupplyStore } from "@/lib/pilot-data";
 
 type RouteSearchParams = {
@@ -15,8 +18,16 @@ function cleanValue(value: string | string[] | undefined, maximumLength: number)
   return first?.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, maximumLength) ?? "";
 }
 
+// The route is built around today, so it must not be served from a cache built
+// on a previous day.
+export const dynamic = "force-dynamic";
+
 export default async function RoutePage({ searchParams }: { searchParams: Promise<RouteSearchParams> }) {
-  const query = await searchParams;
+  const [query, timeZone, { jobs }] = await Promise.all([
+    searchParams,
+    getOrganizationTimezone(),
+    getJobs(),
+  ]);
   const job = cleanValue(query.job, 40);
   const supplier = cleanValue(query.supplier, 24);
   const initialSupplier: SupplierId = supplier === "home-depot" ? "home-depot" : "lowes";
@@ -34,7 +45,7 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
 
   return (
     <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="Volteira builds and locks the stop order first. Navigation opens only after you approve the route." active="More">
-      <RouteOptimizer focusJobId={job || undefined} initialSupplier={initialSupplier} initialSupplyStore={initialSupplyStore} />
+      <RouteOptimizer focusJobId={job || undefined} initialSupplier={initialSupplier} initialSupplyStore={initialSupplyStore} jobs={jobs} today={todayInZone(timeZone)} />
     </FieldPageShell>
   );
 }
