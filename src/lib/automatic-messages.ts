@@ -47,8 +47,13 @@ export async function sendJobEventMessage(input: {
     const customerId = text(job.customer_id);
     if (!organizationId || !customerId) return { sent: false, reason: "Job is incomplete." };
 
-    const [{ data: consentRow }, { data: templateRow }, { data: settingsRow }, { data: orgRow }] =
-      await Promise.all([
+    const [
+      { data: consentRow },
+      { data: templateRow },
+      { data: settingsRow },
+      { data: serviceRow },
+      { data: orgRow },
+    ] = await Promise.all([
         database
           .from("messaging_consent")
           .select("opted_in_at, opted_out_at")
@@ -67,6 +72,11 @@ export async function sendJobEventMessage(input: {
         database
           .from("messaging_settings")
           .select("messaging_service_sid, quiet_hours_start, quiet_hours_end")
+          .eq("organization_id", organizationId)
+          .maybeSingle(),
+        database
+          .from("service_settings")
+          .select("free_reschedule_hours, diagnostic_fee_cents")
           .eq("organization_id", organizationId)
           .maybeSingle(),
         database
@@ -121,6 +131,14 @@ export async function sendJobEventMessage(input: {
         ),
         job_number: job.job_number ? String(job.job_number) : "",
         technician_name: text(technician.display_name),
+        reschedule_hours:
+          typeof serviceRow?.free_reschedule_hours === "number"
+            ? String(serviceRow.free_reschedule_hours)
+            : "",
+        diagnostic_fee:
+          typeof serviceRow?.diagnostic_fee_cents === "number"
+            ? `$${(serviceRow.diagnostic_fee_cents / 100).toFixed(0)}`
+            : "",
       },
     });
 

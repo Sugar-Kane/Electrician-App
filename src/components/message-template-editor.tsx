@@ -2,13 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Check, LoaderCircle, MoonStar, Zap } from "lucide-react";
+import { Check, LoaderCircle, MoonStar, TriangleAlert, Zap } from "lucide-react";
 
 import {
   saveMessageTemplate,
   type TemplateActionState,
 } from "@/app/settings/messages/actions";
-import { renderTemplate, triggerIgnoresQuietHours } from "@/lib/message-templates";
+import {
+  renderTemplate,
+  TEMPLATE_VARIABLE_NAMES,
+  triggerIgnoresQuietHours,
+  unresolvedPlaceholders,
+} from "@/lib/message-templates";
 
 const initialState: TemplateActionState = { error: "" };
 
@@ -20,6 +25,8 @@ const PREVIEW_VARIABLES = {
   arrival_window: "Tue Aug 11, 8:00-10:00 AM",
   job_number: "1042",
   technician_name: "Nick",
+  reschedule_hours: "24",
+  diagnostic_fee: "$149",
 };
 
 function SaveButton() {
@@ -55,6 +62,10 @@ export function MessageTemplateEditor({
 
   const preview = renderTemplate(draft, PREVIEW_VARIABLES);
   const timeCritical = triggerIgnoresQuietHours(trigger);
+  // Named against the full preview set, so what shows up here is a placeholder
+  // the sending path has no value for at all — not one that merely happens to
+  // be blank for this customer.
+  const unsupported = unresolvedPlaceholders(draft, PREVIEW_VARIABLES);
 
   return (
     <form action={formAction} className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 sm:p-6">
@@ -91,6 +102,17 @@ export function MessageTemplateEditor({
         </span>
         {preview || "This would send nothing."}
       </p>
+
+      {unsupported.length > 0 ? (
+        <p className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] p-3 text-xs leading-5 text-amber-100">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>
+            This will not send while it contains{" "}
+            {unsupported.map((name) => `{{${name}}}`).join(", ")} — nothing fills those in
+            yet. Available: {TEMPLATE_VARIABLE_NAMES.map((name) => `{{${name}}}`).join(", ")}.
+          </span>
+        </p>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 text-[11px] text-slate-500">

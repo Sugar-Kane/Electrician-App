@@ -28,6 +28,8 @@ export type TemplateVariables = {
   arrival_window?: string;
   job_number?: string;
   technician_name?: string;
+  reschedule_hours?: string;
+  diagnostic_fee?: string;
 };
 
 export const TEMPLATE_VARIABLE_NAMES = [
@@ -37,6 +39,8 @@ export const TEMPLATE_VARIABLE_NAMES = [
   "arrival_window",
   "job_number",
   "technician_name",
+  "reschedule_hours",
+  "diagnostic_fee",
 ] as const;
 
 /**
@@ -60,12 +64,31 @@ export function triggerIgnoresQuietHours(trigger: string): boolean {
 }
 
 /**
+ * Placeholders in a template that this code cannot fill.
+ *
+ * The deployed templates were written against a wider vocabulary than the
+ * sending path implements — {{invoice_link}}, {{eta}}, {{review_link}} and
+ * others — so this is the difference between what a template asks for and what
+ * can be supplied.
+ */
+export function unresolvedPlaceholders(body: string, variables: TemplateVariables): string[] {
+  const found = new Set<string>();
+  for (const match of body.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/gi)) {
+    const name = match[1].toLowerCase();
+    const value = variables[name as keyof TemplateVariables];
+    if (typeof value !== "string" || value.length === 0) found.add(name);
+  }
+  return [...found];
+}
+
+/**
  * Substitute {{placeholders}}.
  *
  * An unknown or empty placeholder renders as nothing rather than as literal
  * braces: a customer seeing "Hi {{customer_first_name}}" is worse than a
  * slightly clipped greeting, and it is the kind of thing that reaches a carrier
- * as a complaint.
+ * as a complaint. Blanking alone is not enough to send on, though — see
+ * decideAutomaticSend.
  */
 export function renderTemplate(body: string, variables: TemplateVariables): string {
   return body
@@ -100,6 +123,18 @@ export function decideAutomaticSend(input: {
 
   if (input.currentlyQuiet && !triggerIgnoresQuietHours(input.trigger)) {
     return { send: false, reason: "Quiet hours, and this message can wait." };
+  }
+
+  // Refusing beats blanking. The deployed job_confirmed template reads "Free
+  // reschedule up to {{reschedule_hours}}h before"; blanking an unfillable
+  // placeholder sends "Free reschedule up to h before" to a real customer.
+  // Sending nothing and surfacing the problem is the lesser failure.
+  const missing = unresolvedPlaceholders(input.template.body, input.variables);
+  if (missing.length > 0) {
+    return {
+      send: false,
+      reason: `Template needs values this event cannot supply: ${missing.map((name) => `{{${name}}}`).join(", ")}.`,
+    };
   }
 
   const body = renderTemplate(input.template.body, input.variables);
