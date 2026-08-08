@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
 export type DashboardMetric = {
   label: string;
@@ -31,6 +32,8 @@ export type TechnicianMarker = {
 
 export type DashboardSnapshot = {
   source: "demo" | "supabase";
+  /** The business timezone. The header's date and greeting are read from it. */
+  timezone: string;
   requiresOnboarding: boolean;
   businessName: string;
   businessSlug: string | null;
@@ -46,6 +49,7 @@ export type DashboardSnapshot = {
 
 const demoSnapshot: DashboardSnapshot = {
   source: "demo",
+  timezone: DEFAULT_TIMEZONE,
   requiresOnboarding: false,
   businessName: "Pacific Plains Electric",
   businessSlug: null,
@@ -168,7 +172,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
     const { data: membership } = await supabase
       .from("organization_members")
-      .select("organization_id, organizations(name,slug)")
+      .select("organization_id, organizations(name,slug,timezone)")
       .eq("user_id", authData.user.id)
       .limit(1)
       .maybeSingle();
@@ -239,16 +243,19 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       maximumFractionDigits: 0,
     });
 
+    const organization = membership.organizations as unknown as {
+      name?: string;
+      slug?: string;
+      timezone?: string;
+    } | null;
+
     return {
       ...demoSnapshot,
       source: "supabase",
       requiresOnboarding: false,
-      businessName:
-        (membership.organizations as unknown as { name?: string; slug?: string } | null)?.name ??
-        demoSnapshot.businessName,
-      businessSlug:
-        (membership.organizations as unknown as { name?: string; slug?: string } | null)?.slug ??
-        null,
+      businessName: organization?.name ?? demoSnapshot.businessName,
+      businessSlug: organization?.slug ?? null,
+      timezone: organization?.timezone || DEFAULT_TIMEZONE,
       ownerName:
         (typeof profile.data?.display_name === "string" ? profile.data.display_name : null) ??
         technicians.data?.find(
