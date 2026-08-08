@@ -9,6 +9,7 @@ import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { isSupportedTimezone, timezoneLabel } from "@/lib/timezones";
 
 type AccountContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
@@ -73,7 +74,6 @@ export async function updateProfile(formData: FormData) {
   const email = value(formData, "email").toLowerCase();
   const phone = value(formData, "phone");
   const jobTitle = value(formData, "jobTitle");
-  const timezone = value(formData, "timezone");
 
   if (displayName.length < 2 || displayName.length > 120) {
     redirect(accountUrl("profile", "error", "Enter a name between 2 and 120 characters."));
@@ -86,9 +86,6 @@ export async function updateProfile(formData: FormData) {
   }
   if (jobTitle && (jobTitle.length < 2 || jobTitle.length > 80)) {
     redirect(accountUrl("profile", "error", "Enter a job title between 2 and 80 characters."));
-  }
-  if (timezone.length < 3 || timezone.length > 80) {
-    redirect(accountUrl("profile", "error", "Choose a valid timezone."));
   }
 
   if (email !== context.user.email?.toLowerCase()) {
@@ -104,7 +101,6 @@ export async function updateProfile(formData: FormData) {
       display_name: displayName,
       phone: phone || null,
       job_title: jobTitle || null,
-      timezone,
     },
     { onConflict: "user_id" },
   );
@@ -130,6 +126,49 @@ export async function updateProfile(formData: FormData) {
       ? "Profile saved. Check both email addresses to confirm the email change."
       : "Profile saved.";
   redirect(accountUrl("profile", "saved", message));
+}
+
+/**
+ * Set the business timezone.
+ *
+ * `organizations.timezone` is what quiet hours, arrival windows, message
+ * timestamps and the schedule are rendered in, so this is a business setting
+ * rather than a personal one — a crew that disagreed about what "today" means
+ * would send customers conflicting arrival times. The user's own
+ * `user_profiles.timezone` is kept in step so the two never drift apart.
+ */
+export async function updateTimezone(formData: FormData) {
+  const context = await getAccountContext();
+  if (!context) redirect("/login?next=/account");
+  if (!context.organizationId || !canManageBusiness(context)) {
+    redirect(accountUrl("timezone", "error", "Only an owner or administrator can change the business timezone."));
+  }
+
+  const timezone = value(formData, "timezone");
+  if (!isSupportedTimezone(timezone)) {
+    redirect(accountUrl("timezone", "error", "Choose a timezone from the list."));
+  }
+
+  const { error } = await context.database
+    .from("organizations")
+    .update({ timezone })
+    .eq("id", context.organizationId);
+  if (error) {
+    redirect(accountUrl("timezone", "error", "The business timezone could not be saved."));
+  }
+
+  // An update rather than an upsert: user_profiles.display_name is required, and
+  // a personal timezone is not worth inventing a profile row for.
+  await context.database
+    .from("user_profiles")
+    .update({ timezone })
+    .eq("user_id", context.user.id);
+
+  // Every dated screen reads this, so none of them may keep a stale render.
+  revalidatePath("/", "layout");
+  redirect(
+    accountUrl("timezone", "saved", `Business timezone set to ${timezoneLabel(timezone)}.`),
+  );
 }
 
 export async function uploadAvatar(formData: FormData) {

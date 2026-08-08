@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   CircleUserRound,
+  Clock3,
   CreditCard,
   ExternalLink,
   KeyRound,
@@ -27,15 +28,18 @@ import {
   updatePreferences,
   updateProfile,
   updateSquareAccount,
+  updateTimezone,
   uploadAvatar,
 } from "@/app/account/actions";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
+import { currentTimeIn, timezoneLabel, TIMEZONE_OPTIONS } from "@/lib/timezones";
 
 export const metadata: Metadata = { title: "Account | Volteira" };
 
 const sections = [
   { id: "profile", label: "Profile", icon: UserRound },
+  { id: "timezone", label: "Timezone", icon: Clock3 },
   { id: "subscription", label: "Premium", icon: CreditCard },
   { id: "preferences", label: "App settings", icon: MonitorSmartphone },
   { id: "square", label: "Square", icon: Store },
@@ -103,6 +107,8 @@ export default async function AccountPage({
   const avatarStyle = account.avatarUrl
     ? { backgroundImage: `url(${JSON.stringify(account.avatarUrl).slice(1, -1)})` }
     : undefined;
+  const businessClock =
+    currentTimeIn(account.businessTimezone) || timezoneLabel(account.businessTimezone);
   const periodEnd = account.subscription.currentPeriodEnd
     ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
         new Date(account.subscription.currentPeriodEnd),
@@ -226,23 +232,55 @@ export default async function AccountPage({
               Phone
               <input className={inputClass} name="phone" defaultValue={account.phone} autoComplete="tel" inputMode="tel" maxLength={30} placeholder="(805) 555-0100" />
             </label>
-            <label className={`${labelClass} sm:col-span-2`}>
-              Timezone
-              <select className={inputClass} name="timezone" defaultValue={account.timezone}>
-                <option value="America/Los_Angeles">Pacific Time</option>
-                <option value="America/Denver">Mountain Time</option>
-                <option value="America/Chicago">Central Time</option>
-                <option value="America/New_York">Eastern Time</option>
-                <option value="America/Phoenix">Arizona Time</option>
-                <option value="Pacific/Honolulu">Hawaii Time</option>
-              </select>
-            </label>
             <div className="sm:col-span-2 sm:flex sm:justify-end">
               <button type="submit" className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] sm:w-auto">
                 Save profile
               </button>
             </div>
           </form>
+        </section>
+
+        <section id="timezone" className={cardClass}>
+          <div className="flex items-start gap-3">
+            <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+            <div>
+              <h2 className="font-semibold">Business timezone</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                Schedules, arrival windows, message timestamps, and text-message quiet hours are all shown and sent in this timezone. It applies to everyone in the business.
+              </p>
+            </div>
+          </div>
+
+          <form action={updateTimezone} className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+            <label className={labelClass}>
+              Timezone
+              <select
+                className={inputClass}
+                name="timezone"
+                defaultValue={account.businessTimezone}
+                disabled={!account.canManageBusiness}
+              >
+                {TIMEZONE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-2 block text-[10px] font-normal leading-4 text-slate-500">
+                It is currently {businessClock} for the business.
+              </span>
+            </label>
+            <button
+              type="submit"
+              disabled={!account.canManageBusiness}
+              className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              Save timezone
+            </button>
+          </form>
+          {!account.canManageBusiness ? (
+            <p className="mt-4 text-xs text-slate-400">Only an owner or administrator can change the business timezone.</p>
+          ) : null}
         </section>
 
         <section id="subscription" className={cardClass}>

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { todayInZone } from "@/lib/calendar";
+import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import {
   buildStandardDocumentName,
   getDocumentWorkspace,
@@ -74,14 +76,18 @@ export default async function FilesPage({
 }: {
   searchParams: Promise<{ connected?: string; drive?: string; setup?: string; job?: string }>;
 }) {
-  const [workspace, query] = await Promise.all([getDocumentWorkspace(), searchParams]);
+  const [workspace, query, timeZone] = await Promise.all([
+    getDocumentWorkspace(),
+    searchParams,
+    getOrganizationTimezone(),
+  ]);
   const connected = workspace.connection?.status === "connected";
   const connectHref =
     workspace.organizationId && workspace.googleDriveReady
       ? `/api/integrations/google-drive/connect?organization_id=${encodeURIComponent(workspace.organizationId)}`
       : "#setup";
   const namingExample = buildStandardDocumentName({
-    date: "2026-08-03",
+    date: todayInZone(timeZone),
     jobNumber: query.job ?? "1045",
     customerName: "John Smith",
     documentType: "photo-before",

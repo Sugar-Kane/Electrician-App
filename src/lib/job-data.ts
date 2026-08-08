@@ -2,6 +2,8 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
+import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import {
   pilotInvoices,
   pilotJobs,
@@ -82,8 +84,35 @@ async function resolveContext() {
   return {
     database: asFlexibleClient(supabase),
     organizationId,
-    timeZone: org?.timezone ?? "America/Los_Angeles",
+    timeZone: org?.timezone || DEFAULT_TIMEZONE,
   };
+}
+
+/**
+ * Slide the demo jobs onto the current work week.
+ *
+ * The pilot data is written against a fixed week in August 2026. Left alone it
+ * would make the schedule look empty forever to anyone signed out or still
+ * setting up, because the calendar now shows the real current week.
+ */
+function rebaseDemoJobs(jobs: PilotJob[], timeZone: string): PilotJob[] {
+  const demoStart = jobs.reduce(
+    (earliest, job) => (job.date && job.date < earliest ? job.date : earliest),
+    jobs[0]?.date ?? "",
+  );
+  if (!demoStart) return jobs;
+
+  const offset =
+    (Date.parse(`${workWeekStart(todayInZone(timeZone))}T12:00:00Z`) -
+      Date.parse(`${workWeekStart(demoStart)}T12:00:00Z`)) /
+    86_400_000;
+  if (offset === 0) return jobs;
+
+  return jobs.map((job) => {
+    if (!job.date) return job;
+    const date = shiftDays(job.date, offset);
+    return { ...job, date, dateLabel: formatDayLabel(date) };
+  });
 }
 
 // deno-lint-ignore-file
@@ -101,7 +130,10 @@ function mapJob(row: any, timeZone: string): PilotJob {
 
   return {
     id: String(row.job_number ?? row.id),
-    date: inZone(row.scheduled_start, timeZone, { year: "numeric", month: "2-digit", day: "2-digit" }),
+    // YYYY-MM-DD, because the schedule matches jobs to a calendar day by this
+    // exact string. en-US formatting would produce "08/03/2026" and quietly
+    // match nothing.
+    date: row.scheduled_start ? isoDateInZone(new Date(row.scheduled_start), timeZone) : "",
     dateLabel: inZone(row.scheduled_start, timeZone, { weekday: "short", month: "short", day: "numeric" }),
     time: inZone(row.scheduled_start, timeZone, { hour: "numeric", minute: "2-digit" }),
     endTime: inZone(row.scheduled_end, timeZone, { hour: "numeric", minute: "2-digit" }),
@@ -139,7 +171,7 @@ const JOB_SELECT = `
 
 export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {
   const context = await resolveContext();
-  if (!context) return { jobs: pilotJobs, source: "demo" };
+  if (!context) return { jobs: rebaseDemoJobs(pilotJobs, DEFAULT_TIMEZONE), source: "demo" };
 
   const { data, error } = await context.database
     .from("jobs")
@@ -148,14 +180,17 @@ export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {
     .is("archived_at", null)
     .order("scheduled_start", { ascending: true });
 
-  if (error || !data?.length) return { jobs: pilotJobs, source: "demo" };
+  if (error || !data?.length) {
+    return { jobs: rebaseDemoJobs(pilotJobs, context.timeZone), source: "demo" };
+  }
   return { jobs: data.map((row) => mapJob(row, context.timeZone)), source: "supabase" };
 }
 
 export async function getJob(id: string): Promise<{ job: PilotJob | null; source: Source }> {
   const context = await resolveContext();
   if (!context) {
-    return { job: pilotJobs.find((j) => j.id === id) ?? null, source: "demo" };
+    const jobs = rebaseDemoJobs(pilotJobs, DEFAULT_TIMEZONE);
+    return { job: jobs.find((j) => j.id === id) ?? null, source: "demo" };
   }
 
   // Pages link by job_number, which is what mapJob exposes as `id`.
@@ -170,7 +205,8 @@ export async function getJob(id: string): Promise<{ job: PilotJob | null; source
     : await query.eq("id", id).maybeSingle();
 
   if (error || !data) {
-    return { job: pilotJobs.find((j) => j.id === id) ?? null, source: "demo" };
+    const jobs = rebaseDemoJobs(pilotJobs, context.timeZone);
+    return { job: jobs.find((j) => j.id === id) ?? null, source: "demo" };
   }
   return { job: mapJob(data, context.timeZone), source: "supabase" };
 }

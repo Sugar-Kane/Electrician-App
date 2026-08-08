@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
 export type AccountSnapshot = {
   source: "demo" | "supabase";
@@ -15,7 +16,13 @@ export type AccountSnapshot = {
   phone: string;
   jobTitle: string;
   avatarUrl: string | null;
+  /** The user's own timezone. Kept in step with the business timezone. */
   timezone: string;
+  /**
+   * The business timezone — `organizations.timezone`. Everything customer
+   * facing is rendered in it: quiet hours, arrival windows, the schedule.
+   */
+  businessTimezone: string;
   role: string;
   initials: string;
   canManageBusiness: boolean;
@@ -71,7 +78,8 @@ const demoAccount: AccountSnapshot = {
   phone: "(805) 555-0148",
   jobTitle: "Owner",
   avatarUrl: null,
-  timezone: "America/Los_Angeles",
+  timezone: DEFAULT_TIMEZONE,
+  businessTimezone: DEFAULT_TIMEZONE,
   role: "owner",
   initials: "AK",
   canManageBusiness: true,
@@ -147,7 +155,11 @@ export async function getAccountSnapshot(): Promise<AccountSnapshot> {
     await Promise.all([
       database.from("user_profiles").select("*").eq("user_id", user.id).maybeSingle(),
       organizationId
-        ? database.from("organizations").select("name").eq("id", organizationId).maybeSingle()
+        ? database
+            .from("organizations")
+            .select("name,timezone")
+            .eq("id", organizationId)
+            .maybeSingle()
         : Promise.resolve({ data: null }),
       organizationId
         ? database
@@ -210,7 +222,8 @@ export async function getAccountSnapshot(): Promise<AccountSnapshot> {
     phone: text(profile?.phone),
     jobTitle: text(profile?.job_title, role === "owner" ? "Owner" : "Team member"),
     avatarUrl,
-    timezone: text(profile?.timezone, "America/Los_Angeles"),
+    timezone: text(profile?.timezone) || DEFAULT_TIMEZONE,
+    businessTimezone: text(organization?.timezone) || DEFAULT_TIMEZONE,
     role,
     initials: initialsFor(displayName, email),
     canManageBusiness: role === "owner" || role === "admin",
