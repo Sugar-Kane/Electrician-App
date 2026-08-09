@@ -64,6 +64,20 @@ test("malformed tokens are refused rather than thrown on", () => {
   }
 });
 
+test("the live call travels in the token, not in a tool argument", () => {
+  // A model that could name a call id could transfer or hang up someone else's.
+  const token = signMcpSessionToken({
+    session: { ...SESSION, callId: "call-abc" },
+    secret: SECRET,
+  });
+  assert.equal(readMcpSessionToken({ token, secret: SECRET })?.callId, "call-abc");
+});
+
+test("a session with no call has no call id, rather than an empty one", () => {
+  const token = signMcpSessionToken({ session: SESSION, secret: SECRET });
+  assert.equal("callId" in readMcpSessionToken({ token, secret: SECRET })!, false);
+});
+
 test("a session missing a customer is not a session", () => {
   const token = signMcpSessionToken({
     session: { ...SESSION, customerId: "" },

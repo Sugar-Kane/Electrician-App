@@ -12,6 +12,7 @@ import { type ToolResult } from "@/lib/mcp-protocol";
 import { type McpSession } from "@/lib/mcp-session-token";
 import { decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { referCall } from "@/lib/xai-calls";
 
 /**
  * Running a booking tool against the real schedule.
@@ -48,21 +49,37 @@ export async function runBookingTool(input: {
   const callerText = customerWords(input.args);
   const action = decideIntakeAction({ decision, customerText: callerText, context });
 
-  await recordBookingRequest({
-    database: input.database,
-    organizationId: input.session.organizationId,
-    customerId: input.session.customerId,
-    phone: input.session.phone,
-    action,
-    callerText,
-    model: "grok-voice",
-    decision,
-  });
+  // Attempted before the record is written, so what gets logged reflects what
+  // actually happened to the caller. A hazard still outranks it: someone who
+  // needs 911 should not be put on hold waiting for a transfer to ring.
+  let transferred = false;
+  if (input.name === "transfer_to_person" && action.kind !== "escalate") {
+    const target = process.env.ESCALATION_PHONE_NUMBER ?? "";
+    transferred = input.session.callId
+      ? await referCall({ callId: input.session.callId, target })
+      : false;
+  }
+
+  // A connected transfer is not a callback — the caller is talking to a person,
+  // and a request nobody needs to action is noise in the morning's queue.
+  if (!transferred) {
+    await recordBookingRequest({
+      database: input.database,
+      organizationId: input.session.organizationId,
+      customerId: input.session.customerId,
+      phone: input.session.phone,
+      action,
+      callerText,
+      model: "grok-voice",
+      decision,
+    });
+  }
 
   return describeOutcome({
     name: input.name,
     action,
     context,
     phone: input.session.phone,
+    transferred,
   });
 }

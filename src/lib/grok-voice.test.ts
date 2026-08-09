@@ -2,12 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  DEFAULT_VOICE,
   MAX_KEYTERMS,
   TELEPHONY_AUDIO_FORMAT,
   buildKeyterms,
   buildMcpTool,
   buildRealtimeInstructions,
   buildSessionUpdate,
+  realtimeUrlForCall,
 } from "./grok-voice.ts";
 import { BOOKING_TOOL_NAMES } from "./booking-tool-rules.ts";
 import { RECORDING_NOTICE } from "./voice-intake.ts";
@@ -104,27 +106,39 @@ test("a bearer token is sent only when there is one", () => {
   );
 });
 
-test("the session speaks the telephone's own audio format in both directions", () => {
-  // 8 kHz μ-law end to end: no resampling, and no quality lost to a conversion
-  // that only exists because a default was left alone.
-  const update = buildSessionUpdate({
-    context: CONTEXT,
-    mcpServerUrl: "https://x.test/api/mcp/t",
-    allowedTools: BOOKING_TOOL_NAMES,
-  });
-
-  assert.deepEqual(update.session.audio.input.format, TELEPHONY_AUDIO_FORMAT);
-  assert.deepEqual(update.session.audio.output.format, TELEPHONY_AUDIO_FORMAT);
-  assert.equal(TELEPHONY_AUDIO_FORMAT.rate, 8000);
-});
-
 test("the model decides when the caller has finished talking", () => {
   const update = buildSessionUpdate({
     context: CONTEXT,
     mcpServerUrl: "https://x.test/api/mcp/t",
     allowedTools: BOOKING_TOOL_NAMES,
   });
-  assert.deepEqual(update.session.audio.input.turn_detection, { type: "server_vad" });
+  assert.deepEqual(update.session.turn_detection, { type: "server_vad" });
+});
+
+test("voice and instructions sit flat on the session, as the SIP guide shows", () => {
+  const update = buildSessionUpdate({
+    context: CONTEXT,
+    mcpServerUrl: "https://x.test/api/mcp/t",
+    allowedTools: BOOKING_TOOL_NAMES,
+  });
+
+  assert.equal(update.type, "session.update");
+  assert.equal(update.session.voice, DEFAULT_VOICE);
+  assert.equal(update.session.voice, update.session.voice.toLowerCase());
+  assert.ok(update.session.instructions.includes(CONTEXT.businessName));
+});
+
+test("telephony audio is 8 kHz mu-law, for a session where we carry the media", () => {
+  // Not sent over SIP — the trunk negotiates the codec and xAI bridges it.
+  assert.equal(TELEPHONY_AUDIO_FORMAT.rate, 8000);
+  assert.equal(TELEPHONY_AUDIO_FORMAT.type, "audio/pcmu");
+});
+
+test("a call already ringing is joined by its id", () => {
+  assert.equal(
+    realtimeUrlForCall("0000-1111"),
+    "wss://api.x.ai/v1/realtime?call_id=0000-1111",
+  );
 });
 
 test("the session is given the booking tools and only the booking tools", () => {
@@ -139,6 +153,7 @@ test("the session is given the booking tools and only the booking tools", () => 
     "list_open_slots",
     "book_visit",
     "request_callback",
+    "transfer_to_person",
     "flag_emergency",
   ]);
 });

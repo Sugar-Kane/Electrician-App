@@ -87,6 +87,23 @@ export const BOOKING_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "transfer_to_person",
+    title: "Put the caller through to the electrician",
+    description:
+      "Transfer the call to the electrician's own phone. Use when the caller asks for a person, is unhappy, or the call is going nowhere. Read the result back — if the transfer fails you must tell them a callback has been logged instead.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        reason: {
+          type: "string",
+          description: "Why the caller needs a person, in one sentence.",
+        },
+      },
+      required: ["reason"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "flag_emergency",
     title: "Flag a safety emergency",
     description:
@@ -117,7 +134,7 @@ function urgency(value: unknown): "routine" | "urgent" {
 
 /** The customer's own words, which is what the hazard screen reads. */
 export function customerWords(args: Record<string, unknown>): string {
-  return text(args.description);
+  return text(args.description) || text(args.reason);
 }
 
 /**
@@ -140,6 +157,19 @@ export function buildDecision(
         contact_name: text(args.contact_name),
         description: text(args.description),
         urgency: urgency(args.urgency),
+      },
+    };
+  }
+
+  // A transfer is proposed as a callback so that an unanswered one is not a
+  // dropped customer — the same thing the <Gather> line does when a dial fails.
+  if (name === "transfer_to_person") {
+    return {
+      tool: "request_callback",
+      input: {
+        contact_name: "",
+        description: text(args.reason) || "The caller asked to speak to a person.",
+        urgency: "urgent",
       },
     };
   }
@@ -194,12 +224,23 @@ export function describeOutcome(input: {
   action: IntakeAction;
   context: IntakeContext;
   phone: string;
+  /** Whether a transfer actually connected. Only meaningful for a transfer. */
+  transferred?: boolean;
 }): ToolResult {
   const { action, context } = input;
 
   // Safety outranks the tool that was called: a "call me back" about a burning
   // smell comes back from the rules as an escalation, and is answered as one.
   if (action.kind === "escalate") return { text: emergencyScript(context) };
+
+  if (input.name === "transfer_to_person") {
+    return input.transferred
+      ? { text: "Transferring now. Say \"Putting you through now.\" and then stop talking." }
+      : {
+          isError: true,
+          text: `NOT TRANSFERRED — nobody could be reached. A callback is logged for ${input.phone}. Tell the customer plainly that you could not put them through and that ${context.businessName} will call them back shortly. Do not promise a time.`,
+        };
+  }
 
   if (input.name === "request_callback") {
     const urgent = action.kind === "callback" && action.urgency === "urgent";

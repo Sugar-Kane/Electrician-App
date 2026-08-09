@@ -24,8 +24,21 @@ import { RECORDING_NOTICE } from "./voice-intake.ts";
 export const GROK_REALTIME_URL = "wss://api.x.ai/v1/realtime";
 export const GROK_VOICE_MODEL = "grok-voice-latest";
 
-/** μ-law at 8 kHz: exactly what a telephone carries, so nothing is resampled. */
+/**
+ * μ-law at 8 kHz: exactly what a telephone carries, so nothing is resampled.
+ *
+ * Only needed on a direct WebSocket session where we carry the media. Over SIP
+ * the codec is negotiated at the trunk and xAI bridges the audio itself.
+ */
 export const TELEPHONY_AUDIO_FORMAT = { type: "audio/pcmu", rate: 8000 } as const;
+
+/** Voice names are lowercase: ara, rex, sal, eve, leo. */
+export const DEFAULT_VOICE = "eve";
+
+/** The realtime socket for a call already ringing on a SIP trunk. */
+export function realtimeUrlForCall(callId: string): string {
+  return `${GROK_REALTIME_URL}?call_id=${encodeURIComponent(callId)}`;
+}
 
 /** At most this many keyterms are accepted per session. */
 export const MAX_KEYTERMS = 100;
@@ -197,10 +210,16 @@ export function buildMcpTool(input: {
 /**
  * The `session.update` payload for one call.
  *
- * The envelope's exact nesting is the one part of this file taken from xAI's
- * realtime schema rather than from our own rules; everything inside it —
- * instructions, keyterms, the tool block — is built and tested above, so a
- * schema correction is a change to this function alone.
+ * Shaped from the SIP guide, which shows `voice`, `instructions`, and
+ * `turn_detection` flat on `session`. Over SIP the audio format is negotiated
+ * at the trunk — G.711 μ-law end to end if the carrier is configured for it —
+ * so there is nothing to declare here; `TELEPHONY_AUDIO_FORMAT` is for a direct
+ * WebSocket session, where we would be carrying the media ourselves.
+ *
+ * `keyterms` is the one field whose placement is not confirmed against the
+ * schema. It is sent flat alongside the rest; if the session parameters put it
+ * elsewhere this is a one-line move, and an unknown field being ignored costs
+ * transcription accuracy rather than a working call.
  */
 export function buildSessionUpdate(input: {
   context: IntakeContext;
@@ -213,23 +232,15 @@ export function buildSessionUpdate(input: {
   return {
     type: "session.update",
     session: {
+      voice: input.voice ?? DEFAULT_VOICE,
       instructions: buildRealtimeInstructions(input.context),
-      audio: {
-        input: {
-          format: TELEPHONY_AUDIO_FORMAT,
-          // Let the model decide when the caller has stopped talking. Fixed
-          // timeouts are what make an automated line feel like an interrogation.
-          turn_detection: { type: "server_vad" },
-          keyterms: buildKeyterms({
-            businessName: input.context.businessName,
-            serviceAreaTowns: input.serviceAreaTowns,
-          }),
-        },
-        output: {
-          format: TELEPHONY_AUDIO_FORMAT,
-          voice: input.voice ?? "Rex",
-        },
-      },
+      // Let the model decide when the caller has stopped talking. Fixed
+      // timeouts are what make an automated line feel like an interrogation.
+      turn_detection: { type: "server_vad" },
+      keyterms: buildKeyterms({
+        businessName: input.context.businessName,
+        serviceAreaTowns: input.serviceAreaTowns,
+      }),
       tools: [
         buildMcpTool({
           serverUrl: input.mcpServerUrl,

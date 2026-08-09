@@ -22,8 +22,16 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export type McpSession = {
   organizationId: string;
   customerId: string;
-  /** The number the customer called from, as Twilio delivered it. */
+  /** The number the customer called from, as the carrier delivered it. */
   phone: string;
+  /**
+   * The live call this session belongs to, when there is one.
+   *
+   * Present for a SIP call, absent otherwise. It is what lets a tool hand the
+   * caller to a person — and it is in the token for the same reason the tenant
+   * is: a model that could name a call id could hang up somebody else's.
+   */
+  callId?: string;
   /** Seconds since the epoch. A call does not outlive this. */
   expiresAt: number;
 };
@@ -46,6 +54,7 @@ export function signMcpSessionToken(input: {
     organizationId: input.session.organizationId,
     customerId: input.session.customerId,
     phone: input.session.phone,
+    ...(input.session.callId ? { callId: input.session.callId } : {}),
     expiresAt:
       Math.floor(now.getTime() / 1000) + (input.ttlSeconds ?? DEFAULT_SESSION_TTL_SECONDS),
   };
@@ -93,6 +102,7 @@ export function readMcpSessionToken(input: {
   const organizationId = typeof record.organizationId === "string" ? record.organizationId : "";
   const customerId = typeof record.customerId === "string" ? record.customerId : "";
   const phone = typeof record.phone === "string" ? record.phone : "";
+  const callId = typeof record.callId === "string" ? record.callId : "";
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : 0;
 
   if (!organizationId || !customerId || !phone) return null;
@@ -100,5 +110,5 @@ export function readMcpSessionToken(input: {
   const now = Math.floor((input.now ?? new Date()).getTime() / 1000);
   if (expiresAt <= now) return null;
 
-  return { organizationId, customerId, phone, expiresAt };
+  return { organizationId, customerId, phone, ...(callId ? { callId } : {}), expiresAt };
 }
