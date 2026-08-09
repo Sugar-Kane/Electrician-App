@@ -1,16 +1,14 @@
 import "server-only";
 
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
+import { loadIntakeContext, recordBookingRequest } from "@/lib/intake-shared";
 import {
   buildIntakeSystemPrompt,
   decideIntakeAction,
   splitName,
   type IntakeAction,
-  type IntakeContext,
-  type OfferedSlot,
 } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { sendSms } from "@/lib/twilio";
 
 /**
@@ -33,22 +31,6 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-/** "Tue Aug 11, 8:00-10:00 AM", in the business's timezone. */
-function slotLabel(start: string, end: string, timeZone: string): string {
-  const day = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(start));
-  const time = (value: string) =>
-    new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(
-      new Date(value),
-    );
-  return `${day}, ${time(start)}-${time(end)}`;
-}
-
-const MAX_OFFERED_SLOTS = 6;
 const MAX_HISTORY_TURNS = 20;
 
 export async function handleInboundText(input: {
@@ -61,54 +43,19 @@ export async function handleInboundText(input: {
   try {
     const database = getSupabaseAdmin();
 
-    const [{ data: organization }, { data: settings }, { data: messaging }, { data: history }] =
-      await Promise.all([
-        database
-          .from("organizations")
-          .select("name, phone, slug, timezone")
-          .eq("id", input.organizationId)
-          .maybeSingle(),
-        database
-          .from("service_settings")
-          .select("diagnostic_fee_cents, automatic_booking_radius_miles")
-          .eq("organization_id", input.organizationId)
-          .maybeSingle(),
-        database
-          .from("messaging_settings")
-          .select("messaging_service_sid")
-          .eq("organization_id", input.organizationId)
-          .maybeSingle(),
-        database
-          .from("messages")
-          .select("direction, body, created_at")
-          .eq("conversation_id", input.conversationId)
-          .order("created_at", { ascending: false })
-          .limit(MAX_HISTORY_TURNS),
-      ]);
+    const { data: history } = await database
+      .from("messages")
+      .select("direction, body, created_at")
+      .eq("conversation_id", input.conversationId)
+      .order("created_at", { ascending: false })
+      .limit(MAX_HISTORY_TURNS);
 
-    const timeZone = text(organization?.timezone) || DEFAULT_TIMEZONE;
-    const businessName = text(organization?.name) || "Your electrician";
-    const businessPhone = text(organization?.phone);
-    const slug = text(organization?.slug);
-
-    // Only ever offer windows the scheduler says are open. This is the same
-    // function the public booking page reads, so the model cannot offer a time
-    // the business has already filled.
-    let offeredSlots: OfferedSlot[] = [];
-    if (slug) {
-      const { data: slots } = await database.rpc("list_public_booking_slots", {
-        p_slug: slug,
-        p_from_date: new Date().toISOString().slice(0, 10),
-        p_days: 14,
-      });
-      offeredSlots = ((slots as { slot_start: string; slot_end: string }[] | null) ?? [])
-        .slice(0, MAX_OFFERED_SLOTS)
-        .map((slot) => ({
-          start: slot.slot_start,
-          end: slot.slot_end,
-          label: slotLabel(slot.slot_start, slot.slot_end, timeZone),
-        }));
-    }
+    const { context, messagingServiceSid } = await loadIntakeContext({
+      database,
+      organizationId: input.organizationId,
+      // The opt-out rides the first thing this system ever says to them.
+      isFirstReply: (history ?? []).every((row) => row.direction === "inbound"),
+    });
 
     const turns: IntakeTurn[] = (history ?? [])
       .slice()
@@ -126,19 +73,6 @@ export async function handleInboundText(input: {
       turns.push({ role: "user", text: input.body });
     }
 
-    const context: IntakeContext = {
-      businessName,
-      businessPhone: businessPhone || "our office",
-      offeredSlots,
-      diagnosticFee:
-        typeof settings?.diagnostic_fee_cents === "number"
-          ? `$${(settings.diagnostic_fee_cents / 100).toFixed(0)}`
-          : "quoted before we come out",
-      serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of the shop`,
-      // The opt-out rides the first thing this system ever says to them.
-      isFirstReply: (history ?? []).every((row) => row.direction === "inbound"),
-    };
-
     const decision = await readInboundText({
       system: buildIntakeSystemPrompt(context),
       turns,
@@ -148,52 +82,17 @@ export async function handleInboundText(input: {
 
     await recordExtractedName(database, input.customerId, action);
 
-    let requestId: string | undefined;
-    let jobId: string | undefined;
-
-    if (action.kind === "callback" || action.kind === "book" || action.kind === "escalate") {
-      const { data: created } = await database
-        .from("sms_booking_requests")
-        .insert({
-          organization_id: input.organizationId,
-          conversation_id: input.conversationId,
-          customer_id: input.customerId,
-          intent:
-            action.kind === "book" ? "visit" : action.kind === "escalate" ? "emergency" : "callback",
-          phone: input.phone,
-          contact_name: action.kind === "escalate" ? null : action.contactName || null,
-          description:
-            action.kind === "escalate"
-              ? input.body.slice(0, 2000)
-              : (action.description || input.body).slice(0, 2000),
-          address_line_1: action.kind === "book" ? action.address.line1 : null,
-          city: action.kind === "book" ? action.address.city : null,
-          postal_code:
-            action.kind === "book" && /^[0-9]{5}(-[0-9]{4})?$/.test(action.address.postalCode)
-              ? action.address.postalCode
-              : null,
-          arrival_window_start: action.kind === "book" ? action.slot.start : null,
-          arrival_window_end: action.kind === "book" ? action.slot.end : null,
-          urgency: action.kind === "escalate" ? "urgent" : action.urgency ?? "routine",
-          safety_flags: action.kind === "escalate" ? action.hazards : [],
-          model: decision ? "claude-opus-5" : null,
-          model_decision: decision ?? {},
-        })
-        .select("id")
-        .single();
-
-      requestId = created?.id ? String(created.id) : undefined;
-
-      // A window the scheduler offered and the customer accepted becomes a job
-      // straight away — that is the whole point of booking by text. Everything
-      // else waits for a person.
-      if (action.kind === "book" && requestId) {
-        const { data: scheduled } = await database.rpc("schedule_sms_booking_request", {
-          p_request_id: requestId,
-        });
-        jobId = typeof scheduled === "string" ? scheduled : undefined;
-      }
-    }
+    const { requestId, jobId } = await recordBookingRequest({
+      database,
+      organizationId: input.organizationId,
+      customerId: input.customerId,
+      phone: input.phone,
+      conversationId: input.conversationId,
+      action,
+      callerText: input.body,
+      model: decision ? "claude-opus-5" : null,
+      decision,
+    });
 
     await replyToCustomer({
       database,
@@ -201,7 +100,7 @@ export async function handleInboundText(input: {
       conversationId: input.conversationId,
       to: input.phone,
       body: action.reply,
-      messagingServiceSid: text(messaging?.messaging_service_sid),
+      messagingServiceSid,
     });
 
     await database
