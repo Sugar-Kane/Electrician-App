@@ -5,7 +5,6 @@ import {
   buildIntakeSystemPrompt,
   composeReply,
   decideIntakeAction,
-  detectHazards,
   INTAKE_TOOLS,
   splitName,
   type IntakeContext,
@@ -26,50 +25,6 @@ const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
 
 const decide = (tool: string, input: Record<string, unknown>, customerText = "my outlet stopped working") =>
   decideIntakeAction({ decision: { tool, input }, customerText, context: context() });
-
-test("a hazard in the customer's own words is caught without the model", () => {
-  assert.deepEqual(detectHazards("theres smoke coming from the panel"), ["active_fire_or_smoke"]);
-  assert.deepEqual(detectHazards("my son got shocked by the outlet"), ["shock_injury"]);
-  assert.deepEqual(detectHazards("power line is down across my driveway"), ["downed_power_line"]);
-  assert.deepEqual(detectHazards("water is coming into the breaker box"), ["water_touching_electrical"]);
-  assert.deepEqual(detectHazards("my kitchen outlet stopped working"), []);
-});
-
-test("a hazard overrides a booking the model wanted to make", () => {
-  // The dangerous case: a customer describes a fire *and* asks for an
-  // appointment. Booking a visit for Tuesday is the wrong answer on Saturday
-  // night, whatever the model decided.
-  const action = decideIntakeAction({
-    decision: {
-      tool: "confirm_visit",
-      input: {
-        contact_name: "Ada Lovelace",
-        description: "panel is smoking",
-        address_line_1: "123 Maple St",
-        city: "Santa Maria",
-        postal_code: "93454",
-        slot_start: "2026-08-11T15:00:00.000Z",
-        urgency: "urgent",
-      },
-    },
-    customerText: "the panel is smoking, can someone come Tuesday",
-    context: context(),
-  });
-
-  assert.equal(action.kind, "escalate");
-  assert.match(action.reply, /911/);
-  assert.deepEqual(action.kind === "escalate" ? action.hazards : [], ["active_fire_or_smoke"]);
-});
-
-test("an emergency reply never offers to book", () => {
-  const action = decideIntakeAction({
-    decision: null,
-    customerText: "wire is down in the yard",
-    context: context(),
-  });
-  assert.equal(action.kind, "escalate");
-  assert.doesNotMatch(action.reply, /book|schedule|appointment/i);
-});
 
 test("a window the model invented is refused", () => {
   // The scheduler is the only source of truth for what is open. A made-up time
@@ -179,7 +134,7 @@ test("no reply contains a link", () => {
       contact_name: "Ada", description: "no power", address_line_1: "1 A St",
       city: "Nipomo", postal_code: "93444", slot_start: "2026-08-11T15:00:00.000Z", urgency: "routine",
     }).reply,
-    decideIntakeAction({ decision: null, customerText: "smoke", context: context() }).reply,
+    decideIntakeAction({ decision: null, customerText: "hello", context: context() }).reply,
   ];
   for (const reply of replies) {
     assert.doesNotMatch(reply, /https?:\/\/|www\.|\.com/i, reply);
@@ -190,7 +145,6 @@ test("the model is only ever shown windows that are really open", () => {
   const prompt = buildIntakeSystemPrompt(context());
   assert.match(prompt, /2026-08-11T15:00:00\.000Z/);
   assert.match(prompt, /Never invent or adjust a time/);
-  assert.match(prompt, /escalate_emergency/);
 });
 
 test("an empty schedule says so rather than offering nothing", () => {
@@ -214,10 +168,3 @@ test("names split into the columns customers actually has", () => {
   assert.deepEqual(splitName("  "), { first: "", last: "" });
 });
 
-test("an ordinary water heater call is not an emergency", () => {
-  // "water" near an appliance name must not trip the electrical-contact rule,
-  // or every water heater job becomes a 911 reply.
-  assert.deepEqual(detectHazards("my water heater stopped heating"), []);
-  assert.deepEqual(detectHazards("need a quote to move a water heater"), []);
-  assert.deepEqual(detectHazards("the breaker box has water in it"), ["water_touching_electrical"]);
-});

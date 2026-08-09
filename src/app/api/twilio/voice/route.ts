@@ -243,13 +243,11 @@ export async function POST(request: Request) {
         turns: [...turns, { role: "assistant", text: voiceStep.say }],
         failed_turns: action.kind === "ask" ? failedTurns + 1 : 0,
         status:
-          action.kind === "escalate"
-            ? "emergency"
-            : voiceStep.kind === "transfer"
-              ? "transferred"
-              : voiceStep.kind === "hangup"
-                ? "completed"
-                : "in_progress",
+          voiceStep.kind === "transfer"
+            ? "transferred"
+            : voiceStep.kind === "hangup"
+              ? "completed"
+              : "in_progress",
         outcome: action.kind,
         ...(recorded.requestId ? { booking_request_id: recorded.requestId } : {}),
       })

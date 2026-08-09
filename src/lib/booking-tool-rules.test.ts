@@ -70,31 +70,7 @@ test("a window the model invented is refused, and the real ones are handed back"
   assert.match(result.text, /slot_start: 2026-08-11T15:00:00\+00:00/);
 });
 
-test("a hazard in the description stops a booking the model wanted to make", () => {
-  // The model called book_visit. The customer's own words say otherwise, and
-  // the words win.
-  const { action, result } = run("book_visit", {
-    ...BOOKABLE,
-    description: "There is water coming into the breaker box from the roof leak.",
-  });
-
-  assert.equal(action.kind, "escalate");
-  assert.match(result.text, /^NOT BOOKED/);
-  assert.match(result.text, /911/);
-});
-
-test("a callback about a burning smell is an emergency, not a callback", () => {
-  const { action, result } = run("request_callback", {
-    contact_name: "Dana Reyes",
-    description: "There is a burning smell coming from the panel.",
-    urgency: "routine",
-  });
-
-  assert.equal(action.kind, "escalate");
-  assert.match(result.text, /911/);
-});
-
-test("an ordinary water heater call is still bookable", () => {
+test("an ordinary water heater call is bookable", () => {
   const { action } = run("book_visit", {
     ...BOOKABLE,
     description: "The water heater element needs replacing.",
@@ -119,16 +95,6 @@ test("an urgent callback is described as urgent to the model", () => {
 
   assert.match(result.text, /as soon as possible/);
   assert.match(result.text, /Do not promise a specific time/);
-});
-
-test("flag_emergency escalates on the model's word alone", () => {
-  // No regex fires on this one. If the model says it is an emergency, it is.
-  const { action, result } = run("flag_emergency", {
-    description: "The customer says the meter enclosure is making a loud buzzing noise.",
-  });
-
-  assert.equal(action.kind, "escalate");
-  assert.match(result.text, /911/);
 });
 
 test("with nothing open the model is told to take a callback, not to improvise", () => {
@@ -165,11 +131,6 @@ test("the caller's number is asked for, since one URL serves every call", () => 
 
   assert.equal(callerPhone({ caller_phone: " +1 805 555 0142 " }), "+1 805 555 0142");
   assert.equal(callerPhone({}), "");
-});
-
-test("an emergency never waits on a phone number", () => {
-  const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "flag_emergency")!;
-  assert.deepEqual(tool.inputSchema.required, ["description"]);
 });
 
 test("list_open_slots proposes nothing, so it can never write", () => {

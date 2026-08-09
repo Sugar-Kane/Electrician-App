@@ -154,8 +154,7 @@ export function buildKeyterms(input: {
  * What the model is told before it says a word.
  *
  * Written for a model that owns the microphone, which changes the emphasis:
- * the tools are described as the only way anything becomes real, and the
- * hazard rule is stated as a thing to do rather than a thing to classify.
+ * the tools are described as the only way anything becomes real.
  */
 export function buildRealtimeInstructions(context: IntakeContext): string {
   return [
@@ -168,7 +167,6 @@ export function buildRealtimeInstructions(context: IntakeContext): string {
     "- list_open_slots before you offer any time. Never invent, round, or adjust a window.",
     "- book_visit once they have described the problem, given a street address and city, and agreed to a window you offered. Read the result back before you tell them it is booked — it can refuse.",
     "- request_callback when a visit cannot be booked, or they ask to speak to a person.",
-    "- flag_emergency the moment they mention fire, smoke, a burning smell, someone shocked, a downed line, or water near anything electrical. Do this before anything else, and do not book.",
     "",
     "Rules:",
     `- The diagnostic visit costs ${context.diagnosticFee}. Never quote any other price and never estimate a repair cost.`,
