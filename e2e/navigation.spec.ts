@@ -25,6 +25,7 @@ const MENU_DESTINATIONS: [label: string, pathname: string][] = [
   ["Schedule", "/schedule"],
   ["Jobs", "/schedule"],
   ["Messages", "/messages"],
+  ["Booking requests", "/booking-requests"],
   ["Customers", "/search"],
   ["Estimates", "/search"],
   ["Invoices", "/invoices"],
