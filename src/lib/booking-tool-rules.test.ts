@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   BOOKING_TOOLS,
   buildDecision,
+  callerPhone,
   customerWords,
   describeOutcome,
   slotList,
@@ -154,41 +155,21 @@ test("every refusal says so before it says anything else", () => {
   }
 });
 
-test("a transfer nobody answered becomes a callback, not a dropped customer", () => {
-  const { action, result } = run("transfer_to_person", {
-    reason: "The caller wants to speak to Nick about a quote.",
-  });
+test("the caller's number is asked for, since one URL serves every call", () => {
+  // A console-configured MCP server is static, so the caller has to be named.
+  for (const name of ["book_visit", "request_callback"]) {
+    const tool = BOOKING_TOOLS.find((candidate) => candidate.name === name)!;
+    const required = tool.inputSchema.required as string[];
+    assert.ok(required.includes("caller_phone"), name);
+  }
 
-  assert.equal(action.kind, "callback");
-  assert.equal(result.isError, true);
-  assert.match(result.text, /^NOT TRANSFERRED/);
-  assert.match(result.text, /could not put them through/);
+  assert.equal(callerPhone({ caller_phone: " +1 805 555 0142 " }), "+1 805 555 0142");
+  assert.equal(callerPhone({}), "");
 });
 
-test("a connected transfer says so and tells the model to stop talking", () => {
-  const decision = buildDecision("transfer_to_person", { reason: "wants a person" })!;
-  const action = decideIntakeAction({ decision, customerText: "wants a person", context: CONTEXT });
-  const result = describeOutcome({
-    name: "transfer_to_person",
-    action,
-    context: CONTEXT,
-    phone: "+18055550142",
-    transferred: true,
-  });
-
-  assert.equal(result.isError, undefined);
-  assert.match(result.text, /Transferring now/);
-});
-
-test("a transfer request that describes a fire is an emergency first", () => {
-  // Being put on hold for a transfer is the wrong thing to happen to someone
-  // who needs to hang up and dial 911.
-  const { action, result } = run("transfer_to_person", {
-    reason: "There is smoke coming out of the panel and they want someone now.",
-  });
-
-  assert.equal(action.kind, "escalate");
-  assert.match(result.text, /911/);
+test("an emergency never waits on a phone number", () => {
+  const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "flag_emergency")!;
+  assert.deepEqual(tool.inputSchema.required, ["description"]);
 });
 
 test("list_open_slots proposes nothing, so it can never write", () => {

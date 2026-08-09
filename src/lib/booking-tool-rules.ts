@@ -27,6 +27,21 @@ import type { IntakeAction, IntakeContext, IntakeDecision } from "@/lib/sms-inta
 
 const URGENCY = { type: "string", enum: ["routine", "urgent"] } as const;
 
+/**
+ * The caller's number, when the connection was not opened for a known caller.
+ *
+ * A console-configured MCP URL is the same for every call, so the server cannot
+ * know who is on the line unless it is told. Asking for a callback number is
+ * something a receptionist does anyway, and getting it wrong misdirects a
+ * callback rather than crossing a tenant boundary — the organization is still
+ * pinned in the URL. Ignored when the URL was minted for a specific caller.
+ */
+const CALLER_PHONE = {
+  type: "string",
+  description:
+    "The caller's phone number, as they said it. Ask for it if you do not have it, and read it back before using it.",
+} as const;
+
 export const BOOKING_TOOLS: McpTool[] = [
   {
     name: "list_open_slots",
@@ -57,6 +72,7 @@ export const BOOKING_TOOLS: McpTool[] = [
           description: "The exact slot_start value of an open window, copied from list_open_slots.",
         },
         urgency: { ...URGENCY, description: "urgent only if they say today, now, or no power." },
+        caller_phone: CALLER_PHONE,
       },
       required: [
         "contact_name",
@@ -66,6 +82,7 @@ export const BOOKING_TOOLS: McpTool[] = [
         "postal_code",
         "slot_start",
         "urgency",
+        "caller_phone",
       ],
       additionalProperties: false,
     },
@@ -81,25 +98,9 @@ export const BOOKING_TOOLS: McpTool[] = [
         contact_name: { type: "string" },
         description: { type: "string", description: "What the customer needs, in their own words." },
         urgency: URGENCY,
+        caller_phone: CALLER_PHONE,
       },
-      required: ["contact_name", "description", "urgency"],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "transfer_to_person",
-    title: "Put the caller through to the electrician",
-    description:
-      "Transfer the call to the electrician's own phone. Use when the caller asks for a person, is unhappy, or the call is going nowhere. Read the result back — if the transfer fails you must tell them a callback has been logged instead.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        reason: {
-          type: "string",
-          description: "Why the caller needs a person, in one sentence.",
-        },
-      },
-      required: ["reason"],
+      required: ["contact_name", "description", "urgency", "caller_phone"],
       additionalProperties: false,
     },
   },
@@ -115,7 +116,14 @@ export const BOOKING_TOOLS: McpTool[] = [
           type: "string",
           description: "What the customer described, in their own words.",
         },
+        caller_phone: {
+          ...CALLER_PHONE,
+          description:
+            "The caller's phone number if you already have it. Never stop to ask for it — say the safety message first.",
+        },
       },
+      // Only the description is required. Nothing about an emergency should
+      // wait on a field, least of all a phone number.
       required: ["description"],
       additionalProperties: false,
     },
@@ -134,7 +142,12 @@ function urgency(value: unknown): "routine" | "urgent" {
 
 /** The customer's own words, which is what the hazard screen reads. */
 export function customerWords(args: Record<string, unknown>): string {
-  return text(args.description) || text(args.reason);
+  return text(args.description);
+}
+
+/** The number the model says the caller gave, if it was asked to pass one. */
+export function callerPhone(args: Record<string, unknown>): string {
+  return text(args.caller_phone);
 }
 
 /**
@@ -157,19 +170,6 @@ export function buildDecision(
         contact_name: text(args.contact_name),
         description: text(args.description),
         urgency: urgency(args.urgency),
-      },
-    };
-  }
-
-  // A transfer is proposed as a callback so that an unanswered one is not a
-  // dropped customer — the same thing the <Gather> line does when a dial fails.
-  if (name === "transfer_to_person") {
-    return {
-      tool: "request_callback",
-      input: {
-        contact_name: "",
-        description: text(args.reason) || "The caller asked to speak to a person.",
-        urgency: "urgent",
       },
     };
   }
@@ -224,23 +224,12 @@ export function describeOutcome(input: {
   action: IntakeAction;
   context: IntakeContext;
   phone: string;
-  /** Whether a transfer actually connected. Only meaningful for a transfer. */
-  transferred?: boolean;
 }): ToolResult {
   const { action, context } = input;
 
   // Safety outranks the tool that was called: a "call me back" about a burning
   // smell comes back from the rules as an escalation, and is answered as one.
   if (action.kind === "escalate") return { text: emergencyScript(context) };
-
-  if (input.name === "transfer_to_person") {
-    return input.transferred
-      ? { text: "Transferring now. Say \"Putting you through now.\" and then stop talking." }
-      : {
-          isError: true,
-          text: `NOT TRANSFERRED — nobody could be reached. A callback is logged for ${input.phone}. Tell the customer plainly that you could not put them through and that ${context.businessName} will call them back shortly. Do not promise a time.`,
-        };
-  }
 
   if (input.name === "request_callback") {
     const urgent = action.kind === "callback" && action.urgency === "urgent";

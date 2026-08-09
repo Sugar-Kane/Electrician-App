@@ -3,16 +3,21 @@ import "server-only";
 import {
   BOOKING_TOOLS,
   buildDecision,
+  callerPhone,
   customerWords,
   describeOutcome,
+  emergencyScript,
   slotList,
 } from "@/lib/booking-tool-rules";
-import { loadIntakeContext, recordBookingRequest } from "@/lib/intake-shared";
+import {
+  findOrCreateCustomerByPhone,
+  loadIntakeContext,
+  recordBookingRequest,
+} from "@/lib/intake-shared";
 import { type ToolResult } from "@/lib/mcp-protocol";
 import { type McpSession } from "@/lib/mcp-session-token";
 import { decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { referCall } from "@/lib/xai-calls";
 
 /**
  * Running a booking tool against the real schedule.
@@ -26,6 +31,35 @@ import { referCall } from "@/lib/xai-calls";
 export { BOOKING_TOOLS };
 
 type Database = ReturnType<typeof getSupabaseAdmin>;
+
+/**
+ * Who this booking belongs to.
+ *
+ * A per-call URL already knows. A console-configured one does not, so it falls
+ * back to the number the model was told to collect — the organization is pinned
+ * either way, which is the guarantee that actually matters.
+ */
+async function resolveCustomer(input: {
+  database: Database;
+  session: McpSession;
+  args: Record<string, unknown>;
+}): Promise<{ customerId: string; phone: string }> {
+  if (input.session.customerId) {
+    return { customerId: input.session.customerId, phone: input.session.phone ?? "" };
+  }
+
+  const phone = callerPhone(input.args);
+  if (!phone) return { customerId: "", phone: "" };
+
+  const customerId = await findOrCreateCustomerByPhone({
+    database: input.database,
+    organizationId: input.session.organizationId,
+    phone,
+    note: "Created from an inbound phone call.",
+  });
+
+  return { customerId: customerId ?? "", phone };
+}
 
 export async function runBookingTool(input: {
   database: Database;
@@ -49,37 +83,32 @@ export async function runBookingTool(input: {
   const callerText = customerWords(input.args);
   const action = decideIntakeAction({ decision, customerText: callerText, context });
 
-  // Attempted before the record is written, so what gets logged reflects what
-  // actually happened to the caller. A hazard still outranks it: someone who
-  // needs 911 should not be put on hold waiting for a transfer to ring.
-  let transferred = false;
-  if (input.name === "transfer_to_person" && action.kind !== "escalate") {
-    const target = process.env.ESCALATION_PHONE_NUMBER ?? "";
-    transferred = input.session.callId
-      ? await referCall({ callId: input.session.callId, target })
-      : false;
-  }
-
-  // A connected transfer is not a callback — the caller is talking to a person,
-  // and a request nobody needs to action is noise in the morning's queue.
-  if (!transferred) {
-    await recordBookingRequest({
-      database: input.database,
-      organizationId: input.session.organizationId,
-      customerId: input.session.customerId,
-      phone: input.session.phone,
-      action,
-      callerText,
-      model: "grok-voice",
-      decision,
-    });
-  }
-
-  return describeOutcome({
-    name: input.name,
-    action,
-    context,
-    phone: input.session.phone,
-    transferred,
+  const { customerId, phone } = await resolveCustomer({
+    database: input.database,
+    session: input.session,
+    args: input.args,
   });
+
+  // An emergency is answered even with nothing to file it against. Somebody
+  // describing smoke should hear 911 whether or not we know their number.
+  if (!customerId) {
+    if (action.kind === "escalate") return { text: emergencyScript(context) };
+    return {
+      isError: true,
+      text: "NOT BOOKED. Ask the caller for the best phone number to reach them on, then call this again with caller_phone set.",
+    };
+  }
+
+  await recordBookingRequest({
+    database: input.database,
+    organizationId: input.session.organizationId,
+    customerId,
+    phone,
+    action,
+    callerText,
+    model: "grok-voice",
+    decision,
+  });
+
+  return describeOutcome({ name: input.name, action, context, phone });
 }

@@ -64,24 +64,40 @@ test("malformed tokens are refused rather than thrown on", () => {
   }
 });
 
-test("the live call travels in the token, not in a tool argument", () => {
-  // A model that could name a call id could transfer or hang up someone else's.
+test("a static token pins the organization and leaves the caller open", () => {
+  // What a console-configured URL looks like: one URL, every call, but still
+  // only ever one business.
   const token = signMcpSessionToken({
-    session: { ...SESSION, callId: "call-abc" },
+    session: { organizationId: SESSION.organizationId },
     secret: SECRET,
+    ttlSeconds: 60,
   });
-  assert.equal(readMcpSessionToken({ token, secret: SECRET })?.callId, "call-abc");
+
+  const read = readMcpSessionToken({ token, secret: SECRET });
+  assert.equal(read?.organizationId, SESSION.organizationId);
+  assert.equal(read?.customerId, undefined);
+  assert.equal(read?.phone, undefined);
 });
 
-test("a session with no call has no call id, rather than an empty one", () => {
-  const token = signMcpSessionToken({ session: SESSION, secret: SECRET });
-  assert.equal("callId" in readMcpSessionToken({ token, secret: SECRET })!, false);
-});
-
-test("a session missing a customer is not a session", () => {
+test("a token with no organization is worthless, whatever else it carries", () => {
+  // The organization is the guarantee. Everything else is a convenience.
   const token = signMcpSessionToken({
-    session: { ...SESSION, customerId: "" },
+    session: { organizationId: "", customerId: "cus", phone: "+18055550142" },
     secret: SECRET,
   });
   assert.equal(readMcpSessionToken({ token, secret: SECRET }), null);
+});
+
+test("editing the organization out of a static token breaks the signature", () => {
+  const token = signMcpSessionToken({
+    session: { organizationId: SESSION.organizationId },
+    secret: SECRET,
+  });
+  const [, signature] = token.split(".");
+  const forged = Buffer.from(
+    JSON.stringify({ organizationId: "someone-else", expiresAt: 9_999_999_999 }),
+    "utf-8",
+  ).toString("base64url");
+
+  assert.equal(readMcpSessionToken({ token: `${forged}.${signature}`, secret: SECRET }), null);
 });

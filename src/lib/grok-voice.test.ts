@@ -153,7 +153,6 @@ test("the session is given the booking tools and only the booking tools", () => 
     "list_open_slots",
     "book_visit",
     "request_callback",
-    "transfer_to_person",
     "flag_emergency",
   ]);
 });

@@ -101,9 +101,7 @@ export async function POST(request: Request) {
 
   const mcpServerUrl = mcpSessionUrl({
     origin: twilioPublicOrigin(request),
-    // The call id travels in the signed token so a tool can hand the caller to
-    // a person without the model ever being able to name a call.
-    session: { organizationId, customerId, phone: call.from, callId: call.callId },
+    session: { organizationId, customerId, phone: call.from },
   });
   if (!mcpServerUrl) {
     return NextResponse.json({ error: "Could not mint a booking URL" }, { status: 503 });

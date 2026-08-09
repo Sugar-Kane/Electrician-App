@@ -1,17 +1,28 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
- * Who the model on the other end of an MCP connection is allowed to act for.
+ * Whose schedule the model on the other end of an MCP connection may write to.
  *
- * The booking tools are dangerous in a way `tools/list` is not: `book_visit`
- * writes a job into a business's schedule. The model must never choose *whose*
- * schedule, or *whose* phone number the appointment lands against — otherwise a
- * prompt injection carried in a customer's own words ("book this for Volterra
- * Electric instead") becomes a cross-tenant write.
+ * `book_visit` writes a job into a business's calendar, so the one thing the
+ * model must never choose is *which* business. A prompt injection carried in a
+ * customer's own words — "actually, book this with the other electrician" —
+ * would otherwise be a cross-tenant write. The organization is therefore not a
+ * tool argument. It is signed into the URL, and the model only ever gets a URL.
  *
- * So the tenant and the caller are not tool arguments. They are signed into the
- * URL when the call is answered, and the model only ever gets a URL. It can
- * call the tools; it cannot say who it is.
+ * The caller is a weaker claim, and how strong it is depends on where the URL
+ * came from:
+ *
+ * - A **per-call** token, minted when a call is answered, pins the customer too.
+ *   Nothing the model says can move the booking to a different person.
+ * - A **static** token, configured once in a console that has one URL for every
+ *   call, cannot. There the model passes the caller's number as an argument,
+ *   the way a receptionist writes down what they were told. The worst case is a
+ *   booking attached to the wrong customer *within the same business* — a bad
+ *   phone number, not a bad tenant.
+ *
+ * Both are supported. The organization guarantee is identical in each; only the
+ * customer guarantee differs, and that difference is why the fields are
+ * optional rather than the whole session being loosened.
  *
  * Signed rather than stored: a token needs no table, no cleanup, and no
  * database round trip on a request that has a customer waiting on the line.
@@ -21,23 +32,19 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type McpSession = {
   organizationId: string;
-  customerId: string;
-  /** The number the customer called from, as the carrier delivered it. */
-  phone: string;
-  /**
-   * The live call this session belongs to, when there is one.
-   *
-   * Present for a SIP call, absent otherwise. It is what lets a tool hand the
-   * caller to a person — and it is in the token for the same reason the tenant
-   * is: a model that could name a call id could hang up somebody else's.
-   */
-  callId?: string;
-  /** Seconds since the epoch. A call does not outlive this. */
+  /** Pinned by a per-call token; absent from a static one. */
+  customerId?: string;
+  /** The number the customer called from, when the token was minted for a call. */
+  phone?: string;
+  /** Seconds since the epoch. A leaked URL stops working here. */
   expiresAt: number;
 };
 
 /** Long enough for a phone call, short enough that a leaked URL goes stale. */
 export const DEFAULT_SESSION_TTL_SECONDS = 60 * 60;
+
+/** A console-configured URL outlives any one call, so it is dated in months. */
+export const STATIC_SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
 
 function base64url(value: Buffer): string {
   return value.toString("base64url");
@@ -52,9 +59,8 @@ export function signMcpSessionToken(input: {
   const now = input.now ?? new Date();
   const payload: McpSession = {
     organizationId: input.session.organizationId,
-    customerId: input.session.customerId,
-    phone: input.session.phone,
-    ...(input.session.callId ? { callId: input.session.callId } : {}),
+    ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
+    ...(input.session.phone ? { phone: input.session.phone } : {}),
     expiresAt:
       Math.floor(now.getTime() / 1000) + (input.ttlSeconds ?? DEFAULT_SESSION_TTL_SECONDS),
   };
@@ -102,13 +108,19 @@ export function readMcpSessionToken(input: {
   const organizationId = typeof record.organizationId === "string" ? record.organizationId : "";
   const customerId = typeof record.customerId === "string" ? record.customerId : "";
   const phone = typeof record.phone === "string" ? record.phone : "";
-  const callId = typeof record.callId === "string" ? record.callId : "";
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : 0;
 
-  if (!organizationId || !customerId || !phone) return null;
+  // The organization is the only field a token is worthless without: it is the
+  // whole guarantee. A customer may or may not be pinned.
+  if (!organizationId) return null;
 
   const now = Math.floor((input.now ?? new Date()).getTime() / 1000);
   if (expiresAt <= now) return null;
 
-  return { organizationId, customerId, phone, ...(callId ? { callId } : {}), expiresAt };
+  return {
+    organizationId,
+    ...(customerId ? { customerId } : {}),
+    ...(phone ? { phone } : {}),
+    expiresAt,
+  };
 }
