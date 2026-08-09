@@ -6,7 +6,6 @@ import {
   callerPhone,
   customerWords,
   describeOutcome,
-  emergencyScript,
   slotList,
 } from "@/lib/booking-tool-rules";
 import {
@@ -91,10 +90,7 @@ export async function runBookingTool(input: {
     args: input.args,
   });
 
-  // An emergency is answered even with nothing to file it against. Somebody
-  // describing smoke should hear 911 whether or not we know their number.
   if (!customerId) {
-    if (action.kind === "escalate") return { text: emergencyScript(context) };
     return {
       isError: true,
       text: "NOT BOOKED. Ask the caller for the best phone number to reach them on, then call this again with caller_phone set.",

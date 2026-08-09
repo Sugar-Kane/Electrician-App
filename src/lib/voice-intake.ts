@@ -45,8 +45,7 @@ export type VoiceStep =
 /**
  * What the call should do next.
  *
- * The order is the point: a hazard ends the call with 911 before anything
- * else can happen, and a request for a person is honoured before the system
+ * The order is the point: a request for a person is honoured before the system
  * tries to be clever.
  */
 export function decideVoiceStep(input: {
@@ -57,15 +56,6 @@ export function decideVoiceStep(input: {
   context: IntakeContext;
 }): VoiceStep {
   const { action, context } = input;
-
-  if (action.kind === "escalate") {
-    // Nothing is booked and nobody is transferred: the caller needs emergency
-    // services, and keeping them on this line delays that.
-    return {
-      kind: "hangup",
-      say: `This sounds like an emergency. Please hang up and call 9 1 1 right away. If a power line is down, call your utility as well. Do not touch the electrical panel. ${context.businessName} will follow up once you are safe.`,
-    };
-  }
 
   if (wantsHuman(input.callerText)) {
     return input.canTransfer

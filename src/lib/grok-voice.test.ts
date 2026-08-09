@@ -35,7 +35,6 @@ test("the instructions say the model's words book nothing", () => {
   const instructions = buildRealtimeInstructions(CONTEXT);
   assert.match(instructions, /Nothing you say books anything/);
   assert.match(instructions, /Never invent, round, or adjust a window/);
-  assert.match(instructions, /flag_emergency/);
 });
 
 test("the diagnostic fee is the only price the model is given", () => {
@@ -153,6 +152,5 @@ test("the session is given the booking tools and only the booking tools", () => 
     "list_open_slots",
     "book_visit",
     "request_callback",
-    "flag_emergency",
   ]);
 });

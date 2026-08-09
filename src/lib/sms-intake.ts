@@ -2,11 +2,11 @@
  * Reading a customer's text well enough to schedule from it.
  *
  * The model decides *what the customer is asking for*. It never decides whether
- * that is safe, whether the slot is real, or what goes back over SMS — those
- * are settled here, deterministically, and the caller writes to the database
- * only through the paths this module approves.
+ * the slot is real or what goes back over SMS — those are settled here,
+ * deterministically, and the caller writes to the database only through the
+ * paths this module approves.
  *
- * Import-free so the safety rules can be tested directly, like messaging-rules.
+ * Import-free so the rules can be tested directly, like messaging-rules.
  */
 
 /** Field names the model may say it still needs. */
@@ -18,55 +18,6 @@ export const INTAKE_FIELDS = [
 ] as const;
 
 export type IntakeField = (typeof INTAKE_FIELDS)[number];
-
-/**
- * Hazards that stop a booking outright.
- *
- * These mirror the safety screen the web booking form enforces
- * (`create_public_booking_intake` refuses the same four), because a customer
- * describing a fire should get 911 whether they typed it into a form or texted
- * it at 11pm.
- */
-export const HAZARDS = [
-  "active_fire_or_smoke",
-  "shock_injury",
-  "downed_power_line",
-  "water_touching_electrical",
-] as const;
-
-export type Hazard = (typeof HAZARDS)[number];
-
-const HAZARD_PATTERNS: [Hazard, RegExp][] = [
-  ["active_fire_or_smoke", /\b(fire|flames?|burning|smoke|smoking|smells? like burning|scorch)/i],
-  ["shock_injury", /\b(shocked?|shocking|electrocut\w*|got zapped|burned my)/i],
-  ["downed_power_line", /\b(down(ed)? (power )?line|wire (is )?down|line (is )?down|pole fell)/i],
-  ["water_touching_electrical", /\b(flood\w*|submerged|standing water)/i],
-  // Water only matters here when it is near something electrical, in either
-  // order — "water in the breaker box" and "the panel has water in it". A water
-  // heater on its own is a normal service call, not an emergency.
-  [
-    "water_touching_electrical",
-    /\bwater\b[^.!?]{0,40}\b(panel|breaker|outlet|receptacle|wir\w*|electric\w*|meter|fuse|junction box)\b/i,
-  ],
-  [
-    "water_touching_electrical",
-    /\b(panel|breaker|outlet|receptacle|wir\w*|electric\w*|meter|fuse box|junction box)\b[^.!?]{0,40}\bwater\b/i,
-  ],
-];
-
-/**
- * Hazards named in the customer's own words.
- *
- * Deliberately independent of the model: a regex cannot be talked out of
- * spotting "sparks and smoke", and this runs whether or not the model agrees.
- */
-export function detectHazards(text: string): Hazard[] {
-  const found = new Set<Hazard>();
-  for (const [hazard, pattern] of HAZARD_PATTERNS) {
-    if (pattern.test(text)) found.add(hazard);
-  }
-  return [...found];
-}
 
 export type OfferedSlot = { start: string; end: string; label: string };
 
@@ -146,21 +97,6 @@ export const INTAKE_TOOLS = [
     },
   },
   {
-    name: "escalate_emergency",
-    description:
-      "The customer describes fire, smoke, someone shocked or injured, a downed power line, or water touching electrical equipment. Nothing is booked; they are told to call emergency services.",
-    strict: true,
-    input_schema: {
-      type: "object",
-      properties: {
-        hazard: { type: "string", enum: [...HAZARDS] },
-        description: { type: "string" },
-      },
-      required: ["hazard", "description"],
-      additionalProperties: false,
-    },
-  },
-  {
     name: "ask_for",
     description:
       "Something needed to go further is missing. Ask for it in one short question. Ask for at most two things at a time.",
@@ -190,10 +126,9 @@ export type IntakeDecision = {
 
 /**
  * What the caller is cleared to do, after the model's suggestion has been
- * checked against the hazards and the real schedule.
+ * checked against the real schedule.
  */
 export type IntakeAction =
-  | { kind: "escalate"; hazards: Hazard[]; reply: string }
   | { kind: "ask"; missing: IntakeField[]; reply: string }
   | { kind: "callback"; contactName: string; description: string; urgency: "routine" | "urgent"; reply: string }
   | { kind: "propose"; slot: OfferedSlot; contactName: string; description: string; reply: string }
@@ -235,11 +170,12 @@ export function composeReply(body: string, context: IntakeContext): string {
 }
 
 /**
- * Turn the model's suggestion into something safe to execute.
+ * Turn the model's suggestion into something the caller may execute.
  *
- * Every branch that would write to the database is gated on evidence the
- * caller supplied: hazards found in the customer's own text, and the exact
- * list of windows the scheduler says are open.
+ * The model decides what the customer is asking for; this decides whether that
+ * is something the business can actually do. The remaining gate is the
+ * schedule: a booking is only ever approved for a window the scheduler itself
+ * offered, so the model cannot promise a time nobody has.
  */
 export function decideIntakeAction(input: {
   decision: IntakeDecision | null;
@@ -247,23 +183,6 @@ export function decideIntakeAction(input: {
   context: IntakeContext;
 }): IntakeAction {
   const { context } = input;
-  const hazards = detectHazards(input.customerText);
-  const claimedHazard = text(input.decision?.input?.hazard);
-
-  // Safety outranks everything, including the model's own read. If either the
-  // text or the model names a hazard, nothing gets booked.
-  if (hazards.length > 0 || input.decision?.tool === "escalate_emergency") {
-    const named = hazards.length > 0 ? hazards : ([claimedHazard] as Hazard[]);
-    return {
-      kind: "escalate",
-      hazards: named.filter((hazard): hazard is Hazard => HAZARDS.includes(hazard as Hazard)),
-      reply: composeReply(
-        `${context.businessName}: that sounds like an emergency. Please call 911 now, and your utility if a line is down. Do not touch the panel. Call ${context.businessPhone} once you are safe.`,
-        context,
-      ),
-    };
-  }
-
   const decision = input.decision;
   if (!decision) {
     return {
@@ -403,7 +322,6 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     "- Call exactly one tool. Never answer in plain text.",
     "- Only ever use a slot_start copied exactly from the list above. Never invent or adjust a time.",
     "- Do not call confirm_visit on a customer's first message. Propose a window first and wait for them to accept.",
-    "- Anything involving fire, smoke, a shock, a downed line, or water on electrical equipment is escalate_emergency, whatever else they ask for.",
     "- No address, or an address outside the service area, means request_callback rather than a visit.",
     "- Never quote a price other than the diagnostic fee above, and never promise a repair cost.",
     "- Never include a link, and never ask for card details.",

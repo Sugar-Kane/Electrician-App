@@ -106,11 +106,10 @@ export async function handleInboundText(input: {
     await database
       .from("conversations")
       .update({
-        // An emergency or a callback needs a person. A booked visit, or a
+        // A callback needs a person. A booked visit, or a
         // question the customer still has to answer, does not.
-        status: action.kind === "escalate" || action.kind === "callback" ? "needs_human" : "open",
-        escalation_reason:
-          action.kind === "escalate" ? `Safety: ${action.hazards.join(", ") || "reported hazard"}` : null,
+        status: action.kind === "callback" ? "needs_human" : "open",
+        escalation_reason: null,
       })
       .eq("id", input.conversationId);
 
@@ -126,7 +125,7 @@ async function recordExtractedName(
   customerId: string,
   action: IntakeAction,
 ) {
-  if (action.kind === "escalate" || action.kind === "ask") return;
+  if (action.kind === "ask") return;
   const name = action.contactName?.trim();
   if (!name) return;
 

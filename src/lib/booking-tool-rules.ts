@@ -2,7 +2,7 @@ import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { IntakeAction, IntakeContext, IntakeDecision } from "@/lib/sms-intake";
 
 /**
- * Booking as four tools a model can call, and what each outcome means.
+ * Booking as three tools a model can call, and what each outcome means.
  *
  * The same rules the SMS and `<Gather>` intakes run under, shaped for MCP so a
  * realtime voice model can hold the conversation itself while the decision
@@ -11,16 +11,8 @@ import type { IntakeAction, IntakeContext, IntakeDecision } from "@/lib/sms-inta
  * That split is the whole point. A tool call is a *proposal*: it is turned into
  * an `IntakeDecision` here and handed to `decideIntakeAction`, the same gate the
  * text intake goes through. The model cannot book a window the scheduler did
- * not offer, and it cannot book over a described hazard, because the hazard
- * screen re-reads the customer's own words rather than trusting the model's
- * read of them.
- *
- * What this does not gate is what the model *says*. When a realtime model owns
- * the audio, speech is between it and the customer; these tools govern the
- * database. The escalation results below are written as words to read aloud so
- * the safe outcome is also the easy one — but a model that talks past them is
- * not something a server-side rule can stop. That is the price of the better
- * voice, and it is worth naming rather than burying.
+ * not offer — the schedule is checked here rather than taken on the model's
+ * word for it.
  *
  * Import-free, like sms-intake, so the whole chain can be tested directly.
  */
@@ -62,7 +54,7 @@ export const BOOKING_TOOLS: McpTool[] = [
         description: {
           type: "string",
           description:
-            "The electrical problem in the customer's own words, one or two sentences. Do not sanitise it: it is re-read for safety hazards.",
+            "The electrical problem in the customer's own words, one or two sentences.",
         },
         address_line_1: { type: "string", description: "Street address." },
         city: { type: "string" },
@@ -104,30 +96,6 @@ export const BOOKING_TOOLS: McpTool[] = [
       additionalProperties: false,
     },
   },
-  {
-    name: "flag_emergency",
-    title: "Flag a safety emergency",
-    description:
-      "The customer describes fire, smoke, someone shocked or injured, a downed power line, or water touching electrical equipment. Nothing is booked. Read the returned words back to them and end the call.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        description: {
-          type: "string",
-          description: "What the customer described, in their own words.",
-        },
-        caller_phone: {
-          ...CALLER_PHONE,
-          description:
-            "The caller's phone number if you already have it. Never stop to ask for it — say the safety message first.",
-        },
-      },
-      // Only the description is required. Nothing about an emergency should
-      // wait on a field, least of all a phone number.
-      required: ["description"],
-      additionalProperties: false,
-    },
-  },
 ];
 
 export const BOOKING_TOOL_NAMES = BOOKING_TOOLS.map((tool) => tool.name);
@@ -140,7 +108,7 @@ function urgency(value: unknown): "routine" | "urgent" {
   return value === "urgent" ? "urgent" : "routine";
 }
 
-/** The customer's own words, which is what the hazard screen reads. */
+/** The customer's own words, kept as the record of what they asked for. */
 export function customerWords(args: Record<string, unknown>): string {
   return text(args.description);
 }
@@ -159,10 +127,6 @@ export function buildDecision(
   name: string,
   args: Record<string, unknown>,
 ): IntakeDecision | null {
-  if (name === "flag_emergency") {
-    return { tool: "escalate_emergency", input: { description: text(args.description) } };
-  }
-
   if (name === "request_callback") {
     return {
       tool: "request_callback",
@@ -194,14 +158,6 @@ export function buildDecision(
   return null;
 }
 
-/** Spoken, not texted: no "reply STOP", no link, no character budget. */
-export function emergencyScript(context: IntakeContext): string {
-  return [
-    "NOT BOOKED — this is a safety emergency and it has been logged.",
-    `Say this to the customer, then end the call: "That sounds like an emergency. Please hang up and call 911 now, and call your utility if a power line is down. Do not touch the electrical panel. Once you are safe, call ${context.businessPhone} back."`,
-  ].join(" ");
-}
-
 export function slotList(context: IntakeContext): string {
   if (context.offeredSlots.length === 0) {
     return "No arrival windows are open. Use request_callback — do not offer the customer a time.";
@@ -226,10 +182,6 @@ export function describeOutcome(input: {
   phone: string;
 }): ToolResult {
   const { action, context } = input;
-
-  // Safety outranks the tool that was called: a "call me back" about a burning
-  // smell comes back from the rules as an escalation, and is answered as one.
-  if (action.kind === "escalate") return { text: emergencyScript(context) };
 
   if (input.name === "request_callback") {
     const urgent = action.kind === "callback" && action.urgency === "urgent";

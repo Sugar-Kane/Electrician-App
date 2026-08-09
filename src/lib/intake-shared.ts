@@ -199,7 +199,7 @@ export async function recordBookingRequest(input: {
   decision: unknown;
 }): Promise<RecordedRequest> {
   const { action } = input;
-  if (action.kind !== "callback" && action.kind !== "book" && action.kind !== "escalate") {
+  if (action.kind !== "callback" && action.kind !== "book") {
     return {};
   }
 
@@ -209,13 +209,10 @@ export async function recordBookingRequest(input: {
       organization_id: input.organizationId,
       conversation_id: input.conversationId ?? null,
       customer_id: input.customerId,
-      intent: action.kind === "book" ? "visit" : action.kind === "escalate" ? "emergency" : "callback",
+      intent: action.kind === "book" ? "visit" : "callback",
       phone: input.phone,
-      contact_name: action.kind === "escalate" ? null : action.contactName || null,
-      description:
-        action.kind === "escalate"
-          ? input.callerText.slice(0, 2000)
-          : (action.description || input.callerText).slice(0, 2000),
+      contact_name: action.contactName || null,
+      description: (action.description || input.callerText).slice(0, 2000),
       address_line_1: action.kind === "book" ? action.address.line1 : null,
       city: action.kind === "book" ? action.address.city : null,
       postal_code:
@@ -224,8 +221,7 @@ export async function recordBookingRequest(input: {
           : null,
       arrival_window_start: action.kind === "book" ? action.slot.start : null,
       arrival_window_end: action.kind === "book" ? action.slot.end : null,
-      urgency: action.kind === "escalate" ? "urgent" : action.urgency ?? "routine",
-      safety_flags: action.kind === "escalate" ? action.hazards : [],
+      urgency: action.urgency ?? "routine",
       model: input.model,
       model_decision: input.decision ?? {},
     })

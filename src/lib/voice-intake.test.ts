@@ -54,17 +54,6 @@ test("every caller is told the call may be recorded, before they say anything", 
   );
 });
 
-test("an emergency ends the call with 911 and transfers nobody", () => {
-  // Connecting a fire to the electrician's cell delays the call that matters.
-  const result = step({
-    action: decideIntakeAction({ decision: null, customerText: "there's smoke coming from the panel", context }),
-    callerText: "there's smoke coming from the panel",
-  });
-  assert.equal(result.kind, "hangup");
-  assert.match(result.say, /9 1 1/);
-  assert.doesNotMatch(result.say, /book|appointment|connect/i);
-});
-
 test("asking for a person beats anything the model wanted to do", () => {
   for (const phrase of [
     "can I talk to a real person",
