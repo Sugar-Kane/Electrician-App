@@ -2,6 +2,8 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { publicOrigin, webhookUrlCandidates } from "@/lib/twilio-webhook-url";
+
 /**
  * Twilio REST access over fetch.
  *
@@ -106,21 +108,51 @@ export async function sendSms(input: {
  */
 export function verifyTwilioSignature(input: {
   signature: string | null;
-  url: string;
+  /** Every URL the request could have been signed against. */
+  url: string | string[];
   params: Record<string, string>;
 }): boolean {
   const auth = credentials();
   if (!auth || !input.signature) return false;
 
-  const payload = Object.keys(input.params)
-    .sort()
-    .reduce((accumulator, key) => accumulator + key + input.params[key], input.url);
+  const urls = Array.isArray(input.url) ? input.url : [input.url];
+  const provided = Buffer.from(input.signature);
 
-  const expected = createHmac("sha1", auth.authToken).update(Buffer.from(payload, "utf-8")).digest("base64");
+  return urls.some((url) => {
+    const payload = Object.keys(input.params)
+      .sort()
+      .reduce((accumulator, key) => accumulator + key + input.params[key], url);
 
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(input.signature);
-  if (expectedBuffer.length !== providedBuffer.length) return false;
+    const expected = Buffer.from(
+      createHmac("sha1", auth.authToken).update(Buffer.from(payload, "utf-8")).digest("base64"),
+    );
+    if (expected.length !== provided.length) return false;
+    return timingSafeEqual(expected, provided);
+  });
+}
 
-  return timingSafeEqual(expectedBuffer, providedBuffer);
+/**
+ * The URLs this webhook request might have been signed against.
+ *
+ * Wraps the pure reconstruction with the headers Vercel actually sets.
+ */
+export function twilioWebhookUrls(request: Request): string[] {
+  return webhookUrlCandidates({
+    configuredOrigin: process.env.NEXT_PUBLIC_APP_URL,
+    requestUrl: request.url,
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    host: request.headers.get("host"),
+  });
+}
+
+/** The public origin this webhook arrived on, for URLs handed back to Twilio. */
+export function twilioPublicOrigin(request: Request): string {
+  return publicOrigin({
+    requestUrl: request.url,
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    host: request.headers.get("host"),
+    fallbackOrigin: process.env.NEXT_PUBLIC_APP_URL,
+  });
 }

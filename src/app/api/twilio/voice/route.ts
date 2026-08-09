@@ -9,7 +9,12 @@ import {
 } from "@/lib/intake-shared";
 import { buildIntakeSystemPrompt, decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { verifyTwilioSignature } from "@/lib/twilio";
+import {
+  isTwilioConfigured,
+  twilioPublicOrigin,
+  twilioWebhookUrls,
+  verifyTwilioSignature,
+} from "@/lib/twilio";
 import {
   buildGreeting,
   decideVoiceStep,
@@ -44,10 +49,6 @@ function apologise(businessPhone?: string) {
   );
 }
 
-function origin() {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
-}
-
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -60,17 +61,26 @@ export async function POST(request: Request) {
     params[key] = typeof value === "string" ? value : "";
   });
 
-  const callbackUrl = `${origin() || url.origin}${url.pathname}${url.search}`;
   if (
     !verifyTwilioSignature({
       signature: request.headers.get("x-twilio-signature"),
-      url: callbackUrl,
+      url: twilioWebhookUrls(request),
       params,
     })
   ) {
-    return new NextResponse("Invalid signature", { status: 403 });
+    // This body is what shows up in Twilio's request inspector, so it says
+    // which of the two causes it is rather than leaving someone to guess.
+    return new NextResponse(
+      isTwilioConfigured()
+        ? "Invalid signature"
+        : "TWILIO_AUTH_TOKEN is not set on this deployment",
+      { status: 403 },
+    );
   }
 
+  // Derived from the request, not from configuration: a call already in
+  // progress must not be stranded by a mistyped environment variable.
+  const callbackOrigin = twilioPublicOrigin(request);
   const callSid = params.CallSid ?? "";
   const from = params.From ?? "";
   const to = params.To ?? "";
@@ -157,7 +167,7 @@ export async function POST(request: Request) {
       return twiml(
         listenTwiml({
           say: buildGreeting(context.businessName),
-          actionUrl: `${origin() || url.origin}/api/twilio/voice`,
+          actionUrl: `${callbackOrigin}/api/twilio/voice`,
         }),
       );
     }
@@ -182,7 +192,7 @@ export async function POST(request: Request) {
             say: "Let me put you through to the electrician.",
             to: escalationNumber,
             callerId: to,
-            actionUrl: `${origin() || url.origin}/api/twilio/voice?step=after-dial`,
+            actionUrl: `${callbackOrigin}/api/twilio/voice?step=after-dial`,
           }),
         );
       }
@@ -190,7 +200,7 @@ export async function POST(request: Request) {
       return twiml(
         listenTwiml({
           say: "Sorry, I did not catch that. Could you say that again?",
-          actionUrl: `${origin() || url.origin}/api/twilio/voice`,
+          actionUrl: `${callbackOrigin}/api/twilio/voice`,
         }),
       );
     }
@@ -251,7 +261,7 @@ export async function POST(request: Request) {
           say: voiceStep.say,
           to: escalationNumber,
           callerId: to,
-          actionUrl: `${origin() || url.origin}/api/twilio/voice?step=after-dial`,
+          actionUrl: `${callbackOrigin}/api/twilio/voice?step=after-dial`,
         }),
       );
     }
@@ -261,7 +271,7 @@ export async function POST(request: Request) {
     return twiml(
       listenTwiml({
         say: voiceStep.say,
-        actionUrl: `${origin() || url.origin}/api/twilio/voice`,
+        actionUrl: `${callbackOrigin}/api/twilio/voice`,
       }),
     );
   } catch {

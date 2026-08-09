@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { SENT_OVERWRITABLE_STATUSES } from "@/lib/messaging-rules";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { verifyTwilioSignature } from "@/lib/twilio";
+import { isTwilioConfigured, twilioWebhookUrls, verifyTwilioSignature } from "@/lib/twilio";
 
 /**
  * Delivery receipts from Twilio.
@@ -12,14 +12,6 @@ import { verifyTwilioSignature } from "@/lib/twilio";
  */
 
 const TRACKED_STATUSES = new Set(["delivered", "failed", "undelivered", "sent"]);
-
-function requestUrl(request: Request) {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
-  // Twilio signs the exact URL it was given, query string included.
-  const search = new URL(request.url).search;
-  if (configured) return `${configured}/api/twilio/status${search}`;
-  return request.url;
-}
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -31,11 +23,14 @@ export async function POST(request: Request) {
   if (
     !verifyTwilioSignature({
       signature: request.headers.get("x-twilio-signature"),
-      url: requestUrl(request),
+      url: twilioWebhookUrls(request),
       params,
     })
   ) {
-    return new NextResponse("Invalid signature", { status: 403 });
+    return new NextResponse(
+      isTwilioConfigured() ? "Invalid signature" : "TWILIO_AUTH_TOKEN is not set on this deployment",
+      { status: 403 },
+    );
   }
 
   const providerMessageId = params.MessageSid ?? "";
