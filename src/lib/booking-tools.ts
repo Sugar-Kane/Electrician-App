@@ -56,6 +56,8 @@ async function resolveCustomer(input: {
     organizationId: input.session.organizationId,
     phone,
     note: "Created from an inbound phone call.",
+    channel: "phone",
+    contactName: typeof input.args.contact_name === "string" ? input.args.contact_name : "",
   });
 
   return { customerId: customerId ?? "", phone };
