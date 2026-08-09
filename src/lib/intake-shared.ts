@@ -135,6 +135,10 @@ export async function findOrCreateCustomerByPhone(input: {
   organizationId: string;
   phone: string;
   note: string;
+  /** How they reached us, which decides what the placeholder name reads as. */
+  channel?: "sms" | "phone";
+  /** Their name, if they have already said it. */
+  contactName?: string;
 }): Promise<string | null> {
   const digits = input.phone.replace(/\D/g, "").slice(-10);
 
@@ -150,15 +154,22 @@ export async function findOrCreateCustomerByPhone(input: {
   );
   if (existing) return String(existing.id);
 
+  // Named by what they told us if they told us anything, and otherwise by how
+  // they got in touch — a caller who says "Dana Reyes" should not end up in the
+  // customer list as "Text 9985".
+  const channel = input.channel ?? "sms";
+  const given = (input.contactName ?? "").trim().split(/\s+/).filter(Boolean);
+  const named = given.length > 0;
+
   const { data: lead } = await input.database
     .from("customers")
     .insert({
       organization_id: input.organizationId,
       customer_type: "residential",
-      first_name: "Text",
-      last_name: digits.slice(-4) || null,
+      first_name: named ? given[0] : channel === "phone" ? "Caller" : "Text",
+      last_name: named ? given.slice(1).join(" ") || null : digits.slice(-4) || null,
       phone: input.phone,
-      preferred_contact: "sms",
+      preferred_contact: channel === "phone" ? "phone" : "sms",
       notes: input.note,
     })
     .select("id")
