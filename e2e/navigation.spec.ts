@@ -25,6 +25,7 @@ const MENU_DESTINATIONS: [label: string, pathname: string][] = [
   ["Schedule", "/schedule"],
   ["Jobs", "/schedule"],
   ["Messages", "/messages"],
+  ["Booking requests", "/booking-requests"],
   ["Customers", "/search"],
   ["Estimates", "/search"],
   ["Invoices", "/invoices"],
@@ -170,6 +171,7 @@ test.describe("the mobile menu", () => {
     for (const [label, pathname] of [
       ["Jobs", "/schedule"],
       ["Messages", "/messages"],
+  ["Booking requests", "/booking-requests"],
       ["Home", "/"],
     ] as const) {
       await bar.getByRole("link", { name: label, exact: true }).click();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { phoneMatches } from "@/lib/messaging-rules";
+import { handleInboundText } from "@/lib/sms-intake-runner";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { verifyTwilioSignature } from "@/lib/twilio";
 
@@ -82,13 +83,55 @@ export async function POST(request: Request) {
     phoneMatches(String(row.phone ?? ""), from),
   );
 
-  if (!customer) {
-    return new NextResponse(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
-  }
-
-  const customerId = String(customer.id);
+  // A number nobody has seen before is the most valuable message the business
+  // gets — someone asking for work. This used to be dropped on the floor.
+  // A STOP from a stranger is not worth a customer record; anything else is.
   const keyword = body.toLowerCase().replace(/[^a-z]/g, "");
   const now = new Date().toISOString();
+  let customerId = customer ? String(customer.id) : "";
+
+  if (!customerId) {
+    if (OPT_OUT_KEYWORDS.has(keyword) || body.length === 0) {
+      return new NextResponse(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+    }
+
+    const { data: lead } = await database
+      .from("customers")
+      .insert({
+        organization_id: organizationId,
+        customer_type: "residential",
+        // Named by the number until they tell us who they are; the intake
+        // fills the real name in as soon as the customer gives it.
+        first_name: "Text",
+        last_name: from.replace(/\D/g, "").slice(-4) || null,
+        phone: from,
+        preferred_contact: "sms",
+        notes: "Created from an inbound text message.",
+      })
+      .select("id")
+      .single();
+
+    if (!lead) {
+      return new NextResponse(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+    }
+    customerId = String(lead.id);
+
+    // They started the conversation, which is the opt-in — recorded with their
+    // own words as the proof, the same evidence the START keyword path keeps.
+    await database.from("messaging_consent").upsert(
+      {
+        organization_id: organizationId,
+        customer_id: customerId,
+        channel: "sms",
+        scope: "transactional",
+        opted_in_at: now,
+        opted_out_at: null,
+        source: "inbound_text",
+        proof_text: `Customer texted the business first: "${body.slice(0, 120)}"`,
+      },
+      { onConflict: "customer_id,channel,scope" },
+    );
+  }
 
   // Consent first: a STOP has to land even if everything below fails. These are
   // the only writes here whose failure is reported back to Twilio, because a
@@ -171,10 +214,24 @@ export async function POST(request: Request) {
     .from("conversations")
     .update({
       last_message_at: now,
-      // A STOP is not a conversation to reply to; anything else needs a human.
+      // A STOP is not a conversation to reply to; anything else needs a human
+      // until the intake below decides otherwise.
       status: OPT_OUT_KEYWORDS.has(keyword) ? "closed" : "needs_human",
     })
     .eq("id", conversationId);
+
+  // Read what they asked for and answer it. Deliberately last: the message,
+  // the consent, and the conversation are already durable, so a model or
+  // carrier failure here costs a reply, never the record of the text.
+  if (body.length > 0 && !OPT_OUT_KEYWORDS.has(keyword) && !OPT_IN_KEYWORDS.has(keyword)) {
+    await handleInboundText({
+      organizationId,
+      conversationId,
+      customerId,
+      phone: from,
+      body,
+    });
+  }
 
   return new NextResponse(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
 }
