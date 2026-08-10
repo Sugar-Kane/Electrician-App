@@ -34,14 +34,13 @@ const URGENCY = { type: "string", enum: ["routine", "urgent"] } as const;
  * an interrogation.
  */
 export const INTAKE_QUESTIONS = [
-  "Is this affecting the whole house, one room, or a single outlet or fixture?",
-  "When did it start, and did anything change just before — a new appliance, a storm, or work done?",
-  "Have you looked at the breaker panel? Is anything tripped, and does it reset?",
-  "Is this a house, a condo, or a commercial space, and roughly how old is the building?",
-  "Is there anything the electrician needs to get in — a gate code, a dog, parking, or someone home?",
+  { key: "scope", question: "Is this affecting the whole house, one room, or a single outlet or fixture?" },
+  { key: "onset", question: "When did it start, and did anything change just before — a new appliance, a storm, or work done?" },
+  { key: "breaker", question: "Have you looked at the breaker panel? Is anything tripped, and does it reset?" },
+  { key: "property", question: "Is this a house, a condo, or a commercial space, and roughly how old is the building?" },
+  { key: "access", question: "Is there anything the electrician needs to get in — a gate code, a dog, parking, or someone home?" },
 ] as const;
 
-/** Below this, the caller was not interviewed, they were processed. */
 export const MINIMUM_INTAKE_ANSWERS = 3;
 
 /**
@@ -102,19 +101,25 @@ export const BOOKING_TOOLS: McpTool[] = [
           description:
             "The caller's email for a written confirmation. Ask every caller: \"What is the best email for your confirmation?\" Read it back before using it. Send an empty string only if they decline — an empty value never blocks the booking.",
         },
-        intake_answers: {
-          type: "array",
-          description:
-            "What the customer said to the get_intake_questions questions, in their own words. Include a question only if you actually asked it. Do not invent an answer, and do not fill one in from what you assume.",
-          items: {
-            type: "object",
-            properties: {
-              question: { type: "string" },
-              answer: { type: "string", description: "The customer's answer, in their own words." },
-            },
-            required: ["question", "answer"],
-            additionalProperties: false,
-          },
+        answer_scope: {
+          type: "string",
+          description: "Their answer to: Is this affecting the whole house, one room, or a single outlet or fixture?  Empty string if you could not get one.",
+        },
+        answer_onset: {
+          type: "string",
+          description: "Their answer to: When did it start, and did anything change just before?  Empty string if you could not get one.",
+        },
+        answer_breaker: {
+          type: "string",
+          description: "Their answer to: Have you looked at the breaker panel? Is anything tripped, and does it reset?  Empty string if you could not get one.",
+        },
+        answer_property: {
+          type: "string",
+          description: "Their answer to: Is this a house, a condo, or a commercial space, and roughly how old is the building?  Empty string if you could not get one.",
+        },
+        answer_access: {
+          type: "string",
+          description: "Their answer to: Is there anything the electrician needs to get in — gate code, dog, parking, someone home?  Empty string if you could not get one.",
         },
         caller_confirmed: {
           type: "boolean",
@@ -141,7 +146,11 @@ export const BOOKING_TOOLS: McpTool[] = [
         "urgency",
         "caller_phone",
         "caller_email",
-        "intake_answers",
+        "answer_scope",
+        "answer_onset",
+        "answer_breaker",
+        "answer_property",
+        "answer_access",
         "caller_confirmed",
         "delivery_preference",
       ],
@@ -202,16 +211,10 @@ export type IntakeAnswer = { question: string; answer: string };
  * the minimum below.
  */
 export function intakeAnswers(args: Record<string, unknown>): IntakeAnswer[] {
-  if (!Array.isArray(args.intake_answers)) return [];
-  return args.intake_answers
-    .map((entry) => {
-      if (typeof entry !== "object" || entry === null) return null;
-      const record = entry as Record<string, unknown>;
-      const question = text(record.question);
-      const answer = text(record.answer);
-      return question && answer ? { question, answer } : null;
-    })
-    .filter((entry): entry is IntakeAnswer => entry !== null);
+  return INTAKE_QUESTIONS.map(({ key, question }) => ({
+    question,
+    answer: text(args[`answer_${key}`]),
+  })).filter((entry) => entry.answer.length > 0);
 }
 
 export function deliveryPreference(args: Record<string, unknown>): "text" | "email" | "both" | "" {
@@ -288,9 +291,9 @@ export function buildDecision(
 export function intakeQuestionList(): string {
   return [
     "Ask these before booking, conversationally — one at a time, not read as a list:",
-    ...INTAKE_QUESTIONS.map((question, index) => `${index + 1}. ${question}`),
+    ...INTAKE_QUESTIONS.map((entry, index) => `${index + 1}. ${entry.question}`),
     "",
-    `Pass what they say to book_visit as intake_answers. At least ${MINIMUM_INTAKE_ANSWERS} must be answered or the booking will be refused. If a customer will not answer one, move on — do not invent an answer.`,
+    `Pass each answer to book_visit as answer_scope, answer_onset, answer_breaker, answer_property, and answer_access. At least ${MINIMUM_INTAKE_ANSWERS} must be answered or the booking will be refused. If a customer will not answer one, move on — do not invent an answer.`,
   ].join("\n");
 }
 
