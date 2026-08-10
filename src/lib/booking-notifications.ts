@@ -48,6 +48,8 @@ export type BookingNotification = {
   /** Origin for the confirmation link, e.g. https://www.volteira.com */
   origin: string;
   intakeAnswers?: { question: string; answer: string }[];
+  /** Where this business wants booking alerts sent. Falls back to the env. */
+  owner?: { email: string; phone: string };
   /** Where the customer asked to receive their link. */
   deliveryPreference?: "text" | "email" | "both";
   /** The job this became, for the link in the owner's email. */
@@ -204,7 +206,11 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
 
   // The owner. Deliberately a different number from the business line, so a
   // booking taken at 2am reaches a person rather than the phone that took it.
-  const ownerPhone = process.env.OWNER_NOTIFICATION_PHONE ?? process.env.ESCALATION_PHONE_NUMBER ?? "";
+  const ownerPhone =
+    input.owner?.phone ||
+    process.env.OWNER_NOTIFICATION_PHONE ||
+    process.env.ESCALATION_PHONE_NUMBER ||
+    "";
   if (messagingServiceSid && ownerPhone) {
     const sent = await sendSms({ to: ownerPhone, body: ownerBookingSms(facts), messagingServiceSid });
     note({
@@ -223,14 +229,15 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: "",
       audience: "owner",
       ok: false,
-      detail: "OWNER_NOTIFICATION_PHONE and ESCALATION_PHONE_NUMBER are both unset.",
+      detail:
+        "No owner phone: this business has not set one, and neither OWNER_NOTIFICATION_PHONE nor ESCALATION_PHONE_NUMBER is set.",
     });
   }
 
   // The owner's email. While A2P blocks every text, this is the only thing that
   // actually reaches anybody, so it carries the whole work order rather than a
   // nudge to go and look.
-  const ownerEmail = process.env.OWNER_NOTIFICATION_EMAIL ?? "";
+  const ownerEmail = input.owner?.email || process.env.OWNER_NOTIFICATION_EMAIL || "";
   if (ownerEmail) {
     const jobUrl =
       input.origin && input.jobId
@@ -257,7 +264,8 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: "",
       audience: "owner",
       ok: false,
-      detail: "OWNER_NOTIFICATION_EMAIL is not set.",
+      detail:
+        "No owner email: this business has not set one, and OWNER_NOTIFICATION_EMAIL is not set.",
     });
   }
 

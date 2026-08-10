@@ -25,6 +25,8 @@ export type LoadedContext = {
   context: IntakeContext;
   timeZone: string;
   messagingServiceSid: string;
+  /** Where this business wants to hear about a booking. */
+  owner: { email: string; phone: string };
 };
 
 /**
@@ -41,7 +43,7 @@ export async function loadIntakeContext(input: {
   const [{ data: organization }, { data: settings }, { data: messaging }] = await Promise.all([
     database
       .from("organizations")
-      .select("name, phone, slug, timezone")
+      .select("name, phone, slug, timezone, owner_notification_email, owner_notification_phone")
       .eq("id", organizationId)
       .maybeSingle(),
     database
@@ -87,6 +89,12 @@ export async function loadIntakeContext(input: {
   return {
     timeZone,
     messagingServiceSid: text(messaging?.messaging_service_sid),
+    // The business's own answer wins; the deployment's variables are only a
+    // fallback for a tenant that has not set one yet.
+    owner: {
+      email: text(organization?.owner_notification_email),
+      phone: text(organization?.owner_notification_phone),
+    },
     context: {
       businessName: text(organization?.name) || "Your electrician",
       businessPhone: text(organization?.phone) || "our office",
