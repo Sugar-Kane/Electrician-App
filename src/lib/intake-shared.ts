@@ -1,5 +1,6 @@
 import "server-only";
 
+import { calendarDate, nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -18,20 +19,7 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-/** "Tue Aug 11, 8:00-10:00 AM", in the business's timezone. */
-export function slotLabel(start: string, end: string, timeZone: string): string {
-  const day = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(start));
-  const time = (value: string) =>
-    new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(
-      new Date(value),
-    );
-  return `${day}, ${time(start)}-${time(end)}`;
-}
+export { slotLabel };
 
 export type LoadedContext = {
   context: IntakeContext;
@@ -71,19 +59,28 @@ export async function loadIntakeContext(input: {
   const timeZone = text(organization?.timezone) || DEFAULT_TIMEZONE;
   const slug = text(organization?.slug);
 
+  // The business's today, not the server's. Between five in the afternoon and
+  // midnight Pacific the UTC date is already tomorrow, and asking from it
+  // silently drops the rest of the working day.
+  const nowIso = new Date().toISOString();
+  const fromDate = calendarDate(nowIso, timeZone);
+
   let offeredSlots: OfferedSlot[] = [];
   if (slug) {
     const { data: slots } = await database.rpc("list_public_booking_slots", {
       p_slug: slug,
-      p_from_date: new Date().toISOString().slice(0, 10),
+      p_from_date: fromDate,
       p_days: 14,
     });
     offeredSlots = ((slots as { slot_start: string; slot_end: string }[] | null) ?? [])
+      // A window that has already started is not an offer. The scheduler works
+      // in whole days, so the last filter on "has this passed?" belongs here.
+      .filter((slot) => new Date(slot.slot_start).getTime() > Date.now())
       .slice(0, MAX_OFFERED_SLOTS)
       .map((slot) => ({
         start: slot.slot_start,
         end: slot.slot_end,
-        label: slotLabel(slot.slot_start, slot.slot_end, timeZone),
+        label: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso),
       }));
   }
 
@@ -101,6 +98,7 @@ export async function loadIntakeContext(input: {
       diagnosticFeeCents:
         typeof settings?.diagnostic_fee_cents === "number" ? settings.diagnostic_fee_cents : 10000,
       serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of the shop`,
+      nowLabel: nowLabel(nowIso, timeZone),
       isFirstReply: input.isFirstReply,
     },
   };

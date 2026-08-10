@@ -25,6 +25,7 @@ const context: IntakeContext = {
   diagnosticFee: "$100",
   diagnosticFeeCents: 10000,
   serviceArea: "the Central Coast",
+  nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
 };
 

@@ -30,6 +30,7 @@ const CONTEXT: IntakeContext = {
   diagnosticFee: "$95",
   diagnosticFeeCents: 9500,
   serviceArea: "50 miles of the shop",
+  nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
 };
 
