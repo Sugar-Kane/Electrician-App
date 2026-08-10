@@ -3,6 +3,7 @@ import "server-only";
 import {
   confirmationEmail,
   customerConfirmationSms,
+  emailSender,
   looksLikeEmail,
   ownerBookingSms,
   type BookingFacts,
@@ -183,7 +184,8 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       subject: message.subject,
       text: message.text,
       html: message.html,
-      replyTo: undefined,
+      // Signed by the business, not by the software that sent it.
+      from: emailSender(facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
     });
   }
 }

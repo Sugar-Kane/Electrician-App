@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   confirmationEmail,
   customerConfirmationSms,
+  emailSender,
   looksLikeEmail,
   ownerBookingSms,
   type BookingFacts,
@@ -113,6 +114,41 @@ test("an address that came out of speech recognition is not mailed to", () => {
   for (const value of ["adam@gmail.com", "adam.kane+jobs@pacificplainselectric.com"]) {
     assert.equal(looksLikeEmail(value), true, value);
   }
+});
+
+test("the email comes from the business, not from the software", () => {
+  // The address is the platform's, because the platform holds the verified
+  // domain. The name is the electrician's, because that is who called.
+  assert.equal(
+    emailSender("Pacific Plains Electric", "bookings@volteira.com"),
+    "Pacific Plains Electric <bookings@volteira.com>",
+  );
+});
+
+test("a From line that already names a sender is left alone", () => {
+  assert.equal(
+    emailSender("Pacific Plains Electric", "Bookings <hello@example.com>"),
+    "Bookings <hello@example.com>",
+  );
+});
+
+test("a business name cannot break the From header apart", () => {
+  // The name is tenant-controlled, so it is the untrusted half of this header.
+  const sender = emailSender('Bob "Sparks" Reyes, Inc. <evil@attacker.test>', "b@volteira.com");
+
+  // Exactly one address, and it is ours.
+  assert.equal(sender.match(/</g)?.length, 1);
+  assert.equal(sender.match(/>/g)?.length, 1);
+  assert.ok(sender.endsWith("<b@volteira.com>"), sender);
+
+  // Nothing in the display name reads as an address of its own.
+  const displayName = sender.slice(0, sender.indexOf("<"));
+  assert.doesNotMatch(displayName, /[@"<>,;:]/);
+});
+
+test("with nothing configured there is no sender at all", () => {
+  assert.equal(emailSender("Pacific Plains Electric", ""), "");
+  assert.equal(emailSender("", "bookings@volteira.com"), "bookings@volteira.com");
 });
 
 test("a booking with no address still confirms the window", () => {

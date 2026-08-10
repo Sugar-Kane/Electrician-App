@@ -33,6 +33,8 @@ export async function sendEmail(input: {
   text: string;
   html: string;
   replyTo?: string;
+  /** Overrides the configured From line, for a tenant-named sender. */
+  from?: string;
 }): Promise<EmailResult> {
   const auth = credentials();
   if (!auth) {
@@ -51,7 +53,7 @@ export async function sendEmail(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: auth.from,
+        from: input.from || auth.from,
         to: [input.to],
         subject: input.subject,
         text: input.text,

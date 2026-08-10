@@ -140,6 +140,30 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
 }
 
 /**
+ * The From line, so the customer sees who is actually writing to them.
+ *
+ * A confirmation from "bookings@volteira.com" is from software the customer has
+ * never heard of; the same address labelled with the business name is from the
+ * electrician they just called. The address is the platform's because the
+ * platform holds the verified domain — the name is the tenant's because that is
+ * whose appointment it is.
+ *
+ * A configured value that already carries a display name is left alone, so a
+ * deployment can override this entirely.
+ */
+export function emailSender(businessName: string, configured: string): string {
+  const address = configured.trim();
+  if (!address) return "";
+  if (address.includes("<")) return address;
+
+  // A quote, a comma, or an angle bracket would break the header apart. `@` is
+  // stripped too: a display name that reads like an address is the shape of a
+  // phishing header, and no business name needs one.
+  const name = businessName.replace(/["\\<>,;:@]/g, " ").replace(/\s+/g, " ").trim().slice(0, 78);
+  return name ? `${name} <${address}>` : address;
+}
+
+/**
  * Whether an address is worth attempting delivery to.
  *
  * Speech recognition turns "adam at gmail dot com" into things that are not
