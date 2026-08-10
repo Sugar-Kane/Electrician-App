@@ -122,9 +122,9 @@ export const BOOKING_TOOLS: McpTool[] = [
           description: "Their answer to: Is there anything the electrician needs to get in — gate code, dog, parking, someone home?  Empty string if you could not get one.",
         },
         caller_confirmed: {
-          type: "boolean",
+          type: "string",
           description:
-            "True only if you asked whether to go ahead and book, and the customer said yes out loud. Never true because they seemed willing.",
+            'Send "yes" only if you asked whether to go ahead and book and the customer said yes out loud. Send "no" otherwise. Never "yes" because they seemed willing.',
         },
         delivery_preference: {
           type: "string",
@@ -133,26 +133,18 @@ export const BOOKING_TOOLS: McpTool[] = [
             "How they asked to receive the booking and payment link. Ask them: text, email, or both?",
         },
       },
-      // caller_email is required so the model has to collect it rather than
-      // quietly skipping the question. An empty string is a valid answer — the
-      // requirement is that the caller was asked, not that they said yes.
+      // Deliberately short. Everything the intake gate checks is optional here
+      // and enforced in intakeShortfall instead: a refusal that says what is
+      // missing teaches the model more than a schema rejection does, and a
+      // smaller schema is a smaller thing for a tool API to choke on. The whole
+      // connector went quiet once this list grew to ten entries.
       required: [
         "contact_name",
         "description",
         "address_line_1",
         "city",
-        "postal_code",
         "slot_start",
-        "urgency",
         "caller_phone",
-        "caller_email",
-        "answer_scope",
-        "answer_onset",
-        "answer_breaker",
-        "answer_property",
-        "answer_access",
-        "caller_confirmed",
-        "delivery_preference",
       ],
       additionalProperties: false,
     },
@@ -231,7 +223,8 @@ export function deliveryPreference(args: Record<string, unknown>): "text" | "ema
  * places and skipped them anyway, so it is enforced rather than requested.
  */
 export function intakeShortfall(args: Record<string, unknown>): string {
-  if (args.caller_confirmed !== true) {
+  const confirmed = args.caller_confirmed;
+  if (confirmed !== true && text(confirmed).toLowerCase() !== "yes") {
     return 'NOT BOOKED. You have not confirmed with the customer. Ask "Would you like me to go ahead and book that?" and call this again once they say yes.';
   }
 

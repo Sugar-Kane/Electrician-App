@@ -65,13 +65,13 @@ const COMPLETE = {
   answer_breaker: "One breaker tripped and it will not reset.",
   answer_property: "",
   answer_access: "",
-  caller_confirmed: true,
+  caller_confirmed: "yes",
   delivery_preference: "both",
 };
 
 test("a booking is refused until the customer actually says yes", () => {
   // The failure that started this: she booked without ever asking.
-  const refusal = intakeShortfall({ ...COMPLETE, caller_confirmed: false });
+  const refusal = intakeShortfall({ ...COMPLETE, caller_confirmed: "no" });
   assert.match(refusal, /^NOT BOOKED/);
   assert.match(refusal, /go ahead and book/i);
 });
@@ -125,7 +125,7 @@ test("every intake answer is a flat string, never a nested object", () => {
   const properties = tool.inputSchema.properties as Record<string, { type: string }>;
 
   for (const [name, schema] of Object.entries(properties)) {
-    assert.ok(["string", "boolean"].includes(schema.type), `${name} is ${schema.type}`);
+    assert.equal(schema.type, "string", `${name} is ${schema.type}`);
   }
   for (const entry of INTAKE_QUESTIONS) {
     assert.ok(properties[`answer_${entry.key}`], entry.key);
@@ -225,13 +225,24 @@ test("the caller's number is asked for, since one URL serves every call", () => 
   assert.equal(callerPhone({}), "");
 });
 
-test("a booking cannot be made without the email question having been asked", () => {
-  // Required so the model has to collect it rather than quietly skipping the
-  // question — which is exactly what happened on the first live booking. An
-  // empty answer is still an answer; the requirement is that they were asked.
+test("the schema asks for little and the server enforces the rest", () => {
+  // The connector went silent when `required` grew to ten entries. Enforcement
+  // lives in intakeShortfall, which refuses in words the model can act on.
   const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "book_visit")!;
-  assert.ok((tool.inputSchema.required as string[]).includes("caller_email"));
+  const required = tool.inputSchema.required as string[];
+
+  assert.ok(required.length <= 6, `${required.length} required properties`);
+  for (const optional of ["caller_email", "caller_confirmed", "delivery_preference", "answer_scope"]) {
+    assert.ok(!required.includes(optional), `${optional} should not be required`);
+  }
   assert.match(tool.description, /how they want their booking link/i);
+});
+
+test("both spellings of a yes are accepted", () => {
+  // The schema says "yes"; a model that sends a real boolean is still right.
+  assert.equal(intakeShortfall({ ...COMPLETE, caller_confirmed: "yes" }), "");
+  assert.equal(intakeShortfall({ ...COMPLETE, caller_confirmed: true }), "");
+  assert.match(intakeShortfall({ ...COMPLETE, caller_confirmed: "maybe" }), /^NOT BOOKED/);
 });
 
 test("declining the email does not block the booking", () => {
