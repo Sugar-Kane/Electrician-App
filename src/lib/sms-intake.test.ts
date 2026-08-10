@@ -18,6 +18,7 @@ const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
     { start: "2026-08-11T20:00:00.000Z", end: "2026-08-11T22:00:00.000Z", label: "Tue Aug 11, 1:00-3:00 PM" },
   ],
   diagnosticFee: "$149",
+  diagnosticFeeCents: 14900,
   serviceArea: "the Central Coast",
   isFirstReply: false,
   ...overrides,

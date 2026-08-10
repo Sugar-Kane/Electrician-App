@@ -98,6 +98,8 @@ export async function loadIntakeContext(input: {
         typeof settings?.diagnostic_fee_cents === "number"
           ? `$${(settings.diagnostic_fee_cents / 100).toFixed(0)}`
           : "quoted before we come out",
+      diagnosticFeeCents:
+        typeof settings?.diagnostic_fee_cents === "number" ? settings.diagnostic_fee_cents : 10000,
       serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of the shop`,
       isFirstReply: input.isFirstReply,
     },
@@ -204,6 +206,11 @@ export async function recordBookingRequest(input: {
   decision: unknown;
   /** Where to send an email confirmation, if the customer offered one. */
   email?: string;
+  /** What the customer was asked on the call, and what they said. */
+  intakeAnswers?: { question: string; answer: string }[];
+  deliveryPreference?: "text" | "email" | "both";
+  /** The deposit as quoted to them, frozen at the moment they agreed. */
+  depositCents?: number;
 }): Promise<RecordedRequest> {
   const { action } = input;
   if (action.kind !== "callback" && action.kind !== "book") {
@@ -232,6 +239,9 @@ export async function recordBookingRequest(input: {
       model: input.model,
       model_decision: input.decision ?? {},
       email: input.email || null,
+      intake_answers: input.intakeAnswers ?? [],
+      delivery_preference: input.deliveryPreference ?? null,
+      deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
     })
     .select("id, public_token")
     .single();

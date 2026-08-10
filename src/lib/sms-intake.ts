@@ -27,6 +27,8 @@ export type IntakeContext = {
   /** Windows the business actually has open, straight from the scheduler. */
   offeredSlots: OfferedSlot[];
   diagnosticFee: string;
+  /** The same fee in cents, for anything that has to charge it. */
+  diagnosticFeeCents: number;
   serviceArea: string;
   /** Appended to the first reply in a thread only. */
   isFirstReply: boolean;

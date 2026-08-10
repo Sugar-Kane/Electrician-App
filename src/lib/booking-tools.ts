@@ -6,7 +6,11 @@ import {
   callerEmail,
   callerPhone,
   customerWords,
+  deliveryPreference,
   describeOutcome,
+  intakeAnswers,
+  intakeQuestionList,
+  intakeShortfall,
   slotList,
 } from "@/lib/booking-tool-rules";
 import { sendBookingConfirmations } from "@/lib/booking-notifications";
@@ -79,6 +83,14 @@ export async function runBookingTool(input: {
   });
 
   if (input.name === "list_open_slots") return { text: slotList(context) };
+  if (input.name === "get_intake_questions") return { text: intakeQuestionList() };
+
+  // Before anything is written: was the customer actually interviewed, and did
+  // they actually say yes? Both are refusals the model can act on, not errors.
+  if (input.name === "book_visit") {
+    const shortfall = intakeShortfall(input.args);
+    if (shortfall) return { isError: true, text: shortfall };
+  }
 
   const decision = buildDecision(input.name, input.args);
   if (!decision) return { isError: true, text: `NOT BOOKED. Unknown tool: ${input.name}` };
@@ -100,6 +112,8 @@ export async function runBookingTool(input: {
   }
 
   const email = callerEmail(input.args);
+  const answers = intakeAnswers(input.args);
+  const preference = deliveryPreference(input.args);
   const recorded = await recordBookingRequest({
     database: input.database,
     organizationId: input.session.organizationId,
@@ -110,6 +124,9 @@ export async function runBookingTool(input: {
     model: "grok-voice",
     decision,
     email,
+    intakeAnswers: answers,
+    deliveryPreference: preference || undefined,
+    depositCents: context.diagnosticFeeCents,
   });
 
   // Tell the customer and the owner. Awaited so a serverless invocation is not
@@ -130,8 +147,16 @@ export async function runBookingTool(input: {
       slot: { start: action.slot.start, end: action.slot.end },
       timeZone,
       origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+      intakeAnswers: answers,
+      deliveryPreference: preference || "text",
     });
   }
 
-  return describeOutcome({ name: input.name, action, context, phone });
+  return describeOutcome({
+    name: input.name,
+    action,
+    context,
+    phone,
+    deliveryPreference: preference,
+  });
 }
