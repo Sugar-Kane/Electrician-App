@@ -46,7 +46,7 @@ export const BOOKING_TOOLS: McpTool[] = [
     name: "book_visit",
     title: "Book a diagnostic visit",
     description:
-      "Book a visit into one of the open windows, after the customer has described the problem, given a service address, and accepted a window you offered them. Fails if the window is not open or the address is incomplete — read the result back before telling the customer anything is booked.",
+      "Book a visit into one of the open windows, after the customer has described the problem, given a service address, and accepted a window you offered them. Before calling this you must have asked for a callback number AND offered to email a confirmation — send an empty caller_email only if they actually declined one. Fails if the window is not open or the address is incomplete; read the result back before telling the customer anything is booked.",
     inputSchema: {
       type: "object",
       properties: {
@@ -68,9 +68,12 @@ export const BOOKING_TOOLS: McpTool[] = [
         caller_email: {
           type: "string",
           description:
-            "The caller's email, if they want an emailed confirmation. Offer it once; an empty string is fine and never blocks the booking.",
+            "The caller's email for a written confirmation. Ask every caller: \"What is the best email for your confirmation?\" Read it back before using it. Send an empty string only if they decline — an empty value never blocks the booking.",
         },
       },
+      // caller_email is required so the model has to collect it rather than
+      // quietly skipping the question. An empty string is a valid answer — the
+      // requirement is that the caller was asked, not that they said yes.
       required: [
         "contact_name",
         "description",
@@ -80,6 +83,7 @@ export const BOOKING_TOOLS: McpTool[] = [
         "slot_start",
         "urgency",
         "caller_phone",
+        "caller_email",
       ],
       additionalProperties: false,
     },
