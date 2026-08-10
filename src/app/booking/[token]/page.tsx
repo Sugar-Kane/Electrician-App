@@ -32,6 +32,9 @@ type Confirmation = {
   diagnostic_fee_cents: number | null;
   time_zone: string | null;
   status: string | null;
+  intake_answers: { question: string; answer: string }[] | null;
+  deposit_cents: number | null;
+  deposit_paid: boolean | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,11 +94,16 @@ export default async function BookingConfirmationPage({
   const address = [booking.address_line_1, booking.city, booking.postal_code]
     .filter(Boolean)
     .join(", ");
-  const fee = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format((booking.diagnostic_fee_cents ?? 10000) / 100);
+  const money = (cents: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(cents / 100);
+
+  const fee = money(booking.diagnostic_fee_cents ?? 10000);
+  const deposit = money(booking.deposit_cents ?? booking.diagnostic_fee_cents ?? 10000);
+  const answers = Array.isArray(booking.intake_answers) ? booking.intake_answers : [];
 
   return (
     <main className="grid min-h-screen place-items-center bg-[#06131d] px-4 py-10 text-white">
@@ -149,6 +157,35 @@ export default async function BookingConfirmationPage({
             </div>
           ) : null}
         </dl>
+
+        {answers.length > 0 ? (
+          <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <h2 className="text-sm font-semibold text-slate-200">What we went over on the call</h2>
+            <dl className="mt-3 space-y-3 text-sm">
+              {answers.map((entry, index) => (
+                <div key={index}>
+                  <dt className="text-slate-400">{entry.question}</dt>
+                  <dd className="mt-0.5 text-slate-200">{entry.answer}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              An electrician will call to go over a few more details before the visit.
+            </p>
+          </section>
+        ) : null}
+
+        <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <h2 className="text-sm font-semibold text-slate-200">
+            {booking.deposit_paid ? "Deposit received" : "Deposit to hold this appointment"}
+          </h2>
+          <p className="mt-1 text-2xl font-semibold">{deposit}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            {booking.deposit_paid
+              ? "Thank you — nothing else is due before the visit."
+              : `Credited toward the work. Call ${booking.business_phone} to pay it, or pay the electrician when they arrive.`}
+          </p>
+        </section>
 
         <a
           href={`tel:${booking.business_phone.replace(/[^\d+]/g, "")}`}

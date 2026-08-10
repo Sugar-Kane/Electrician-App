@@ -22,6 +22,8 @@ export type BookingFacts = {
   description: string;
   /** The public confirmation page for this booking, when there is one. */
   link?: string;
+  /** What was asked on the call, and what the customer said. */
+  intakeAnswers?: { question: string; answer: string }[];
 };
 
 /** Two SMS segments. Past this a message arrives split and looks broken. */
@@ -75,6 +77,25 @@ export function ownerBookingSms(facts: BookingFacts): string {
   );
 }
 
+/**
+ * The intake, as a second message to the owner.
+ *
+ * Deliberately separate rather than crammed into the first: the booking text
+ * has to survive a lock screen, and the answers are what gets read sitting down
+ * with a coffee. Sent only when there is something to send, and split so a long
+ * interview does not arrive as one truncated wall.
+ */
+export function ownerIntakeSms(facts: BookingFacts): string {
+  const answers = facts.intakeAnswers ?? [];
+  if (answers.length === 0) return "";
+
+  const lines = answers.map((entry, index) => `${index + 1}. ${squash(entry.question)} — ${squash(entry.answer)}`);
+  return clip(
+    [`What ${facts.contactName || "the caller"} said:`, ...lines].join(" "),
+    SMS_LIMIT * 2,
+  );
+}
+
 export type EmailBody = { subject: string; text: string; html: string };
 
 function escapeHtml(value: string): string {
@@ -105,6 +126,10 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
     address ? `Where: ${address}` : "",
     `Diagnostic visit: ${facts.diagnosticFee}`,
     facts.description ? `What you told us: ${squash(facts.description)}` : "",
+    ...(facts.intakeAnswers ?? []).flatMap((entry) => [
+      `${squash(entry.question)}`,
+      `  ${squash(entry.answer)}`,
+    ]),
     "",
     facts.link ? `View this appointment: ${facts.link}` : "",
     `Need to change it, or think something is wrong? Call ${facts.businessPhone}.`,
@@ -122,6 +147,10 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
     facts.description
       ? `<li><strong>What you told us:</strong> ${escapeHtml(squash(facts.description))}</li>`
       : "",
+    ...(facts.intakeAnswers ?? []).map(
+      (entry) =>
+        `<li><strong>${escapeHtml(squash(entry.question))}</strong><br />${escapeHtml(squash(entry.answer))}</li>`,
+    ),
     "</ul>",
     facts.link
       ? `<p><a href="${escapeHtml(facts.link)}">View this appointment</a></p>`

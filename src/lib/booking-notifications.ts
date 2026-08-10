@@ -6,6 +6,7 @@ import {
   emailSender,
   looksLikeEmail,
   ownerBookingSms,
+  ownerIntakeSms,
   type BookingFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
@@ -45,6 +46,9 @@ export type BookingNotification = {
   timeZone: string;
   /** Origin for the confirmation link, e.g. https://www.volteira.com */
   origin: string;
+  intakeAnswers?: { question: string; answer: string }[];
+  /** Where the customer asked to receive their link. */
+  deliveryPreference?: "text" | "email" | "both";
 };
 
 function factsFor(input: BookingNotification): BookingFacts {
@@ -57,6 +61,7 @@ function factsFor(input: BookingNotification): BookingFacts {
     city: input.address.city,
     diagnosticFee: input.context.diagnosticFee,
     description: input.description,
+    intakeAnswers: input.intakeAnswers,
     link: input.origin ? `${input.origin.replace(/\/+$/, "")}/booking/${input.publicToken}` : undefined,
   };
 }
@@ -143,7 +148,11 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // The customer. They gave this number on a call to book this appointment,
   // which is the transactional consent — recorded with that as the proof, the
   // same evidence an inbound text leaves.
-  if (messagingServiceSid && input.phone) {
+  const preference = input.deliveryPreference ?? "text";
+  const wantsText = preference === "text" || preference === "both";
+  const wantsEmail = preference === "email" || preference === "both";
+
+  if (messagingServiceSid && input.phone && wantsText) {
     await database.from("messaging_consent").upsert(
       {
         organization_id: input.organizationId,
@@ -174,10 +183,13 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   const ownerPhone = process.env.OWNER_NOTIFICATION_PHONE ?? process.env.ESCALATION_PHONE_NUMBER ?? "";
   if (messagingServiceSid && ownerPhone) {
     await sendSms({ to: ownerPhone, body: ownerBookingSms(facts), messagingServiceSid });
+
+    const intake = ownerIntakeSms(facts);
+    if (intake) await sendSms({ to: ownerPhone, body: intake, messagingServiceSid });
   }
 
   // The email, when the caller gave one that could plausibly be delivered to.
-  if (input.email && looksLikeEmail(input.email)) {
+  if (input.email && wantsEmail && looksLikeEmail(input.email)) {
     const message = confirmationEmail(facts);
     await sendEmail({
       to: input.email,

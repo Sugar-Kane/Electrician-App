@@ -23,6 +23,7 @@ const context: IntakeContext = {
     { start: "2026-08-11T15:00:00.000Z", end: "2026-08-11T17:00:00.000Z", label: "Tue Aug 11, 8:00-10:00 AM" },
   ],
   diagnosticFee: "$100",
+  diagnosticFeeCents: 10000,
   serviceArea: "the Central Coast",
   isFirstReply: false,
 };

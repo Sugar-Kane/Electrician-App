@@ -20,6 +20,31 @@ import type { IntakeAction, IntakeContext, IntakeDecision } from "@/lib/sms-inta
 const URGENCY = { type: "string", enum: ["routine", "urgent"] } as const;
 
 /**
+ * What an electrician asks before agreeing to come out.
+ *
+ * The agent was booking on two sentences — "my washer is out" and an address —
+ * which is not enough for anyone to load a van. These decide what the visit
+ * actually is: whether it is one circuit or the service, whether a breaker has
+ * already been tried, and whether the electrician can physically get to the
+ * panel when they arrive.
+ *
+ * Kept here rather than in the spoken prompt because a prompt lives in a web
+ * form somebody typed into, and this has already silently stopped being true
+ * twice. The list is short on purpose: five questions is a phone call, ten is
+ * an interrogation.
+ */
+export const INTAKE_QUESTIONS = [
+  "Is this affecting the whole house, one room, or a single outlet or fixture?",
+  "When did it start, and did anything change just before — a new appliance, a storm, or work done?",
+  "Have you looked at the breaker panel? Is anything tripped, and does it reset?",
+  "Is this a house, a condo, or a commercial space, and roughly how old is the building?",
+  "Is there anything the electrician needs to get in — a gate code, a dog, parking, or someone home?",
+] as const;
+
+/** Below this, the caller was not interviewed, they were processed. */
+export const MINIMUM_INTAKE_ANSWERS = 3;
+
+/**
  * The caller's number, when the connection was not opened for a known caller.
  *
  * A console-configured MCP URL is the same for every call, so the server cannot
@@ -43,10 +68,17 @@ export const BOOKING_TOOLS: McpTool[] = [
     inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
   },
   {
+    name: "get_intake_questions",
+    title: "The questions to ask before booking",
+    description:
+      "The questions this business wants asked before a visit is booked. Call this after the customer describes the problem, ask them conversationally — not as a list read aloud — and pass what you learn to book_visit.",
+    inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
+  },
+  {
     name: "book_visit",
     title: "Book a diagnostic visit",
     description:
-      "Book a visit into one of the open windows, after the customer has described the problem, given a service address, and accepted a window you offered them. Before calling this you must have asked for a callback number AND offered to email a confirmation — send an empty caller_email only if they actually declined one. Fails if the window is not open or the address is incomplete; read the result back before telling the customer anything is booked.",
+      "Book a visit. Only call this after all of: the customer described the problem, you asked the get_intake_questions questions, you took a service address, you offered a window and they accepted it, you asked \"Would you like me to go ahead and book that?\" and they said yes, you took a callback number, and you asked how they want their booking link. This refuses unless the intake answers and the caller's yes are both present. Read the result back before telling the customer anything is booked.",
     inputSchema: {
       type: "object",
       properties: {
@@ -70,6 +102,31 @@ export const BOOKING_TOOLS: McpTool[] = [
           description:
             "The caller's email for a written confirmation. Ask every caller: \"What is the best email for your confirmation?\" Read it back before using it. Send an empty string only if they decline — an empty value never blocks the booking.",
         },
+        intake_answers: {
+          type: "array",
+          description:
+            "What the customer said to the get_intake_questions questions, in their own words. Include a question only if you actually asked it. Do not invent an answer, and do not fill one in from what you assume.",
+          items: {
+            type: "object",
+            properties: {
+              question: { type: "string" },
+              answer: { type: "string", description: "The customer's answer, in their own words." },
+            },
+            required: ["question", "answer"],
+            additionalProperties: false,
+          },
+        },
+        caller_confirmed: {
+          type: "boolean",
+          description:
+            "True only if you asked whether to go ahead and book, and the customer said yes out loud. Never true because they seemed willing.",
+        },
+        delivery_preference: {
+          type: "string",
+          enum: ["text", "email", "both"],
+          description:
+            "How they asked to receive the booking and payment link. Ask them: text, email, or both?",
+        },
       },
       // caller_email is required so the model has to collect it rather than
       // quietly skipping the question. An empty string is a valid answer — the
@@ -84,6 +141,9 @@ export const BOOKING_TOOLS: McpTool[] = [
         "urgency",
         "caller_phone",
         "caller_email",
+        "intake_answers",
+        "caller_confirmed",
+        "delivery_preference",
       ],
       additionalProperties: false,
     },
@@ -132,6 +192,58 @@ export function callerEmail(args: Record<string, unknown>): string {
   return text(args.caller_email);
 }
 
+export type IntakeAnswer = { question: string; answer: string };
+
+/**
+ * The answers the model says it collected, with the empty ones dropped.
+ *
+ * A question with no answer is not evidence of an interview — it is the shape
+ * of one. Only pairs where the customer actually said something count toward
+ * the minimum below.
+ */
+export function intakeAnswers(args: Record<string, unknown>): IntakeAnswer[] {
+  if (!Array.isArray(args.intake_answers)) return [];
+  return args.intake_answers
+    .map((entry) => {
+      if (typeof entry !== "object" || entry === null) return null;
+      const record = entry as Record<string, unknown>;
+      const question = text(record.question);
+      const answer = text(record.answer);
+      return question && answer ? { question, answer } : null;
+    })
+    .filter((entry): entry is IntakeAnswer => entry !== null);
+}
+
+export function deliveryPreference(args: Record<string, unknown>): "text" | "email" | "both" | "" {
+  const value = text(args.delivery_preference);
+  return value === "text" || value === "email" || value === "both" ? value : "";
+}
+
+/**
+ * Why this booking is not allowed to proceed yet, if it is not.
+ *
+ * Everything here is something the customer is owed before a job appears in
+ * their name: being asked what is actually wrong, and being asked whether they
+ * want it booked at all. The model has been told to do both in three separate
+ * places and skipped them anyway, so it is enforced rather than requested.
+ */
+export function intakeShortfall(args: Record<string, unknown>): string {
+  if (args.caller_confirmed !== true) {
+    return 'NOT BOOKED. You have not confirmed with the customer. Ask "Would you like me to go ahead and book that?" and call this again once they say yes.';
+  }
+
+  const answers = intakeAnswers(args);
+  if (answers.length < MINIMUM_INTAKE_ANSWERS) {
+    return `NOT BOOKED. Only ${answers.length} of the intake questions were answered and ${MINIMUM_INTAKE_ANSWERS} are needed. Call get_intake_questions, ask the ones you have not asked, and try again.`;
+  }
+
+  if (!deliveryPreference(args)) {
+    return 'NOT BOOKED. Ask "Would you like the booking and payment link by text, email, or both?" and call this again with their answer.';
+  }
+
+  return "";
+}
+
 /**
  * A tool call, restated as the proposal the intake rules already understand.
  *
@@ -172,6 +284,16 @@ export function buildDecision(
   return null;
 }
 
+/** The questions, as the model should receive them. */
+export function intakeQuestionList(): string {
+  return [
+    "Ask these before booking, conversationally — one at a time, not read as a list:",
+    ...INTAKE_QUESTIONS.map((question, index) => `${index + 1}. ${question}`),
+    "",
+    `Pass what they say to book_visit as intake_answers. At least ${MINIMUM_INTAKE_ANSWERS} must be answered or the booking will be refused. If a customer will not answer one, move on — do not invent an answer.`,
+  ].join("\n");
+}
+
 export function slotList(context: IntakeContext): string {
   if (context.offeredSlots.length === 0) {
     return "No arrival windows are open. Use request_callback — do not offer the customer a time.";
@@ -194,6 +316,7 @@ export function describeOutcome(input: {
   action: IntakeAction;
   context: IntakeContext;
   phone: string;
+  deliveryPreference?: "text" | "email" | "both" | "";
 }): ToolResult {
   const { action, context } = input;
 
@@ -206,8 +329,27 @@ export function describeOutcome(input: {
 
   if (input.name === "book_visit") {
     if (action.kind === "book") {
+      // The words after a booking are the ones the customer will hold the
+      // business to, so they are written here rather than left to the model:
+      // what was booked, what it costs, and what happens next.
+      const where = `${action.address.line1}, ${action.address.city}`;
+      const delivery =
+        input.deliveryPreference === "both"
+          ? "by text and email"
+          : input.deliveryPreference === "email"
+            ? "by email"
+            : "by text";
+
       return {
-        text: `Booked: ${action.slot.label} at ${action.address.line1}, ${action.address.city}. Confirm the window and the address back to the customer, tell them the diagnostic visit is ${context.diagnosticFee}, and tell them a confirmation is on its way to their phone. ${context.businessName} will call if anything changes.`,
+        text: [
+          `Booked: ${action.slot.label} at ${where}.`,
+          "Say this back to the customer, in your own voice, all of it:",
+          `1. The window and the address, so they can correct you.`,
+          `2. "There is a ${context.diagnosticFee} deposit to hold the appointment."`,
+          `3. "An electrician will call you later today to go over a few more details."`,
+          `4. "I am sending your booking and payment link ${delivery} now."`,
+          "Do not promise a repair price, and do not take card details on this call.",
+        ].join(" "),
       };
     }
 

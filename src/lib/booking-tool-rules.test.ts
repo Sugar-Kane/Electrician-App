@@ -3,11 +3,16 @@ import assert from "node:assert/strict";
 
 import {
   BOOKING_TOOLS,
+  INTAKE_QUESTIONS,
+  MINIMUM_INTAKE_ANSWERS,
   buildDecision,
   callerEmail,
   callerPhone,
   customerWords,
+  deliveryPreference,
   describeOutcome,
+  intakeAnswers,
+  intakeShortfall,
   slotList,
 } from "./booking-tool-rules.ts";
 import { decideIntakeAction, type IntakeContext } from "./sms-intake.ts";
@@ -23,6 +28,7 @@ const CONTEXT: IntakeContext = {
   businessPhone: "(805) 555-0142",
   offeredSlots: [SLOT],
   diagnosticFee: "$95",
+  diagnosticFeeCents: 9500,
   serviceArea: "50 miles of the shop",
   isFirstReply: false,
 };
@@ -48,6 +54,79 @@ const BOOKABLE = {
   slot_start: SLOT.start,
   urgency: "routine",
 };
+
+const ANSWERS = [
+  { question: INTAKE_QUESTIONS[0], answer: "Just the kitchen." },
+  { question: INTAKE_QUESTIONS[1], answer: "Started last night, nothing changed." },
+  { question: INTAKE_QUESTIONS[2], answer: "One breaker tripped and it will not reset." },
+];
+
+/** A booking that has been through the whole conversation. */
+const COMPLETE = {
+  ...BOOKABLE,
+  caller_phone: "209-819-9985",
+  caller_email: "",
+  intake_answers: ANSWERS,
+  caller_confirmed: true,
+  delivery_preference: "both",
+};
+
+test("a booking is refused until the customer actually says yes", () => {
+  // The failure that started this: she booked without ever asking.
+  const refusal = intakeShortfall({ ...COMPLETE, caller_confirmed: false });
+  assert.match(refusal, /^NOT BOOKED/);
+  assert.match(refusal, /go ahead and book/i);
+});
+
+test("a booking is refused until the intake questions were actually asked", () => {
+  const refusal = intakeShortfall({ ...COMPLETE, intake_answers: ANSWERS.slice(0, 1) });
+  assert.match(refusal, /^NOT BOOKED/);
+  assert.match(refusal, new RegExp(String(MINIMUM_INTAKE_ANSWERS)));
+  assert.match(refusal, /get_intake_questions/);
+});
+
+test("a question with no answer is not an answer", () => {
+  // Otherwise the model can satisfy the gate by listing the questions back.
+  const blank = ANSWERS.map((entry) => ({ question: entry.question, answer: "  " }));
+  assert.deepEqual(intakeAnswers({ intake_answers: blank }), []);
+  assert.match(intakeShortfall({ ...COMPLETE, intake_answers: blank }), /^NOT BOOKED/);
+});
+
+test("a booking is refused until they have said how to send the link", () => {
+  const refusal = intakeShortfall({ ...COMPLETE, delivery_preference: "carrier pigeon" });
+  assert.match(refusal, /text, email, or both/i);
+});
+
+test("a complete conversation passes the gate", () => {
+  assert.equal(intakeShortfall(COMPLETE), "");
+  assert.equal(intakeAnswers(COMPLETE).length, 3);
+  assert.equal(deliveryPreference(COMPLETE), "both");
+});
+
+test("the booking result tells her to say the deposit and what happens next", () => {
+  const decision = buildDecision("book_visit", COMPLETE)!;
+  const action = decideIntakeAction({ decision, customerText: "no power", context: CONTEXT });
+  const result = describeOutcome({
+    name: "book_visit",
+    action,
+    context: CONTEXT,
+    phone: "+12098199985",
+    deliveryPreference: "both",
+  });
+
+  assert.match(result.text, /\$95 deposit/);
+  assert.match(result.text, /call you later today/i);
+  assert.match(result.text, /by text and email/);
+  assert.match(result.text, /do not take card details/i);
+});
+
+test("the questions are the business's, and short enough to ask out loud", () => {
+  assert.ok(INTAKE_QUESTIONS.length >= MINIMUM_INTAKE_ANSWERS);
+  assert.ok(INTAKE_QUESTIONS.length <= 6, "a phone call, not an interrogation");
+  for (const question of INTAKE_QUESTIONS) {
+    assert.ok(question.endsWith("?"), question);
+  }
+});
 
 test("a complete booking into an offered window is booked", () => {
   const { action, result } = run("book_visit", BOOKABLE);
@@ -140,7 +219,7 @@ test("a booking cannot be made without the email question having been asked", ()
   // empty answer is still an answer; the requirement is that they were asked.
   const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "book_visit")!;
   assert.ok((tool.inputSchema.required as string[]).includes("caller_email"));
-  assert.match(tool.description, /offered to email a confirmation/i);
+  assert.match(tool.description, /how they want their booking link/i);
 });
 
 test("declining the email does not block the booking", () => {

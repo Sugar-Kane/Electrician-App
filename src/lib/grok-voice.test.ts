@@ -20,6 +20,7 @@ const CONTEXT: IntakeContext = {
   businessPhone: "(805) 555-0142",
   offeredSlots: [],
   diagnosticFee: "$95",
+  diagnosticFeeCents: 9500,
   serviceArea: "50 miles of the shop",
   isFirstReply: false,
 };
@@ -150,6 +151,7 @@ test("the session is given the booking tools and only the booking tools", () => 
   assert.equal(update.session.tools.length, 1);
   assert.deepEqual(update.session.tools[0]!.allowed_tools, [
     "list_open_slots",
+    "get_intake_questions",
     "book_visit",
     "request_callback",
   ]);
