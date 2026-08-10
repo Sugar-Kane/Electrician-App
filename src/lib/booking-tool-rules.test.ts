@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   BOOKING_TOOLS,
   buildDecision,
+  callerEmail,
   callerPhone,
   customerWords,
   describeOutcome,
@@ -131,6 +132,22 @@ test("the caller's number is asked for, since one URL serves every call", () => 
 
   assert.equal(callerPhone({ caller_phone: " +1 805 555 0142 " }), "+1 805 555 0142");
   assert.equal(callerPhone({}), "");
+});
+
+test("a booking cannot be made without the email question having been asked", () => {
+  // Required so the model has to collect it rather than quietly skipping the
+  // question — which is exactly what happened on the first live booking. An
+  // empty answer is still an answer; the requirement is that they were asked.
+  const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "book_visit")!;
+  assert.ok((tool.inputSchema.required as string[]).includes("caller_email"));
+  assert.match(tool.description, /offered to email a confirmation/i);
+});
+
+test("declining the email does not block the booking", () => {
+  const { action } = run("book_visit", { ...BOOKABLE, caller_email: "" });
+  assert.equal(action.kind, "book");
+  assert.equal(callerEmail({ caller_email: "  adam@gmail.com " }), "adam@gmail.com");
+  assert.equal(callerEmail({}), "");
 });
 
 test("list_open_slots proposes nothing, so it can never write", () => {
