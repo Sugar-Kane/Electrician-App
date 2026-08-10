@@ -149,6 +149,7 @@ export async function runBookingTool(input: {
       origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
       intakeAnswers: answers,
       deliveryPreference: preference || "text",
+      jobId: recorded.jobId,
     });
   }
 
