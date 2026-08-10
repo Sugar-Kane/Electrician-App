@@ -55,18 +55,16 @@ const BOOKABLE = {
   urgency: "routine",
 };
 
-const ANSWERS = [
-  { question: INTAKE_QUESTIONS[0], answer: "Just the kitchen." },
-  { question: INTAKE_QUESTIONS[1], answer: "Started last night, nothing changed." },
-  { question: INTAKE_QUESTIONS[2], answer: "One breaker tripped and it will not reset." },
-];
-
 /** A booking that has been through the whole conversation. */
 const COMPLETE = {
   ...BOOKABLE,
   caller_phone: "209-819-9985",
   caller_email: "",
-  intake_answers: ANSWERS,
+  answer_scope: "Just the kitchen.",
+  answer_onset: "Started last night, nothing changed.",
+  answer_breaker: "One breaker tripped and it will not reset.",
+  answer_property: "",
+  answer_access: "",
   caller_confirmed: true,
   delivery_preference: "both",
 };
@@ -79,17 +77,17 @@ test("a booking is refused until the customer actually says yes", () => {
 });
 
 test("a booking is refused until the intake questions were actually asked", () => {
-  const refusal = intakeShortfall({ ...COMPLETE, intake_answers: ANSWERS.slice(0, 1) });
+  const refusal = intakeShortfall({ ...COMPLETE, answer_onset: "", answer_breaker: "" });
   assert.match(refusal, /^NOT BOOKED/);
   assert.match(refusal, new RegExp(String(MINIMUM_INTAKE_ANSWERS)));
   assert.match(refusal, /get_intake_questions/);
 });
 
 test("a question with no answer is not an answer", () => {
-  // Otherwise the model can satisfy the gate by listing the questions back.
-  const blank = ANSWERS.map((entry) => ({ question: entry.question, answer: "  " }));
-  assert.deepEqual(intakeAnswers({ intake_answers: blank }), []);
-  assert.match(intakeShortfall({ ...COMPLETE, intake_answers: blank }), /^NOT BOOKED/);
+  // Otherwise the model can satisfy the gate by sending whitespace back.
+  const blank = { ...COMPLETE, answer_scope: "  ", answer_onset: " ", answer_breaker: "" };
+  assert.deepEqual(intakeAnswers(blank), []);
+  assert.match(intakeShortfall(blank), /^NOT BOOKED/);
 });
 
 test("a booking is refused until they have said how to send the link", () => {
@@ -120,11 +118,25 @@ test("the booking result tells her to say the deposit and what happens next", ()
   assert.match(result.text, /do not take card details/i);
 });
 
+test("every intake answer is a flat string, never a nested object", () => {
+  // A nested schema is the thing a tool API is most likely to reject, and a
+  // rejected tool is a silent failure: the model simply stops having it.
+  const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "book_visit")!;
+  const properties = tool.inputSchema.properties as Record<string, { type: string }>;
+
+  for (const [name, schema] of Object.entries(properties)) {
+    assert.ok(["string", "boolean"].includes(schema.type), `${name} is ${schema.type}`);
+  }
+  for (const entry of INTAKE_QUESTIONS) {
+    assert.ok(properties[`answer_${entry.key}`], entry.key);
+  }
+});
+
 test("the questions are the business's, and short enough to ask out loud", () => {
   assert.ok(INTAKE_QUESTIONS.length >= MINIMUM_INTAKE_ANSWERS);
   assert.ok(INTAKE_QUESTIONS.length <= 6, "a phone call, not an interrogation");
-  for (const question of INTAKE_QUESTIONS) {
-    assert.ok(question.endsWith("?"), question);
+  for (const entry of INTAKE_QUESTIONS) {
+    assert.ok(entry.question.endsWith("?"), entry.question);
   }
 });
 
