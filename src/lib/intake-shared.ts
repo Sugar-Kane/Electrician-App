@@ -178,7 +178,12 @@ export async function findOrCreateCustomerByPhone(input: {
   return lead ? String(lead.id) : null;
 }
 
-export type RecordedRequest = { requestId?: string; jobId?: string };
+export type RecordedRequest = {
+  requestId?: string;
+  jobId?: string;
+  /** The unguessable handle for this booking, safe to put in a message. */
+  publicToken?: string;
+};
 
 /**
  * Write down what the customer asked for, and turn an accepted window into a
@@ -197,6 +202,8 @@ export async function recordBookingRequest(input: {
   callerText: string;
   model: string | null;
   decision: unknown;
+  /** Where to send an email confirmation, if the customer offered one. */
+  email?: string;
 }): Promise<RecordedRequest> {
   const { action } = input;
   if (action.kind !== "callback" && action.kind !== "book") {
@@ -224,16 +231,22 @@ export async function recordBookingRequest(input: {
       urgency: action.urgency ?? "routine",
       model: input.model,
       model_decision: input.decision ?? {},
+      email: input.email || null,
     })
-    .select("id")
+    .select("id, public_token")
     .single();
 
   const requestId = created?.id ? String(created.id) : undefined;
-  if (action.kind !== "book" || !requestId) return { requestId };
+  const publicToken = created?.public_token ? String(created.public_token) : undefined;
+  if (action.kind !== "book" || !requestId) return { requestId, publicToken };
 
   const { data: scheduled } = await input.database.rpc("schedule_sms_booking_request", {
     p_request_id: requestId,
   });
 
-  return { requestId, jobId: typeof scheduled === "string" ? scheduled : undefined };
+  return {
+    requestId,
+    publicToken,
+    jobId: typeof scheduled === "string" ? scheduled : undefined,
+  };
 }

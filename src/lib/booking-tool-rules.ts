@@ -65,6 +65,11 @@ export const BOOKING_TOOLS: McpTool[] = [
         },
         urgency: { ...URGENCY, description: "urgent only if they say today, now, or no power." },
         caller_phone: CALLER_PHONE,
+        caller_email: {
+          type: "string",
+          description:
+            "The caller's email, if they want an emailed confirmation. Offer it once; an empty string is fine and never blocks the booking.",
+        },
       },
       required: [
         "contact_name",
@@ -116,6 +121,11 @@ export function customerWords(args: Record<string, unknown>): string {
 /** The number the model says the caller gave, if it was asked to pass one. */
 export function callerPhone(args: Record<string, unknown>): string {
   return text(args.caller_phone);
+}
+
+/** An email address the caller offered. Optional everywhere it appears. */
+export function callerEmail(args: Record<string, unknown>): string {
+  return text(args.caller_email);
 }
 
 /**
@@ -193,7 +203,7 @@ export function describeOutcome(input: {
   if (input.name === "book_visit") {
     if (action.kind === "book") {
       return {
-        text: `Booked: ${action.slot.label} at ${action.address.line1}, ${action.address.city}. Confirm the window and the address back to the customer, tell them the diagnostic visit is ${context.diagnosticFee}, and that ${context.businessName} will call if anything changes.`,
+        text: `Booked: ${action.slot.label} at ${action.address.line1}, ${action.address.city}. Confirm the window and the address back to the customer, tell them the diagnostic visit is ${context.diagnosticFee}, and tell them a confirmation is on its way to their phone. ${context.businessName} will call if anything changes.`,
       };
     }
 

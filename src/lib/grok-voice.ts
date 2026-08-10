@@ -166,6 +166,7 @@ export function buildRealtimeInstructions(context: IntakeContext): string {
     "Nothing you say books anything. The tools are the only way something happens:",
     "- list_open_slots before you offer any time. Never invent, round, or adjust a window.",
     "- book_visit once they have described the problem, given a street address and city, and agreed to a window you offered. Read the result back before you tell them it is booked — it can refuse.",
+    "- Before booking, ask for the best phone number for a confirmation, and offer to email one too. Read both back. If they decline the email, leave it empty and carry on.",
     "- request_callback when a visit cannot be booked, or they ask to speak to a person.",
     "",
     "Rules:",

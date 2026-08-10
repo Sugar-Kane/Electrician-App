@@ -3,11 +3,13 @@ import "server-only";
 import {
   BOOKING_TOOLS,
   buildDecision,
+  callerEmail,
   callerPhone,
   customerWords,
   describeOutcome,
   slotList,
 } from "@/lib/booking-tool-rules";
+import { sendBookingConfirmations } from "@/lib/booking-notifications";
 import {
   findOrCreateCustomerByPhone,
   loadIntakeContext,
@@ -68,7 +70,7 @@ export async function runBookingTool(input: {
   name: string;
   args: Record<string, unknown>;
 }): Promise<ToolResult> {
-  const { context } = await loadIntakeContext({
+  const { context, timeZone } = await loadIntakeContext({
     database: input.database,
     organizationId: input.session.organizationId,
     // A phone call has no thread and sends no SMS, so the opt-out footer that
@@ -97,7 +99,8 @@ export async function runBookingTool(input: {
     };
   }
 
-  await recordBookingRequest({
+  const email = callerEmail(input.args);
+  const recorded = await recordBookingRequest({
     database: input.database,
     organizationId: input.session.organizationId,
     customerId,
@@ -106,7 +109,29 @@ export async function runBookingTool(input: {
     callerText,
     model: "grok-voice",
     decision,
+    email,
   });
+
+  // Tell the customer and the owner. Awaited so a serverless invocation is not
+  // torn down mid-send, but every failure inside is swallowed: the appointment
+  // is already in the calendar and no delivery problem may unmake it.
+  if (action.kind === "book" && recorded.requestId && recorded.publicToken) {
+    await sendBookingConfirmations({
+      requestId: recorded.requestId,
+      organizationId: input.session.organizationId,
+      customerId,
+      publicToken: recorded.publicToken,
+      phone,
+      email,
+      context,
+      contactName: action.contactName,
+      description: action.description,
+      address: { line1: action.address.line1, city: action.address.city },
+      slot: { start: action.slot.start, end: action.slot.end },
+      timeZone,
+      origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+    });
+  }
 
   return describeOutcome({ name: input.name, action, context, phone });
 }
