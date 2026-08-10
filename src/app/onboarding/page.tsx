@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CheckCircle2, LockKeyhole, Zap } from "lucide-react";
 
 import { OnboardingForm } from "@/components/onboarding-form";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Set up your business | Volteira" };
@@ -21,6 +22,14 @@ export default async function OnboardingPage() {
     .maybeSingle();
 
   if (membership) redirect("/");
+
+  // Somebody who was invited must not be offered a business to create. Building
+  // a second company next door to the one holding their work is the single
+  // worst outcome here: the app looks empty, and the phone number and booking
+  // agent still point at the business they were supposed to join.
+  const { data: invited } = await asFlexibleClient(supabase).rpc("pending_invitation_for_me");
+  const invitation = Array.isArray(invited) ? (invited[0] as { token?: string } | undefined) : undefined;
+  if (invitation?.token) redirect(`/invite/${invitation.token}`);
 
   const metadataName = authData.user.user_metadata.full_name;
   const defaultOwnerName =
