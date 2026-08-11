@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { OwnerNotificationForm } from "@/components/owner-notification-form";
+import { formatForDisplay } from "@/lib/phone-format";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,7 +57,7 @@ export default async function BookingAlertsSettingsPage() {
         <OwnerNotificationForm
           organizationId={organizationId}
           email={text(organization?.owner_notification_email)}
-          phone={text(organization?.owner_notification_phone)}
+          phone={formatForDisplay(text(organization?.owner_notification_phone))}
           textingBlocked={!messaging?.a2p_registered_at}
         />
       ) : (
