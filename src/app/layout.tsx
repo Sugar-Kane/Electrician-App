@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { ImpersonationBanner } from "@/components/impersonation-banner";
+
 export const metadata: Metadata = {
   title: "Volteira | Electrical Business Operations",
   description:
@@ -14,7 +16,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
-      <body className="min-h-full bg-[#06131d] text-slate-950">{children}</body>
+      {/*
+        The banner lives here rather than in a page shell so that a page cannot
+        render without it. Acting inside somebody else's business must never be
+        a state you can be in without being told.
+      */}
+      <body className="min-h-full bg-canvas text-ink">
+        <ImpersonationBanner />
+        {children}
+      </body>
     </html>
   );
 }
