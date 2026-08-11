@@ -132,6 +132,100 @@ export function workWeekLabel(days: CalendarDay[]): string {
   return `${month(start, "short")} ${start.getUTCDate()}, ${year(start)} – ${month(end, "short")} ${end.getUTCDate()}, ${year(end)}`;
 }
 
+/**
+ * The Monday of the week containing a date, weekends included.
+ *
+ * Different from `workWeekStart`, which rolls a weekend forward into the week
+ * ahead. That is right for a five-day strip you are picking a working day from,
+ * and wrong for a week view: somebody looking at Saturday's callout wants the
+ * week that Saturday is in, not the next one.
+ */
+export function calendarWeekStart(date: string): string {
+  const weekday = atNoon(date).getUTCDay();
+  // getUTCDay is 0 for Sunday, which belongs to the week that began six days
+  // earlier rather than the one starting tomorrow.
+  return shiftDays(date, weekday === 0 ? -6 : 1 - weekday);
+}
+
+/** Monday through Sunday of the week containing `date`. */
+export function fullWeekOf(date: string, today: string): CalendarDay[] {
+  const monday = calendarWeekStart(date);
+  return Array.from({ length: 7 }, (_unused, index) => {
+    const iso = shiftDays(monday, index);
+    const instant = atNoon(iso);
+    return {
+      date: iso,
+      weekday: part(instant, "UTC", { weekday: "short" }, "weekday"),
+      day: String(instant.getUTCDate()),
+      isToday: iso === today,
+    };
+  });
+}
+
+export type MonthCell = CalendarDay & {
+  /** False for the days either side that pad the grid out to whole weeks. */
+  inMonth: boolean;
+};
+
+/** The first of the month a date belongs to. */
+export function monthStart(date: string): string {
+  return `${date.slice(0, 7)}-01`;
+}
+
+/**
+ * A month as a grid of whole weeks, Monday first.
+ *
+ * Always six rows. A month that fits in five would otherwise make the page
+ * change height as you page through the year, which moves the buttons under
+ * somebody's thumb between taps.
+ */
+export function monthGridOf(date: string, today: string): MonthCell[] {
+  const first = monthStart(date);
+  const month = first.slice(0, 7);
+  const gridStart = calendarWeekStart(first);
+
+  return Array.from({ length: 42 }, (_unused, index) => {
+    const iso = shiftDays(gridStart, index);
+    const instant = atNoon(iso);
+    return {
+      date: iso,
+      weekday: part(instant, "UTC", { weekday: "short" }, "weekday"),
+      day: String(instant.getUTCDate()),
+      isToday: iso === today,
+      inMonth: iso.slice(0, 7) === month,
+    };
+  });
+}
+
+/** "August 2026" — the heading over a month grid. */
+export function monthLabel(date: string): string {
+  if (!isIsoDate(date)) return "";
+  const instant = atNoon(date);
+  const pieces = parts(instant, "UTC", { month: "long", year: "numeric" });
+  const value = (type: string) => pieces.find((piece) => piece.type === type)?.value ?? "";
+  return `${value("month")} ${value("year")}`;
+}
+
+/**
+ * The same day one month away, without landing on a date that does not exist.
+ *
+ * Naive month arithmetic turns January 31st into March 3rd, which as a "next
+ * month" button means a month gets skipped entirely.
+ */
+export function shiftMonths(date: string, months: number): string {
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  const target = month - 1 + months;
+  const targetYear = year + Math.floor(target / 12);
+  const targetMonth = ((target % 12) + 12) % 12;
+
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const day = Math.min(Number(date.slice(8, 10)), lastDay);
+
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${targetYear}-${pad(targetMonth + 1)}-${pad(day)}`;
+}
+
 /** "Mon, Aug 3" — the heading over a single day's jobs. */
 export function formatDayLabel(date: string): string {
   if (!isIsoDate(date)) return "";
