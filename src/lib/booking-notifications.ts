@@ -48,7 +48,12 @@ export type BookingNotification = {
   /** Origin for the confirmation link, e.g. https://www.volteira.com */
   origin: string;
   intakeAnswers?: { question: string; answer: string }[];
-  /** Where this business wants booking alerts sent. Falls back to the env. */
+  /**
+   * Where this business wants booking alerts sent.
+   *
+   * Per-business and nothing else. There is no deployment-wide fallback on
+   * purpose — see the comment at the owner send below.
+   */
   owner?: { email: string; phone: string };
   /** Where the customer asked to receive their link. */
   deliveryPreference?: "text" | "email" | "both";
@@ -224,11 +229,19 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
 
   // The owner. Deliberately a different number from the business line, so a
   // booking taken at 2am reaches a person rather than the phone that took it.
-  const ownerPhone =
-    input.owner?.phone ||
-    process.env.OWNER_NOTIFICATION_PHONE ||
-    process.env.ESCALATION_PHONE_NUMBER ||
-    "";
+  //
+  // This deliberately does NOT fall back to an environment variable. It used
+  // to, so the one tenant already running would not go quiet before anybody had
+  // filled the settings form in — which was safe at exactly one business and
+  // becomes a data leak at two. A deployment-wide address is one address: the
+  // second electrician's first booking, carrying their customer's name, street
+  // address, phone number and problem, would be emailed and texted to the first
+  // electrician. Going quiet is a bug somebody reports. Sending a stranger's
+  // customer to the wrong contractor is not recoverable.
+  //
+  // A business with nothing set is recorded as such, and the support console
+  // reports it as blocking.
+  const ownerPhone = input.owner?.phone ?? "";
   if (messagingServiceSid && ownerPhone) {
     const sent = await sendSms({ to: ownerPhone, body: ownerBookingSms(facts), messagingServiceSid });
     note({
@@ -248,14 +261,15 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       audience: "owner",
       ok: false,
       detail:
-        "No owner phone: this business has not set one, and neither OWNER_NOTIFICATION_PHONE nor ESCALATION_PHONE_NUMBER is set.",
+        "This business has not set a booking-alert phone number. Set one at Settings \u2192 Booking alerts.",
     });
   }
 
   // The owner's email. While A2P blocks every text, this is the only thing that
   // actually reaches anybody, so it carries the whole work order rather than a
   // nudge to go and look.
-  const ownerEmail = input.owner?.email || process.env.OWNER_NOTIFICATION_EMAIL || "";
+  // Per-business only, for the same reason as the phone above.
+  const ownerEmail = input.owner?.email ?? "";
   if (ownerEmail) {
     const jobUrl =
       input.origin && input.jobId
@@ -283,7 +297,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       audience: "owner",
       ok: false,
       detail:
-        "No owner email: this business has not set one, and OWNER_NOTIFICATION_EMAIL is not set.",
+        "This business has not set a booking-alert email address. Set one at Settings \u2192 Booking alerts.",
     });
   }
 
