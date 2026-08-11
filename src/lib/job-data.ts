@@ -379,7 +379,10 @@ export async function getTechnicianWorkloads(): Promise<{
  * free when there is nothing to do, which is the usual case after the first
  * time an address is seen.
  */
-export async function placeTodaysStops(): Promise<{ placed: number; unplaced: string[] }> {
+export async function placeTodaysStops(): Promise<{
+  placed: number;
+  unplaced: { address: string; reason: string }[];
+}> {
   const context = await resolveContext();
   if (!context) return { placed: 0, unplaced: [] };
 

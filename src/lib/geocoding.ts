@@ -20,6 +20,8 @@ import { hasCoordinates, type Coordinates } from "@/lib/coordinates";
 export type { Coordinates };
 export { hasCoordinates };
 
+export type UnplacedAddress = { address: string; reason: string };
+
 export type GeocodeResult =
   | { ok: true; coordinates: Coordinates; formatted: string }
   | { ok: false; reason: string };
@@ -102,8 +104,14 @@ export async function ensurePropertiesGeocoded(input: {
   database: { from: (table: string) => never } | ReturnType<typeof import("@/lib/supabase/admin").getSupabaseAdmin>;
   organizationId: string;
   limit?: number;
-}): Promise<{ placed: number; unplaced: string[] }> {
-  if (!isGeocodingConfigured()) return { placed: 0, unplaced: [] };
+}): Promise<{ placed: number; unplaced: UnplacedAddress[] }> {
+  if (!isGeocodingConfigured()) {
+    return {
+      placed: 0,
+      unplaced: [],
+      // Not an error: an unconfigured deployment simply has no coordinates.
+    };
+  }
 
   const database = input.database as ReturnType<
     typeof import("@/lib/supabase/admin").getSupabaseAdmin
@@ -121,7 +129,7 @@ export async function ensurePropertiesGeocoded(input: {
   if (pending.length === 0) return { placed: 0, unplaced: [] };
 
   let placed = 0;
-  const unplaced: string[] = [];
+  const unplaced: UnplacedAddress[] = [];
 
   for (const row of pending) {
     const record = row as Record<string, unknown>;
@@ -137,7 +145,13 @@ export async function ensurePropertiesGeocoded(input: {
 
     const result = await geocodeAddress(address);
     if (!result.ok) {
-      unplaced.push(address || "an address with nothing in it");
+      // Google's own words. "Could not place this address" is true and
+      // useless; REQUEST_DENIED or BILLING_NOT_ENABLED tells somebody which
+      // console page to open.
+      unplaced.push({
+        address: address || "an address with nothing in it",
+        reason: result.reason,
+      });
       continue;
     }
 

@@ -34,8 +34,12 @@ export function RouteMap({
   jobs: PilotJob[];
   today: string;
   apiKey: string;
-  /** Addresses that could not be turned into a point, named rather than dropped. */
-  unplaced: string[];
+  /**
+   * Addresses that could not be turned into a point, each with the reason the
+   * geocoder gave — "could not place this" is true and tells nobody which
+   * console page to open.
+   */
+  unplaced: { address: string; reason: string }[];
 }) {
   const [position, setPosition] = useState<RouteStartPosition | undefined>();
   const [locating, setLocating] = useState(false);
@@ -151,19 +155,32 @@ export function RouteMap({
         </div>
       ) : null}
 
-      {missing.length > 0 || unplaced.length > 0 ? (
+      {missing.length > 0 ? (
         <div className="mt-3 flex items-start gap-2 rounded-control border border-caution/25 bg-caution-bg p-4 text-sm leading-6 text-caution">
           <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <span>
-            {missing.length > 0 ? (
-              <>
-                {missing.length} {missing.length === 1 ? "stop is" : "stops are"} not on the map
-                because {missing.length === 1 ? "its address" : "their addresses"} could not be
-                placed: {missing.map((job) => job.address).join(", ")}.
-              </>
-            ) : null}{" "}
-            {unplaced.length > 0 ? `Could not place: ${unplaced.join(", ")}.` : null}
+            {missing.length} {missing.length === 1 ? "stop is" : "stops are"} not on the map
+            because {missing.length === 1 ? "its address" : "their addresses"} could not be placed:{" "}
+            {missing.map((job) => job.address).join(", ")}.
           </span>
+        </div>
+      ) : null}
+
+      {unplaced.length > 0 ? (
+        <div className="mt-3 rounded-control border border-caution/25 bg-caution-bg p-4 text-sm leading-6 text-caution">
+          <p className="flex items-start gap-2 font-semibold">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            {unplaced.length === 1 ? "One address" : `${unplaced.length} addresses`} could not be
+            placed
+          </p>
+          <ul className="mt-2 space-y-1">
+            {unplaced.map((entry) => (
+              <li key={entry.address}>
+                <span className="font-medium">{entry.address}</span>
+                <span className="block text-xs opacity-90">Google said: {entry.reason}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </section>
