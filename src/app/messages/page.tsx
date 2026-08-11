@@ -55,7 +55,6 @@ export default async function MessagesPage() {
       title="Messages"
       eyebrow="Customer conversations"
       description="Texts with customers about their appointments."
-      active="Messages"
     >
       <div className="mb-4 flex justify-end">
         <Link

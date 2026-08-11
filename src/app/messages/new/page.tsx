@@ -17,7 +17,6 @@ export default async function NewMessagePage() {
       title="New message"
       eyebrow="Start a conversation"
       description="Customers who agreed to receive text messages."
-      active="Messages"
     >
       <Link
         href="/messages"

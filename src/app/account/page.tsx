@@ -120,7 +120,6 @@ export default async function AccountPage({
       title="Account"
       eyebrow="User and business settings"
       description="Update your profile, control the app experience, manage Premium, and maintain payment-provider information."
-      active="More"
     >
       <section className="mb-4 rounded-3xl border border-[#ffc21c]/20 bg-[#ffc21c]/[0.045] p-4 sm:p-5">
         <div className="flex items-center gap-4">

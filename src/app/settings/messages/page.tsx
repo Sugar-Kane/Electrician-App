@@ -55,10 +55,10 @@ export default async function AutomaticMessagesPage() {
 
   return (
     <FieldPageShell
+      backHref="/settings"
       title="Automatic messages"
       eyebrow="Messaging"
       description="What gets texted to customers, and when."
-      active="Messages"
     >
       <section className="mb-4 rounded-3xl border border-white/10 bg-[#0b1b27] p-5 text-sm leading-6 text-slate-300 sm:p-6">
         <p>

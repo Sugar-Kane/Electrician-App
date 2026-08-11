@@ -65,10 +65,10 @@ export default async function TeamSettingsPage() {
 
   return (
     <FieldPageShell
+      backHref="/settings"
       title="Team"
       eyebrow="Your business"
       description="Who can open this business, and who has been invited to."
-      active="More"
     >
       {organizationId ? (
         <TeamManager

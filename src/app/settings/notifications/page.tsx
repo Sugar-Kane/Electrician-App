@@ -48,10 +48,10 @@ export default async function BookingAlertsSettingsPage() {
 
   return (
     <FieldPageShell
+      backHref="/settings"
       title="Booking alerts"
       eyebrow="Notifications"
       description="How you find out when the phone assistant books a job for you."
-      active="More"
     >
       {organizationId ? (
         <OwnerNotificationForm

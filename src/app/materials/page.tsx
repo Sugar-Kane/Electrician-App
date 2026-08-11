@@ -14,7 +14,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
   const nearAddress = selectedJob ? `${selectedJob.address}, ${selectedJob.city}` : serviceBase.address;
 
   return (
-    <FieldPageShell title="Material sourcing" eyebrow={selectedJob ? `Job #${selectedJob.id}` : "Inventory and suppliers"} description="Review what is already on the truck, identify shortages, and check live retailer results before adding a supply stop." active="More">
+    <FieldPageShell title="Material sourcing" eyebrow={selectedJob ? `Job #${selectedJob.id}` : "Inventory and suppliers"} description="Review what is already on the truck, identify shortages, and check live retailer results before adding a supply stop.">
       <div className="grid gap-4 lg:grid-cols-[1fr_.72fr]">
         <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-4 sm:p-6">
           <form action="/materials" className="flex gap-2"><input type="hidden" name="job" value={jobId ?? ""} /><label className="flex min-h-12 flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-[#0d202d] px-4"><Search className="h-4 w-4 text-slate-500" aria-hidden /><span className="sr-only">Search required materials</span><input name="query" defaultValue={query} placeholder="Search materials…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-slate-500" /></label><button className="tap-target grid h-12 w-12 place-items-center rounded-2xl bg-[#ffc21c] text-[#071723]" aria-label="Search materials"><PackageSearch className="h-5 w-5" aria-hidden /></button></form>
