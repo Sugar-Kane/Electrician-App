@@ -100,7 +100,6 @@ export default async function FilesPage({
       title={query.job ? `Job #${query.job} files` : "Files"}
       eyebrow="Documents and cloud sync"
       description="Files are filed by year, month, and job. Customer, property, payment status, and document type are filters in the app, not folders — so each file exists exactly once."
-      active="More"
     >
       {query.connected === "google_drive" ? (
         <div className="mb-4 flex items-start gap-3 rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.05] p-4 text-sm text-emerald-100">

@@ -24,7 +24,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   const total = visible.reduce((sum, invoice) => sum + invoice.amount, 0);
 
   return (
-    <FieldPageShell title={status === "paid" ? "Paid invoices" : status === "unpaid" ? "Unpaid invoices" : status === "overdue" ? "Overdue invoices" : "Invoices"} eyebrow="Revenue and collections" description="Tap an invoice to open its related job and customer context." active="More">
+    <FieldPageShell title={status === "paid" ? "Paid invoices" : status === "unpaid" ? "Unpaid invoices" : status === "overdue" ? "Overdue invoices" : "Invoices"} eyebrow="Revenue and collections" description="Tap an invoice to open its related job and customer context.">
       <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-4 sm:p-6">
         <div className="grid grid-cols-4 gap-1.5">
           {filters.map((filter) => <Link key={filter.value} href={`/invoices?status=${filter.value}`} className={`tap-target flex min-h-11 items-center justify-center rounded-xl text-xs font-semibold ${status === filter.value || (status === "all" && filter.value === "all") ? "bg-[#ffc21c] text-[#071723]" : "border border-white/10 text-slate-300"}`}>{filter.label}</Link>)}

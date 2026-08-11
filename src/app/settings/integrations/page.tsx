@@ -16,7 +16,8 @@ export default function SupplierIntegrationsPage() {
   const suppliers = getSupplierIntegrations();
 
   return (
-    <FieldPageShell title="Supplier integrations" eyebrow="Product discovery" description="Connect approved retailer programs without exposing credentials to technicians or customer browsers." active="More">
+    <FieldPageShell
+      backHref="/settings" title="Supplier integrations" eyebrow="Product discovery" description="Connect approved retailer programs without exposing credentials to technicians or customer browsers.">
       <div className="grid gap-4 lg:grid-cols-2">
         {suppliers.map((supplier) => {
           const ready = supplier.stage === "configuration_ready";

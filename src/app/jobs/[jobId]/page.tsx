@@ -40,7 +40,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   const appleMapsUrl = buildAppleDirectionsUrl(fullAddress);
 
   return (
-    <FieldPageShell title={job.customer} eyebrow={`Job #${job.id}`} description={`${job.workType} · ${job.dateLabel}, ${job.time}–${job.endTime}`} active="Jobs">
+    <FieldPageShell title={job.customer} eyebrow={`Job #${job.id}`} description={`${job.workType} · ${job.dateLabel}, ${job.time}–${job.endTime}`}>
       <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
         <div className="space-y-4">
           <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5">

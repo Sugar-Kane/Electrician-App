@@ -138,7 +138,6 @@ export default async function BookingRequestsPage({
       title="Booking requests"
       eyebrow="From text messages"
       description="What customers asked for by text. A visit they accepted is already on the schedule; everything here is waiting on you."
-      active="More"
     >
       {query.saved ? (
         <p role="status" className="mb-4 flex items-start gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">

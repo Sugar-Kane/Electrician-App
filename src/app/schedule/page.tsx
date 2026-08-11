@@ -45,7 +45,7 @@ export default async function SchedulePage({
   const jobs = allJobs.filter((job) => job.date === selectedDate);
 
   return (
-    <FieldPageShell title="Schedule" eyebrow="Calendar view" description="Tap any job to open the customer, address, scope, documents, material needs, and navigation." active="Jobs">
+    <FieldPageShell title="Schedule" eyebrow="Calendar view" description="Tap any job to open the customer, address, scope, documents, material needs, and navigation.">
       <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-3 sm:p-5">
         <div className="flex items-center justify-between gap-2 px-1">
           <div className="min-w-0">

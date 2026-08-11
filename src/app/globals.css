@@ -1,18 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #06131d;
-  --foreground: #111827;
-  --brand-yellow: #ffbf18;
-  --navy: #071723;
-  --panel-border: #dfe5ea;
-}
+/**
+ * One theme, defined once.
+ *
+ * Before this file was rewritten the app had two: the dashboard rendered a
+ * light canvas on desktop and was repainted dark below 1024px by ninety lines
+ * of descendant overrides, while every other page was dark at every width. So
+ * the dashboard looked like a different product on a phone than on a laptop,
+ * and moving from it to any other page flashed light to dark.
+ *
+ * The colours below are the whole palette. Components reference them as
+ * `bg-surface`, `border-line`, `text-muted` and so on, so a colour can be
+ * changed here rather than in the two hundred places that used to hardcode
+ * `#ffc21c` — alongside six other yellows that were all meant to be it.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+@theme {
+  /* Ground, from furthest back to closest. */
+  --color-canvas: #06131d;
+  --color-surface: #0b1b27;
+  --color-raised: #0d202d;
+  --color-sunken: #071723;
+
+  /* One yellow. There were seven. */
+  --color-brand: #ffc21c;
+  --color-brand-strong: #f7a70c;
+  --color-on-brand: #071723;
+
+  /* Text, by how loudly it should speak. */
+  --color-ink: #f8fafc;
+  --color-ink-muted: #94a3b8;
+  --color-ink-faint: #64748b;
+
+  /* Lines and separators, as opacities over the ground rather than greys. */
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line-strong: rgba(255, 255, 255, 0.2);
+
+  /* Status. Each is a tint for the ground and a colour for the text on it. */
+  --color-positive: #34d399;
+  --color-positive-bg: rgba(52, 211, 153, 0.09);
+  --color-caution: #fbbf24;
+  --color-caution-bg: rgba(251, 191, 36, 0.09);
+  --color-critical: #fb7185;
+  --color-critical-bg: rgba(251, 113, 133, 0.09);
+  --color-info: #60a5fa;
+  --color-info-bg: rgba(96, 165, 250, 0.09);
+
+  /*
+   * Three radii, not the ten that were in use. Panels are 24, controls and
+   * cards inside them are 16, small chips are 12. Anything else was somebody
+   * eyeballing it.
+   */
+  --radius-panel: 24px;
+  --radius-control: 16px;
+  --radius-chip: 12px;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 * {
@@ -21,17 +66,21 @@
 
 html {
   min-width: 320px;
-  background: var(--background);
+  background: var(--color-canvas);
   scroll-behavior: smooth;
+  /* Form controls, scrollbars and autofill follow the theme without being
+     restyled one at a time. */
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   background:
     radial-gradient(circle at 14% 10%, rgba(32, 66, 88, 0.32), transparent 28rem),
-    var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -39,6 +88,7 @@ input,
 textarea,
 select {
   font: inherit;
+  color: inherit;
 }
 
 button,
@@ -47,18 +97,27 @@ a {
   touch-action: manipulation;
 }
 
+/**
+ * Anything a finger has to hit.
+ *
+ * 44px is the smallest target most people can reliably tap, and this app is
+ * used one-handed on a ladder.
+ */
 .tap-target {
   min-height: 44px;
 }
 
 .tap-card,
 .tap-row {
-  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .tap-card:hover,
 .tap-row:hover {
-  border-color: rgba(255, 191, 24, 0.48);
+  border-color: rgba(255, 194, 28, 0.48);
 }
 
 .tap-card:active,
@@ -70,278 +129,11 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--brand-yellow);
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-brand);
   outline-offset: 2px;
-}
-
-.panel {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.96);
-  color: #121826;
-  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.025);
-}
-
-.panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.panel-heading h2 {
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: -0.012em;
-}
-
-.dashboard-canvas .text-slate-500,
-.dashboard-canvas .text-slate-400 {
-  color: #52647e;
-}
-
-.dashboard-canvas .text-emerald-600 {
-  color: #047857;
-}
-
-.dashboard-canvas .text-red-500 {
-  color: #b91c1c;
-}
-
-.dashboard-canvas .text-amber-600 {
-  color: #92400e;
-}
-
-.field-page .text-slate-500 {
-  color: #94a3b8;
-}
-
-.panel-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  color: #2563eb;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.icon-button {
-  display: grid;
-  height: 40px;
-  width: 40px;
-  place-items: center;
-  border: 1px solid #e2e7eb;
-  border-radius: 12px;
-  background: white;
-  color: #1e293b;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.icon-button:hover {
-  transform: translateY(-1px);
-  border-color: #cbd5e1;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-}
-
-.metric-scroll {
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(190px, 1fr);
-  scrollbar-width: none;
-}
-
-.metric-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.metric-card {
-  min-height: 112px;
-}
-
-.route-map {
-  background-color: #eaf2e8;
-  background-image:
-    linear-gradient(29deg, transparent 47%, rgba(255, 255, 255, 0.72) 48%, rgba(255, 255, 255, 0.72) 51%, transparent 52%),
-    linear-gradient(-17deg, transparent 47%, rgba(255, 255, 255, 0.58) 48%, rgba(255, 255, 255, 0.58) 51%, transparent 52%),
-    radial-gradient(circle at 20% 25%, #d1e5c9 0 10%, transparent 11%),
-    radial-gradient(circle at 82% 18%, #d4e8cc 0 12%, transparent 13%),
-    linear-gradient(#e7efe3 1px, transparent 1px),
-    linear-gradient(90deg, #e7efe3 1px, transparent 1px);
-  background-size: 160px 120px, 180px 140px, auto, auto, 26px 26px, 26px 26px;
-}
-
-.map-control {
-  display: grid;
-  height: 34px;
-  width: 34px;
-  place-items: center;
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #334155;
-  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.1);
-}
-
-.ai-action {
-  display: flex;
-  min-height: 34px;
-  align-items: center;
-  gap: 9px;
-  border: 1px solid #e1e6eb;
-  border-radius: 9px;
-  padding: 0 10px;
-  color: #334155;
-  font-size: 10px;
-  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
-}
-
-.ai-action:hover {
-  transform: translateX(2px);
-  border-color: #e7b51c;
-  background: #fffbeb;
-  color: #111827;
-}
-
-.assistant-input {
-  height: 36px;
-  min-width: 0;
-  flex: 1;
-  border: 1px solid #e1e6eb;
-  border-radius: 9px;
-  background: white;
-  padding: 0 11px;
-  color: #111827;
-  font-size: 10px;
-}
-
-.assistant-input::placeholder {
-  color: #94a3b8;
-}
-
-.mobile-icon {
-  display: grid;
-  height: 44px;
-  width: 44px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.04);
-  color: white;
-}
-
-@media (max-width: 1023px) {
-  body {
-    background: #06131d;
-  }
-
-  .dashboard-canvas {
-    margin-bottom: 76px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: #081722;
-    color: white;
-  }
-
-  .dashboard-canvas header h1,
-  .dashboard-canvas .metric-card p:nth-child(2),
-  .dashboard-canvas .panel h2 {
-    color: #f8fafc;
-  }
-
-  .dashboard-canvas header > div:first-child > div:last-child,
-  .dashboard-canvas .text-slate-500,
-  .dashboard-canvas .text-slate-600,
-  .dashboard-canvas .text-slate-700,
-  .dashboard-canvas .text-slate-400 {
-    color: #94a3b8;
-  }
-
-  .dashboard-canvas .text-emerald-600 {
-    color: #34d399;
-  }
-
-  .dashboard-canvas .text-red-500 {
-    color: #f87171;
-  }
-
-  .dashboard-canvas .text-amber-600 {
-    color: #fbbf24;
-  }
-
-  .panel {
-    border-color: #21323d;
-    background: #0b1b27;
-    color: #f8fafc;
-    box-shadow: none;
-  }
-
-  .panel .divide-slate-100 > :not(:last-child) {
-    border-color: #20313d;
-  }
-
-  .panel .border-slate-200 {
-    border-color: #32424d;
-  }
-
-  .panel .bg-slate-100 {
-    background: #20313d;
-  }
-
-  .panel .bg-white,
-  .icon-button {
-    border-color: #283945;
-    background: #0d202d;
-    color: white;
-  }
-
-  .ai-action,
-  .assistant-input {
-    border-color: #283945;
-    background: #0d202d;
-    color: #dbe4ea;
-  }
-
-  .ai-action:hover {
-    background: #122733;
-  }
-
-  .panel-link,
-  .panel a.text-blue-600,
-  .panel time.text-blue-600 {
-    color: #60a5fa;
-  }
-
-  #new-job .text-slate-600 {
-    color: #475569;
-  }
-
-  .metric-scroll {
-    margin-inline: -4px;
-    padding-inline: 4px;
-    scroll-snap-type: x proximity;
-  }
-
-  .metric-card {
-    scroll-snap-align: start;
-  }
-}
-
-@media (max-width: 639px) {
-  .dashboard-canvas {
-    border-radius: 20px;
-    padding: 16px;
-  }
-
-  .dashboard-canvas header h1 {
-    font-size: 20px;
-  }
-
-  .dashboard-canvas header h1 + * {
-    font-size: 10px;
-  }
-
-  .metric-card {
-    min-height: 104px;
-  }
+  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
