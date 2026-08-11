@@ -72,10 +72,11 @@ export async function sendInvoice(
   const customer = (job?.customers ?? null) as Record<string, unknown> | null;
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
 
-  // The balance, not the total: a partly-paid invoice chased for its full
-  // amount asks the customer for money they have already handed over.
-  const amountDue =
-    Number(row.balance_due_cents ?? row.total_cents ?? 0) / 100;
+  // The invoice total, which is what the business asked for. A partly-paid
+  // invoice therefore still shows its full figure rather than the remainder —
+  // the owner's call, so that the number in the message matches the number on
+  // the invoice the customer is holding.
+  const amountDue = Number(row.total_cents ?? 0) / 100;
 
   const permitted = invoiceCanBeSent({ status: text(row.status), amountDue });
   if (!permitted.ok) return { error: permitted.reason };

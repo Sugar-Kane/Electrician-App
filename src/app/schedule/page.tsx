@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, UserRound } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, Plus, UserRound } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import {
@@ -47,6 +47,16 @@ export default async function SchedulePage({
 
   return (
     <FieldPageShell title="Schedule" eyebrow="Calendar view" description="Tap any job to open the customer, address, scope, documents, material needs, and navigation.">
+      <div className="mb-3 flex justify-end">
+        <Link
+          href="/jobs/new"
+          className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          New job
+        </Link>
+      </div>
+
       <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-3 sm:p-5">
         <div className="flex items-center justify-between gap-2 px-1">
           <div className="min-w-0">

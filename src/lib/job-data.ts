@@ -254,8 +254,8 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
       recordId: String(row.id ?? ""),
       customerPhone: String(customer.phone ?? ""),
       customerEmail: String(customer.email ?? ""),
-      // The balance, not the total. A partly-paid invoice chased for its full
-      // amount is a demand for money the customer has already handed over.
+      // What is still outstanding, kept alongside the total so a screen can
+      // show both. The sent message quotes the total, not this.
       balance: Number(row.balance_due_cents ?? row.total_cents ?? 0) / 100,
       sentLabel: row.last_sent_at
         ? inZone(row.last_sent_at as string, context.timeZone, {
