@@ -70,3 +70,54 @@ export async function readInboundText(input: {
     return null;
   }
 }
+
+export type AssistantTurn = { role: "user" | "assistant"; text: string };
+
+/**
+ * Answer a question about the business.
+ *
+ * No tools and no database access. The brief is assembled by the caller from
+ * rows already scoped to the session's organization and passed in as text, so
+ * there is nothing here for a prompt injection to reach — the other tenants'
+ * rows were never fetched.
+ *
+ * Returns null rather than throwing, like every other call in this file: a
+ * model outage should render as "could not answer", not as a crashed page.
+ */
+export async function askAboutBusiness(input: {
+  system: string;
+  brief: string;
+  turns: AssistantTurn[];
+}): Promise<string | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-5",
+      max_tokens: 700,
+      system: [
+        { type: "text" as const, text: input.system },
+        // Separate block, and named as data. The snapshot contains text
+        // customers wrote.
+        { type: "text" as const, text: `<business_snapshot>\n${input.brief}\n</business_snapshot>` },
+      ],
+      messages: input.turns.map((turn) => ({
+        role: turn.role,
+        content: turn.text,
+      })),
+    });
+
+    const text = response.content
+      .filter((block): block is { type: "text"; text: string; citations: never } =>
+        block.type === "text",
+      )
+      .map((block) => block.text)
+      .join("\n")
+      .trim();
+
+    return text || null;
+  } catch {
+    return null;
+  }
+}

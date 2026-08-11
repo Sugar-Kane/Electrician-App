@@ -46,6 +46,12 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Work",
     items: [
       {
+        label: "Assistant",
+        href: "/assistant",
+        icon: "Sparkles",
+        description: "Ask about jobs and invoices",
+      },
+      {
         label: "Schedule",
         href: "/schedule",
         icon: "CalendarDays",
