@@ -295,7 +295,12 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       })),
     );
 
-    const jobsToday = jobs.data ?? [];
+    // A canceled job is not work. It stayed in the count, so a day whose only
+    // job had been called off still read "Jobs today: 1" — and then "0 in
+    // progress" underneath, which is the contradiction that gives it away.
+    const allJobsToday = jobs.data ?? [];
+    const jobsToday = allJobsToday.filter((job) => job.status !== "canceled");
+    const canceledToday = allJobsToday.length - jobsToday.length;
     const inProgress = jobsToday.filter((job) => job.status === "in_progress").length;
     const enRoute = jobsToday.filter((job) => job.status === "en_route").length;
     const activeTechnicians = technicians.data?.length ?? 0;
@@ -341,7 +346,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         {
           label: "Jobs today",
           value: String(jobsToday.length),
-          ...jobsDetail({ inProgress, total: jobsToday.length }),
+          ...jobsDetail({ inProgress, total: jobsToday.length, canceled: canceledToday }),
         },
         {
           label: "Techs working",

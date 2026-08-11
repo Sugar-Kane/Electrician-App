@@ -228,6 +228,7 @@ function SchedulePanel({ schedule }: Pick<DashboardSnapshot, "schedule">) {
     "In progress": "bg-info-bg text-info",
     Scheduled: "bg-caution-bg text-caution",
     Pending: "bg-white/5 text-ink-muted",
+    Canceled: "bg-critical-bg text-critical",
   };
 
   return (
@@ -595,7 +596,7 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
   const metricDestinations = [
     "/invoices?status=paid",
     "/schedule",
-    "/route",
+    "/technicians",
     "/search",
     "/invoices?status=unpaid",
   ];

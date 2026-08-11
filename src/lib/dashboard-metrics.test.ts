@@ -208,3 +208,24 @@ test("an invoice with no due date counts as owed but not as late", () => {
   assert.equal(buckets[0]?.value, "$300");
   assert.equal(buckets[0]?.percent, 100);
 });
+
+test("a day whose only job was canceled is not the same as an empty day", () => {
+  // "Jobs today: 1" with "0 in progress" under it was the contradiction that
+  // gave this away — the job had been cancelled and still counted.
+  assert.deepEqual(jobsDetail({ inProgress: 0, total: 0, canceled: 1 }), {
+    detail: "1 canceled today",
+    tone: "danger",
+  });
+
+  assert.deepEqual(jobsDetail({ inProgress: 0, total: 0, canceled: 0 }), {
+    detail: "Nothing booked today",
+    tone: "neutral",
+  });
+});
+
+test("a cancellation alongside live work is mentioned, not hidden", () => {
+  assert.equal(
+    jobsDetail({ inProgress: 1, total: 2, canceled: 1 }).detail,
+    "1 in progress, 1 canceled",
+  );
+});

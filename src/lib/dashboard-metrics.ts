@@ -49,12 +49,33 @@ export function revenueDetail(input: {
   };
 }
 
-/** How many of today's jobs are actually underway. */
-export function jobsDetail(input: { inProgress: number; total: number }): {
-  detail: string;
-  tone: MetricTone;
-} {
-  if (input.total === 0) return { detail: "Nothing booked today", tone: "neutral" };
+/**
+ * How many of today's jobs are actually underway.
+ *
+ * Canceled jobs are counted separately rather than silently dropped: a day
+ * whose only job was called off is not the same as a day nobody booked, and the
+ * electrician wants to know which one they are looking at.
+ */
+export function jobsDetail(input: {
+  inProgress: number;
+  total: number;
+  canceled?: number;
+}): { detail: string; tone: MetricTone } {
+  const canceled = input.canceled ?? 0;
+
+  if (input.total === 0) {
+    if (canceled > 0) {
+      return {
+        detail: `${canceled} canceled today`,
+        tone: "danger",
+      };
+    }
+    return { detail: "Nothing booked today", tone: "neutral" };
+  }
+
+  if (canceled > 0) {
+    return { detail: `${input.inProgress} in progress, ${canceled} canceled`, tone: "neutral" };
+  }
   return { detail: `${input.inProgress} in progress`, tone: "neutral" };
 }
 

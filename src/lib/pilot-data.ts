@@ -1,4 +1,4 @@
-export type JobStatus = "In progress" | "Scheduled" | "Pending" | "Completed";
+export type JobStatus = "In progress" | "Scheduled" | "Pending" | "Completed" | "Canceled";
 export type SupplierId = "lowes" | "home-depot";
 
 export type SupplyStore = {
