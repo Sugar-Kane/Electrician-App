@@ -1,0 +1,96 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { listOrganizations } from "@/lib/admin-console";
+import { diagnose, headline } from "@/lib/admin-health";
+
+export const metadata: Metadata = {
+  title: "Businesses | Volteira support",
+  robots: { index: false, follow: false },
+};
+
+const BADGE: Record<string, string> = {
+  blocking: "border-rose-400/30 bg-rose-400/10 text-rose-200",
+  degraded: "border-amber-300/25 bg-amber-300/[0.08] text-amber-100",
+  ok: "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200",
+  note: "border-white/10 bg-white/5 text-slate-300",
+};
+
+function when(iso: string): string {
+  if (!iso) return "never";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "never";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export default async function AdminOrganizationsPage() {
+  const organizations = await listOrganizations();
+
+  return (
+    <div className="space-y-3">
+      <p className="px-1 text-sm text-slate-400">
+        {organizations.length} {organizations.length === 1 ? "business" : "businesses"}
+      </p>
+
+      {organizations.map((organization) => {
+        const findings = diagnose(organization);
+        const verdict = headline(findings);
+
+        return (
+          <Link
+            key={organization.id}
+            href={`/admin/organizations/${organization.id}`}
+            className="tap-row block rounded-3xl border border-white/10 bg-[#0b1b27] p-5 transition hover:border-white/20"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold">{organization.name}</h2>
+                <p className="mt-1 truncate text-sm text-slate-400">
+                  {[organization.city, organization.state].filter(Boolean).join(", ") || "No address"}
+                  {organization.phone ? ` · ${organization.phone}` : ""}
+                </p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${BADGE[verdict.severity] ?? BADGE.note}`}
+              >
+                {verdict.label}
+              </span>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-xs text-slate-500">People</dt>
+                <dd className="font-semibold">
+                  {organization.memberCount}
+                  {organization.pendingInvitations > 0 ? (
+                    <span className="ml-1 text-xs font-normal text-amber-200">
+                      +{organization.pendingInvitations} invited
+                    </span>
+                  ) : null}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Jobs</dt>
+                <dd className="font-semibold">{organization.jobCount}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Bookings</dt>
+                <dd className="font-semibold">{organization.bookingCount}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">Last booking</dt>
+                <dd className="font-semibold">{when(organization.lastBookingAt)}</dd>
+              </div>
+            </dl>
+          </Link>
+        );
+      })}
+
+      {organizations.length === 0 ? (
+        <p className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 text-sm text-slate-400">
+          No businesses yet.
+        </p>
+      ) : null}
+    </div>
+  );
+}

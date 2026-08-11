@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { toE164 } from "@/lib/phone-format";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,8 +35,12 @@ export async function saveOwnerNotifications(
   if (email && !/^[^@\s]+@[^@.\s]+\.[^@\s]{2,}$/.test(email)) {
     return { error: "That email address does not look right." };
   }
-  if (phone && phone.replace(/\D/g, "").length < 10) {
-    return { error: "Enter a full phone number, including the area code." };
+  // Stored the way a carrier wants it, not the way it was typed. Twilio is
+  // handed this string verbatim, so "209-626-9313" is an alert that silently
+  // never sends — and the settings page would still say it was configured.
+  const sendablePhone = phone ? toE164(phone) : "";
+  if (phone && !sendablePhone) {
+    return { error: "Enter a full mobile number, including the area code." };
   }
 
   const supabase = asFlexibleClient(await createClient());
@@ -47,7 +52,7 @@ export async function saveOwnerNotifications(
     .from("organizations")
     .update({
       owner_notification_email: email || null,
-      owner_notification_phone: phone || null,
+      owner_notification_phone: sendablePhone || null,
     })
     .eq("id", organizationId)
     .select("id");

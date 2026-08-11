@@ -1,4 +1,5 @@
 import { getAccountSnapshot } from "@/lib/account";
+import { isPlatformAdmin } from "@/lib/admin-console";
 
 export async function GET() {
   const account = await getAccountSnapshot();
@@ -17,6 +18,9 @@ export async function GET() {
       plan: account.subscription.plan,
       initials: account.initials,
       avatarUrl: account.avatarUrl,
+      // Decides only whether the menu shows a link. The console itself refuses
+      // in the database, so a tampered response buys nothing.
+      isPlatformAdmin: await isPlatformAdmin(),
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

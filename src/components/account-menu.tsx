@@ -7,6 +7,7 @@ import {
   CreditCard,
   LogOut,
   Settings2,
+  ShieldCheck,
   Store,
   UserRound,
 } from "lucide-react";
@@ -20,6 +21,7 @@ type AccountSummary = {
   plan: string;
   initials: string;
   avatarUrl: string | null;
+  isPlatformAdmin?: boolean;
 };
 
 const fallbackSummary: AccountSummary = {
@@ -163,6 +165,25 @@ export function AccountMenu({ tone = "dark" }: { tone?: "dark" | "light" }) {
               </Link>
             ))}
           </div>
+
+          {summary.isPlatformAdmin ? (
+            <div className="mt-2 border-t border-white/10 pt-2">
+              <Link
+                href="/admin"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="tap-row flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 hover:bg-white/[0.06]"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#ffc21c]/10 text-[#ffc21c]">
+                  <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">Support console</span>
+                  <span className="block text-[10px] text-slate-400">Every business on the platform</span>
+                </span>
+              </Link>
+            </div>
+          ) : null}
 
           <form action={signOut} className="mt-2 border-t border-white/10 pt-2">
             <button
