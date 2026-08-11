@@ -174,10 +174,12 @@ export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {
     .is("archived_at", null)
     .order("scheduled_start", { ascending: true });
 
-  if (error || !data?.length) {
-    return { jobs: rebaseDemoJobs(pilotJobs, context.timeZone), source: "demo" };
-  }
-  return { jobs: data.map((row) => mapJob(row, context.timeZone)), source: "supabase" };
+  // A real business with no jobs has no jobs. Falling back to the pilot
+  // fixtures here is what put four invented customers in front of an
+  // electrician who had just signed up, with no way to tell which of their
+  // records were real.
+  if (error) return { jobs: [], source: "supabase" };
+  return { jobs: (data ?? []).map((row) => mapJob(row, context.timeZone)), source: "supabase" };
 }
 
 export async function getJob(id: string): Promise<{ job: PilotJob | null; source: Source }> {
@@ -198,10 +200,9 @@ export async function getJob(id: string): Promise<{ job: PilotJob | null; source
     ? await query.eq("job_number", numeric).maybeSingle()
     : await query.eq("id", id).maybeSingle();
 
-  if (error || !data) {
-    const jobs = rebaseDemoJobs(pilotJobs, context.timeZone);
-    return { job: jobs.find((j) => j.id === id) ?? null, source: "demo" };
-  }
+  // Not found for a signed-in business means not found, so the page 404s
+  // rather than showing somebody a fictional job under a real job number.
+  if (error || !data) return { job: null, source: "supabase" };
   return { job: mapJob(data, context.timeZone), source: "supabase" };
 }
 
@@ -218,7 +219,8 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
     .eq("organization_id", context.organizationId)
     .order("due_at", { ascending: true });
 
-  if (error || !data?.length) return { invoices: pilotInvoices, source: "demo" };
+  if (error) return { invoices: [], source: "supabase" };
+  if (!data?.length) return { invoices: [], source: "supabase" };
 
   const invoices: PilotInvoice[] = data.map((raw) => {
     // The relational select is wider than the generated types describe, so the

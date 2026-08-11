@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
 import { AdminInviteForm } from "@/components/admin-invite-form";
+import { beginImpersonation } from "@/app/admin/impersonate/actions";
 import {
   getOrganizationDetail,
   listMcpCalls,
@@ -131,6 +132,29 @@ export default async function AdminOrganizationPage({
             ))}
           </ul>
         )}
+      </Card>
+
+      <Card title="Work inside this business">
+        <p className="text-sm leading-6 text-ink-muted">
+          Opens the app as a member of {organization.name} with full access, for one hour.
+          Anything you do is real: a cancelled job texts their customer, and an invoice is
+          their invoice. It is recorded against your account, not the owner&rsquo;s.
+        </p>
+        <form action={beginImpersonation} className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <input type="hidden" name="organizationId" value={id} />
+          <input
+            name="reason"
+            maxLength={200}
+            placeholder="Why, e.g. owner cannot see their schedule"
+            className="min-h-12 flex-1 rounded-control border border-line bg-raised px-4 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-brand/70"
+          />
+          <button
+            type="submit"
+            className="tap-target shrink-0 rounded-control bg-brand px-5 text-sm font-bold text-on-brand"
+          >
+            Open as this business
+          </button>
+        </form>
       </Card>
 
       <Card title="Setup">

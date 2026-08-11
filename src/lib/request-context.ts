@@ -50,12 +50,20 @@ export const currentContext = cache(async (): Promise<SessionContext | null> => 
   if (!user) return null;
 
   const supabase = asFlexibleClient(await createClient());
-  const { data } = await supabase
+
+  // A platform admin who has opened somebody else's business acts for that
+  // business, not their own. The session is the authority — it carries its own
+  // expiry, so a forgotten tab stops acting rather than acting forever.
+  const impersonating = await currentImpersonation();
+
+  const query = supabase
     .from("organization_members")
     .select("organization_id, role, organizations ( timezone )")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+    .eq("user_id", user.id);
+
+  const { data } = impersonating
+    ? await query.eq("organization_id", impersonating.organizationId).maybeSingle()
+    : await query.limit(1).maybeSingle();
 
   const row = (data ?? null) as Record<string, unknown> | null;
   const organizationId = typeof row?.organization_id === "string" ? row.organization_id : "";
@@ -73,5 +81,43 @@ export const currentContext = cache(async (): Promise<SessionContext | null> => 
     organizationId,
     timeZone,
     role: typeof row?.role === "string" ? row.role : "",
+  };
+});
+
+export type Impersonation = {
+  sessionId: string;
+  organizationId: string;
+  organizationName: string;
+  expiresAt: string;
+};
+
+/**
+ * The business this admin has opened, if any.
+ *
+ * Read from the database rather than a cookie, so ending a session ends it
+ * everywhere at once — including in a tab the admin forgot about — and so a
+ * cookie cannot be edited into acting for a business nobody granted.
+ *
+ * Expired sessions are filtered out by the function itself, so nothing here has
+ * to remember to check the clock.
+ */
+export const currentImpersonation = cache(async (): Promise<Impersonation | null> => {
+  const user = await currentUser();
+  if (!user) return null;
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data } = await supabase.rpc("my_impersonation");
+  const row = Array.isArray(data) ? (data[0] as Record<string, unknown> | undefined) : undefined;
+  if (!row) return null;
+
+  const str = (value: unknown) => (typeof value === "string" ? value : "");
+  const organizationId = str(row.organization_id);
+  if (!organizationId) return null;
+
+  return {
+    sessionId: str(row.session_id),
+    organizationId,
+    organizationName: str(row.organization_name),
+    expiresAt: str(row.expires_at),
   };
 });
