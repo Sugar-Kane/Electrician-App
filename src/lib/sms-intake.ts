@@ -19,6 +19,32 @@ export const INTAKE_FIELDS = [
 
 export type IntakeField = (typeof INTAKE_FIELDS)[number];
 
+/**
+ * What the customer is asked before anybody drives out.
+ *
+ * These lived only in the MCP tools, which is the voice path — so a booking
+ * taken over the phone arrived with the scope, the breaker state and the access
+ * notes, and the identical booking taken by text arrived with none of them. The
+ * electrician could not tell which kind of booking he was looking at, only that
+ * some of them were thin.
+ *
+ * Defined here, at the layer both paths already share, so there is one list
+ * rather than two that drift.
+ */
+export const INTAKE_QUESTIONS = [
+  { key: "scope", question: "Is this affecting the whole house, one room, or a single outlet or fixture?" },
+  { key: "onset", question: "When did it start, and did anything change just before — a new appliance, a storm, or work done?" },
+  { key: "breaker", question: "Have you looked at the breaker panel? Is anything tripped, and does it reset?" },
+  { key: "property", question: "Is this a house, a condo, or a commercial space, and roughly how old is the building?" },
+  { key: "access", question: "Is there anything the electrician needs to get in — a gate code, a dog, parking, or someone home?" },
+] as const;
+
+export const MINIMUM_INTAKE_ANSWERS = 3;
+
+export type IntakeAnswer = { question: string; answer: string };
+
+export type DeliveryPreference = "text" | "email" | "both";
+
 export type OfferedSlot = { start: string; end: string; label: string };
 
 export type IntakeContext = {
@@ -83,7 +109,7 @@ export const INTAKE_TOOLS = [
   {
     name: "confirm_visit",
     description:
-      "The customer has accepted a window that was already offered to them in this conversation. Use only after they agree — never on their first message.",
+      "The customer has accepted a window that was already offered to them in this conversation. Use only after they agree — never on their first message. Include whatever intake questions they have answered so far and how they want their confirmation sent.",
     strict: true,
     input_schema: {
       type: "object",
@@ -95,8 +121,22 @@ export const INTAKE_TOOLS = [
         postal_code: { type: "string" },
         slot_start: { type: "string", description: "The exact slot_start of the window they accepted." },
         urgency: { type: "string", enum: ["routine", "urgent"] },
+        answer_scope: { type: "string", description: "What the customer said about how much of the property is affected. Empty string if not asked yet." },
+        answer_onset: { type: "string", description: "What the customer said about when it started. Empty string if not asked yet." },
+        answer_breaker: { type: "string", description: "What the customer said about the breaker panel. Empty string if not asked yet." },
+        answer_property: { type: "string", description: "What the customer said about the kind and age of building. Empty string if not asked yet." },
+        answer_access: { type: "string", description: "What the customer said about gate codes, dogs, parking, or being home. Empty string if not asked yet." },
+        delivery_preference: {
+          type: "string",
+          enum: ["text", "email", "both", ""],
+          description: "How the customer asked for their confirmation. Empty string if they have not been asked.",
+        },
       },
-      required: ["contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency"],
+      required: [
+        "contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency",
+        "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access",
+        "delivery_preference",
+      ],
       additionalProperties: false,
     },
   },
@@ -144,6 +184,9 @@ export type IntakeAction =
       address: { line1: string; city: string; postalCode: string };
       urgency: "routine" | "urgent";
       reply: string;
+      /** What the customer was asked in the thread, and what they said. */
+      intakeAnswers: IntakeAnswer[];
+      deliveryPreference: DeliveryPreference;
     };
 
 function text(value: unknown): string {
@@ -154,6 +197,53 @@ function firstAndLast(name: string): { first: string; last: string } {
   const parts = name.split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first: "", last: "" };
   return { first: parts[0]!, last: parts.slice(1).join(" ") };
+}
+
+/**
+ * The intake answers a tool call actually carries, empty ones dropped.
+ *
+ * A question with no answer is not evidence of an interview — it is the shape
+ * of one, and only pairs where the customer said something count.
+ */
+export function collectIntakeAnswers(args: Record<string, unknown>): IntakeAnswer[] {
+  return INTAKE_QUESTIONS.map(({ key, question }) => ({
+    question,
+    answer: text(args[`answer_${key}`]),
+  })).filter((entry) => entry.answer.length > 0);
+}
+
+export function readDeliveryPreference(args: Record<string, unknown>): DeliveryPreference | "" {
+  const value = text(args.delivery_preference);
+  return value === "text" || value === "email" || value === "both" ? value : "";
+}
+
+/**
+ * The next thing the customer still has to be asked before this is booked.
+ *
+ * Returns the question itself rather than a complaint, because over SMS the
+ * remedy and the message to send are the same string. One question at a time:
+ * a text that asks three things gets one answer, and it is rarely obvious which
+ * one it was for.
+ *
+ * Null means there is nothing outstanding and the booking may proceed.
+ */
+export function nextIntakeQuestion(args: Record<string, unknown>): string | null {
+  const answered = new Set(
+    INTAKE_QUESTIONS.filter(({ key }) => text(args[`answer_${key}`]).length > 0).map(
+      ({ key }) => key as string,
+    ),
+  );
+
+  if (answered.size < MINIMUM_INTAKE_ANSWERS) {
+    const unanswered = INTAKE_QUESTIONS.find(({ key }) => !answered.has(key));
+    if (unanswered) return unanswered.question;
+  }
+
+  if (!readDeliveryPreference(args)) {
+    return "Would you like your confirmation by text, email, or both?";
+  }
+
+  return null;
 }
 
 export function splitName(name: string) {
@@ -279,6 +369,22 @@ export function decideIntakeAction(input: {
       };
     }
 
+    // Booked over the phone, a customer is asked what is actually wrong and how
+    // they want their confirmation. Booked by text they were not, and the job
+    // arrived with an address and a sentence. The model has been told to ask;
+    // this is where it is required to have done so, because a booking is the
+    // point after which nobody asks anything.
+    const outstanding = nextIntakeQuestion(decision.input);
+    if (outstanding) {
+      return {
+        kind: "ask",
+        missing: ["description"],
+        reply: composeReply(`${context.businessName}: ${outstanding}`, context),
+      };
+    }
+
+    const preference = readDeliveryPreference(decision.input);
+
     return {
       kind: "book",
       slot,
@@ -286,6 +392,9 @@ export function decideIntakeAction(input: {
       description,
       address,
       urgency,
+      intakeAnswers: collectIntakeAnswers(decision.input),
+      // nextIntakeQuestion has already refused to get here without one.
+      deliveryPreference: preference || "text",
       reply: composeReply(
         `${context.businessName}: booked for ${slot.label}. We will text when the technician is on the way. Questions? ${context.businessPhone}`,
         context,
@@ -322,10 +431,17 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     "",
     `The diagnostic visit costs ${context.diagnosticFee}.`,
     "",
+    "Before a visit is booked, ask these — one per message, and carry the answers",
+    `into confirm_visit as answer_<key>. At least ${MINIMUM_INTAKE_ANSWERS} must be answered:`,
+    ...INTAKE_QUESTIONS.map(({ key, question }) => `- ${key}: ${question}`),
+    "",
+    "Also ask how they want their confirmation — text, email, or both — and pass it as delivery_preference.",
+    "",
     "Rules:",
     "- Call exactly one tool. Never answer in plain text.",
     "- Only ever use a slot_start copied exactly from the list above. Never invent or adjust a time.",
     "- Do not call confirm_visit on a customer's first message. Propose a window first and wait for them to accept.",
+    "- Ask one question per message. A text that asks three things gets one answer.",
     "- No address, or an address outside the service area, means request_callback rather than a visit.",
     "- Never quote a price other than the diagnostic fee above, and never promise a repair cost.",
     "- Never include a link, and never ask for card details.",

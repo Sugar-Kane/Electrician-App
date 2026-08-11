@@ -119,6 +119,10 @@ test("a booked call says the time and hangs up", () => {
     action: action("confirm_visit", {
       contact_name: "Ada", description: "no power", address_line_1: "1 A St",
       city: "Nipomo", postal_code: "93444", slot_start: "2026-08-11T15:00:00.000Z", urgency: "routine",
+      // A booking now requires the interview on every path, so a call that
+      // reaches confirm_visit has been through it.
+      answer_scope: "Just the kitchen.", answer_onset: "Since last night.",
+      answer_breaker: "One tripped, will not reset.", delivery_preference: "text",
     }, "yes please book it"),
     callerText: "yes please book it",
   });

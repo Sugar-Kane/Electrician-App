@@ -28,6 +28,20 @@ const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
 const decide = (tool: string, input: Record<string, unknown>, customerText = "my outlet stopped working") =>
   decideIntakeAction({ decision: { tool, input }, customerText, context: context() });
 
+/**
+ * The intake a customer has actually been through.
+ *
+ * Spread into a confirm_visit whenever a test is about something other than
+ * whether the questions were asked — three answers and a delivery preference
+ * are what a booking now requires, on this path as much as on the phone.
+ */
+const INTERVIEWED = {
+  answer_scope: "Just the kitchen.",
+  answer_onset: "Since last night.",
+  answer_breaker: "One breaker tripped, will not reset.",
+  delivery_preference: "text",
+};
+
 test("a window the model invented is refused", () => {
   // The scheduler is the only source of truth for what is open. A made-up time
   // is a promise the business never agreed to.
@@ -47,6 +61,7 @@ test("a window the model invented is refused", () => {
 
 test("a real window books, and carries the address through", () => {
   const action = decide("confirm_visit", {
+    ...INTERVIEWED,
     contact_name: "Ada Lovelace",
     description: "no power in the kitchen",
     address_line_1: "123 Maple St",
@@ -170,3 +185,108 @@ test("names split into the columns customers actually has", () => {
   assert.deepEqual(splitName("  "), { first: "", last: "" });
 });
 
+
+test("a text booking is not made until the customer has been asked something", () => {
+  // This is what the text path did for its whole life: a name, an address, a
+  // window, and nothing else. The electrician arrived knowing the street and
+  // one sentence, while the identical booking taken by phone arrived with the
+  // scope, the breaker state and whether there was a dog.
+  const action = decide("confirm_visit", {
+    contact_name: "Ada Lovelace",
+    description: "no power in the kitchen",
+    address_line_1: "123 Maple St",
+    city: "Santa Maria",
+    postal_code: "93454",
+    slot_start: "2026-08-11T20:00:00.000Z",
+    urgency: "routine",
+  });
+
+  assert.equal(action.kind, "ask");
+  // The remedy and the message are the same string over SMS: it asks the
+  // question rather than reporting that a question is missing.
+  assert.match(action.reply, /whole house, one room, or a single outlet/i);
+});
+
+test("the questions are asked one at a time, in order", () => {
+  const first = decide("confirm_visit", {
+    contact_name: "Ada", description: "no power", address_line_1: "1 A St",
+    city: "Nipomo", postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z", urgency: "routine",
+    answer_scope: "Just the kitchen.",
+  });
+
+  assert.equal(first.kind, "ask");
+  // Scope answered, so onset is next — not a repeat and not all of them at
+  // once. A text asking three things gets one answer.
+  assert.match(first.reply, /When did it start/i);
+  assert.doesNotMatch(first.reply, /breaker panel/i);
+});
+
+test("three answers is enough, and then the delivery question is the last gate", () => {
+  const base = {
+    contact_name: "Ada", description: "no power", address_line_1: "1 A St",
+    city: "Nipomo", postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z", urgency: "routine",
+    answer_scope: "Kitchen.", answer_onset: "Last night.", answer_breaker: "Tripped.",
+  };
+
+  const asksDelivery = decide("confirm_visit", base);
+  assert.equal(asksDelivery.kind, "ask");
+  assert.match(asksDelivery.reply, /text, email, or both/i);
+
+  const booked = decide("confirm_visit", { ...base, delivery_preference: "email" });
+  assert.equal(booked.kind, "book");
+  if (booked.kind !== "book") return;
+  assert.equal(booked.deliveryPreference, "email");
+  assert.equal(booked.intakeAnswers.length, 3);
+});
+
+test("a blank answer is not an answer", () => {
+  // A question with no answer is the shape of an interview, not one.
+  const action = decide("confirm_visit", {
+    contact_name: "Ada", description: "no power", address_line_1: "1 A St",
+    city: "Nipomo", postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z", urgency: "routine",
+    answer_scope: "  ", answer_onset: "", answer_breaker: "Tripped.",
+    delivery_preference: "text",
+  });
+
+  assert.equal(action.kind, "ask");
+});
+
+test("an unrecognised delivery preference is not accepted as one", () => {
+  const action = decide("confirm_visit", {
+    contact_name: "Ada", description: "no power", address_line_1: "1 A St",
+    city: "Nipomo", postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z", urgency: "routine",
+    answer_scope: "Kitchen.", answer_onset: "Last night.", answer_breaker: "Tripped.",
+    delivery_preference: "carrier pigeon",
+  });
+
+  assert.equal(action.kind, "ask");
+  assert.match(action.reply, /text, email, or both/i);
+});
+
+test("proposing a window still needs no interview", () => {
+  // The questions are owed before a job exists, not before a time can be
+  // offered. Refusing to quote a window until five questions are answered
+  // would make the assistant unusable.
+  const action = decide("propose_visit", {
+    contact_name: "Ada", description: "no power", address_line_1: "1 A St",
+    city: "Nipomo", postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z", urgency: "routine",
+  });
+
+  assert.equal(action.kind, "propose");
+});
+
+test("the prompt tells the model what it will be held to", () => {
+  // The gate refuses a booking that skipped the questions. If the prompt does
+  // not carry them, the model cannot know what it is being refused for and the
+  // conversation loops.
+  const prompt = buildIntakeSystemPrompt(context());
+
+  assert.match(prompt, /breaker panel/i);
+  assert.match(prompt, /delivery_preference/);
+  assert.match(prompt, /one question per message/i);
+});
