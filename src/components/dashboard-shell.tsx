@@ -331,11 +331,14 @@ function LiveMap({ technicians, source }: Pick<DashboardSnapshot, "technicians" 
         {technicians.length} {technicians.length === 1 ? "technician" : "technicians"} · Central
         Coast
       </p>
-      <div
-        className="relative mt-3 h-[246px] overflow-hidden rounded-control border border-line"
+      {/* The whole map opens the route. It was previously decoration with two
+          small buttons in the corner, so the obvious thing to tap did nothing. */}
+      <Link
+        href="/route"
+        aria-label="Open today's route on the map"
+        className="tap-card relative mt-3 block h-[246px] overflow-hidden rounded-control border border-line"
         style={{
-          // A map at night rather than a light tile sheet dropped into a dark
-          // page, which is what the old background image was.
+          // A sketch, not a map: the real one lives on /route, which this opens.
           backgroundColor: "var(--color-sunken)",
           backgroundImage:
             "linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px)",
@@ -388,23 +391,10 @@ function LiveMap({ technicians, source }: Pick<DashboardSnapshot, "technicians" 
             <span className="font-semibold text-ink">Route optimization ready</span>
           )}
         </div>
-        <div className="absolute right-3 top-3 space-y-1.5">
-          <Link
-            href="/route"
-            className="tap-target grid h-10 w-10 place-items-center rounded-chip border border-line bg-canvas/85 text-ink backdrop-blur"
-            aria-label="Open route builder"
-          >
-            <Navigation className="h-4 w-4" aria-hidden />
-          </Link>
-          <Link
-            href="/route"
-            className="tap-target grid h-10 w-10 place-items-center rounded-chip border border-line bg-canvas/85 text-ink backdrop-blur"
-            aria-label="Open route options"
-          >
-            <Route className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-      </div>
+        <span className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-chip border border-line bg-canvas/85 text-ink backdrop-blur">
+          <Navigation className="h-4 w-4" aria-hidden />
+        </span>
+      </Link>
     </Panel>
   );
 }
