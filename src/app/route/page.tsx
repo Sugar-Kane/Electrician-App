@@ -1,7 +1,8 @@
 import { FieldPageShell } from "@/components/field-page-shell";
+import { RouteMap } from "@/components/route-map";
 import { RouteOptimizer } from "@/components/route-optimizer";
 import { todayInZone } from "@/lib/calendar";
-import { getJobs } from "@/lib/job-data";
+import { getJobs, placeTodaysStops } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import type { SupplierId, SupplyStore } from "@/lib/pilot-data";
 
@@ -28,6 +29,12 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
     getOrganizationTimezone(),
     getJobs(),
   ]);
+
+  // Addresses arrive from phone calls with no coordinates. Placing them here,
+  // once, is what puts the day on a map at all — and what is returned is the
+  // ones that could not be placed, so the page can say so rather than quietly
+  // drawing a shorter route than the day actually has.
+  const geocoded = await placeTodaysStops();
   const job = cleanValue(query.job, 40);
   const supplier = cleanValue(query.supplier, 24);
   const initialSupplier: SupplierId = supplier === "home-depot" ? "home-depot" : "lowes";
@@ -45,6 +52,14 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
 
   return (
     <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="Volteira builds and locks the stop order first. Navigation opens only after you approve the route.">
+      <div className="mb-4">
+        <RouteMap
+          jobs={jobs}
+          today={todayInZone(timeZone)}
+          apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
+          unplaced={geocoded.unplaced}
+        />
+      </div>
       <RouteOptimizer focusJobId={job || undefined} initialSupplier={initialSupplier} initialSupplyStore={initialSupplyStore} jobs={jobs} today={todayInZone(timeZone)} />
     </FieldPageShell>
   );

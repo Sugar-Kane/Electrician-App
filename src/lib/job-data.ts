@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
+import { hasCoordinates } from "@/lib/coordinates";
 import { currentContext } from "@/lib/request-context";
 import { isoToZonedWallClock } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -146,10 +147,15 @@ function mapJob(row: any, timeZone: string): PilotJob {
     technicianInitials: initialsOf(technicianName),
     accessNotes: property.access_notes ?? "",
     serviceNotes: row.ai_summary ?? "",
-    coordinates: {
-      lat: Number(property.latitude ?? 0),
-      lng: Number(property.longitude ?? 0),
-    },
+    // Null when the address has never been geocoded, rather than 0,0 — which
+    // is a real point in the Atlantic and would put every phone-booked job in
+    // the ocean the moment anything plotted it.
+    coordinates: hasCoordinates({
+      lat: property.latitude === null || property.latitude === undefined ? null : Number(property.latitude),
+      lng: property.longitude === null || property.longitude === undefined ? null : Number(property.longitude),
+    })
+      ? { lat: Number(property.latitude), lng: Number(property.longitude) }
+      : null,
     // No documents or job_materials tables yet — empty beats showing mock
     // attachments that belong to a different job.
     documents: [],
@@ -364,4 +370,24 @@ export async function getTechnicianWorkloads(): Promise<{
   });
 
   return { technicians, source: "supabase" };
+}
+
+/**
+ * Place any of this business's addresses that have never been placed.
+ *
+ * Run before the route map so stops have coordinates to be drawn at. Silent and
+ * free when there is nothing to do, which is the usual case after the first
+ * time an address is seen.
+ */
+export async function placeTodaysStops(): Promise<{ placed: number; unplaced: string[] }> {
+  const context = await resolveContext();
+  if (!context) return { placed: 0, unplaced: [] };
+
+  const { ensurePropertiesGeocoded } = await import("@/lib/geocoding");
+  const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+
+  return ensurePropertiesGeocoded({
+    database: getSupabaseAdmin(),
+    organizationId: context.organizationId,
+  });
 }

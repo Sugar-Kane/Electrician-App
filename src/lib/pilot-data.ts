@@ -45,7 +45,8 @@ export type PilotJob = {
   technicianInitials: string;
   accessNotes: string;
   serviceNotes: string;
-  coordinates: { lat: number; lng: number };
+  /** Null until the address has been geocoded. Never 0,0. */
+  coordinates: { lat: number; lng: number } | null;
   documents: JobDocument[];
   materials: JobMaterial[];
 };
