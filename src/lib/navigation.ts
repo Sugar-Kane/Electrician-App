@@ -234,6 +234,12 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         icon: "BellRing",
         description: "Where a booked job reaches you",
       },
+      {
+        label: "Contract",
+        href: "/settings/contract",
+        icon: "FileText",
+        description: "The agreement customers sign, filled in per job",
+      },
     ],
   },
   {

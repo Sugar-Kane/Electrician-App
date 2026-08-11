@@ -405,3 +405,49 @@ export async function placeTodaysStops(): Promise<{
     organizationId: context.organizationId,
   });
 }
+
+/**
+ * The contracts already generated for a job.
+ *
+ * Read through the caller's session, so RLS decides which business's contracts
+ * these are. Newest first: the last draft is the one somebody is about to send.
+ */
+export async function getJobContracts(jobNumber: string): Promise<
+  { id: string; createdLabel: string; body: string; unfilled: string[] }[]
+> {
+  const context = await resolveContext();
+  if (!context) return [];
+
+  const numeric = Number(jobNumber);
+  if (!Number.isFinite(numeric)) return [];
+
+  const { data: job } = await context.database
+    .from("jobs")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  const jobId = typeof job?.id === "string" ? job.id : "";
+  if (!jobId) return [];
+
+  const { data } = await context.database
+    .from("contracts")
+    .select("id, body, unfilled, created_at")
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    body: typeof row.body === "string" ? row.body : "",
+    unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+    createdLabel: inZone(row.created_at as string | null, context.timeZone, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+  }));
+}

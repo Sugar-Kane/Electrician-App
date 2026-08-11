@@ -2,6 +2,7 @@ import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
 
+import { scopePrompt } from "@/lib/contract-template";
 import { INTAKE_TOOLS, type IntakeDecision } from "@/lib/sms-intake";
 
 /**
@@ -114,6 +115,58 @@ export async function askAboutBusiness(input: {
       )
       .map((block) => block.text)
       .join("\n")
+      .trim();
+
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Draft the scope-of-work paragraph for a contract.
+ *
+ * The only thing a model is asked to write in a contract, and deliberately so:
+ * names, addresses, dates and money are substituted deterministically by
+ * `fillTemplate`. A model-written price contradicting the price section two
+ * lines below it is the worst thing this feature could produce.
+ *
+ * Returns null on any failure, and the caller leaves {{scope}} unfilled rather
+ * than shipping a contract with a made-up paragraph in it.
+ */
+export async function draftScope(input: {
+  description: string;
+  workType: string;
+}): Promise<string | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const described = input.description.trim();
+  if (!described) return null;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-5",
+      max_tokens: 400,
+      system: scopePrompt(),
+      messages: [
+        {
+          role: "user",
+          content: [
+            `Kind of work booked: ${input.workType}`,
+            "",
+            "What the customer described:",
+            described.slice(0, 2000),
+          ].join("\n"),
+        },
+      ],
+    });
+
+    const text = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join(" ")
+      .replace(/\s+/g, " ")
       .trim();
 
     return text || null;
