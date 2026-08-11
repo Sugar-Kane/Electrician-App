@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, MapPin, TriangleAlert } from "lucide-react";
 
 import type { Coordinates } from "@/lib/coordinates";
+import { keyTail } from "@/lib/map-key";
 
 /**
  * A real map, with the day's stops on it.
@@ -30,7 +31,39 @@ declare global {
   interface Window {
     google?: typeof google;
     __volteiraMapsPromise?: Promise<void>;
+    /**
+     * Google calls this when it refuses the key. It is the only programmatic
+     * notice of an auth failure — see `subscribeToAuthFailure`.
+     */
+    gm_authFailure?: () => void;
   }
+}
+
+/**
+ * Google's key rejections do not fail the script request.
+ *
+ * A wrong-API, wrong-referrer, or revoked key still returns a perfectly good
+ * 200 from `maps/api/js`. The script loads, the map object constructs, and then
+ * Google quietly paints a grey "for development purposes only" rectangle and
+ * writes the real reason to the console — which nobody operating this app is
+ * going to open. The one hook it offers is `window.gm_authFailure`, so we take
+ * it and turn it into something on the screen.
+ */
+const authFailureListeners = new Set<() => void>();
+let authFailed = false;
+
+function subscribeToAuthFailure(listener: () => void): () => void {
+  if (typeof window !== "undefined") {
+    window.gm_authFailure ??= () => {
+      authFailed = true;
+      for (const notify of authFailureListeners) notify();
+    };
+  }
+  authFailureListeners.add(listener);
+  // A failure can land before a second map mounts; replay it rather than
+  // leaving that map spinning forever.
+  if (authFailed) listener();
+  return () => authFailureListeners.delete(listener);
 }
 
 /** One shared load, however many maps a page ends up rendering. */
@@ -73,7 +106,12 @@ export function JobMap({
     markers: [],
     line: null,
   });
-  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "failed" | "refused">("loading");
+
+  useEffect(() => {
+    if (!apiKey) return;
+    return subscribeToAuthFailure(() => setStatus("refused"));
+  }, [apiKey]);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -91,7 +129,9 @@ export function JobMap({
           // notice first, and the only part of this that is purely cosmetic.
           styles: DARK_MAP_STYLE,
         });
-        setStatus("ready");
+        // A key rejection can arrive before the constructor returns; do not
+        // paint over it with "ready".
+        setStatus((current) => (current === "refused" ? current : "ready"));
       })
       .catch(() => {
         if (!cancelled) setStatus("failed");
@@ -204,15 +244,33 @@ export function JobMap({
         </div>
       ) : null}
 
-      {status === "failed" ? (
+      {status === "failed" || status === "refused" ? (
         <div className="absolute inset-0 grid place-items-center bg-raised p-6 text-center">
           <div className="max-w-sm">
             <TriangleAlert className="mx-auto h-6 w-6 text-caution" aria-hidden />
-            <p className="mt-3 text-sm font-semibold">The map could not load</p>
-            <p className="mt-1 text-sm leading-6 text-ink-muted">
-              Usually the API key is restricted to different domains, or Maps JavaScript API is
-              not enabled on the project. The stop order below still works.
+            <p className="mt-3 text-sm font-semibold">
+              {status === "refused" ? "Google refused this map key" : "The map could not load"}
             </p>
+            <p className="mt-1 text-sm leading-6 text-ink-muted">
+              {status === "refused" ? (
+                <>
+                  The key reached Google and was turned down — usually because it is restricted to
+                  a different website, or because Maps JavaScript API is not enabled on its
+                  project. Geocoding-only keys are refused here too.
+                </>
+              ) : (
+                <>
+                  The request for Google&rsquo;s map script never completed. That is a network
+                  problem, a blocked request, or a key so malformed Google would not serve it.
+                </>
+              )}
+            </p>
+            <p className="mt-2 text-xs text-ink-faint">
+              Key in use ends {keyTail(apiKey)} · from{" "}
+              <code className="text-brand">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, compiled at
+              build time, so changing it needs a redeploy.
+            </p>
+            <p className="mt-2 text-xs text-ink-faint">The stop order below still works.</p>
           </div>
         </div>
       ) : null}
