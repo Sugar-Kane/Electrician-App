@@ -58,6 +58,19 @@ export type PilotInvoice = {
   status: "Paid" | "Unpaid" | "Overdue";
   due: string;
   jobId: string;
+  /**
+   * The database row id, which is what sending an invoice needs — `id` above is
+   * the human-facing "INV-10024". Empty on the demo invoices, and the send
+   * control keys on that: there is nobody to send a fixture to.
+   */
+  recordId?: string;
+  /** Where the invoice would go. Empty means that channel is unavailable. */
+  customerPhone?: string;
+  customerEmail?: string;
+  /** What is actually still owed, which is not always the invoice total. */
+  balance?: number;
+  /** When it last reached the customer. Empty means never — not the same as unpaid. */
+  sentLabel?: string;
 };
 
 const commonDocuments: JobDocument[] = [

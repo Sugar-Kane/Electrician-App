@@ -221,8 +221,8 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   const { data, error } = await context.database
     .from("invoices")
     .select(`
-      id, invoice_number, status, total_cents, balance_due_cents, due_at,
-      jobs ( job_number, customers ( first_name, last_name, company_name ) )
+      id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
+      jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )
     `)
     .eq("organization_id", context.organizationId)
     .order("due_at", { ascending: true });
@@ -251,6 +251,17 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
         month: "short", day: "numeric", year: "numeric",
       }),
       jobId: String(job.job_number ?? ""),
+      recordId: String(row.id ?? ""),
+      customerPhone: String(customer.phone ?? ""),
+      customerEmail: String(customer.email ?? ""),
+      // The balance, not the total. A partly-paid invoice chased for its full
+      // amount is a demand for money the customer has already handed over.
+      balance: Number(row.balance_due_cents ?? row.total_cents ?? 0) / 100,
+      sentLabel: row.last_sent_at
+        ? inZone(row.last_sent_at as string, context.timeZone, {
+            month: "short", day: "numeric",
+          })
+        : "",
     };
   });
 
