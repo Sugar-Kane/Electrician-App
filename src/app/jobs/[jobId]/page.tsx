@@ -23,7 +23,8 @@ import {
   pilotJobs,
   serviceBase,
 } from "@/lib/pilot-data";
-import { getJob } from "@/lib/job-data";
+import { JobControls } from "@/components/job-controls";
+import { getJob, getJobControls } from "@/lib/job-data";
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
@@ -33,6 +34,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   const { jobId } = await params;
   const { job } = await getJob(jobId);
   if (!job) notFound();
+
+  // Null for the signed-out demo view, where there is nothing real to edit.
+  const controls = await getJobControls(jobId);
 
   const fullAddress = `${job.address}, ${job.city}`;
   const needsStop = jobNeedsMaterialStop(job);
@@ -101,6 +105,21 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           </section>
         </div>
       </div>
+
+      {controls ? (
+        <div className="mt-4">
+          <JobControls
+            jobNumber={controls.jobNumber}
+            status={controls.status}
+            startLocal={controls.startLocal}
+            endLocal={controls.endLocal}
+            canceled={controls.canceled}
+            cancellationReason={controls.cancellationReason}
+            customerPhone={controls.customerPhone}
+            customerEmail={controls.customerEmail}
+          />
+        </div>
+      ) : null}
     </FieldPageShell>
   );
 }

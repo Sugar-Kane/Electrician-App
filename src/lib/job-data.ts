@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
+import { isoToZonedWallClock } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import {
   pilotInvoices,
@@ -251,4 +252,60 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   });
 
   return { invoices, source: "supabase" };
+}
+
+/**
+ * The raw fields the edit and cancel controls need.
+ *
+ * Separate from `getJob` on purpose: that returns a `PilotJob` of display
+ * strings, and editing needs the instants and the database's own status value.
+ * Returns null for the demo fallback, because there is nothing real to edit —
+ * the controls simply do not render rather than pretending to save.
+ */
+export async function getJobControls(jobNumber: string): Promise<{
+  jobNumber: string;
+  status: string;
+  startLocal: string;
+  endLocal: string;
+  canceled: boolean;
+  cancellationReason: string;
+  customerPhone: string;
+  customerEmail: string;
+} | null> {
+  const context = await resolveContext();
+  if (!context) return null;
+
+  const numeric = Number(jobNumber);
+  if (!Number.isFinite(numeric)) return null;
+
+  const { data } = await context.database
+    .from("jobs")
+    .select(
+      `job_number, status, canceled_at, cancellation_reason,
+       scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
+       customers ( phone, email )`,
+    )
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const row = data as Record<string, unknown>;
+  const customer = (row.customers ?? null) as Record<string, unknown> | null;
+  const str = (value: unknown) => (typeof value === "string" ? value : "");
+
+  const start = str(row.arrival_window_start) || str(row.scheduled_start);
+  const end = str(row.arrival_window_end) || str(row.scheduled_end);
+
+  return {
+    jobNumber: String(row.job_number ?? jobNumber),
+    status: str(row.status),
+    startLocal: isoToZonedWallClock(start, context.timeZone),
+    endLocal: isoToZonedWallClock(end, context.timeZone),
+    canceled: str(row.status) === "canceled",
+    cancellationReason: str(row.cancellation_reason),
+    customerPhone: str(customer?.phone),
+    customerEmail: str(customer?.email),
+  };
 }

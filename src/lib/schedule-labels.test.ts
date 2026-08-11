@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { addDays, calendarDate, nowLabel, relativeDay, slotLabel } from "./schedule-labels.ts";
+import {
+  addDays,
+  calendarDate,
+  isoToZonedWallClock,
+  nowLabel,
+  relativeDay,
+  slotLabel,
+  zonedWallClockToIso,
+} from "./schedule-labels.ts";
 
 const PACIFIC = "America/Los_Angeles";
 
@@ -69,4 +77,76 @@ test("the clock is stated in words a person would use", () => {
   assert.match(label, /Sunday/);
   assert.match(label, /August 9/);
   assert.match(label, /6:28/);
+});
+
+test("a time typed into the form means that time where the business is", () => {
+  // 1pm Pacific in August is UTC-7, so 20:00Z. Read as UTC instead, the
+  // customer would be told 6am.
+  assert.equal(
+    zonedWallClockToIso("2026-08-13T13:00", "America/Los_Angeles"),
+    "2026-08-13T20:00:00.000Z",
+  );
+});
+
+test("winter and summer differ by the hour daylight saving moves", () => {
+  assert.equal(
+    zonedWallClockToIso("2026-01-13T13:00", "America/Los_Angeles"),
+    "2026-01-13T21:00:00.000Z",
+  );
+});
+
+test("a zone that is ahead of UTC works the other way", () => {
+  assert.equal(
+    zonedWallClockToIso("2026-08-13T09:00", "Europe/London"),
+    "2026-08-13T08:00:00.000Z",
+  );
+  assert.equal(
+    zonedWallClockToIso("2026-08-13T09:00", "Asia/Tokyo"),
+    "2026-08-13T00:00:00.000Z",
+  );
+});
+
+test("an hour just after the clocks go forward is not thrown an hour out", () => {
+  // 2026-03-08 is the US spring-forward: 01:59 PST is followed by 03:00 PDT.
+  // 3am that morning is 10:00Z, an hour closer to UTC than the same clock time
+  // the day before. The second probe pass exists for exactly this.
+  assert.equal(
+    zonedWallClockToIso("2026-03-08T03:00", "America/Los_Angeles"),
+    "2026-03-08T10:00:00.000Z",
+  );
+  assert.equal(
+    zonedWallClockToIso("2026-03-07T03:00", "America/Los_Angeles"),
+    "2026-03-07T11:00:00.000Z",
+  );
+});
+
+test("an hour that never happened resolves to a real instant, not a crash", () => {
+  // 02:30 does not exist on the spring-forward morning. Somebody can still type
+  // it, so it has to land somewhere sensible rather than throwing or becoming
+  // the epoch — the surrounding hour is the honest answer.
+  const iso = zonedWallClockToIso("2026-03-08T02:30", "America/Los_Angeles");
+  assert.match(iso, /^2026-03-08T\d{2}:\d{2}:00\.000Z$/);
+  assert.ok(!Number.isNaN(new Date(iso).getTime()));
+});
+
+test("garbage typed into the field does not become the epoch", () => {
+  for (const value of ["", "tomorrow", "2026-08-13", "not-a-date", "13/08/2026"]) {
+    assert.equal(zonedWallClockToIso(value, "America/Los_Angeles"), "", value);
+  }
+});
+
+test("a stored instant comes back as the wall clock somebody typed", () => {
+  // Round trip: what the form shows must be what the form would send back.
+  const iso = zonedWallClockToIso("2026-08-13T13:00", "America/Los_Angeles");
+  assert.equal(isoToZonedWallClock(iso, "America/Los_Angeles"), "2026-08-13T13:00");
+});
+
+test("midnight round trips rather than rendering as hour 24", () => {
+  const iso = zonedWallClockToIso("2026-08-13T00:00", "America/Los_Angeles");
+  assert.equal(isoToZonedWallClock(iso, "America/Los_Angeles"), "2026-08-13T00:00");
+});
+
+test("an unusable instant is shown as empty rather than as Invalid Date", () => {
+  assert.equal(isoToZonedWallClock("", "America/Los_Angeles"), "");
+  assert.equal(isoToZonedWallClock("not a date", "America/Los_Angeles"), "");
 });
