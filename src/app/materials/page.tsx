@@ -3,12 +3,18 @@ import { Boxes, CheckCircle2, ChevronRight, PackageSearch, Search, Settings2, St
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { MaterialSourcingWorkflow } from "@/components/material-sourcing-workflow";
-import { getPilotJob, pilotHomeDepotStore, pilotJobs, pilotLowesStore, serviceBase } from "@/lib/pilot-data";
+import { pilotHomeDepotStore, pilotLowesStore, serviceBase } from "@/lib/pilot-data";
+import { getJobs } from "@/lib/job-data";
 
 export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ job?: string; query?: string }> }) {
   const { job: jobId, query = "" } = await searchParams;
-  const selectedJob = jobId ? getPilotJob(jobId) : undefined;
-  const allMaterials = (selectedJob ? selectedJob.materials : pilotJobs.flatMap((job) => job.materials)).filter((material, index, materials) => materials.findIndex((candidate) => candidate.name === material.name) === index);
+
+  // The business's own jobs, not the pilot fixtures. Materials have no table
+  // yet, so a real job carries none and this page correctly shows nothing to
+  // buy — which is honest, where a list of invented parts was not.
+  const { jobs } = await getJobs();
+  const selectedJob = jobId ? jobs.find((job) => job.id === jobId) : undefined;
+  const allMaterials = (selectedJob ? selectedJob.materials : jobs.flatMap((job) => job.materials)).filter((material, index, materials) => materials.findIndex((candidate) => candidate.name === material.name) === index);
   const normalized = query.trim().toLowerCase();
   const materials = normalized ? allMaterials.filter((material) => material.name.toLowerCase().includes(normalized)) : allMaterials;
   const nearAddress = selectedJob ? `${selectedJob.address}, ${selectedJob.city}` : serviceBase.address;

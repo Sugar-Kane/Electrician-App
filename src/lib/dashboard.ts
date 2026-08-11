@@ -318,12 +318,12 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           name: item.name,
           quantity: Number(item.quantity_on_hand),
           unit: item.unit,
-        })) ?? demoSnapshot.lowStock,
+        })) ?? [],
       activity:
         activity.data?.map((event) => ({
           label: event.label,
           when: formatRelativeTime(event.created_at),
-        })) ?? demoSnapshot.activity,
+        })) ?? [],
     };
   } catch {
     return demoSnapshot;
