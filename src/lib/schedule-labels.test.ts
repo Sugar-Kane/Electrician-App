@@ -150,3 +150,90 @@ test("an unusable instant is shown as empty rather than as Invalid Date", () => 
   assert.equal(isoToZonedWallClock("", "America/Los_Angeles"), "");
   assert.equal(isoToZonedWallClock("not a date", "America/Los_Angeles"), "");
 });
+
+test("Arizona does not move, so summer and winter are the same offset", () => {
+  // Phoenix is UTC-7 all year. A business there must not be shifted in summer
+  // just because the rest of Mountain Time is.
+  assert.equal(
+    zonedWallClockToIso("2026-01-13T13:00", "America/Phoenix"),
+    "2026-01-13T20:00:00.000Z",
+  );
+  assert.equal(
+    zonedWallClockToIso("2026-08-13T13:00", "America/Phoenix"),
+    "2026-08-13T20:00:00.000Z",
+  );
+});
+
+test("Hawaii does not move either", () => {
+  assert.equal(
+    zonedWallClockToIso("2026-01-13T13:00", "Pacific/Honolulu"),
+    "2026-01-13T23:00:00.000Z",
+  );
+  assert.equal(
+    zonedWallClockToIso("2026-08-13T13:00", "Pacific/Honolulu"),
+    "2026-08-13T23:00:00.000Z",
+  );
+});
+
+test("Denver does move, which is what makes Phoenix worth testing", () => {
+  // Same nominal Mountain Time, one hour apart for most of the year. Getting
+  // this wrong sends an Arizona customer an appointment an hour out.
+  const denverSummer = zonedWallClockToIso("2026-08-13T13:00", "America/Denver");
+  const phoenixSummer = zonedWallClockToIso("2026-08-13T13:00", "America/Phoenix");
+  assert.notEqual(denverSummer, phoenixSummer);
+
+  const denverWinter = zonedWallClockToIso("2026-01-13T13:00", "America/Denver");
+  const phoenixWinter = zonedWallClockToIso("2026-01-13T13:00", "America/Phoenix");
+  assert.equal(denverWinter, phoenixWinter);
+});
+
+test("every timezone the app offers round trips in both halves of the year", () => {
+  for (const zone of [
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Phoenix",
+    "America/Chicago",
+    "America/New_York",
+    "America/Anchorage",
+    "Pacific/Honolulu",
+    "America/Puerto_Rico",
+  ]) {
+    for (const wall of ["2026-01-13T13:00", "2026-08-13T13:00", "2026-11-01T09:00"]) {
+      const iso = zonedWallClockToIso(wall, zone);
+      assert.equal(isoToZonedWallClock(iso, zone), wall, `${zone} ${wall}`);
+    }
+  }
+});
+
+test("the hour that happens twice when the clocks go back resolves to one of them", () => {
+  // 2026-11-01, 01:30 Pacific occurs twice. Either instant is defensible; what
+  // matters is that it is a real instant and reads back as the same wall clock.
+  const iso = zonedWallClockToIso("2026-11-01T01:30", "America/Los_Angeles");
+  assert.ok(!Number.isNaN(new Date(iso).getTime()));
+  assert.equal(isoToZonedWallClock(iso, "America/Los_Angeles"), "2026-11-01T01:30");
+});
+
+test("a day that is 23 hours long is still one calendar day", () => {
+  // Spring forward: midnight to midnight is 23 hours, and the dashboard's
+  // "today" window is built from exactly this pair.
+  const start = new Date(zonedWallClockToIso("2026-03-08T00:00", "America/Los_Angeles"));
+  const end = new Date(zonedWallClockToIso("2026-03-09T00:00", "America/Los_Angeles"));
+  assert.equal((end.getTime() - start.getTime()) / 3_600_000, 23);
+});
+
+test("a day that is 25 hours long is also one calendar day", () => {
+  const start = new Date(zonedWallClockToIso("2026-11-01T00:00", "America/Los_Angeles"));
+  const end = new Date(zonedWallClockToIso("2026-11-02T00:00", "America/Los_Angeles"));
+  assert.equal((end.getTime() - start.getTime()) / 3_600_000, 25);
+});
+
+test("an Arizona day is always 24 hours, including the weekends everyone else moves", () => {
+  for (const [from, to] of [
+    ["2026-03-08", "2026-03-09"],
+    ["2026-11-01", "2026-11-02"],
+  ]) {
+    const start = new Date(zonedWallClockToIso(`${from}T00:00`, "America/Phoenix"));
+    const end = new Date(zonedWallClockToIso(`${to}T00:00`, "America/Phoenix"));
+    assert.equal((end.getTime() - start.getTime()) / 3_600_000, 24, from);
+  }
+});

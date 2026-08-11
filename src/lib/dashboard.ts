@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { shiftDays, todayInZone } from "@/lib/calendar";
+import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
@@ -180,10 +182,18 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     if (!membership) return { ...demoSnapshot, requiresOnboarding: true };
     const organizationId = membership.organization_id;
     const accountDatabase = asFlexibleClient(supabase);
-    const dayStart = new Date();
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    // "Today" is the business's day, not the server's. Production runs in UTC,
+    // where setHours(0,0,0,0) is 5pm Pacific the previous afternoon — so the
+    // dashboard showed part of yesterday's schedule as today's, and dropped
+    // this evening's jobs entirely. Built from the business's calendar date so
+    // it also survives the 23- and 25-hour days that daylight saving creates,
+    // and the zones that have no daylight saving at all.
+    const organizationRow = membership.organizations as unknown as { timezone?: string } | null;
+    const zone = organizationRow?.timezone || DEFAULT_TIMEZONE;
+    const today = todayInZone(zone);
+    const dayStart = new Date(zonedWallClockToIso(`${today}T00:00`, zone));
+    const dayEnd = new Date(zonedWallClockToIso(`${shiftDays(today, 1)}T00:00`, zone));
 
     const [jobs, invoices, estimates, technicians, inventory, activity, profile] =
       await Promise.all([

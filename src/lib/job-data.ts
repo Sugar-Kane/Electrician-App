@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
+import { currentContext } from "@/lib/request-context";
 import { isoToZonedWallClock } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import {
@@ -64,28 +65,20 @@ function inZone(iso: string | null, timeZone: string, opts: Intl.DateTimeFormatO
   return new Intl.DateTimeFormat("en-US", { timeZone, ...opts }).format(new Date(iso));
 }
 
+/**
+ * Who this request is for, and a client to read with.
+ *
+ * The session half is memoised for the request, so a page that calls getJobs()
+ * and getInvoices() verifies the token once rather than once per function.
+ */
 async function resolveContext() {
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) return null;
+  const context = await currentContext();
+  if (!context) return null;
 
-  // Membership goes through the typed client (these tables are in the generated
-  // types); the loose client is only for the wide relational selects below.
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id, organizations(timezone)")
-    .eq("user_id", authData.user.id)
-    .limit(1)
-    .maybeSingle();
-
-  const organizationId = membership?.organization_id;
-  if (typeof organizationId !== "string") return null;
-
-  const org = membership?.organizations as unknown as { timezone?: string } | null;
   return {
-    database: asFlexibleClient(supabase),
-    organizationId,
-    timeZone: org?.timezone || DEFAULT_TIMEZONE,
+    database: asFlexibleClient(await createClient()),
+    organizationId: context.organizationId,
+    timeZone: context.timeZone || DEFAULT_TIMEZONE,
   };
 }
 
