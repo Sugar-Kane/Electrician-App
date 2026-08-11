@@ -89,8 +89,11 @@ export async function loadIntakeContext(input: {
   return {
     timeZone,
     messagingServiceSid: text(messaging?.messaging_service_sid),
-    // The business's own answer wins; the deployment's variables are only a
-    // fallback for a tenant that has not set one yet.
+    // Per business, and nothing else. There is deliberately no deployment-wide
+    // fallback: one deployment serves many electricians, so a single address
+    // here would send the second electrician's customer to the first. A
+    // business that has set nothing is told nothing, and the support console
+    // reports that as blocking.
     owner: {
       email: text(organization?.owner_notification_email),
       phone: text(organization?.owner_notification_phone),

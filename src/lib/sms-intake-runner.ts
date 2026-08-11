@@ -93,6 +93,11 @@ export async function handleInboundText(input: {
       callerText: input.body,
       model: decision ? "claude-opus-5" : null,
       decision,
+      // Collected in the thread and carried through, so a text booking lands
+      // with the same intake a phone booking does rather than an address and a
+      // sentence.
+      intakeAnswers: action.kind === "book" ? action.intakeAnswers : undefined,
+      deliveryPreference: action.kind === "book" ? action.deliveryPreference : undefined,
     });
 
     await replyToCustomer({
@@ -125,6 +130,8 @@ export async function handleInboundText(input: {
         origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
         jobId,
         owner,
+        intakeAnswers: action.intakeAnswers,
+        deliveryPreference: action.deliveryPreference,
         customerAlreadyToldBySms: true,
       });
     }

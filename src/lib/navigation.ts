@@ -46,6 +46,12 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Work",
     items: [
       {
+        label: "Assistant",
+        href: "/assistant",
+        icon: "Sparkles",
+        description: "Ask about jobs and invoices",
+      },
+      {
         label: "Schedule",
         href: "/schedule",
         icon: "CalendarDays",
@@ -227,6 +233,12 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         href: "/settings/notifications",
         icon: "BellRing",
         description: "Where a booked job reaches you",
+      },
+      {
+        label: "Contract",
+        href: "/settings/contract",
+        icon: "FileText",
+        description: "The agreement customers sign, filled in per job",
       },
     ],
   },

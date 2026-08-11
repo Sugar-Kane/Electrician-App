@@ -23,8 +23,9 @@ import {
   pilotJobs,
   serviceBase,
 } from "@/lib/pilot-data";
+import { JobContract } from "@/components/job-contract";
 import { JobControls } from "@/components/job-controls";
-import { getJob, getJobControls } from "@/lib/job-data";
+import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
@@ -36,7 +37,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to edit.
-  const controls = await getJobControls(jobId);
+  const [controls, contracts] = await Promise.all([
+    getJobControls(jobId),
+    getJobContracts(jobId),
+  ]);
 
   const fullAddress = `${job.address}, ${job.city}`;
   const needsStop = jobNeedsMaterialStop(job);
@@ -118,6 +122,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             customerPhone={controls.customerPhone}
             customerEmail={controls.customerEmail}
           />
+        </div>
+      ) : null}
+
+      {controls ? (
+        <div className="mt-4">
+          <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
         </div>
       ) : null}
     </FieldPageShell>

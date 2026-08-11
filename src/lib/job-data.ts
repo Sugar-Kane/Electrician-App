@@ -221,8 +221,8 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   const { data, error } = await context.database
     .from("invoices")
     .select(`
-      id, invoice_number, status, total_cents, balance_due_cents, due_at,
-      jobs ( job_number, customers ( first_name, last_name, company_name ) )
+      id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
+      jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )
     `)
     .eq("organization_id", context.organizationId)
     .order("due_at", { ascending: true });
@@ -251,6 +251,17 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
         month: "short", day: "numeric", year: "numeric",
       }),
       jobId: String(job.job_number ?? ""),
+      recordId: String(row.id ?? ""),
+      customerPhone: String(customer.phone ?? ""),
+      customerEmail: String(customer.email ?? ""),
+      // What is still outstanding, kept alongside the total so a screen can
+      // show both. The sent message quotes the total, not this.
+      balance: Number(row.balance_due_cents ?? row.total_cents ?? 0) / 100,
+      sentLabel: row.last_sent_at
+        ? inZone(row.last_sent_at as string, context.timeZone, {
+            month: "short", day: "numeric",
+          })
+        : "",
     };
   });
 
@@ -393,4 +404,50 @@ export async function placeTodaysStops(): Promise<{
     database: getSupabaseAdmin(),
     organizationId: context.organizationId,
   });
+}
+
+/**
+ * The contracts already generated for a job.
+ *
+ * Read through the caller's session, so RLS decides which business's contracts
+ * these are. Newest first: the last draft is the one somebody is about to send.
+ */
+export async function getJobContracts(jobNumber: string): Promise<
+  { id: string; createdLabel: string; body: string; unfilled: string[] }[]
+> {
+  const context = await resolveContext();
+  if (!context) return [];
+
+  const numeric = Number(jobNumber);
+  if (!Number.isFinite(numeric)) return [];
+
+  const { data: job } = await context.database
+    .from("jobs")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  const jobId = typeof job?.id === "string" ? job.id : "";
+  if (!jobId) return [];
+
+  const { data } = await context.database
+    .from("contracts")
+    .select("id, body, unfilled, created_at")
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    body: typeof row.body === "string" ? row.body : "",
+    unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+    createdLabel: inZone(row.created_at as string | null, context.timeZone, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+  }));
 }

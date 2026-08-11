@@ -66,19 +66,56 @@ function subscribeToAuthFailure(listener: () => void): () => void {
   return () => authFailureListeners.delete(listener);
 }
 
-/** One shared load, however many maps a page ends up rendering. */
+/**
+ * One shared load, however many maps a page ends up rendering.
+ *
+ * `loading=async` does not deliver the Maps API. It delivers a *bootstrap* that
+ * defines `google.maps.importLibrary` and fetches the real libraries on demand.
+ * So at `script.onload` the object `window.google.maps` exists while
+ * `google.maps.Map` does not yet — and constructing a map right then throws a
+ * TypeError that looks, from the outside, exactly like a rejected API key.
+ *
+ * This cost an afternoon of rotating Google credentials that were never the
+ * problem. The script has to be awaited and then the libraries asked for by
+ * name, which is what `importLibrary` is for.
+ */
+type Bootstrap = {
+  importLibrary?: (name: string) => Promise<unknown>;
+};
+
 function loadMaps(apiKey: string): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (window.google?.maps) return Promise.resolve();
+  // Map is the thing actually needed; `google.maps` alone proves only that the
+  // bootstrap ran, which was the whole bug.
+  if (window.google?.maps?.Map) return Promise.resolve();
 
-  window.__volteiraMapsPromise ??= new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=marker&loading=async`;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Google Maps failed to load."));
-    document.head.appendChild(script);
-  });
+  window.__volteiraMapsPromise ??= (async () => {
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>("script[data-volteira-maps]");
+      if (existing) {
+        existing.addEventListener("load", () => resolve());
+        existing.addEventListener("error", () => reject(new Error("Google Maps failed to load.")));
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=marker&loading=async`;
+      script.async = true;
+      script.dataset.volteiraMaps = "true";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Google Maps failed to load."));
+      document.head.appendChild(script);
+    });
+
+    const bootstrap = window.google?.maps as (typeof window.google.maps & Bootstrap) | undefined;
+
+    // Older loaders hand over a fully populated namespace and have no
+    // importLibrary at all. Nothing to wait for in that case.
+    if (typeof bootstrap?.importLibrary !== "function") return;
+
+    await bootstrap.importLibrary("maps");
+    await bootstrap.importLibrary("marker");
+  })();
 
   return window.__volteiraMapsPromise;
 }
@@ -119,7 +156,13 @@ export function JobMap({
 
     loadMaps(apiKey)
       .then(() => {
-        if (cancelled || !container.current || !window.google?.maps) return;
+        if (cancelled || !container.current) return;
+        // Returning quietly here used to leave the spinner turning forever,
+        // which is the one outcome that tells nobody anything.
+        if (!window.google?.maps?.Map) {
+          setStatus("failed");
+          return;
+        }
         mapRef.current ??= new window.google.maps.Map(container.current, {
           center: { lat: 35.0428, lng: -120.4766 },
           zoom: 11,

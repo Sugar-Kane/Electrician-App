@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, CircleDollarSign, Clock3, ReceiptText, TriangleAlert } from "lucide-react";
 
+import { InvoiceSend } from "@/components/invoice-send";
 import type { PilotInvoice } from "@/lib/pilot-data";
 
 /**
@@ -96,33 +97,44 @@ export function InvoiceList({
       <div className="mt-4 space-y-2">
         {visible.map((invoice) => {
           const Icon = STATUS_ICONS[invoice.status] ?? ReceiptText;
+          // The send control cannot live inside the row link — a button nested
+          // in an anchor is not something a browser or a screen reader can make
+          // sense of. So the row is a container, and the link is the part of it
+          // that navigates.
           return (
-            <Link
+            <div
               key={invoice.id}
-              href={`/jobs/${invoice.jobId}`}
-              className="tap-row flex min-h-[76px] items-center gap-3 rounded-control border border-line px-4 py-3 active:bg-white/5"
+              className="rounded-control border border-line px-4 py-3"
             >
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5">
-                <Icon className="h-5 w-5 text-brand" aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{invoice.customer}</span>
-                <span className="mt-0.5 block truncate text-xs text-ink-muted">
-                  {invoice.id} · due {invoice.due}
+              <Link
+                href={`/jobs/${invoice.jobId}`}
+                className="tap-row flex min-h-[52px] items-center gap-3 active:bg-white/5"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5">
+                  <Icon className="h-5 w-5 text-brand" aria-hidden />
                 </span>
-              </span>
-              <span className="shrink-0 text-right">
-                <span className="block text-sm font-semibold">
-                  ${invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{invoice.customer}</span>
+                  <span className="mt-0.5 block truncate text-xs text-ink-muted">
+                    {invoice.id} · due {invoice.due}
+                    {invoice.sentLabel ? ` · sent ${invoice.sentLabel}` : ""}
+                  </span>
                 </span>
-                <span
-                  className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[invoice.status] ?? ""}`}
-                >
-                  {invoice.status}
+                <span className="shrink-0 text-right">
+                  <span className="block text-sm font-semibold">
+                    ${invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                  <span
+                    className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[invoice.status] ?? ""}`}
+                  >
+                    {invoice.status}
+                  </span>
                 </span>
-              </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
-            </Link>
+                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+              </Link>
+
+              {invoice.status === "Paid" ? null : <InvoiceSend invoice={invoice} />}
+            </div>
           );
         })}
 

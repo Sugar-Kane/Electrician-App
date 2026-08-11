@@ -2,7 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  calendarWeekStart,
   formatDayLabel,
+  fullWeekOf,
+  monthGridOf,
+  monthLabel,
+  monthStart,
+  shiftMonths,
   isIsoDate,
   isoDateInZone,
   shiftDays,
@@ -111,4 +117,83 @@ test("a week that crosses a year names both years", () => {
 test("the selected day has a heading even when no jobs are booked", () => {
   assert.equal(formatDayLabel("2026-08-03"), "Mon, Aug 3");
   assert.equal(formatDayLabel("nonsense"), "");
+});
+
+test("a week view keeps a weekend in its own week", () => {
+  // workWeekStart deliberately rolls a weekend forward, which is right for a
+  // five-day picker and wrong here: somebody looking at Saturday's callout
+  // wants the week Saturday is in, not the next one.
+  assert.equal(calendarWeekStart("2026-08-08"), "2026-08-03"); // Saturday
+  assert.equal(calendarWeekStart("2026-08-09"), "2026-08-03"); // Sunday
+  assert.equal(calendarWeekStart("2026-08-03"), "2026-08-03"); // Monday itself
+  assert.equal(calendarWeekStart("2026-08-05"), "2026-08-03");
+});
+
+test("a Sunday belongs to the week that began six days earlier", () => {
+  // getUTCDay is 0 for Sunday. Treating that as "1 - 0 = tomorrow" would show
+  // the wrong week for one day in seven.
+  const week = fullWeekOf("2026-08-09", "2026-08-09");
+
+  assert.equal(week.length, 7);
+  assert.equal(week[0]!.date, "2026-08-03");
+  assert.equal(week[6]!.date, "2026-08-09");
+  assert.equal(week[6]!.isToday, true);
+});
+
+test("a week runs Monday to Sunday and marks today once", () => {
+  const week = fullWeekOf("2026-08-05", "2026-08-05");
+
+  assert.deepEqual(
+    week.map((day) => day.weekday),
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  );
+  assert.equal(week.filter((day) => day.isToday).length, 1);
+});
+
+test("a month is always six whole weeks", () => {
+  // A month that fits in five rows would make the page change height as you
+  // page through the year, moving the buttons under somebody's thumb.
+  for (const date of ["2026-02-01", "2026-08-15", "2027-01-31", "2024-02-29"]) {
+    assert.equal(monthGridOf(date, "2026-08-11").length, 42, date);
+  }
+});
+
+test("a month grid starts on a Monday and flags the padding days", () => {
+  const grid = monthGridOf("2026-08-15", "2026-08-11");
+
+  assert.equal(grid[0]!.weekday, "Mon");
+  // August 2026 starts on a Saturday, so the grid opens in July.
+  assert.equal(grid[0]!.inMonth, false);
+  assert.equal(grid[0]!.date, "2026-07-27");
+
+  const august = grid.filter((cell) => cell.inMonth);
+  assert.equal(august.length, 31);
+  assert.equal(august[0]!.date, "2026-08-01");
+  assert.equal(august[30]!.date, "2026-08-31");
+});
+
+test("month arithmetic never skips a month", () => {
+  // Naive arithmetic turns January 31st into March 3rd, so a "next month"
+  // button silently jumps over February.
+  assert.equal(shiftMonths("2026-01-31", 1), "2026-02-28");
+  assert.equal(shiftMonths("2024-01-31", 1), "2024-02-29");
+  assert.equal(shiftMonths("2026-03-31", -1), "2026-02-28");
+  assert.equal(shiftMonths("2026-08-15", 1), "2026-09-15");
+});
+
+test("month arithmetic crosses a year boundary in both directions", () => {
+  assert.equal(shiftMonths("2026-12-15", 1), "2027-01-15");
+  assert.equal(shiftMonths("2026-01-15", -1), "2025-12-15");
+  assert.equal(shiftMonths("2026-06-15", -18), "2024-12-15");
+});
+
+test("a month is named for a heading", () => {
+  assert.equal(monthLabel("2026-08-15"), "August 2026");
+  assert.equal(monthLabel("2026-01-01"), "January 2026");
+  assert.equal(monthLabel("not-a-date"), "");
+});
+
+test("the first of the month is found from any day in it", () => {
+  assert.equal(monthStart("2026-08-31"), "2026-08-01");
+  assert.equal(monthStart("2026-02-14"), "2026-02-01");
 });

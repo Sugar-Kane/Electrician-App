@@ -142,7 +142,7 @@ test("the questions are the business's, and short enough to ask out loud", () =>
 });
 
 test("a complete booking into an offered window is booked", () => {
-  const { action, result } = run("book_visit", BOOKABLE);
+  const { action, result } = run("book_visit", COMPLETE);
 
   assert.equal(action.kind, "book");
   assert.equal(result.isError, undefined);
@@ -153,7 +153,7 @@ test("a complete booking into an offered window is booked", () => {
 test("a window the model invented is refused, and the real ones are handed back", () => {
   // The failure that matters most: a model that promises a time nobody has.
   const { action, result } = run("book_visit", {
-    ...BOOKABLE,
+    ...COMPLETE,
     slot_start: "2026-08-11T09:00:00+00:00",
   });
 
@@ -165,14 +165,14 @@ test("a window the model invented is refused, and the real ones are handed back"
 
 test("an ordinary water heater call is bookable", () => {
   const { action } = run("book_visit", {
-    ...BOOKABLE,
+    ...COMPLETE,
     description: "The water heater element needs replacing.",
   });
   assert.equal(action.kind, "book");
 });
 
 test("a booking with no street address asks for one instead", () => {
-  const { result } = run("book_visit", { ...BOOKABLE, address_line_1: "", city: "" });
+  const { result } = run("book_visit", { ...COMPLETE, address_line_1: "", city: "" });
 
   assert.equal(result.isError, true);
   assert.match(result.text, /^NOT BOOKED\./);
@@ -247,7 +247,7 @@ test("both spellings of a yes are accepted", () => {
 });
 
 test("declining the email does not block the booking", () => {
-  const { action } = run("book_visit", { ...BOOKABLE, caller_email: "" });
+  const { action } = run("book_visit", { ...COMPLETE, caller_email: "" });
   assert.equal(action.kind, "book");
   assert.equal(callerEmail({ caller_email: "  adam@gmail.com " }), "adam@gmail.com");
   assert.equal(callerEmail({}), "");
@@ -278,4 +278,37 @@ test("no tool lets the model name the business or the customer", () => {
       assert.doesNotMatch(property, forbidden, `${tool.name}.${property}`);
     }
   }
+});
+
+test("an interview that never happened does not become a booking", () => {
+  // BOOKABLE has a name, an address and a real window — everything except
+  // having asked the customer anything. That used to be enough to book over
+  // text, and the electrician arrived knowing only the street.
+  const { action } = run("book_visit", BOOKABLE);
+
+  assert.equal(action.kind, "ask");
+});
+
+test("the answers the caller gave survive the trip to the gate", () => {
+  // buildDecision used to drop these, so the interview the voice path had
+  // already collected never reached the rules that judge whether enough was
+  // asked. The two halves checked different things and neither saw the whole.
+  const decision = buildDecision("book_visit", COMPLETE);
+
+  assert.ok(decision);
+  assert.equal(decision.input.answer_scope, "Just the kitchen.");
+  assert.equal(decision.input.delivery_preference, "both");
+});
+
+test("a booking carries its interview into the action", () => {
+  const { action } = run("book_visit", COMPLETE);
+
+  assert.equal(action.kind, "book");
+  if (action.kind !== "book") return;
+
+  // Three answered, two left blank — the blanks are dropped rather than
+  // recorded as questions with no answer.
+  assert.equal(action.intakeAnswers.length, 3);
+  assert.equal(action.deliveryPreference, "both");
+  assert.ok(action.intakeAnswers.every((entry) => entry.answer.length > 0));
 });

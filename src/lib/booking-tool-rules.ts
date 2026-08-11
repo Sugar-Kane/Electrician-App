@@ -1,5 +1,11 @@
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
-import type { IntakeAction, IntakeContext, IntakeDecision } from "@/lib/sms-intake";
+import {
+  INTAKE_QUESTIONS,
+  MINIMUM_INTAKE_ANSWERS,
+  type IntakeAction,
+  type IntakeContext,
+  type IntakeDecision,
+} from "./sms-intake.ts";
 
 /**
  * Booking as three tools a model can call, and what each outcome means.
@@ -33,15 +39,10 @@ const URGENCY = { type: "string", enum: ["routine", "urgent"] } as const;
  * twice. The list is short on purpose: five questions is a phone call, ten is
  * an interrogation.
  */
-export const INTAKE_QUESTIONS = [
-  { key: "scope", question: "Is this affecting the whole house, one room, or a single outlet or fixture?" },
-  { key: "onset", question: "When did it start, and did anything change just before — a new appliance, a storm, or work done?" },
-  { key: "breaker", question: "Have you looked at the breaker panel? Is anything tripped, and does it reset?" },
-  { key: "property", question: "Is this a house, a condo, or a commercial space, and roughly how old is the building?" },
-  { key: "access", question: "Is there anything the electrician needs to get in — a gate code, a dog, parking, or someone home?" },
-] as const;
-
-export const MINIMUM_INTAKE_ANSWERS = 3;
+// The questions themselves live with the text intake, which is the layer both
+// paths share. Two copies would drift, and a phone booking and a text booking
+// asking different things is exactly the state this replaced.
+export { INTAKE_QUESTIONS, MINIMUM_INTAKE_ANSWERS };
 
 /**
  * The caller's number, when the connection was not opened for a known caller.
@@ -273,6 +274,15 @@ export function buildDecision(
         postal_code: text(args.postal_code),
         slot_start: text(args.slot_start),
         urgency: urgency(args.urgency),
+        // The interview goes with the proposal. These used to be dropped here,
+        // so answers the caller had already given out loud never reached the
+        // gate that decides whether enough was asked — the voice path checked
+        // separately and the text path did not check at all. Now both go
+        // through the same one.
+        ...Object.fromEntries(
+          INTAKE_QUESTIONS.map(({ key }) => [`answer_${key}`, text(args[`answer_${key}`])]),
+        ),
+        delivery_preference: text(args.delivery_preference),
       },
     };
   }
