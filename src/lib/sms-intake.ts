@@ -30,6 +30,8 @@ export type IntakeContext = {
   /** The same fee in cents, for anything that has to charge it. */
   diagnosticFeeCents: number;
   serviceArea: string;
+  /** The business's own clock, so nobody has to guess what "today" means. */
+  nowLabel: string;
   /** Appended to the first reply in a thread only. */
   isFirstReply: boolean;
 };

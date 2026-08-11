@@ -5,6 +5,7 @@ import {
   customerConfirmationSms,
   emailSender,
   looksLikeEmail,
+  ownerBookingEmail,
   ownerBookingSms,
   ownerIntakeSms,
   type BookingFacts,
@@ -47,8 +48,12 @@ export type BookingNotification = {
   /** Origin for the confirmation link, e.g. https://www.volteira.com */
   origin: string;
   intakeAnswers?: { question: string; answer: string }[];
+  /** Where this business wants booking alerts sent. Falls back to the env. */
+  owner?: { email: string; phone: string };
   /** Where the customer asked to receive their link. */
   deliveryPreference?: "text" | "email" | "both";
+  /** The job this became, for the link in the owner's email. */
+  jobId?: string;
 };
 
 function factsFor(input: BookingNotification): BookingFacts {
@@ -62,6 +67,7 @@ function factsFor(input: BookingNotification): BookingFacts {
     diagnosticFee: input.context.diagnosticFee,
     description: input.description,
     intakeAnswers: input.intakeAnswers,
+    customerPhone: input.phone,
     link: input.origin ? `${input.origin.replace(/\/+$/, "")}/booking/${input.publicToken}` : undefined,
   };
 }
@@ -120,9 +126,22 @@ async function recordOutbound(input: {
   });
 }
 
+type Attempt = {
+  channel: "sms" | "email";
+  to: string;
+  audience: "customer" | "owner";
+  ok: boolean;
+  detail?: string;
+  at: string;
+};
+
 export async function sendBookingConfirmations(input: BookingNotification): Promise<void> {
   const database = getSupabaseAdmin();
   const facts = factsFor(input);
+  const attempts: Attempt[] = [];
+
+  const note = (attempt: Omit<Attempt, "at">) =>
+    attempts.push({ ...attempt, at: new Date().toISOString() });
 
   // Claim the booking before sending. A retried tool call, or a model that
   // books twice, must not text the same customer about the same appointment
@@ -169,6 +188,13 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
 
     const body = customerConfirmationSms(facts);
     const result = await sendSms({ to: input.phone, body, messagingServiceSid });
+    note({
+      channel: "sms",
+      to: input.phone,
+      audience: "customer",
+      ok: result.ok,
+      detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
+    });
     await recordOutbound({
       database,
       organizationId: input.organizationId,
@@ -180,18 +206,73 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
 
   // The owner. Deliberately a different number from the business line, so a
   // booking taken at 2am reaches a person rather than the phone that took it.
-  const ownerPhone = process.env.OWNER_NOTIFICATION_PHONE ?? process.env.ESCALATION_PHONE_NUMBER ?? "";
+  const ownerPhone =
+    input.owner?.phone ||
+    process.env.OWNER_NOTIFICATION_PHONE ||
+    process.env.ESCALATION_PHONE_NUMBER ||
+    "";
   if (messagingServiceSid && ownerPhone) {
-    await sendSms({ to: ownerPhone, body: ownerBookingSms(facts), messagingServiceSid });
+    const sent = await sendSms({ to: ownerPhone, body: ownerBookingSms(facts), messagingServiceSid });
+    note({
+      channel: "sms",
+      to: ownerPhone,
+      audience: "owner",
+      ok: sent.ok,
+      detail: sent.ok ? sent.status : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
 
     const intake = ownerIntakeSms(facts);
     if (intake) await sendSms({ to: ownerPhone, body: intake, messagingServiceSid });
+  } else if (!ownerPhone) {
+    note({
+      channel: "sms",
+      to: "",
+      audience: "owner",
+      ok: false,
+      detail:
+        "No owner phone: this business has not set one, and neither OWNER_NOTIFICATION_PHONE nor ESCALATION_PHONE_NUMBER is set.",
+    });
+  }
+
+  // The owner's email. While A2P blocks every text, this is the only thing that
+  // actually reaches anybody, so it carries the whole work order rather than a
+  // nudge to go and look.
+  const ownerEmail = input.owner?.email || process.env.OWNER_NOTIFICATION_EMAIL || "";
+  if (ownerEmail) {
+    const jobUrl =
+      input.origin && input.jobId
+        ? `${input.origin.replace(/\/+$/, "")}/jobs/${input.jobId}`
+        : undefined;
+    const message = ownerBookingEmail(facts, jobUrl);
+    const sent = await sendEmail({
+      to: ownerEmail,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      from: emailSender(facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+    });
+    note({
+      channel: "email",
+      to: ownerEmail,
+      audience: "owner",
+      ok: sent.ok,
+      detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
+  } else {
+    note({
+      channel: "email",
+      to: "",
+      audience: "owner",
+      ok: false,
+      detail:
+        "No owner email: this business has not set one, and OWNER_NOTIFICATION_EMAIL is not set.",
+    });
   }
 
   // The email, when the caller gave one that could plausibly be delivered to.
   if (input.email && wantsEmail && looksLikeEmail(input.email)) {
     const message = confirmationEmail(facts);
-    await sendEmail({
+    const sent = await sendEmail({
       to: input.email,
       subject: message.subject,
       text: message.text,
@@ -199,5 +280,23 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       // Signed by the business, not by the software that sent it.
       from: emailSender(facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
     });
+    note({
+      channel: "email",
+      to: input.email,
+      audience: "customer",
+      ok: sent.ok,
+      detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
+  }
+
+  // Written last and never allowed to fail the call: this is the record of what
+  // was attempted, and it is the answer to "was anybody actually told?".
+  try {
+    await database
+      .from("sms_booking_requests")
+      .update({ notification_results: attempts })
+      .eq("id", input.requestId);
+  } catch {
+    // Deliberately silent.
   }
 }

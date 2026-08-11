@@ -20,6 +20,7 @@ const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
   diagnosticFee: "$149",
   diagnosticFeeCents: 14900,
   serviceArea: "the Central Coast",
+  nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
   ...overrides,
 });

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BellRing,
   Bot,
   Boxes,
   BriefcaseBusiness,
@@ -60,6 +61,8 @@ export const NAV_ITEMS: NavItem[] = [
 export const SETUP_NAV_ITEMS: NavItem[] = [
   { label: "Supplier connections", href: "/settings/integrations", icon: PlugZap, description: "Lowe’s and Home Depot programs" },
   { label: "Automatic messages", href: "/settings/messages", icon: MessagesSquare, description: "What gets texted, and when" },
+  { label: "Team", href: "/settings/team", icon: UsersRound, description: "Who can open this business" },
+  { label: "Booking alerts", href: "/settings/notifications", icon: BellRing, description: "Where a booked job reaches you" },
   { label: "Legal pages", href: "/settings/legal", icon: ScrollText, description: "Terms and privacy carriers read" },
   { label: "Account settings", href: "/account", icon: Settings, description: "Profile, timezone, premium, Square" },
 ];

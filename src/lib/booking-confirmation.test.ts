@@ -6,6 +6,7 @@ import {
   customerConfirmationSms,
   emailSender,
   looksLikeEmail,
+  ownerBookingEmail,
   ownerBookingSms,
   type BookingFacts,
 } from "./booking-confirmation.ts";
@@ -149,6 +150,52 @@ test("a business name cannot break the From header apart", () => {
 test("with nothing configured there is no sender at all", () => {
   assert.equal(emailSender("Pacific Plains Electric", ""), "");
   assert.equal(emailSender("", "bookings@volteira.com"), "bookings@volteira.com");
+});
+
+const WITH_ANSWERS = {
+  ...FACTS,
+  customerPhone: "209-819-9985",
+  intakeAnswers: [
+    { question: "Whole house or one room?", answer: "just the kitchen" },
+    { question: "When did it start?", answer: "yesterday, new oven" },
+    { question: "Anything to get in?", answer: "I have a dog" },
+  ],
+};
+
+test("the owner's email is a work order, not a reassurance", () => {
+  // Enough to load a van from without opening the app.
+  const mail = ownerBookingEmail(WITH_ANSWERS, "https://www.volteira.com/jobs/abc");
+
+  for (const body of [mail.text, mail.html]) {
+    assert.match(body, /Mon, Aug 10, 8:00 AM-10:00 AM/);
+    assert.match(body, /4 Red Gum Lane, Nipomo/);
+    assert.match(body, /209-819-9985/);
+    assert.match(body, /just the kitchen/);
+    assert.match(body, /I have a dog/);
+    assert.match(body, /\$100/);
+    assert.match(body, /jobs\/abc/);
+  }
+});
+
+test("the owner's subject says when and who, because that is the inbox line", () => {
+  const mail = ownerBookingEmail(WITH_ANSWERS);
+  assert.match(mail.subject, /^New booking: Mon, Aug 10/);
+  assert.match(mail.subject, /Adam/);
+});
+
+test("the owner's email survives having no job link and no answers", () => {
+  const mail = ownerBookingEmail(FACTS);
+  assert.doesNotMatch(mail.text, /Open the job/);
+  assert.match(mail.text, /Mon, Aug 10/);
+});
+
+test("a caller's words cannot become markup in the owner's email either", () => {
+  const mail = ownerBookingEmail({
+    ...WITH_ANSWERS,
+    intakeAnswers: [{ question: "Access?", answer: "<img src=x onerror=alert(1)>" }],
+  });
+  assert.doesNotMatch(mail.html, /<img/);
+  assert.match(mail.html, /&lt;img/);
 });
 
 test("a booking with no address still confirms the window", () => {

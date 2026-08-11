@@ -291,11 +291,16 @@ export function intakeQuestionList(): string {
 }
 
 export function slotList(context: IntakeContext): string {
+  // The clock comes first. Without it the model cannot tell a caller whether a
+  // window is tonight or next week, and it will guess.
+  const clock = `Right now it is ${context.nowLabel} where the business is.`;
+
   if (context.offeredSlots.length === 0) {
-    return "No arrival windows are open. Use request_callback — do not offer the customer a time.";
+    return `${clock} No arrival windows are open. Use request_callback — do not offer the customer a time.`;
   }
   return [
-    "Open arrival windows:",
+    clock,
+    "Open arrival windows, soonest first:",
     ...context.offeredSlots.map((slot) => `- ${slot.label} (slot_start: ${slot.start})`),
     `The diagnostic visit costs ${context.diagnosticFee}. Book with the exact slot_start value above.`,
   ].join("\n");
@@ -344,6 +349,7 @@ export function describeOutcome(input: {
           `2. "There is a ${context.diagnosticFee} deposit to hold the appointment."`,
           `3. "An electrician will call you later today to go over a few more details."`,
           `4. "I am sending your booking and payment link ${delivery} now."`,
+          "Then ask if there is anything else, and close with a proper goodbye before ending the call.",
           "Do not promise a repair price, and do not take card details on this call.",
         ].join(" "),
       };

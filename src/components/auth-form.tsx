@@ -9,9 +9,9 @@ import { createClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
 
-export function AuthForm({ mode, nextPath, initialError }: { mode: AuthMode; nextPath: string; initialError?: string }) {
+export function AuthForm({ mode, nextPath, initialError, defaultEmail }: { mode: AuthMode; nextPath: string; initialError?: string; defaultEmail?: string }) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

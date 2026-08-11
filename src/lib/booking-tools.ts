@@ -74,7 +74,7 @@ export async function runBookingTool(input: {
   name: string;
   args: Record<string, unknown>;
 }): Promise<ToolResult> {
-  const { context, timeZone } = await loadIntakeContext({
+  const { context, timeZone, owner } = await loadIntakeContext({
     database: input.database,
     organizationId: input.session.organizationId,
     // A phone call has no thread and sends no SMS, so the opt-out footer that
@@ -149,6 +149,8 @@ export async function runBookingTool(input: {
       origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
       intakeAnswers: answers,
       deliveryPreference: preference || "text",
+      jobId: recorded.jobId,
+      owner,
     });
   }
 

@@ -24,6 +24,8 @@ export type BookingFacts = {
   link?: string;
   /** What was asked on the call, and what the customer said. */
   intakeAnswers?: { question: string; answer: string }[];
+  /** The caller's number, so the owner can ring them back from the email. */
+  customerPhone?: string;
 };
 
 /** Two SMS segments. Past this a message arrives split and looks broken. */
@@ -97,6 +99,64 @@ export function ownerIntakeSms(facts: BookingFacts): string {
 }
 
 export type EmailBody = { subject: string; text: string; html: string };
+
+/**
+ * The owner's copy, which is a work order rather than a reassurance.
+ *
+ * The customer's email tells them not to worry. This one has to be enough to
+ * load a van from: what is wrong, where, when, and everything the caller said
+ * when asked. It leads with the window because that is what decides the day.
+ */
+export function ownerBookingEmail(facts: BookingFacts, jobUrl?: string): EmailBody {
+  const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
+  const answers = facts.intakeAnswers ?? [];
+
+  const lines = [
+    `${facts.slotLabel}`,
+    address ? `${address}` : "",
+    facts.contactName ? `${squash(facts.contactName)}${facts.customerPhone ? ` — ${facts.customerPhone}` : ""}` : "",
+    "",
+    facts.description ? `Problem: ${squash(facts.description)}` : "",
+    "",
+    ...(answers.length > 0 ? ["What they said on the call:"] : []),
+    ...answers.flatMap((entry) => [`  ${squash(entry.question)}`, `    ${squash(entry.answer)}`]),
+    "",
+    `Deposit: ${facts.diagnosticFee}`,
+    jobUrl ? `Open the job: ${jobUrl}` : "",
+  ].filter((line) => line !== "");
+
+  const html = [
+    `<p style="font-size:18px;margin:0 0 4px"><strong>${escapeHtml(facts.slotLabel)}</strong></p>`,
+    address ? `<p style="margin:0 0 4px">${escapeHtml(address)}</p>` : "",
+    facts.contactName
+      ? `<p style="margin:0 0 16px">${escapeHtml(squash(facts.contactName))}${facts.customerPhone ? ` — <a href="tel:${escapeHtml(facts.customerPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(facts.customerPhone)}</a>` : ""}</p>`
+      : "",
+    facts.description
+      ? `<p><strong>Problem:</strong> ${escapeHtml(squash(facts.description))}</p>`
+      : "",
+    ...(answers.length > 0
+      ? [
+          "<p><strong>What they said on the call:</strong></p><ul>",
+          ...answers.map(
+            (entry) =>
+              `<li>${escapeHtml(squash(entry.question))}<br /><strong>${escapeHtml(squash(entry.answer))}</strong></li>`,
+          ),
+          "</ul>",
+        ]
+      : []),
+    `<p><strong>Deposit:</strong> ${escapeHtml(facts.diagnosticFee)}</p>`,
+    jobUrl ? `<p><a href="${escapeHtml(jobUrl)}">Open the job</a></p>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const who = facts.contactName ? ` — ${squash(facts.contactName)}` : "";
+  return {
+    subject: `New booking: ${facts.slotLabel}${who}`,
+    text: lines.join("\n"),
+    html,
+  };
+}
 
 function escapeHtml(value: string): string {
   return value
