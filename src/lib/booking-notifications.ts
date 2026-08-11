@@ -54,6 +54,16 @@ export type BookingNotification = {
   deliveryPreference?: "text" | "email" | "both";
   /** The job this became, for the link in the owner's email. */
   jobId?: string;
+  /**
+   * True when the customer has already been told, in a thread they are reading.
+   *
+   * A booking made over text ends with the assistant replying "booked for Tue,
+   * 8-10am" in that same conversation. A second text a moment later saying the
+   * same thing reads as a system malfunction, so the text path suppresses the
+   * customer's copy and keeps everything else — the owner is the one who has
+   * heard nothing.
+   */
+  customerAlreadyToldBySms?: boolean;
 };
 
 function factsFor(input: BookingNotification): BookingFacts {
@@ -171,7 +181,15 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   const wantsText = preference === "text" || preference === "both";
   const wantsEmail = preference === "email" || preference === "both";
 
-  if (messagingServiceSid && input.phone && wantsText) {
+  if (input.customerAlreadyToldBySms) {
+    note({
+      channel: "sms",
+      to: input.phone,
+      audience: "customer",
+      ok: true,
+      detail: "Confirmed in the text thread itself; a second copy was not sent.",
+    });
+  } else if (messagingServiceSid && input.phone && wantsText) {
     await database.from("messaging_consent").upsert(
       {
         organization_id: input.organizationId,

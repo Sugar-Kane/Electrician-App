@@ -1,5 +1,6 @@
 import "server-only";
 
+import { sendBookingConfirmations } from "@/lib/booking-notifications";
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
 import { loadIntakeContext, recordBookingRequest } from "@/lib/intake-shared";
 import {
@@ -50,7 +51,7 @@ export async function handleInboundText(input: {
       .order("created_at", { ascending: false })
       .limit(MAX_HISTORY_TURNS);
 
-    const { context, messagingServiceSid } = await loadIntakeContext({
+    const { context, messagingServiceSid, timeZone, owner } = await loadIntakeContext({
       database,
       organizationId: input.organizationId,
       // The opt-out rides the first thing this system ever says to them.
@@ -82,7 +83,7 @@ export async function handleInboundText(input: {
 
     await recordExtractedName(database, input.customerId, action);
 
-    const { requestId, jobId } = await recordBookingRequest({
+    const { requestId, jobId, publicToken } = await recordBookingRequest({
       database,
       organizationId: input.organizationId,
       customerId: input.customerId,
@@ -102,6 +103,31 @@ export async function handleInboundText(input: {
       body: action.reply,
       messagingServiceSid,
     });
+
+    // Tell the owner. A booking taken by text used to tell nobody at all: the
+    // customer got the assistant's reply in the thread and the electrician
+    // found out by opening the app, which for a job at 8am the next morning is
+    // too late to be a notification. The customer's copy is suppressed because
+    // they have just read it in this very conversation.
+    if (action.kind === "book" && requestId && publicToken) {
+      await sendBookingConfirmations({
+        requestId,
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        publicToken,
+        phone: input.phone,
+        context,
+        contactName: action.contactName,
+        description: action.description,
+        address: { line1: action.address.line1, city: action.address.city },
+        slot: { start: action.slot.start, end: action.slot.end },
+        timeZone,
+        origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+        jobId,
+        owner,
+        customerAlreadyToldBySms: true,
+      });
+    }
 
     await database
       .from("conversations")
