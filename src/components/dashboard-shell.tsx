@@ -208,15 +208,14 @@ function Header({
         >
           <Search className="h-4 w-4" aria-hidden />
         </Link>
+        {/* No badge: the "3" that used to sit here was a constant, so it
+            never went away however many notifications had been read. */}
         <Link
           href="/search?scope=notifications"
-          className="tap-target relative grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
+          className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" aria-hidden />
-          <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[9px] font-bold text-on-brand">
-            3
-          </span>
         </Link>
         <AccountMenu />
       </div>
@@ -229,6 +228,7 @@ function SchedulePanel({ schedule }: Pick<DashboardSnapshot, "schedule">) {
     "In progress": "bg-info-bg text-info",
     Scheduled: "bg-caution-bg text-caution",
     Pending: "bg-white/5 text-ink-muted",
+    Canceled: "bg-critical-bg text-critical",
   };
 
   return (
@@ -507,10 +507,14 @@ function ProfitOverview({ profit }: Pick<DashboardSnapshot, "profit">) {
         action={<span className="text-[10px] text-ink-muted">MTD</span>}
       />
       <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">{profit.value}</p>
-      <p className="text-[10px] font-medium text-positive">{profit.change}</p>
-      <div className="mt-2">
-        <Sparkline values={profit.chart} large />
-      </div>
+      <p className="text-[10px] font-medium text-ink-muted">{profit.change}</p>
+      {/* No trend line until there is a trend. An empty array would make
+          Math.max return -Infinity and draw a broken path. */}
+      {profit.chart.length > 1 ? (
+        <div className="mt-2">
+          <Sparkline values={profit.chart} large />
+        </div>
+      ) : null}
     </Link>
   );
 }
@@ -592,7 +596,7 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
   const metricDestinations = [
     "/invoices?status=paid",
     "/schedule",
-    "/route",
+    "/technicians",
     "/search",
     "/invoices?status=unpaid",
   ];

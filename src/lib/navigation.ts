@@ -58,6 +58,12 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "What customers have asked for",
       },
       {
+        label: "Crew",
+        href: "/technicians",
+        icon: "UsersRound",
+        description: "Who is out, and what they are on",
+      },
+      {
         label: "Route",
         href: "/route",
         icon: "Route",

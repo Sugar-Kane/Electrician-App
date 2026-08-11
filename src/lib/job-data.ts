@@ -41,7 +41,9 @@ const JOB_STATUS: Record<string, JobStatus> = {
   draft: "Pending",
   awaiting_payment: "Pending",
   needs_review: "Pending",
-  canceled: "Pending",
+  // Its own state, not a pending one: a cancelled job that reads as "Pending"
+  // is indistinguishable from work still to come.
+  canceled: "Canceled",
   no_show: "Pending",
 };
 
@@ -303,4 +305,63 @@ export async function getJobControls(jobNumber: string): Promise<{
     customerPhone: str(customer?.phone),
     customerEmail: str(customer?.email),
   };
+}
+
+export type TechnicianWorkload = {
+  id: string;
+  name: string;
+  initials: string;
+  phone: string;
+  isActive: boolean;
+  jobs: { id: string; customer: string; time: string; status: JobStatus; city: string }[];
+};
+
+/**
+ * Who is on the crew, and what each of them is doing today.
+ *
+ * The "Techs working" tile linked to the route builder, which answers a
+ * different question entirely — how to drive between stops, rather than who is
+ * out and where. This is the answer to the question the tile actually asks.
+ */
+export async function getTechnicianWorkloads(): Promise<{
+  technicians: TechnicianWorkload[];
+  source: Source;
+}> {
+  const context = await resolveContext();
+  if (!context) return { technicians: [], source: "demo" };
+
+  const [{ data: crew }, { jobs }] = await Promise.all([
+    context.database
+      .from("technicians")
+      .select("id, display_name, phone, is_active")
+      .eq("organization_id", context.organizationId)
+      .order("display_name"),
+    getJobs(),
+  ]);
+
+  const today = todayInZone(context.timeZone);
+
+  const technicians: TechnicianWorkload[] = (crew ?? []).map((row) => {
+    const record = row as Record<string, unknown>;
+    const name = typeof record.display_name === "string" ? record.display_name : "";
+
+    return {
+      id: String(record.id ?? ""),
+      name,
+      initials: initialsOf(name),
+      phone: typeof record.phone === "string" ? record.phone : "",
+      isActive: record.is_active !== false,
+      jobs: jobs
+        .filter((job) => job.technician === name && job.date === today)
+        .map((job) => ({
+          id: job.id,
+          customer: job.customer,
+          time: job.time,
+          status: job.status,
+          city: job.city,
+        })),
+    };
+  });
+
+  return { technicians, source: "supabase" };
 }

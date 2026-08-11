@@ -2,6 +2,16 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { shiftDays, todayInZone } from "@/lib/calendar";
+import {
+  estimatesDetail,
+  invoicesDetail,
+  isOverdue,
+  invoiceAging,
+  jobsDetail,
+  profitSummary,
+  revenueDetail,
+  techniciansDetail,
+} from "@/lib/dashboard-metrics";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -205,7 +215,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .lt("scheduled_start", dayEnd.toISOString()),
         supabase
           .from("invoices")
-          .select("status,total_cents,balance_due_cents")
+          .select("status,total_cents,balance_due_cents,due_at,paid_at")
           .eq("organization_id", organizationId),
         supabase
           .from("estimates")
@@ -236,9 +246,64 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .maybeSingle(),
       ]);
 
-    const paidToday = (invoices.data ?? [])
-      .filter((invoice) => invoice.status === "paid")
-      .reduce((total, invoice) => total + invoice.total_cents, 0);
+    // "Today's revenue" summed every paid invoice the business had ever
+    // issued, so the label was wrong as well as the line under it. Today means
+    // today, in the business's own day, and yesterday is fetched too because a
+    // comparison needs something to compare against.
+    const yesterdayStart = new Date(zonedWallClockToIso(`${shiftDays(today, -1)}T00:00`, zone));
+    const paidBetween = (from: Date, to: Date) =>
+      (invoices.data ?? [])
+        .filter((invoice) => {
+          if (invoice.status !== "paid" || !invoice.paid_at) return false;
+          const at = new Date(invoice.paid_at).getTime();
+          return at >= from.getTime() && at < to.getTime();
+        })
+        .reduce((total, invoice) => total + invoice.total_cents, 0);
+
+    const paidToday = paidBetween(dayStart, dayEnd);
+    const paidYesterday = paidBetween(yesterdayStart, dayStart);
+
+    const overdueCount = (invoices.data ?? []).filter((invoice) =>
+      isOverdue({
+        status: invoice.status,
+        dueAt: invoice.due_at,
+        balanceDueCents: invoice.balance_due_cents,
+      }),
+    ).length;
+
+    // Month to date, against the same stretch of last month.
+    const monthStart = new Date(zonedWallClockToIso(`${today.slice(0, 8)}01T00:00`, zone));
+    const lastMonthDate = new Date(monthStart);
+    lastMonthDate.setUTCMonth(lastMonthDate.getUTCMonth() - 1);
+    const lastMonthStart = new Date(lastMonthDate);
+    const dayOfMonth = Number(today.slice(8, 10));
+    const lastMonthSameDay = new Date(lastMonthStart);
+    lastMonthSameDay.setUTCDate(lastMonthSameDay.getUTCDate() + dayOfMonth);
+
+    const monthToDate = paidBetween(monthStart, dayEnd);
+    const lastMonthToDate = paidBetween(lastMonthStart, lastMonthSameDay);
+    const profit = profitSummary({
+      monthToDateCents: monthToDate,
+      lastMonthToDateCents: lastMonthToDate,
+    });
+
+    const aging = invoiceAging(
+      (invoices.data ?? []).map((invoice) => ({
+        dueAt: invoice.due_at,
+        balanceDueCents: invoice.balance_due_cents,
+        status: invoice.status,
+      })),
+    );
+
+    // A canceled job is not work. It stayed in the count, so a day whose only
+    // job had been called off still read "Jobs today: 1" — and then "0 in
+    // progress" underneath, which is the contradiction that gives it away.
+    const allJobsToday = jobs.data ?? [];
+    const jobsToday = allJobsToday.filter((job) => job.status !== "canceled");
+    const canceledToday = allJobsToday.length - jobsToday.length;
+    const inProgress = jobsToday.filter((job) => job.status === "in_progress").length;
+    const enRoute = jobsToday.filter((job) => job.status === "en_route").length;
+    const activeTechnicians = technicians.data?.length ?? 0;
     const outstanding = (invoices.data ?? []).reduce(
       (total, invoice) => total + invoice.balance_due_cents,
       0,
@@ -273,23 +338,37 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         )?.display_name ??
         demoSnapshot.ownerName,
       metrics: [
-        { ...demoSnapshot.metrics[0], value: money.format(paidToday / 100) },
         {
-          ...demoSnapshot.metrics[1],
-          value: String(jobs.data?.length ?? 0),
-          detail: `${jobs.data?.filter((job) => job.status === "in_progress").length ?? 0} in progress`,
+          label: "Today's revenue",
+          value: money.format(paidToday / 100),
+          ...revenueDetail({ todayCents: paidToday, yesterdayCents: paidYesterday }),
         },
         {
-          ...demoSnapshot.metrics[2],
-          value: String(technicians.data?.length ?? 0),
+          label: "Jobs today",
+          value: String(jobsToday.length),
+          ...jobsDetail({ inProgress, total: jobsToday.length, canceled: canceledToday }),
         },
         {
-          ...demoSnapshot.metrics[3],
+          label: "Techs working",
+          value: String(activeTechnicians),
+          ...techniciansDetail({ active: activeTechnicians, enRoute }),
+        },
+        {
+          label: "Open estimates",
           value: String(estimates.data?.length ?? 0),
-          detail: `${money.format(estimateTotal / 100)} pending`,
+          ...estimatesDetail({
+            pendingCents: estimateTotal,
+            count: estimates.data?.length ?? 0,
+          }),
         },
-        { ...demoSnapshot.metrics[4], value: money.format(outstanding / 100) },
+        {
+          label: "Unpaid invoices",
+          value: money.format(outstanding / 100),
+          ...invoicesDetail({ outstandingCents: outstanding, overdue: overdueCount }),
+        },
       ],
+      profit: { value: profit.value, change: profit.change, chart: [] },
+      invoiceAging: aging,
       schedule: [],
       technicians:
         technicians.data?.map((technician, index) => ({
@@ -303,16 +382,6 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           x: 42 + (index % 3) * 14,
           y: 44 + (index % 2) * 18,
         })) ?? [],
-      invoiceAging: [
-        { label: "1–30 days", value: "$0", percent: 0 },
-        { label: "31–60 days", value: "$0", percent: 0 },
-        { label: "60+ days", value: "$0", percent: 0 },
-      ],
-      profit: {
-        value: money.format(paidToday / 100),
-        change: "No prior month data",
-        chart: [0, 0, 0, 0, 0, 0, 0, 0],
-      },
       lowStock:
         inventory.data?.map((item) => ({
           name: item.name,
