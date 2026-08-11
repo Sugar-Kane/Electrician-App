@@ -1,6 +1,5 @@
 import { FieldPageShell } from "@/components/field-page-shell";
-import { RouteMap } from "@/components/route-map";
-import { RouteOptimizer } from "@/components/route-optimizer";
+import { RouteBuilder } from "@/components/route-builder";
 import { todayInZone } from "@/lib/calendar";
 import { getJobs, placeTodaysStops } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
@@ -51,16 +50,16 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
   } : undefined;
 
   return (
-    <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="Volteira builds and locks the stop order first. Navigation opens only after you approve the route.">
-      <div className="mb-4">
-        <RouteMap
-          jobs={jobs}
-          today={todayInZone(timeZone)}
-          apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
-          unplaced={geocoded.unplaced}
-        />
-      </div>
-      <RouteOptimizer focusJobId={job || undefined} initialSupplier={initialSupplier} initialSupplyStore={initialSupplyStore} jobs={jobs} today={todayInZone(timeZone)} />
+    <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="The order is built on the map from today's real stops. Move or drop any of them, then lock it and navigate.">
+      <RouteBuilder
+        jobs={jobs}
+        today={todayInZone(timeZone)}
+        apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
+        unplaced={geocoded.unplaced}
+        focusJobId={job || undefined}
+        initialSupplier={initialSupplier}
+        initialSupplyStore={initialSupplyStore}
+      />
     </FieldPageShell>
   );
 }
