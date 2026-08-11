@@ -90,3 +90,81 @@ export function nowLabel(nowIso: string, timeZone: string): string {
     minute: "2-digit",
   }).format(new Date(nowIso));
 }
+
+/**
+ * A wall-clock time somebody typed, as the instant it means where the business
+ * is.
+ *
+ * A `datetime-local` input hands over "2026-08-13T13:00" with no zone attached.
+ * Reading that as UTC is how an electrician schedules a 1pm visit and the
+ * customer is told 6am — the same class of bug that once had the phone
+ * assistant offering windows that had already passed.
+ *
+ * Done by probing rather than with a date library: format a guess in the target
+ * zone, measure how far it landed from the wanted wall clock, and shift by that
+ * much. The second pass settles the case where the first shift crosses a
+ * daylight-saving boundary and changes the offset underneath us.
+ *
+ * Returns "" for anything that is not a wall-clock string, so a malformed input
+ * cannot silently become the epoch.
+ */
+export function zonedWallClockToIso(local: string, timeZone: string): string {
+  const match = local.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return "";
+
+  const [, year, month, day, hour, minute] = match;
+  const wanted = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+  );
+
+  let guess = wanted;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date(guess));
+
+    const read = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+    const landed = Date.UTC(
+      read("year"),
+      read("month") - 1,
+      read("day"),
+      // Some locales render midnight as 24; both mean the same instant.
+      read("hour") % 24,
+      read("minute"),
+    );
+    guess += wanted - landed;
+  }
+
+  return new Date(guess).toISOString();
+}
+
+/** The value a `datetime-local` input wants, for an instant in a zone. */
+export function isoToZonedWallClock(iso: string, timeZone: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  const hour = read("hour") === "24" ? "00" : read("hour");
+  return `${read("year")}-${read("month")}-${read("day")}T${hour}:${read("minute")}`;
+}
