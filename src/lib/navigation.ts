@@ -30,12 +30,23 @@ export type NavSection = {
   items: NavItem[];
 };
 
+/**
+ * The menu, in the order an electrician's day runs.
+ *
+ * Section names are the trade's, not the software's. "Work" held Stock and
+ * "Field" held Materials, which are the same parts; "Money" and "Setup" are
+ * categories nobody says out loud.
+ *
+ * Two duplicate pairs are gone. Crew and Team were the same people behind two
+ * labels, and Stock and Materials were the same parts — /materials already
+ * linked to /inventory for its own data. One destination each.
+ */
 export const NAV_SECTIONS: NavSection[] = [
   {
     title: "",
     items: [
       {
-        label: "Dashboard",
+        label: "Home",
         href: "/",
         icon: "LayoutDashboard",
         description: "Today at a glance",
@@ -46,16 +57,10 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Work",
     items: [
       {
-        label: "Stock",
-        href: "/inventory",
-        icon: "Package",
-        description: "What is on the van and the shelf",
-      },
-      {
-        label: "Schedule",
+        label: "Jobs",
         href: "/schedule",
         icon: "CalendarDays",
-        description: "Calendar, jobs, and today's route",
+        description: "Today, this week, and the calendar",
       },
       {
         label: "Booking requests",
@@ -64,16 +69,16 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "What customers have asked for",
       },
       {
-        label: "Crew",
-        href: "/technicians",
-        icon: "UsersRound",
-        description: "Who is out, and what they are on",
-      },
-      {
         label: "Route",
         href: "/route",
         icon: "Route",
-        description: "Order the day before you drive it",
+        description: "Today's driving order",
+      },
+      {
+        label: "Materials",
+        href: "/materials",
+        icon: "Package",
+        description: "What is on the van, and what to buy",
       },
     ],
   },
@@ -81,44 +86,39 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Customers",
     items: [
       {
-        label: "Customers",
-        href: "/search",
-        icon: "UsersRound",
-        description: "People, properties, and estimates",
-      },
-      {
         label: "Messages",
         href: "/messages",
         icon: "MessagesSquare",
-        description: "Texts with customers",
+        description: "Texts to and from customers",
+      },
+      {
+        label: "Search",
+        href: "/search",
+        icon: "Search",
+        description: "Find a customer, job or invoice",
       },
     ],
   },
   {
-    title: "Money",
+    title: "Business",
     items: [
       {
         label: "Invoices",
         href: "/invoices",
         icon: "ReceiptText",
-        description: "Paid, unpaid, and overdue",
+        description: "Billing and what is owed",
       },
-    ],
-  },
-  {
-    title: "Field",
-    items: [
       {
-        label: "Materials",
-        href: "/materials",
-        icon: "Boxes",
-        description: "Truck stock, needs, and orders",
+        label: "Team",
+        href: "/technicians",
+        icon: "UsersRound",
+        description: "Technicians, workload and access",
       },
       {
         label: "Files",
         href: "/files",
         icon: "FolderOpen",
-        description: "Job documents and cloud sync",
+        description: "Documents and photos",
       },
     ],
   },
@@ -129,19 +129,18 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Settings",
         href: "/settings",
         icon: "Settings",
-        description: "Business, messaging, team, and alerts",
+        description: "How the business runs",
       },
       {
         label: "Your account",
         href: "/account",
         icon: "UserRound",
-        description: "Profile, password, and app preferences",
+        description: "Your sign-in and plan",
       },
     ],
   },
 ];
 
-/** Every destination, flattened. */
 export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
 /**
@@ -220,13 +219,13 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         label: "Business details",
         href: "/settings/business",
         icon: "Building2",
-        description: "Name, address, timezone, and working hours",
+        description: "Name, phone, timezone and where you work from",
       },
       {
         label: "Team",
-        href: "/settings/team",
+        href: "/technicians",
         icon: "UsersRound",
-        description: "Who can open this business, and invitations",
+        description: "Technicians and access",
       },
       {
         label: "Booking alerts",

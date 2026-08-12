@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Phone, UserRound } from "lucide-react";
+import { ChevronRight, Phone, UserRound, UserRoundPlus } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getTechnicianWorkloads } from "@/lib/job-data";
 
-export const metadata: Metadata = { title: "Crew | Volteira" };
+export const metadata: Metadata = { title: "Team | Volteira" };
 
 const STATUS_STYLES: Record<string, string> = {
   "In progress": "bg-info-bg text-info",
@@ -27,7 +27,7 @@ export default async function TechniciansPage() {
 
   return (
     <FieldPageShell
-      title="Crew"
+      title="Team"
       eyebrow="Who is working"
       description={
         technicians.length === 0
@@ -35,6 +35,15 @@ export default async function TechniciansPage() {
           : `${working} of ${technicians.length} out on a job today.`
       }
     >
+      <div className="mb-3 flex justify-end">
+        <Link
+          href="/settings/team"
+          className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+        >
+          <UserRoundPlus className="h-4 w-4" aria-hidden />
+          Invite someone
+        </Link>
+      </div>
       <div className="space-y-3">
         {technicians.map((technician) => (
           <section
