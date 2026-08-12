@@ -16,8 +16,8 @@ import { NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-
 import { todayInZone } from "@/lib/calendar";
 import {
   canceledToday,
-  firstName,
   greeting,
+  greetingName,
   nextJob,
   todaysJobs,
   type AttentionItem,
@@ -158,12 +158,12 @@ function MetricCard({
 }
 
 function Header({
-  ownerName,
-  source,
+  ownerNames,
+  ownerEmail,
   timeZone,
 }: {
-  ownerName: string;
-  source: DashboardSnapshot["source"];
+  ownerNames: string[];
+  ownerEmail: string;
   timeZone: string;
 }) {
   // The business's day and hour, not the server's — production runs in UTC,
@@ -179,13 +179,12 @@ function Header({
   const hour = Number(
     new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hour12: false }).format(now),
   );
-  // greeting() and firstName() have existed since Phase 1, tested, and nothing
-  // ever called them: this header rolled its own greeting and printed
-  // ownerName raw. So an account whose display name came from an email was
-  // greeted "Good morning, adamkane13.ak" — the exact thing firstName was
-  // written to stop.
+  // Every place a name might be, best first, rather than the profile column
+  // alone. That column is NOT NULL, so signing up fills it with whatever is to
+  // hand — here, the local part of an email — which `firstName` then correctly
+  // refuses, leaving a bare "Good afternoon" and no way to fix it.
   const hello = greeting(hour);
-  const name = firstName(ownerName);
+  const name = greetingName(ownerNames, ownerEmail);
 
   return (
     <header className="flex items-center justify-between gap-4">
@@ -197,14 +196,12 @@ function Header({
             {name ? `${hello}, ${name}` : hello}
           </h1>
         </div>
-        <div className="mt-1 flex items-center gap-2 pl-10 text-xs text-ink-muted">
-          <span>{dateLabel}</span>
-          <span aria-hidden>•</span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-positive" />
-            {source === "supabase" ? "Live business data" : "Pilot workspace"}
-          </span>
-        </div>
+        {/*
+          The date, and nothing else. There used to be a green dot and "Live
+          business data" beside it, which told an electrician something they
+          already assumed and cost a line of the screen to say.
+        */}
+        <p className="mt-1 pl-10 text-xs text-ink-muted">{dateLabel}</p>
       </div>
       <div className="hidden items-center gap-2 lg:flex">
         <Link
@@ -369,8 +366,8 @@ export function DashboardShell({
         <AppSidebar businessName={snapshot.businessName} ownerName={snapshot.ownerName} />
         <div className="min-w-0 lg:px-4 lg:py-2" id="main-content" tabIndex={-1}>
           <Header
-            ownerName={snapshot.ownerName}
-            source={snapshot.source}
+            ownerNames={snapshot.ownerNames}
+            ownerEmail={snapshot.ownerEmail}
             timeZone={snapshot.timezone}
           />
 

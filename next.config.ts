@@ -25,6 +25,26 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  experimental: {
+    serverActions: {
+      /*
+       * Server Actions cap request bodies at 1MB by default, and the account
+       * page posts a profile photo through one. A photo off a phone is three to
+       * five megabytes, so the framework rejected the request before the action
+       * ran and the user saw a broken page rather than the size message the
+       * action was ready to give them.
+       *
+       * 4MB rather than more: the platform refuses request bodies over about
+       * 4.5MB whatever is set here, so a larger number would only move the
+       * failure somewhere this app cannot phrase an error for. The avatar
+       * upload is capped below this, so its own message always wins.
+       *
+       * Job photos do not come through here at all — they go from the browser
+       * straight to storage, which is the only way a 12MP camera works at all.
+       */
+      bodySizeLimit: "4mb",
+    },
+  },
   async headers() {
     return [
       {

@@ -50,6 +50,9 @@ export type DashboardSnapshot = {
   businessName: string;
   businessSlug: string | null;
   ownerName: string;
+  /** Every place a real name might live, best first. See `greetingName`. */
+  ownerNames: string[];
+  ownerEmail: string;
   metrics: DashboardMetric[];
   schedule: ScheduleItem[];
   technicians: TechnicianMarker[];
@@ -66,6 +69,8 @@ const demoSnapshot: DashboardSnapshot = {
   businessName: "Pacific Plains Electric",
   businessSlug: null,
   ownerName: "Adam",
+  ownerNames: ["Adam"],
+  ownerEmail: "",
   metrics: [
     {
       label: "Today’s revenue",
@@ -337,12 +342,32 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       businessName: organization?.name ?? demoSnapshot.businessName,
       businessSlug: organization?.slug ?? null,
       timezone: organization?.timezone || DEFAULT_TIMEZONE,
+      // Every place a real name might be, best first, for `greetingName` to
+      // pick through. It used to be `profile.display_name ?? technician ?? demo`
+      // — and `display_name` is NOT NULL, so signing up fills it with whatever
+      // is to hand. On this deployment it holds "adamkane13.ak", which the
+      // greeting then correctly refused to use and fell back to nothing at all,
+      // leaving a bare "Good afternoon" with no way to fix it.
       ownerName:
         (typeof profile.data?.display_name === "string" ? profile.data.display_name : null) ??
         technicians.data?.find(
           (technician) => technician.user_id === authData.user.id,
         )?.display_name ??
         demoSnapshot.ownerName,
+      ownerNames: [
+        typeof profile.data?.display_name === "string" ? profile.data.display_name : "",
+        technicians.data?.find((technician) => technician.user_id === authData.user.id)
+          ?.display_name ?? "",
+        // Typed by a person at their identity provider, so worth more than a
+        // column something filled in automatically.
+        typeof authData.user.user_metadata?.full_name === "string"
+          ? authData.user.user_metadata.full_name
+          : "",
+        typeof authData.user.user_metadata?.name === "string"
+          ? authData.user.user_metadata.name
+          : "",
+      ].filter(Boolean),
+      ownerEmail: authData.user.email ?? "",
       metrics: [
         {
           label: "Today's revenue",

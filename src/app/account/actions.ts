@@ -141,9 +141,13 @@ export async function uploadAvatar(formData: FormData) {
     "image/png": "png",
     "image/webp": "webp",
   };
+  // Three megabytes, under the Server Action body cap this posts through, so
+  // this message is what somebody sees rather than a framework error page. The
+  // limit used to be 5MB — larger than the request could carry, which made the
+  // check decorative.
   const extension = extensions[avatar.type];
-  if (!extension || avatar.size > 5 * 1024 * 1024) {
-    redirect(accountUrl("profile", "error", "Use a JPG, PNG, or WebP image under 5 MB."));
+  if (!extension || avatar.size > 3 * 1024 * 1024) {
+    redirect(accountUrl("profile", "error", "Use a JPG, PNG, or WebP image under 3 MB."));
   }
 
   let admin: ReturnType<typeof getSupabaseAdmin>;
