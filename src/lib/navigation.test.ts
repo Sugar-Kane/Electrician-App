@@ -8,6 +8,8 @@ import {
   SETTINGS_GROUPS,
   activeNavHref,
   activeNavItem,
+  BOTTOM_NAV_HREFS,
+  isBeyondBottomNav,
 } from "./navigation.ts";
 
 test("no destination is listed twice", () => {
@@ -116,4 +118,44 @@ test("every settings group explains itself", () => {
     assert.ok(group.blurb.trim().length > 0, group.title);
     assert.ok(group.links.length > 0, group.title);
   }
+});
+
+test("the bottom bar's permanent destinations are all real menu entries", () => {
+  // A bottom-bar href that is not in the menu is a page the drawer cannot
+  // reach, and one that has been renamed is a tab that lights up for nothing.
+  for (const href of BOTTOM_NAV_HREFS) {
+    assert.ok(
+      ALL_NAV_ITEMS.some((item) => item.href === href),
+      `${href} is in the bottom bar but not in the menu`,
+    );
+  }
+});
+
+test("the four permanent tabs do not light More", () => {
+  for (const href of BOTTOM_NAV_HREFS) {
+    assert.equal(isBeyondBottomNav(href), false, href);
+  }
+});
+
+test("a page reached through the menu lights More", () => {
+  // Settings used to be the bottom bar's fifth destination, so being on it lit
+  // a tab labelled "More" that was really a link. It is a menu page now.
+  assert.equal(isBeyondBottomNav("/settings"), true);
+  assert.equal(isBeyondBottomNav("/invoices"), true);
+  assert.equal(isBeyondBottomNav("/materials"), true);
+  assert.equal(isBeyondBottomNav("/technicians"), true);
+});
+
+test("a job opened from the schedule keeps Jobs lit, not More", () => {
+  // /jobs/1045 resolves to /schedule, which is a permanent tab. Lighting More
+  // there would move the highlight while somebody is still inside their jobs.
+  assert.equal(isBeyondBottomNav("/jobs/1045"), false);
+  assert.equal(isBeyondBottomNav("/messages/6f1c"), false);
+});
+
+test("a page in no menu section lights nothing at all", () => {
+  // Better than lighting More by default: an unknown page is not "in the menu",
+  // and claiming it is would make the highlight meaningless.
+  assert.equal(isBeyondBottomNav("/login"), false);
+  assert.equal(isBeyondBottomNav(""), false);
 });
