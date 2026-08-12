@@ -4,7 +4,8 @@ import { Boxes, CheckCircle2, ChevronRight, PackageSearch, Search, Settings2, St
 import { FieldPageShell } from "@/components/field-page-shell";
 import { MaterialSourcingWorkflow } from "@/components/material-sourcing-workflow";
 import { pilotHomeDepotStore, pilotLowesStore, serviceBase } from "@/lib/pilot-data";
-import { getJobs } from "@/lib/job-data";
+import { getInventory, getJobs } from "@/lib/job-data";
+import { describeCoverage, matchMaterials } from "@/lib/inventory-match";
 
 export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ job?: string; query?: string }> }) {
   const { job: jobId, query = "" } = await searchParams;
@@ -12,11 +13,31 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
   // The business's own jobs, not the pilot fixtures. Materials have no table
   // yet, so a real job carries none and this page correctly shows nothing to
   // buy — which is honest, where a list of invented parts was not.
-  const { jobs } = await getJobs();
+  const [{ jobs }, stock] = await Promise.all([getJobs(), getInventory()]);
   const selectedJob = jobId ? jobs.find((job) => job.id === jobId) : undefined;
   const allMaterials = (selectedJob ? selectedJob.materials : jobs.flatMap((job) => job.materials)).filter((material, index, materials) => materials.findIndex((candidate) => candidate.name === material.name) === index);
   const normalized = query.trim().toLowerCase();
-  const materials = normalized ? allMaterials.filter((material) => material.name.toLowerCase().includes(normalized)) : allMaterials;
+  const filtered = normalized ? allMaterials.filter((material) => material.name.toLowerCase().includes(normalized)) : allMaterials;
+
+  // What the business actually has, rather than the fixture's own truckStock
+  // number. A materials list that ignores the van sends somebody to Lowe's for
+  // a breaker they have four of.
+  const matched = matchMaterials(
+    filtered.map((material) => ({ name: material.name, quantity: material.quantity, unit: material.unit })),
+    stock.map((item) => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      partNumber: item.partNumber,
+      location: item.location,
+    })),
+  );
+  const materials = filtered.map((material, index) => ({
+    ...material,
+    truckStock: matched[index]?.inStock ?? 0,
+  }));
+  const coverage = describeCoverage(matched);
   const nearAddress = selectedJob ? `${selectedJob.address}, ${selectedJob.city}` : serviceBase.address;
 
   return (
@@ -24,6 +45,10 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
       <div className="grid gap-4 lg:grid-cols-[1fr_.72fr]">
         <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-4 sm:p-6">
           <form action="/materials" className="flex gap-2"><input type="hidden" name="job" value={jobId ?? ""} /><label className="flex min-h-12 flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-[#0d202d] px-4"><Search className="h-4 w-4 text-slate-500" aria-hidden /><span className="sr-only">Search required materials</span><input name="query" defaultValue={query} placeholder="Search materials…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-slate-500" /></label><button className="tap-target grid h-12 w-12 place-items-center rounded-2xl bg-[#ffc21c] text-[#071723]" aria-label="Search materials"><PackageSearch className="h-5 w-5" aria-hidden /></button></form>
+          <p className="mt-4 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3 text-xs leading-5 text-slate-300">
+            {coverage}{" "}
+            <Link href="/inventory" className="font-semibold text-[#ffc21c]">Manage stock</Link>
+          </p>
           <div className="mt-5"><MaterialSourcingWorkflow materials={materials} jobReference={jobId} nearAddress={nearAddress} /></div>
         </section>
 

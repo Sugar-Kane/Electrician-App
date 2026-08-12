@@ -7,6 +7,11 @@ import {
   type BriefJob,
 } from "@/lib/assistant-brief";
 import { todayInZone } from "@/lib/calendar";
+import {
+  buildReferenceBrief,
+  findReferences,
+  referenceSystemPrompt,
+} from "@/lib/code-reference";
 import { askAboutBusiness, claudeIsConfigured, type AssistantTurn } from "@/lib/claude";
 import { getInvoices, getJobs } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
@@ -98,9 +103,19 @@ export async function askAssistant(
 
   const turns: AssistantTurn[] = asked.slice(-MAX_HISTORY);
 
+  // Code, licensing and permit questions are answered from the reference index
+  // rather than from what the model remembers. A confident invented CEC article
+  // is worse than no answer — somebody pulls a permit against it.
+  const references = findReferences(question);
+  const referenceBrief = references.length
+    ? `\n\n<code_reference>\n${buildReferenceBrief(references)}\n</code_reference>`
+    : "";
+
   const answer = await askAboutBusiness({
-    system: assistantSystemPrompt(businessName),
-    brief,
+    system: references.length
+      ? `${assistantSystemPrompt(businessName)}\n\n${referenceSystemPrompt()}`
+      : assistantSystemPrompt(businessName),
+    brief: `${brief}${referenceBrief}`,
     turns,
   });
 

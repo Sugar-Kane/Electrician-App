@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { invoiceTotals } from "@/lib/invoice-math";
 import { parseNewJob, splitName, type NewJobRaw } from "@/lib/new-job-input";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -181,15 +182,22 @@ export async function createJob(
   }
 
   if (job.costCents > 0) {
+    // A job created here has no paid diagnostic behind it — it is being
+    // written down after the fact, and nothing has been collected yet.
+    const totals = invoiceTotals({ subtotalCents: job.costCents });
+
     await supabase.from("invoices").insert({
       organization_id: organizationId,
       job_id: text(createdJob.id),
       // Draft, not sent: raising an invoice and telling the customer about it
       // are two decisions, and the second one has its own button.
       status: "draft",
-      subtotal_cents: job.costCents,
-      total_cents: job.costCents,
-      balance_due_cents: job.costCents,
+      subtotal_cents: totals.subtotalCents,
+      diagnostic_credit_cents: totals.diagnosticCreditCents,
+      tax_cents: totals.taxCents,
+      total_cents: totals.totalCents,
+      balance_due_cents: totals.totalCents,
+      stripe_application_fee_cents: totals.applicationFeeCents,
     });
   }
 
