@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, MapPin, TriangleAlert } from "lucide-react";
+import { LoaderCircle, MapPin, RefreshCw, TriangleAlert } from "lucide-react";
 
 import type { Coordinates } from "@/lib/coordinates";
 import { keyTail } from "@/lib/map-key";
@@ -55,6 +55,14 @@ let authFailed = false;
 function subscribeToAuthFailure(listener: () => void): () => void {
   if (typeof window !== "undefined") {
     window.gm_authFailure ??= () => {
+      // The screen shows a symbol and a Refresh button now, so this is the
+      // only place the reason survives. It is the commonest real cause: a key
+      // restricted to another site, or Maps JavaScript API not enabled on its
+      // project. A geocoding-only key is refused here too.
+      console.error(
+        "[volteira] Google refused the Maps key. Check the key's website restrictions " +
+          "and that Maps JavaScript API is enabled on its project.",
+      );
       authFailed = true;
       for (const notify of authFailureListeners) notify();
     };
@@ -231,7 +239,16 @@ export function JobMap({
         // paint over it with "ready".
         setStatus((current) => (current === "refused" ? current : "ready"));
       })
-      .catch(() => {
+      .catch((reason: unknown) => {
+        // The screen no longer explains itself — it shows a symbol and a
+        // Refresh button, because none of the detail was actionable by an
+        // electrician in a driveway. It still has to go somewhere, so it goes
+        // here, with the key tail that used to be printed on the map.
+        console.error(
+          `[volteira] Google Maps failed to load. Key ends ${keyTail(apiKey)}. ` +
+            "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is compiled at build time, so changing it needs a redeploy.",
+          reason,
+        );
         if (!cancelled) setStatus("failed");
       });
 
@@ -317,16 +334,11 @@ export function JobMap({
   if (!apiKey) {
     return (
       <div
-        className={`grid place-items-center rounded-control border border-line bg-raised p-6 text-center ${className}`}
+        className={`grid place-items-center rounded-control border border-line bg-raised p-4 ${className}`}
+        role="img"
+        aria-label="The map is not switched on for this business."
       >
-        <div className="max-w-sm">
-          <MapPin className="mx-auto h-6 w-6 text-ink-faint" aria-hidden />
-          <p className="mt-3 text-sm font-semibold">The map is not switched on yet</p>
-          <p className="mt-1 text-sm leading-6 text-ink-muted">
-            Set <code className="text-brand">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> to show the
-            route on a map. The stop order below works without it.
-          </p>
-        </div>
+        <MapPin className="h-6 w-6 text-ink-faint" aria-hidden />
       </div>
     );
   }
@@ -342,40 +354,36 @@ export function JobMap({
         </div>
       ) : null}
 
+      {/*
+        A failed map says so with a symbol and a button, and nothing else.
+
+        It used to explain itself at length — which request failed, which key
+        was in use, that the variable is compiled at build time and needs a
+        redeploy. All true, all written for whoever was debugging it, and all
+        of it addressed to an electrician standing in a driveway who cannot act
+        on any of it. The stop list below the map keeps working either way, so
+        the map failing is an inconvenience, not an incident.
+
+        The reason is still available to anyone who needs it: it goes to the
+        console, and the screen reader gets it through the button's label.
+      */}
       {status === "failed" || status === "refused" ? (
-        <div className="absolute inset-0 grid place-items-center bg-raised p-6 text-center">
-          <div className="max-w-sm">
-            <TriangleAlert className="mx-auto h-6 w-6 text-caution" aria-hidden />
-            <p className="mt-3 text-sm font-semibold">
-              {status === "refused" ? "Google refused this map key" : "The map could not load"}
-            </p>
-            <p className="mt-1 text-sm leading-6 text-ink-muted">
-              {status === "refused" ? (
-                <>
-                  The key reached Google and was turned down — usually because it is restricted to
-                  a different website, or because Maps JavaScript API is not enabled on its
-                  project. Geocoding-only keys are refused here too.
-                </>
-              ) : (
-                <>
-                  The request for Google&rsquo;s map script never completed. That is a network
-                  problem, a blocked request, or a key so malformed Google would not serve it.
-                </>
-              )}
-            </p>
-            <p className="mt-2 text-xs text-ink-faint">
-              Key in use ends {keyTail(apiKey)} · from{" "}
-              <code className="text-brand">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, compiled at
-              build time, so changing it needs a redeploy.
-            </p>
+        <div className="absolute inset-0 grid place-items-center bg-raised p-4">
+          <div className="flex flex-col items-center gap-3">
+            <TriangleAlert className="h-6 w-6 text-caution" aria-hidden />
             <button
               type="button"
               onClick={() => setAttempt((current) => current + 1)}
-              className="tap-target mt-3 inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+              aria-label={
+                status === "refused"
+                  ? "The map key was refused by Google. Refresh the map"
+                  : "The map could not load. Refresh it"
+              }
+              className="tap-target inline-flex min-h-11 items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
             >
-              Try again
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              Refresh
             </button>
-            <p className="mt-2 text-xs text-ink-faint">The stop order below still works.</p>
           </div>
         </div>
       ) : null}

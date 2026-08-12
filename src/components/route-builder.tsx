@@ -319,8 +319,12 @@ export function RouteBuilder({
   }
 
   return (
+    // min-w-0 on both columns. A grid item will not shrink below the intrinsic
+    // width of its widest child, so a long store address pushed this whole
+    // layout past the edge of the phone and clipped the controls in the other
+    // column with it.
     <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
-      <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
+      <section className="min-w-0 rounded-panel border border-line bg-surface p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
@@ -372,9 +376,13 @@ export function RouteBuilder({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{stop.label}</p>
                     <p className="mt-0.5 truncate text-xs text-ink-muted">{stop.detail}</p>
-                    <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-ink-faint">
+                    {/* truncate belongs on the text, not on the flex row:
+                        text-overflow does not apply across a flex item, so the
+                        address ran off the side of the phone instead of
+                        ellipsising. */}
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-faint">
                       <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-                      {stop.address}
+                      <span className="truncate">{stop.address}</span>
                     </p>
                     {!hasCoordinates(stop.point) && !isStart ? (
                       <p className="mt-1 text-xs text-caution">
@@ -466,7 +474,7 @@ export function RouteBuilder({
         ) : null}
       </section>
 
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-faint">
             Start location
