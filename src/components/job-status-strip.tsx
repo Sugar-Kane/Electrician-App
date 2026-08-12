@@ -36,8 +36,13 @@ function StepButton({
   step: (typeof STEPS)[number];
   current: string;
 }) {
-  const { pending } = useFormStatus();
+  const { pending, data } = useFormStatus();
   const active = current === step.value;
+
+  // The spinner belongs on the status being submitted, not the one already set.
+  // Reading `active` here put it on Arrived while Working was in flight — the
+  // button that had just been tapped showed nothing and the previous one span.
+  const submitting = pending && data?.get("status") === step.value;
   const Icon = step.icon;
 
   return (
@@ -51,7 +56,7 @@ function StepButton({
         active ? "border-brand bg-brand text-on-brand" : "border-line bg-surface text-ink-muted"
       }`}
     >
-      {pending && active ? (
+      {submitting ? (
         <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden />
       ) : (
         <Icon className="h-5 w-5" aria-hidden />

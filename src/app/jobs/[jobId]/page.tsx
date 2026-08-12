@@ -11,12 +11,7 @@ import {
 } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import {
-  buildGoogleDirectionsUrl,
-  jobNeedsMaterialStop,
-  pilotJobs,
-  serviceBase,
-} from "@/lib/pilot-data";
+import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobControls } from "@/components/job-controls";
 import { JobStatusStrip } from "@/components/job-status-strip";
@@ -40,7 +35,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
   const fullAddress = `${job.address}, ${job.city}`;
   const needsStop = jobNeedsMaterialStop(job);
-  const googleMapsUrl = buildGoogleDirectionsUrl([serviceBase.address, fullAddress]);
+  // Destination only, so the maps app starts from wherever the phone is. The
+  // route-builder URL names the shop as the origin, which is right for planning
+  // a day and wrong for a technician already standing somewhere else.
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`;
 
   return (
     <FieldPageShell
@@ -117,11 +115,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </div>
       ) : null}
 
-      {job.summary || job.accessNotes ? (
+      {job.summary || job.serviceNotes || job.accessNotes ? (
         <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
           <h2 className="text-sm font-semibold">What the customer said</h2>
           {job.summary ? (
             <p className="mt-2 text-sm leading-6 text-ink-muted">{job.summary}</p>
+          ) : null}
+          {job.serviceNotes ? (
+            <p className="mt-3 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
+              {job.serviceNotes}
+            </p>
           ) : null}
           {job.accessNotes ? (
             <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
@@ -187,6 +190,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       {controls ? (
         <div className="mt-3">
           <JobControls
+            // Remounted when the status changes, so the form's uncontrolled
+            // select picks up the new defaultValue. Without this, changing
+            // status on the strip and then saving an arrival window submits the
+            // stale status and silently reverts it.
+            key={controls.status}
             jobNumber={controls.jobNumber}
             status={controls.status}
             startLocal={controls.startLocal}
