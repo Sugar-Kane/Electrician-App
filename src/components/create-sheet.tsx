@@ -25,16 +25,16 @@ import {
 
 const ACTIONS = [
   {
-    label: "New job",
-    detail: "Customer, address, and what is wrong",
-    href: "/jobs/new",
-    icon: CalendarPlus,
-  },
-  {
     label: "New customer",
     detail: "Someone to book work for later",
     href: "/jobs/new?focus=customer",
     icon: UserRoundPlus,
+  },
+  {
+    label: "New job",
+    detail: "Customer, address, and what is wrong",
+    href: "/jobs/new",
+    icon: CalendarPlus,
   },
   {
     label: "New invoice",
