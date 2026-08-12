@@ -23,6 +23,15 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { AccountMenu } from "@/components/account-menu";
 import type { DashboardMetric, DashboardSnapshot, TechnicianMarker } from "@/lib/dashboard";
+import { NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
+import { todayInZone } from "@/lib/calendar";
+import {
+  canceledToday,
+  nextJob,
+  todaysJobs,
+  type AttentionItem,
+} from "@/lib/dashboard-focus";
+import type { PilotJob } from "@/lib/pilot-data";
 
 /**
  * The dashboard.
@@ -446,7 +455,7 @@ function AiAssistant() {
   );
 }
 
-function InvoiceOverview({
+export function InvoiceOverview({
   invoiceAging,
   outstandingValue,
 }: Pick<DashboardSnapshot, "invoiceAging"> & { outstandingValue: string }) {
@@ -484,7 +493,7 @@ function InvoiceOverview({
   );
 }
 
-function ProfitOverview({ profit }: Pick<DashboardSnapshot, "profit">) {
+export function ProfitOverview({ profit }: Pick<DashboardSnapshot, "profit">) {
   return (
     <Link
       href="/invoices?status=paid"
@@ -544,7 +553,7 @@ function InventoryOverview({ lowStock }: Pick<DashboardSnapshot, "lowStock">) {
   );
 }
 
-function RecentActivity({ activity }: Pick<DashboardSnapshot, "activity">) {
+export function RecentActivity({ activity }: Pick<DashboardSnapshot, "activity">) {
   return (
     <Panel>
       <PanelHeading
@@ -582,7 +591,23 @@ function RecentActivity({ activity }: Pick<DashboardSnapshot, "activity">) {
   );
 }
 
-export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
+export function DashboardShell({
+  snapshot,
+  jobs,
+  attention,
+}: {
+  snapshot: DashboardSnapshot;
+  /** Real jobs. The snapshot's own `schedule` is never populated for a live
+   *  business — it returns [] — so the panel that read it has always been
+   *  empty outside the demo. */
+  jobs: PilotJob[];
+  attention: AttentionItem[];
+}) {
+  const today = todayInZone(snapshot.timezone);
+  const nextUp = nextJob(jobs, today);
+  const activeToday = todaysJobs(jobs, today);
+  const canceled = canceledToday(jobs, today);
+
   const metricDestinations = [
     "/invoices?status=paid",
     "/schedule",
@@ -603,67 +628,46 @@ export function DashboardShell({ snapshot }: { snapshot: DashboardSnapshot }) {
             timeZone={snapshot.timezone}
           />
 
-          <div
-            className="mt-6 grid auto-cols-[minmax(190px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2 [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:grid-flow-row lg:grid-cols-5 lg:overflow-visible lg:pb-0"
-            role="region"
-            aria-label="Business metrics"
-            tabIndex={0}
-          >
-            {snapshot.metrics.map((metric, index) => (
-              <MetricCard
-                key={metric.label}
-                metric={metric}
-                href={metricDestinations[index] ?? "/"}
-              />
-            ))}
-          </div>
-
-          <div className="mt-4 grid min-w-0 gap-3 xl:grid-cols-[1.1fr_1.2fr_.9fr]">
-            <SchedulePanel schedule={snapshot.schedule} />
-            <LiveMap technicians={snapshot.technicians} source={snapshot.source} />
-            <AiAssistant />
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <InvoiceOverview
-              invoiceAging={snapshot.invoiceAging}
-              outstandingValue={snapshot.metrics[4]?.value ?? "$0"}
-            />
-            <ProfitOverview profit={snapshot.profit} />
-            <InventoryOverview lowStock={snapshot.lowStock} />
-            <RecentActivity activity={snapshot.activity} />
-          </div>
-
-          <section
-            id="new-job"
-            className="mt-3 flex flex-col gap-3 rounded-panel border border-brand/25 bg-brand/[0.06] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div className="flex items-start gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand text-on-brand">
-                <WandSparkles className="h-5 w-5" aria-hidden />
-              </span>
-              <div>
-                <h2 className="text-sm font-semibold text-ink">
-                  Turn the next call into a paid visit
-                </h2>
-                <p className="mt-1 text-xs text-ink-muted">
-                  Start adaptive intake, screen safety concerns, and offer the best diagnostic
-                  window.
-                </p>
-              </div>
+          {/*
+            The working day first. Metrics used to open the page and the
+            schedule arrived in the third section; an electrician in a truck
+            wants the next job, and everything else can wait for a scroll.
+          */}
+          {nextUp ? (
+            <div className="mt-5">
+              <NextJobCard job={nextUp} isToday={nextUp.date === today} />
             </div>
-            <Link
-              href={
-                snapshot.businessSlug
-                  ? `/book/${snapshot.businessSlug}`
-                  : "/search?scope=intake"
-              }
-              className="tap-target inline-flex shrink-0 items-center justify-center gap-2 rounded-control bg-brand px-4 text-xs font-bold text-on-brand"
+          ) : null}
+
+          <TodaysJobs jobs={activeToday} canceledCount={canceled.length} />
+
+          <NeedsAttention items={attention} />
+
+          <section aria-labelledby="snapshot-heading" className="mt-5">
+            <div className="mb-2 flex items-end justify-between px-1">
+              <h2 id="snapshot-heading" className="text-sm font-semibold">
+                Business
+              </h2>
+              <Link href="/reports" className="text-xs font-semibold text-brand">
+                Reports
+              </Link>
+            </div>
+            <div
+              className="grid auto-cols-[minmax(160px,1fr)] grid-flow-col gap-2 overflow-x-auto pb-2 [scrollbar-width:none] lg:grid-flow-row lg:grid-cols-5 lg:overflow-visible"
+              role="region"
+              aria-label="Business metrics"
+              tabIndex={0}
             >
-              {snapshot.businessSlug ? "Preview booking page" : "Start AI intake"}{" "}
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
+              {snapshot.metrics.map((metric, index) => (
+                <MetricCard
+                  key={metric.label}
+                  metric={metric}
+                  href={metricDestinations[index] ?? "/"}
+                />
+              ))}
+            </div>
           </section>
+
         </div>
       </div>
     </main>
