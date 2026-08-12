@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 
+import { ensureDocumentsBucket } from "@/lib/document-storage";
 import { encryptDocumentSecret, readDocumentOAuthState } from "@/lib/document-secrets";
 import {
   createGoogleDriveWorkspaceRoot,
@@ -27,20 +28,6 @@ function filesRedirect(origin: string, key: string, value: string) {
   const target = new URL("/files", origin);
   target.searchParams.set(key, value);
   return Response.redirect(target);
-}
-
-async function ensureDocumentsBucket() {
-  const admin = getSupabaseAdmin();
-  const existing = await admin.storage.getBucket("business-documents");
-  if (existing.data) return;
-
-  const created = await admin.storage.createBucket("business-documents", {
-    public: false,
-    fileSizeLimit: 50 * 1024 * 1024,
-  });
-  if (created.error && !created.error.message.toLowerCase().includes("already exists")) {
-    throw new Error("Document storage could not be prepared.");
-  }
 }
 
 export async function GET(request: Request) {

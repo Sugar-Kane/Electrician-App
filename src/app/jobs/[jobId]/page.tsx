@@ -16,10 +16,12 @@ import { JobContract } from "@/components/job-contract";
 import { JobControls } from "@/components/job-controls";
 import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobNotes } from "@/components/job-notes";
+import { JobPhotos } from "@/components/job-photos";
 import { JobStatusStrip } from "@/components/job-status-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
 import { getJobLines, getStockOptions } from "@/lib/job-line-data";
+import { getJobPhotos } from "@/lib/job-photo-data";
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
@@ -31,11 +33,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to edit.
-  const [controls, contracts, { lines, totals }, stock] = await Promise.all([
+  const [controls, contracts, { lines, totals }, stock, photos] = await Promise.all([
     getJobControls(jobId),
     getJobContracts(jobId),
     getJobLines(jobId),
     getStockOptions(),
+    getJobPhotos(jobId),
   ]);
 
   const fullAddress = `${job.address}, ${job.city}`;
@@ -148,6 +151,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             totals={totals}
             stock={stock}
           />
+          <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
           <JobNotes
             // Remounted when the saved notes change, so the textarea's initial
             // value follows the server rather than holding what was there when
