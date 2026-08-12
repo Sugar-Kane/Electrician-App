@@ -32,10 +32,10 @@ function RequestCard({ request }: { request: BookingRequest }) {
 
   return (
     <article
-      className={`rounded-3xl border p-4 sm:p-5 ${
+      className={`rounded-panel border p-4 sm:p-5 ${
         request.intent === "emergency"
           ? "border-red-400/25 bg-red-400/[0.04]"
-          : "border-white/10 bg-[#0b1b27]"
+          : "border-line bg-surface"
       } ${handled ? "opacity-60" : ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -50,7 +50,7 @@ function RequestCard({ request }: { request: BookingRequest }) {
               </span>
             ) : null}
             {handled ? (
-              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
                 {request.status === "scheduled" ? "Scheduled" : "Dismissed"}
               </span>
             ) : null}
@@ -58,10 +58,10 @@ function RequestCard({ request }: { request: BookingRequest }) {
           <h2 className="mt-2 text-base font-semibold">
             {request.contactName || "Unnamed"} · {request.phone}
           </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-300">{request.description}</p>
-          {request.address ? <p className="mt-1 text-xs text-slate-400">{request.address}</p> : null}
+          <p className="mt-1 text-sm leading-6 text-ink-muted">{request.description}</p>
+          {request.address ? <p className="mt-1 text-xs text-ink-muted">{request.address}</p> : null}
           {request.arrivalWindow ? (
-            <p className="mt-1 text-xs text-[#ffc21c]">Window: {request.arrivalWindow}</p>
+            <p className="mt-1 text-xs text-brand">Window: {request.arrivalWindow}</p>
           ) : null}
           {request.safetyFlags.length > 0 ? (
             <p className="mt-2 flex items-start gap-1.5 text-xs text-red-200">
@@ -70,26 +70,26 @@ function RequestCard({ request }: { request: BookingRequest }) {
             </p>
           ) : null}
         </div>
-        <span className="shrink-0 text-[11px] text-slate-500">{request.receivedLabel}</span>
+        <span className="shrink-0 text-[11px] text-ink-faint">{request.receivedLabel}</span>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <a
           href={`tel:${request.phone.replace(/[^\d+]/g, "")}`}
-          className="tap-target inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 text-xs font-semibold text-slate-200"
+          className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip border border-line bg-white/[0.03] px-3.5 text-xs font-semibold text-ink"
         >
           <PhoneCall className="h-4 w-4" aria-hidden /> Call
         </a>
         {request.conversationId ? (
           <Link
             href={`/messages/${request.conversationId}`}
-            className="tap-target inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 text-xs font-semibold text-slate-200"
+            className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip border border-line bg-white/[0.03] px-3.5 text-xs font-semibold text-ink"
           >
             <MessagesSquare className="h-4 w-4" aria-hidden /> Read the thread
           </Link>
         ) : null}
         {request.jobId ? (
-          <span className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-3.5 text-xs font-semibold text-emerald-300">
+          <span className="inline-flex min-h-11 items-center gap-2 rounded-chip border border-emerald-400/20 bg-emerald-400/[0.06] px-3.5 text-xs font-semibold text-emerald-300">
             <Check className="h-4 w-4" aria-hidden /> Job created
           </span>
         ) : null}
@@ -100,7 +100,7 @@ function RequestCard({ request }: { request: BookingRequest }) {
               <input type="hidden" name="requestId" value={request.id} />
               <button
                 type="submit"
-                className="tap-target inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#ffc21c] px-4 text-xs font-semibold text-[#071723]"
+                className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip bg-brand px-4 text-xs font-semibold text-on-brand"
               >
                 <CalendarPlus className="h-4 w-4" aria-hidden />
                 {request.arrivalWindow ? "Create the job" : "Create an unscheduled job"}
@@ -110,7 +110,7 @@ function RequestCard({ request }: { request: BookingRequest }) {
               <input type="hidden" name="requestId" value={request.id} />
               <button
                 type="submit"
-                className="tap-target inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3.5 text-xs font-semibold text-slate-400"
+                className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip border border-line px-3.5 text-xs font-semibold text-ink-muted"
               >
                 <X className="h-4 w-4" aria-hidden /> Dismiss
               </button>
@@ -140,21 +140,21 @@ export default async function BookingRequestsPage({
       description="What customers asked for by text. A visit they accepted is already on the schedule; everything here is waiting on you."
     >
       {query.saved ? (
-        <p role="status" className="mb-4 flex items-start gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
+        <p role="status" className="mb-4 flex items-start gap-2 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
           <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {query.saved}
         </p>
       ) : null}
       {query.error ? (
-        <p role="alert" className="mb-4 flex items-start gap-2 rounded-2xl border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
+        <p role="alert" className="mb-4 flex items-start gap-2 rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {query.error}
         </p>
       ) : null}
 
       {open.length === 0 && handled.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-white/15 p-10 text-center">
-          <MessagesSquare className="mx-auto h-7 w-7 text-slate-600" aria-hidden />
+        <div className="rounded-panel border border-dashed border-line p-10 text-center">
+          <MessagesSquare className="mx-auto h-7 w-7 text-ink-faint" aria-hidden />
           <h2 className="mt-3 text-lg font-semibold">No requests yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-muted">
             When a customer texts the business number, what they asked for shows up here — a callback
             to return, or a visit they have already accepted.
           </p>
@@ -163,7 +163,7 @@ export default async function BookingRequestsPage({
 
       {open.length > 0 ? (
         <section className="space-y-3" aria-labelledby="open-requests">
-          <h2 id="open-requests" className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <h2 id="open-requests" className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
             Waiting on you ({open.length})
           </h2>
           {open.map((request) => (
@@ -174,7 +174,7 @@ export default async function BookingRequestsPage({
 
       {handled.length > 0 ? (
         <section className="mt-6 space-y-3" aria-labelledby="handled-requests">
-          <h2 id="handled-requests" className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <h2 id="handled-requests" className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
             Handled
           </h2>
           {handled.map((request) => (

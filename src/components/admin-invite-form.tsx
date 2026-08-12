@@ -8,7 +8,7 @@ import { adminInvite, type AdminInviteState } from "@/app/admin/organizations/[i
 
 const initialState: AdminInviteState = { error: "" };
 const inputClass =
-  "mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#0d202d] px-4 text-base text-white outline-none placeholder:text-slate-600 focus:border-[#ffc21c]/70";
+  "mt-2 min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base text-white outline-none placeholder:text-ink-faint focus:border-brand/70";
 
 function SendButton() {
   const { pending } = useFormStatus();
@@ -17,7 +17,7 @@ function SendButton() {
     <button
       type="submit"
       disabled={pending}
-      className="tap-target flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-5 text-sm font-bold text-[#071723] disabled:cursor-wait disabled:opacity-70"
+      className="tap-target flex min-h-13 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-bold text-on-brand disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}
       {pending ? "Sending…" : "Send invitation"}
@@ -34,7 +34,7 @@ export function AdminInviteForm({ organizationId }: { organizationId: string }) 
 
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_200px]">
         <label className="block">
-          <span className="text-sm font-medium text-slate-200">Email</span>
+          <span className="text-sm font-medium text-ink">Email</span>
           <input
             name="email"
             type="email"
@@ -45,7 +45,7 @@ export function AdminInviteForm({ organizationId }: { organizationId: string }) 
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-200">Role</span>
+          <span className="text-sm font-medium text-ink">Role</span>
           <select name="role" defaultValue="owner" className={inputClass}>
             <option value="owner">Owner</option>
             <option value="admin">Administrator</option>
@@ -69,7 +69,7 @@ export function AdminInviteForm({ organizationId }: { organizationId: string }) 
             {state.notice}
           </p>
           {state.link ? (
-            <p className="mt-2 break-all rounded-xl bg-black/30 p-3 text-xs text-slate-300">
+            <p className="mt-2 break-all rounded-chip bg-black/30 p-3 text-xs text-ink-muted">
               {state.link}
             </p>
           ) : null}

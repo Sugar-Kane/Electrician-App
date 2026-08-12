@@ -20,7 +20,7 @@ export default async function TenantLegalSettingsPage() {
       {page ? (
         <>
           <section
-            className={`mb-4 rounded-3xl border p-5 sm:p-6 ${page.published ? "border-emerald-400/20 bg-emerald-400/[0.045]" : "border-amber-300/25 bg-amber-300/[0.06]"}`}
+            className={`mb-4 rounded-panel border p-5 sm:p-6 ${page.published ? "border-emerald-400/20 bg-emerald-400/[0.045]" : "border-amber-300/25 bg-amber-300/[0.06]"}`}
           >
             <div className="flex items-start gap-3">
               {page.published ? (
@@ -32,7 +32,7 @@ export default async function TenantLegalSettingsPage() {
                 <h2 className="font-semibold">
                   {page.published ? "Your pages are live" : "Your pages are not published yet"}
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
+                <p className="mt-2 text-sm leading-6 text-ink-muted">
                   {page.published
                     ? "Anyone with the link can read them, including a carrier reviewing your text message campaign."
                     : "We filled in what we know from your signup so you can check it. Nothing is public until you publish, and a text message campaign cannot be approved until these pages open without signing in."}
@@ -44,10 +44,10 @@ export default async function TenantLegalSettingsPage() {
           <TenantLegalForm page={page} />
         </>
       ) : (
-        <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-6 text-center">
-          <TriangleAlert className="mx-auto h-7 w-7 text-slate-600" aria-hidden />
+        <section className="rounded-panel border border-line bg-surface p-6 text-center">
+          <TriangleAlert className="mx-auto h-7 w-7 text-ink-faint" aria-hidden />
           <h2 className="mt-3 font-semibold">No legal pages yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-muted">
             These are created with your business workspace. Finish onboarding — business
             name, phone, and address — and they will appear here ready to review.
           </p>

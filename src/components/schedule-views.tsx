@@ -133,7 +133,7 @@ export function MonthView({
               key={cell.date}
               href={`/schedule?date=${cell.date}`}
               aria-current={selected ? "date" : undefined}
-              className={`flex min-h-[68px] flex-col rounded-chip border p-1.5 transition ${
+              className={`flex min-h-[76px] flex-col rounded-chip border p-1 transition sm:min-h-[68px] sm:p-1.5 ${
                 selected
                   ? "border-brand bg-brand/15"
                   : cell.isToday
@@ -150,7 +150,10 @@ export function MonthView({
                       key={job.id}
                       className="block truncate rounded-[4px] bg-white/[0.07] px-1 text-[9px] leading-4 text-ink-muted"
                     >
-                      {job.time} {job.customer}
+                      <span className="sm:hidden">{job.time}</span>
+                      <span className="hidden sm:inline">
+                        {job.time} {job.customer}
+                      </span>
                     </span>
                   ))}
                   {active.length > 2 ? (
@@ -172,7 +175,7 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
   const statusStyles: Record<string, string> = {
     "In progress": "border-blue-400/30 bg-blue-400/10 text-blue-300",
     Scheduled: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-    Pending: "border-slate-400/30 bg-slate-400/10 text-slate-300",
+    Pending: "border-slate-400/30 bg-slate-400/10 text-ink-muted",
     Canceled: "border-rose-400/30 bg-rose-400/10 text-rose-200",
     Completed: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
   };

@@ -36,22 +36,22 @@ export default async function AdminAuditPage() {
 
   return (
     <div className="space-y-3">
-      <p className="px-1 text-sm text-slate-400">
+      <p className="px-1 text-sm text-ink-muted">
         Every time a business&rsquo;s records were opened or an invitation was sent.
       </p>
 
       {entries.map((entry) => (
-        <div key={entry.id} className="rounded-2xl border border-white/10 bg-[#0b1b27] p-4">
+        <div key={entry.id} className="rounded-control border border-line bg-surface p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm font-semibold">{LABELS[entry.action] ?? entry.action}</p>
-            <p className="text-xs text-slate-500">{when(entry.createdAt)}</p>
+            <p className="text-xs text-ink-faint">{when(entry.createdAt)}</p>
           </div>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-ink-muted">
             {entry.adminEmail || "unknown"}
             {entry.organizationName ? ` · ${entry.organizationName}` : ""}
           </p>
           {entry.detail && entry.detail !== "{}" ? (
-            <pre className="mt-2 overflow-x-auto rounded-xl bg-black/30 p-3 text-xs text-slate-400">
+            <pre className="mt-2 overflow-x-auto rounded-chip bg-black/30 p-3 text-xs text-ink-muted">
               {entry.detail}
             </pre>
           ) : null}
@@ -59,7 +59,7 @@ export default async function AdminAuditPage() {
       ))}
 
       {entries.length === 0 ? (
-        <p className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 text-sm text-slate-400">
+        <p className="rounded-panel border border-line bg-surface p-5 text-sm text-ink-muted">
           Nothing yet.
         </p>
       ) : null}

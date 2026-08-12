@@ -29,30 +29,30 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-3">
-      <p className="px-1 text-sm text-slate-400">
+      <p className="px-1 text-sm text-ink-muted">
         {users.length} {users.length === 1 ? "account" : "accounts"}
       </p>
 
       {users.map((user) => (
         <div
           key={`${user.userId}-${user.organizationId}`}
-          className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5"
+          className="rounded-panel border border-line bg-surface p-5"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="flex items-center gap-2 truncate text-base font-semibold">
                 {user.fullName || user.email}
                 {user.isPlatformAdmin ? (
-                  <ShieldCheck className="h-4 w-4 shrink-0 text-[#ffc21c]" aria-label="Platform admin" />
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-brand" aria-label="Platform admin" />
                 ) : null}
               </h2>
-              <p className="mt-1 truncate text-sm text-slate-400">{user.email}</p>
+              <p className="mt-1 truncate text-sm text-ink-muted">{user.email}</p>
             </div>
 
             {user.organizationId ? (
               <Link
                 href={`/admin/organizations/${user.organizationId}`}
-                className="tap-target shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold"
+                className="tap-target shrink-0 rounded-chip border border-line px-3 py-2 text-xs font-semibold"
               >
                 {user.organizationName} · {user.role}
               </Link>
@@ -66,15 +66,15 @@ export default async function AdminUsersPage() {
 
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-xs text-slate-500">Signed up</dt>
+              <dt className="text-xs text-ink-faint">Signed up</dt>
               <dd className="font-semibold">{when(user.createdAt)}</dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Last signed in</dt>
+              <dt className="text-xs text-ink-faint">Last signed in</dt>
               <dd className="font-semibold">{when(user.lastSignInAt)}</dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-500">Email</dt>
+              <dt className="text-xs text-ink-faint">Email</dt>
               <dd className={`font-semibold ${user.emailConfirmed ? "" : "text-amber-200"}`}>
                 {user.emailConfirmed ? "Confirmed" : "Not confirmed"}
               </dd>

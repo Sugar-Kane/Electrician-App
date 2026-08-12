@@ -60,10 +60,10 @@ export default async function AutomaticMessagesPage() {
       eyebrow="Messaging"
       description="What gets texted to customers, and when."
     >
-      <section className="mb-4 rounded-3xl border border-white/10 bg-[#0b1b27] p-5 text-sm leading-6 text-slate-300 sm:p-6">
+      <section className="mb-4 rounded-panel border border-line bg-surface p-5 text-sm leading-6 text-ink-muted sm:p-6">
         <p>
           These only go to customers who opted in to text messages, and never to anyone who
-          replied STOP. Words in <code className="text-[#ffc21c]">{"{{braces}}"}</code> are
+          replied STOP. Words in <code className="text-brand">{"{{braces}}"}</code> are
           filled in when the message is sent — an unknown one is left out rather than shown
           to the customer.
         </p>
@@ -76,9 +76,9 @@ export default async function AutomaticMessagesPage() {
       </section>
 
       {templates.size === 0 ? (
-        <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-8 text-center">
+        <section className="rounded-panel border border-line bg-surface p-8 text-center">
           <h2 className="font-semibold">No templates yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-muted">
             These are created with your business workspace. If this is empty, the messaging
             migration has not been applied to this environment.
           </p>

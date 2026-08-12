@@ -150,3 +150,61 @@ select:focus-visible,
     animation-iteration-count: 1 !important;
   }
 }
+
+/*
+ * Mobile guards.
+ *
+ * The app is used one-handed in a van, and the failure that ruins that is not
+ * an ugly layout — it is the whole page sliding sideways because one unbroken
+ * string was wider than the screen. A customer's email address, a Stripe pay
+ * link, a part number: any of them can do it, and once the page scrolls
+ * horizontally every tap target moves.
+ */
+html,
+body {
+  overflow-x: hidden;
+  /* Stops iOS inflating text in landscape, which reflows a laid-out page. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * Break anywhere rather than overflow. `anywhere` and not `break-word`: the
+ * latter still refuses to break a long token when it is the only thing on the
+ * line, which is exactly the URL case.
+ */
+body {
+  overflow-wrap: anywhere;
+}
+
+/* Nothing embedded may be wider than what contains it. */
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+ * Preformatted text is the one thing that should scroll rather than wrap —
+ * a contract or a code block reflowed to phone width is unreadable — so it
+ * scrolls inside itself instead of taking the page with it.
+ */
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/*
+ * Anything below 11px is decoration, not information. On a 390px screen in
+ * daylight it is unreadable, and several screens were using 9px for job times
+ * and stop counts that people actually need to read.
+ */
+@media (max-width: 640px) {
+  .text-\[9px\],
+  .text-\[10px\] {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+}

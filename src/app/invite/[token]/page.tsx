@@ -22,13 +22,13 @@ function text(value: unknown) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="grid min-h-screen place-items-center bg-[#06131d] px-4 py-10 text-white">
+    <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
       <div className="w-full max-w-md">
         <div className="mb-6 inline-flex items-center gap-2 text-lg font-bold tracking-[0.04em]">
-          <Zap className="h-7 w-7 fill-[#ffc21c] text-[#ffc21c]" aria-hidden />
+          <Zap className="h-7 w-7 fill-brand text-brand" aria-hidden />
           VOLTEIRA
         </div>
-        <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-6">{children}</section>
+        <section className="rounded-panel border border-line bg-surface p-6">{children}</section>
       </div>
     </main>
   );
@@ -41,12 +41,12 @@ function Refusal({ heading, detail }: { heading: string; detail: string }) {
         <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
         <div>
           <h1 className="text-lg font-semibold">{heading}</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-400">{detail}</p>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">{detail}</p>
         </div>
       </div>
       <Link
         href="/"
-        className="tap-target mt-6 flex min-h-12 items-center justify-center rounded-2xl border border-white/10 text-sm font-semibold"
+        className="tap-target mt-6 flex min-h-12 items-center justify-center rounded-control border border-line text-sm font-semibold"
       >
         Go to Volteira
       </Link>
@@ -102,24 +102,24 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     return (
       <Shell>
         <h1 className="text-xl font-semibold">Join {organizationName}</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-ink-muted">
           You have been invited as {roleLabel(role)}. Create your account with{" "}
-          <strong className="text-slate-200">{invitedEmail}</strong> — the invitation only
+          <strong className="text-ink">{invitedEmail}</strong> — the invitation only
           works for that address.
         </p>
         <Link
           href={`/signup?next=${next}&email=${email}`}
-          className="tap-target mt-6 flex min-h-14 items-center justify-center rounded-2xl bg-[#ffc21c] text-sm font-bold text-[#071723]"
+          className="tap-target mt-6 flex min-h-14 items-center justify-center rounded-control bg-brand text-sm font-bold text-on-brand"
         >
           Create my account
         </Link>
         <Link
           href={`/login?next=${next}`}
-          className="tap-target mt-3 flex min-h-12 items-center justify-center rounded-2xl border border-white/10 text-sm font-semibold"
+          className="tap-target mt-3 flex min-h-12 items-center justify-center rounded-control border border-line text-sm font-semibold"
         >
           I already have one
         </Link>
-        <p className="mt-6 flex items-center gap-2 text-xs text-slate-500">
+        <p className="mt-6 flex items-center gap-2 text-xs text-ink-faint">
           <LockKeyhole className="h-4 w-4 text-emerald-400" aria-hidden />
           You will only see this business, and only what your role allows.
         </p>
@@ -132,14 +132,14 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     return (
       <Shell>
         <h1 className="text-lg font-semibold">This invitation is for a different address</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
-          It was sent to <strong className="text-slate-200">{invitedEmail}</strong>, and you
-          are signed in as <strong className="text-slate-200">{user.email}</strong>. Sign out
+        <p className="mt-2 text-sm leading-6 text-ink-muted">
+          It was sent to <strong className="text-ink">{invitedEmail}</strong>, and you
+          are signed in as <strong className="text-ink">{user.email}</strong>. Sign out
           and sign back in with the invited address.
         </p>
         <Link
           href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
-          className="tap-target mt-6 flex min-h-14 items-center justify-center rounded-2xl bg-[#ffc21c] text-sm font-bold text-[#071723]"
+          className="tap-target mt-6 flex min-h-14 items-center justify-center rounded-control bg-brand text-sm font-bold text-on-brand"
         >
           Switch accounts
         </Link>
@@ -159,9 +159,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <Shell>
       <h1 className="text-xl font-semibold">Join {organizationName}</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-400">
+      <p className="mt-2 text-sm leading-6 text-ink-muted">
         You have been invited as {roleLabel(role)}, signed in as{" "}
-        <strong className="text-slate-200">{user.email}</strong>.
+        <strong className="text-ink">{user.email}</strong>.
       </p>
       <AcceptInvitationForm token={token} />
     </Shell>

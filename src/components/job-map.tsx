@@ -383,7 +383,13 @@ export function JobMap({
   );
 }
 
-/** Dark tiles, so the map belongs to the app rather than interrupting it. */
+/**
+ * Dark tiles, so the map belongs to the app rather than interrupting it.
+ *
+ * Literal hex on purpose. Google's styling API takes colour values, not CSS,
+ * so these cannot be theme tokens — they are the same values as --color-surface
+ * and --color-canvas and have to be changed alongside them.
+ */
 const DARK_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#0b1b27" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#0b1b27" }] },

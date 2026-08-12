@@ -71,13 +71,13 @@ export default async function BookingConfirmationPage({
 
   if (!booking) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#06131d] px-4 py-10 text-white">
-        <section className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#081925] p-6 text-center sm:p-8">
+      <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
+        <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 text-center sm:p-8">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-300/10 text-amber-200">
             <Clock3 className="h-7 w-7" aria-hidden />
           </span>
           <h1 className="mt-5 text-2xl font-semibold">We could not find that appointment</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-400">
+          <p className="mt-3 text-sm leading-6 text-ink-muted">
             The link may be old, or it may have been copied incompletely. Call the business and
             they will find your booking.
           </p>
@@ -106,8 +106,8 @@ export default async function BookingConfirmationPage({
   const answers = Array.isArray(booking.intake_answers) ? booking.intake_answers : [];
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[#06131d] px-4 py-10 text-white">
-      <section className="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#081925] p-6 sm:p-8">
+    <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
+      <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 sm:p-8">
         <span className="grid h-14 w-14 place-items-center rounded-full bg-emerald-400/10 text-emerald-300">
           <CalendarCheck2 className="h-7 w-7" aria-hidden />
         </span>
@@ -115,34 +115,34 @@ export default async function BookingConfirmationPage({
         <h1 className="mt-5 text-2xl font-semibold">
           {booking.contact_name ? `You're booked, ${booking.contact_name}` : "You're booked"}
         </h1>
-        <p className="mt-2 text-sm text-slate-400">with {booking.business_name}</p>
+        <p className="mt-2 text-sm text-ink-muted">with {booking.business_name}</p>
 
         <dl className="mt-7 space-y-5 text-sm">
           {labels ? (
             <div className="flex gap-3">
-              <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+              <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
-                <dt className="text-slate-400">Arrival window</dt>
+                <dt className="text-ink-muted">Arrival window</dt>
                 <dd className="mt-0.5 font-semibold">{labels.day}</dd>
-                <dd className="text-slate-300">{labels.window}</dd>
+                <dd className="text-ink-muted">{labels.window}</dd>
               </div>
             </div>
           ) : null}
 
           {address ? (
             <div className="flex gap-3">
-              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
-                <dt className="text-slate-400">Service address</dt>
+                <dt className="text-ink-muted">Service address</dt>
                 <dd className="mt-0.5 font-semibold">{address}</dd>
               </div>
             </div>
           ) : null}
 
           <div className="flex gap-3">
-            <ReceiptText className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+            <ReceiptText className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
-              <dt className="text-slate-400">Diagnostic visit</dt>
+              <dt className="text-ink-muted">Diagnostic visit</dt>
               <dd className="mt-0.5 font-semibold">{fee}</dd>
             </div>
           </div>
@@ -151,36 +151,36 @@ export default async function BookingConfirmationPage({
             <div className="flex gap-3">
               <ReceiptText className="mt-0.5 h-5 w-5 shrink-0 text-transparent" aria-hidden />
               <div>
-                <dt className="text-slate-400">What you told us</dt>
-                <dd className="mt-0.5 text-slate-200">{booking.description}</dd>
+                <dt className="text-ink-muted">What you told us</dt>
+                <dd className="mt-0.5 text-ink">{booking.description}</dd>
               </div>
             </div>
           ) : null}
         </dl>
 
         {answers.length > 0 ? (
-          <section className="mt-7 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <h2 className="text-sm font-semibold text-slate-200">What we went over on the call</h2>
+          <section className="mt-7 rounded-control border border-line bg-white/[0.03] p-4">
+            <h2 className="text-sm font-semibold text-ink">What we went over on the call</h2>
             <dl className="mt-3 space-y-3 text-sm">
               {answers.map((entry, index) => (
                 <div key={index}>
-                  <dt className="text-slate-400">{entry.question}</dt>
-                  <dd className="mt-0.5 text-slate-200">{entry.answer}</dd>
+                  <dt className="text-ink-muted">{entry.question}</dt>
+                  <dd className="mt-0.5 text-ink">{entry.answer}</dd>
                 </div>
               ))}
             </dl>
-            <p className="mt-3 text-xs leading-5 text-slate-500">
+            <p className="mt-3 text-xs leading-5 text-ink-faint">
               An electrician will call to go over a few more details before the visit.
             </p>
           </section>
         ) : null}
 
-        <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <h2 className="text-sm font-semibold text-slate-200">
+        <section className="mt-5 rounded-control border border-line bg-white/[0.03] p-4">
+          <h2 className="text-sm font-semibold text-ink">
             {booking.deposit_paid ? "Deposit received" : "Deposit to hold this appointment"}
           </h2>
           <p className="mt-1 text-2xl font-semibold">{deposit}</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">
+          <p className="mt-2 text-xs leading-5 text-ink-muted">
             {booking.deposit_paid
               ? "Thank you — nothing else is due before the visit."
               : `Credited toward the work. Call ${booking.business_phone} to pay it, or pay the electrician when they arrive.`}
@@ -189,12 +189,12 @@ export default async function BookingConfirmationPage({
 
         <a
           href={`tel:${booking.business_phone.replace(/[^\d+]/g, "")}`}
-          className="tap-target mt-8 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-5 font-semibold text-[#071723]"
+          className="tap-target mt-8 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-5 font-semibold text-on-brand"
         >
           <Phone className="h-5 w-5" aria-hidden />
           Call {booking.business_phone}
         </a>
-        <p className="mt-3 text-center text-xs leading-5 text-slate-500">
+        <p className="mt-3 text-center text-xs leading-5 text-ink-faint">
           Need to change or cancel? Call and we will sort it out.
         </p>
       </section>
