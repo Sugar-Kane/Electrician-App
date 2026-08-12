@@ -6,8 +6,6 @@ import {
   CalendarPlus,
   MessageCircle,
   Plus,
-  ReceiptText,
-  UserRoundPlus,
   X,
 } from "lucide-react";
 
@@ -23,24 +21,29 @@ import {
  * Nothing is lost and the mental model stops being AI-first.
  */
 
+/*
+ * "New customer" used to sit here as a separate row pointing at
+ * /jobs/new?focus=customer. Nothing reads `focus`, so it opened the same page
+ * in the same state as "New job" — two rows, one destination, and whichever
+ * you picked you got the same form.
+ *
+ * It is not a missing feature either: /jobs/new opens with the customer's
+ * name, number and address before it asks about the work, and saving creates
+ * the customer record. One row says so.
+ *
+ * "New invoice" went for the same reason and one worse. `/invoices?new=1` has
+ * no handler — the page reads `status` and nothing else — so it opened the
+ * invoice list, which is already in the menu under Business. It also promised
+ * a screen that has never existed: an invoice is raised from the job it bills
+ * for, by the button on that job, because the line items and the diagnostic
+ * credit both come from it.
+ */
 const ACTIONS = [
   {
-    label: "New customer",
-    detail: "Someone to book work for later",
-    href: "/jobs/new?focus=customer",
-    icon: UserRoundPlus,
-  },
-  {
     label: "New job",
-    detail: "Customer, address, and what is wrong",
+    detail: "Customer details, address, and what is wrong",
     href: "/jobs/new",
     icon: CalendarPlus,
-  },
-  {
-    label: "New invoice",
-    detail: "Bill for work already done",
-    href: "/invoices?new=1",
-    icon: ReceiptText,
   },
   {
     label: "Ask Volteira",
