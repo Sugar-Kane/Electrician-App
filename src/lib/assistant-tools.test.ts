@@ -110,3 +110,22 @@ test("the prompt forbids claiming an action that has only been proposed", () => 
   assert.match(prompt, /Never invent a job number/i);
   assert.match(prompt, /call lookup_code/i);
 });
+
+test("assigning a technician needs a tap, listing them does not", () => {
+  // Listing is a read. Putting somebody on a job changes who drives where.
+  assert.equal(requiresConfirmation("list_technicians"), false);
+  assert.equal(requiresConfirmation("assign_technician"), true);
+});
+
+test("an empty technician name reads as unassigning, not as a missing field", () => {
+  // The two are genuinely different instructions, and a summary that blurred
+  // them would let somebody approve "put (unspecified) on #5".
+  assert.equal(
+    describeProposal("assign_technician", { job_number: "5", technician: "Nick" }),
+    "Put Nick on job #5.",
+  );
+  assert.equal(
+    describeProposal("assign_technician", { job_number: "5", technician: "" }),
+    "Take the assigned technician off job #5.",
+  );
+});

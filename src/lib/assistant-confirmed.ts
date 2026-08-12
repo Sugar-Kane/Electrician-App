@@ -158,6 +158,55 @@ export async function runConfirmedTool(
       return `Job #${jobNumber} moved. The customer has not been told — send them a text if they should know.`;
     }
 
+    case "assign_technician": {
+      const jobNumber = Number(text(input.job_number));
+      if (!Number.isFinite(jobNumber)) return "That job could not be read, so nothing was changed.";
+
+      const who = text(input.technician);
+
+      // An empty name is "take them off", which is a real instruction and not a
+      // failed lookup. Treating the two the same would silently unassign a job
+      // whenever a name was misheard.
+      let technicianId: string | null = null;
+      if (who) {
+        const { data } = await supabase
+          .from("technicians")
+          .select("id, display_name")
+          .eq("organization_id", organizationId)
+          .limit(100);
+
+        const rows = (data ?? []) as Record<string, unknown>[];
+        const needle = who.toLowerCase();
+        const exact = rows.find((row) => text(row.display_name).toLowerCase() === needle);
+        const partial = rows.filter((row) => text(row.display_name).toLowerCase().includes(needle));
+
+        const match = exact ?? (partial.length === 1 ? partial[0] : undefined);
+        if (!match) {
+          // Ambiguity is reported rather than guessed. Two people called Nick
+          // and picking one is how the wrong person drives to Nipomo.
+          return partial.length > 1
+            ? `More than one technician matches "${who}": ${partial.map((row) => text(row.display_name)).join(", ")}. Nothing was changed.`
+            : `No technician called "${who}" is on this crew. Nothing was changed.`;
+        }
+        technicianId = text(match.id);
+      }
+
+      const { data: updated, error } = await supabase
+        .from("jobs")
+        .update({ technician_id: technicianId })
+        .eq("organization_id", organizationId)
+        .eq("job_number", jobNumber)
+        .select("job_number")
+        .maybeSingle();
+
+      if (error) return "That job could not be updated.";
+      if (!updated) return `Job #${jobNumber} could not be found. Nothing was changed.`;
+
+      return who
+        ? `${who} is now on job #${jobNumber}. The customer has not been told.`
+        : `Job #${jobNumber} has nobody assigned now.`;
+    }
+
     case "set_invoice_amount": {
       const jobNumber = Number(text(input.job_number));
       const cents = parseCostToCents(text(input.amount));

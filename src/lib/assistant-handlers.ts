@@ -131,6 +131,35 @@ export async function runReadOnlyTool(
         .join("\n");
     }
 
+    case "list_technicians": {
+      const query = text(input.query).toLowerCase();
+      const context = await currentContext();
+      if (!context) return "Not signed in to a business.";
+
+      const supabase = asFlexibleClient(await createClient());
+      const { data } = await supabase
+        .from("technicians")
+        .select("display_name, phone, is_active, skills")
+        .eq("organization_id", context.organizationId)
+        .order("display_name", { ascending: true });
+
+      const rows = ((data ?? []) as Record<string, unknown>[]).filter(
+        (row) => !query || text(row.display_name).toLowerCase().includes(query),
+      );
+
+      if (rows.length === 0) {
+        return query ? `No technician matches "${text(input.query)}".` : "This business has no technicians on its crew yet.";
+      }
+
+      return rows
+        .slice(0, MAX_ROWS)
+        .map(
+          (row) =>
+            `${text(row.display_name)} | ${row.is_active === false ? "inactive" : "active"}${text(row.phone) ? ` | ${text(row.phone)}` : ""}`,
+        )
+        .join("\n");
+    }
+
     case "lookup_code": {
       const question = text(input.question);
       const entries = findReferences(question);

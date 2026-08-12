@@ -20,12 +20,14 @@ export type ToolName =
   | "search_customers"
   | "check_stock"
   | "list_invoices"
+  | "list_technicians"
   | "lookup_code"
   | "remember"
   | "forget"
   | "send_invoice"
   | "send_text"
   | "schedule_job"
+  | "assign_technician"
   | "set_invoice_amount"
   | "draft_contract";
 
@@ -99,6 +101,19 @@ export const ASSISTANT_TOOLS: ToolSpec[] = [
         },
       },
       required: ["status"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "list_technicians",
+    description:
+      "List the technicians on this business's crew, with who is active. Use before assigning somebody, so the name is one that exists.",
+    confirm: false,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: { query: str("Optional name to narrow to. Empty string lists everybody.") },
+      required: ["query"],
       additionalProperties: false,
     },
   },
@@ -195,6 +210,22 @@ export const ASSISTANT_TOOLS: ToolSpec[] = [
     },
   },
   {
+    name: "assign_technician",
+    description:
+      "Put a technician on a job, or take them off it. Proposes only — the person confirms before the schedule changes.",
+    confirm: true,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        job_number: str("The job number."),
+        technician: str("The technician's name as the crew list shows it. Empty string unassigns."),
+      },
+      required: ["job_number", "technician"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "set_invoice_amount",
     description:
       "Raise an invoice against a job for an amount. Proposes only — the figure is read back before anything is created.",
@@ -279,6 +310,13 @@ export function describeProposal(
     }
     case "set_invoice_amount":
       return `Raise a draft invoice on job #${text(input.job_number) || "(unspecified)"} for ${text(input.amount) || "(no amount)"}.`;
+    case "assign_technician": {
+      const who = text(input.technician);
+      const job = text(input.job_number) || "(unspecified)";
+      return who
+        ? `Put ${who} on job #${job}.`
+        : `Take the assigned technician off job #${job}.`;
+    }
     case "draft_contract":
       return `Draft a contract for job #${text(input.job_number) || "(unspecified)"} from your template.`;
     default:
