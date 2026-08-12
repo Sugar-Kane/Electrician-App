@@ -174,3 +174,65 @@ export async function draftScope(input: {
     return null;
   }
 }
+
+export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
+export type AgentReply = {
+  text: string;
+  calls: AgentToolCall[];
+};
+
+/**
+ * One turn of the chat, with tools.
+ *
+ * Returns whatever the model said and whatever it asked to do. Deciding which
+ * of those may actually run is not this function's job — that lives in
+ * `assistant-tools`, so the boundary between reading and sending is one list
+ * that can be read and tested rather than a branch buried in an API call.
+ *
+ * Returns null on failure rather than throwing, like everything else here.
+ */
+export async function runAssistantTurn(input: {
+  system: string;
+  brief: string;
+  turns: { role: "user" | "assistant"; content: unknown }[];
+  tools: { name: string; description: string; input_schema: unknown }[];
+}): Promise<AgentReply | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-5",
+      max_tokens: 1200,
+      system: [
+        { type: "text" as const, text: input.system },
+        { type: "text" as const, text: `<business_snapshot>\n${input.brief}\n</business_snapshot>` },
+      ],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: input.tools as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: input.turns as any,
+    });
+
+    const text = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("\n")
+      .trim();
+
+    const calls: AgentToolCall[] = response.content
+      .filter((block) => block.type === "tool_use")
+      .map((block) => {
+        const call = block as { id: string; name: string; input: unknown };
+        return {
+          id: call.id,
+          name: call.name,
+          input: (call.input ?? {}) as Record<string, unknown>,
+        };
+      });
+
+    return { text, calls };
+  } catch {
+    return null;
+  }
+}
