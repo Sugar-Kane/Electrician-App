@@ -83,6 +83,56 @@ type Bootstrap = {
   importLibrary?: (name: string) => Promise<unknown>;
 };
 
+/** A load that takes longer than this is not going to finish. */
+const LOAD_TIMEOUT_MS = 15_000;
+
+function awaitScript(apiKey: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>("script[data-volteira-maps]");
+
+    if (existing) {
+      // An already-finished script fires neither event ever again. Listening
+      // for one left the promise pending forever and the spinner turning —
+      // which is why a second mount after a reload could hang rather than
+      // recover.
+      if (existing.dataset.state === "loaded") {
+        resolve();
+        return;
+      }
+      if (existing.dataset.state === "error") {
+        reject(new Error("Google Maps failed to load."));
+        return;
+      }
+
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error("Google Maps failed to load.")),
+        { once: true },
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=marker&loading=async`;
+    script.async = true;
+    script.dataset.volteiraMaps = "true";
+    script.dataset.state = "loading";
+    script.onload = () => {
+      script.dataset.state = "loaded";
+      resolve();
+    };
+    script.onerror = () => {
+      // Removed as well as marked. A dead script element left in the head is
+      // what a retry would otherwise find and immediately give up on.
+      script.dataset.state = "error";
+      script.remove();
+      reject(new Error("Google Maps failed to load."));
+    };
+    document.head.appendChild(script);
+  });
+}
+
 function loadMaps(apiKey: string): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   // Map is the thing actually needed; `google.maps` alone proves only that the
@@ -90,22 +140,17 @@ function loadMaps(apiKey: string): Promise<void> {
   if (window.google?.maps?.Map) return Promise.resolve();
 
   window.__volteiraMapsPromise ??= (async () => {
-    await new Promise<void>((resolve, reject) => {
-      const existing = document.querySelector<HTMLScriptElement>("script[data-volteira-maps]");
-      if (existing) {
-        existing.addEventListener("load", () => resolve());
-        existing.addEventListener("error", () => reject(new Error("Google Maps failed to load.")));
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=marker&loading=async`;
-      script.async = true;
-      script.dataset.volteiraMaps = "true";
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Google Maps failed to load."));
-      document.head.appendChild(script);
-    });
+    // A load that never settles is indistinguishable from a slow one, and the
+    // spinner sits there either way.
+    await Promise.race([
+      awaitScript(apiKey),
+      new Promise<never>((_resolve, reject) =>
+        setTimeout(
+          () => reject(new Error("Google Maps did not load in time.")),
+          LOAD_TIMEOUT_MS,
+        ),
+      ),
+    ]);
 
     const bootstrap = window.google?.maps as (typeof window.google.maps & Bootstrap) | undefined;
 
@@ -117,7 +162,14 @@ function loadMaps(apiKey: string): Promise<void> {
     await bootstrap.importLibrary("marker");
   })();
 
-  return window.__volteiraMapsPromise;
+  // A rejected promise cached on `window` is permanent for the life of the
+  // page: every later mount awaits the same failure and reports it again, so
+  // one bad load turns into a map that can never recover without a reload.
+  // Clearing it means the next attempt actually attempts something.
+  return window.__volteiraMapsPromise.catch((reason: unknown) => {
+    window.__volteiraMapsPromise = undefined;
+    throw reason;
+  });
 }
 
 export function JobMap({
@@ -144,6 +196,8 @@ export function JobMap({
     line: null,
   });
   const [status, setStatus] = useState<"loading" | "ready" | "failed" | "refused">("loading");
+  /** Bumped to run the load effect again after a failure. */
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -153,6 +207,7 @@ export function JobMap({
   useEffect(() => {
     if (!apiKey) return;
     let cancelled = false;
+    setStatus((current) => (current === "ready" ? current : "loading"));
 
     loadMaps(apiKey)
       .then(() => {
@@ -183,7 +238,7 @@ export function JobMap({
     return () => {
       cancelled = true;
     };
-  }, [apiKey]);
+  }, [apiKey, attempt]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -313,6 +368,13 @@ export function JobMap({
               <code className="text-brand">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, compiled at
               build time, so changing it needs a redeploy.
             </p>
+            <button
+              type="button"
+              onClick={() => setAttempt((current) => current + 1)}
+              className="tap-target mt-3 inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+            >
+              Try again
+            </button>
             <p className="mt-2 text-xs text-ink-faint">The stop order below still works.</p>
           </div>
         </div>
