@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 /**
  * The panel everything sits in.
  *
- * There was no such component, so every page invented one: `rounded-3xl` here,
- * `rounded-2xl` there, one-off `rounded-[28px]` in a third place, each with its
+ * There was no such component, so every page invented one: `rounded-panel` here,
+ * `rounded-control` there, one-off `rounded-[28px]` in a third place, each with its
  * own border colour and padding. This is that panel, once.
  */
 

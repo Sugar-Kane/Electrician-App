@@ -23,7 +23,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FINDING_STYLE: Record<Finding["severity"], string> = {
   blocking: "border-rose-400/30 bg-rose-400/[0.07] text-rose-100",
   degraded: "border-amber-300/25 bg-amber-300/[0.06] text-amber-100",
-  note: "border-white/10 bg-white/[0.03] text-slate-300",
+  note: "border-line bg-white/[0.03] text-ink-muted",
 };
 
 function stamp(iso: string): string {
@@ -40,7 +40,7 @@ function stamp(iso: string): string {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 sm:p-6">
+    <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
       <h2 className="text-lg font-semibold">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
@@ -50,7 +50,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/5 py-2 last:border-0">
-      <dt className="text-sm text-slate-400">{label}</dt>
+      <dt className="text-sm text-ink-muted">{label}</dt>
       <dd className="text-sm font-medium">{value || "—"}</dd>
     </div>
   );
@@ -98,14 +98,14 @@ export default async function AdminOrganizationPage({
 
   return (
     <div className="space-y-4">
-      <header className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 sm:p-6">
+      <header className="rounded-panel border border-line bg-surface p-5 sm:p-6">
         <h1 className="text-2xl font-semibold tracking-tight">{organization.name}</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-ink-muted">
           {[organization.address, organization.city, organization.state, organization.postalCode]
             .filter(Boolean)
             .join(", ") || "No address"}
         </p>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-ink-faint">
           {organization.phone} · {organization.timeZone} · since {stamp(organization.createdAt)}
         </p>
       </header>
@@ -121,7 +121,7 @@ export default async function AdminOrganizationPage({
             {findings.map((finding) => (
               <li
                 key={finding.title}
-                className={`flex items-start gap-3 rounded-2xl border p-4 ${FINDING_STYLE[finding.severity]}`}
+                className={`flex items-start gap-3 rounded-control border p-4 ${FINDING_STYLE[finding.severity]}`}
               >
                 <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <span>
@@ -174,16 +174,16 @@ export default async function AdminOrganizationPage({
 
       <Card title="People">
         {members.length === 0 ? (
-          <p className="text-sm text-slate-400">Nobody has joined this business.</p>
+          <p className="text-sm text-ink-muted">Nobody has joined this business.</p>
         ) : (
           <ul className="space-y-2">
             {members.map((member) => (
-              <li key={member.userId} className="rounded-2xl border border-white/10 p-4">
+              <li key={member.userId} className="rounded-control border border-line p-4">
                 <p className="text-sm font-semibold">{member.fullName || member.email}</p>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-ink-muted">
                   {member.email} · {member.role}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-ink-faint">
                   Joined {stamp(member.joinedAt)} · last signed in {stamp(member.lastSignInAt)}
                   {member.emailConfirmed ? "" : " · email not confirmed"}
                 </p>
@@ -191,8 +191,8 @@ export default async function AdminOrganizationPage({
             ))}
           </ul>
         )}
-        <div className="mt-5 border-t border-white/10 pt-5">
-          <p className="mb-4 text-sm text-slate-400">
+        <div className="mt-5 border-t border-line pt-5">
+          <p className="mb-4 text-sm text-ink-muted">
             Invite somebody into this business. Works even when nobody on the inside can sign
             in to do it themselves.
           </p>
@@ -202,23 +202,23 @@ export default async function AdminOrganizationPage({
 
       <Card title="Recent bookings">
         {bookings.length === 0 ? (
-          <p className="text-sm text-slate-400">No bookings.</p>
+          <p className="text-sm text-ink-muted">No bookings.</p>
         ) : (
           <ul className="space-y-3">
             {bookings.map((booking) => (
-              <li key={booking.id} className="rounded-2xl border border-white/10 p-4">
+              <li key={booking.id} className="rounded-control border border-line p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm font-semibold">
                     {booking.contactName || "No name"} · {booking.status}
                   </p>
-                  <p className="text-xs text-slate-500">{stamp(booking.createdAt)}</p>
+                  <p className="text-xs text-ink-faint">{stamp(booking.createdAt)}</p>
                 </div>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-ink-muted">
                   {booking.phone}
                   {booking.email ? ` · ${booking.email}` : ""}
                 </p>
-                <p className="mt-1 text-sm text-slate-300">{booking.description}</p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-sm text-ink-muted">{booking.description}</p>
+                <p className="mt-1 text-xs text-ink-faint">
                   {booking.windowStart ? `Window ${stamp(booking.windowStart)}` : "No window"} ·{" "}
                   {booking.intakeAnswerCount} intake answers
                 </p>
@@ -228,7 +228,7 @@ export default async function AdminOrganizationPage({
                     {booking.notifications.map((attempt, index) => (
                       <li
                         key={`${booking.id}-${index}`}
-                        className={`rounded-xl px-3 py-2 text-xs ${attempt.ok ? "bg-emerald-400/[0.08] text-emerald-200" : "bg-rose-400/[0.08] text-rose-200"}`}
+                        className={`rounded-chip px-3 py-2 text-xs ${attempt.ok ? "bg-emerald-400/[0.08] text-emerald-200" : "bg-rose-400/[0.08] text-rose-200"}`}
                       >
                         <span className="font-semibold">
                           {attempt.audience} {attempt.channel}
@@ -239,7 +239,7 @@ export default async function AdminOrganizationPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-xs text-slate-500">
+                  <p className="mt-3 text-xs text-ink-faint">
                     No notification record — this booking predates the tracking, or nothing was
                     attempted.
                   </p>
@@ -252,7 +252,7 @@ export default async function AdminOrganizationPage({
 
       <Card title="Phone assistant calls">
         {calls.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-ink-muted">
             The voice agent has never reached this server for this business. If they say the
             phone does nothing, this is the confirmation — check that the agent is published
             with the right connector URL.
@@ -262,19 +262,19 @@ export default async function AdminOrganizationPage({
             {calls.map((call) => (
               <li
                 key={call.id}
-                className={`rounded-2xl border p-3 text-xs ${call.isError ? "border-rose-400/25 bg-rose-400/[0.06]" : "border-white/10"}`}
+                className={`rounded-control border p-3 text-xs ${call.isError ? "border-rose-400/25 bg-rose-400/[0.06]" : "border-line"}`}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="font-semibold">
                     {call.method}
                     {call.toolName ? ` · ${call.toolName}` : ""}
                   </span>
-                  <span className="text-slate-500">
+                  <span className="text-ink-faint">
                     {stamp(call.createdAt)} · {call.httpStatus} · {call.durationMs}ms
                   </span>
                 </div>
                 {call.resultText ? (
-                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-black/30 p-3 text-slate-400">
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-chip bg-black/30 p-3 text-ink-muted">
                     {call.resultText}
                   </pre>
                 ) : null}

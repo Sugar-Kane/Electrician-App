@@ -35,7 +35,7 @@ function SaveButton() {
     <button
       type="submit"
       disabled={pending}
-      className="tap-target flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#ffc21c] px-4 text-sm font-bold text-[#071723] disabled:opacity-70"
+      className="tap-target flex min-h-11 items-center justify-center gap-2 rounded-chip bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-70"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
       Save
@@ -68,21 +68,21 @@ export function MessageTemplateEditor({
   const unsupported = unresolvedPlaceholders(draft, PREVIEW_VARIABLES);
 
   return (
-    <form action={formAction} className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 sm:p-6">
+    <form action={formAction} className="rounded-panel border border-line bg-surface p-5 sm:p-6">
       <input type="hidden" name="trigger" value={trigger} />
 
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-semibold">{label}</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">{description}</p>
         </div>
-        <label className="tap-target flex shrink-0 cursor-pointer items-center gap-2 text-xs text-slate-300">
+        <label className="tap-target flex shrink-0 cursor-pointer items-center gap-2 text-xs text-ink-muted">
           <input
             type="checkbox"
             name="isActive"
             checked={active}
             onChange={(event) => setActive(event.target.checked)}
-            className="h-5 w-5 accent-[#ffc21c]"
+            className="h-5 w-5 accent-brand"
           />
           On
         </label>
@@ -93,18 +93,18 @@ export function MessageTemplateEditor({
         rows={3}
         value={draft}
         onChange={(event) => setDraft(event.target.value.slice(0, 1600))}
-        className="mt-4 w-full resize-y rounded-2xl border border-white/10 bg-[#0d202d] p-4 text-sm leading-6 text-white outline-none focus:border-[#ffc21c]/70"
+        className="mt-4 w-full resize-y rounded-control border border-line bg-raised p-4 text-sm leading-6 text-white outline-none focus:border-brand/70"
       />
 
-      <p className="mt-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs leading-5 text-slate-300">
-        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+      <p className="mt-3 rounded-control border border-white/[0.06] bg-white/[0.02] p-3 text-xs leading-5 text-ink-muted">
+        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
           Preview
         </span>
         {preview || "This would send nothing."}
       </p>
 
       {unsupported.length > 0 ? (
-        <p className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] p-3 text-xs leading-5 text-amber-100">
+        <p className="mt-3 flex items-start gap-2 rounded-control border border-amber-300/25 bg-amber-300/[0.07] p-3 text-xs leading-5 text-amber-100">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <span>
             This will not send while it contains{" "}
@@ -115,10 +115,10 @@ export function MessageTemplateEditor({
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
+        <span className="flex items-center gap-1.5 text-[11px] text-ink-faint">
           {timeCritical ? (
             <>
-              <Zap className="h-3.5 w-3.5 text-[#ffc21c]" aria-hidden /> Sends during quiet hours
+              <Zap className="h-3.5 w-3.5 text-brand" aria-hidden /> Sends during quiet hours
             </>
           ) : (
             <>
@@ -132,13 +132,13 @@ export function MessageTemplateEditor({
               <Check className="h-3.5 w-3.5" aria-hidden /> Saved
             </span>
           ) : null}
-          <span className="text-[11px] text-slate-600">{draft.length}/1600</span>
+          <span className="text-[11px] text-ink-faint">{draft.length}/1600</span>
           <SaveButton />
         </div>
       </div>
 
       {state.error ? (
-        <p role="alert" className="mt-3 rounded-2xl border border-red-400/20 bg-red-400/[0.07] p-3 text-sm text-red-200">
+        <p role="alert" className="mt-3 rounded-control border border-red-400/20 bg-red-400/[0.07] p-3 text-sm text-red-200">
           {state.error}
         </p>
       ) : null}

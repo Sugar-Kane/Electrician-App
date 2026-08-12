@@ -47,9 +47,9 @@ const sections = [
 ];
 
 const inputClass =
-  "mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#0d202d] px-3.5 text-base text-white outline-none placeholder:text-slate-600 disabled:cursor-not-allowed disabled:opacity-60";
-const labelClass = "block text-xs font-semibold text-slate-300";
-const cardClass = "scroll-mt-24 rounded-3xl border border-white/10 bg-[#0b1b27] p-5 sm:p-6";
+  "mt-2 min-h-12 w-full rounded-chip border border-line bg-raised px-3.5 text-base text-white outline-none placeholder:text-ink-faint disabled:cursor-not-allowed disabled:opacity-60";
+const labelClass = "block text-xs font-semibold text-ink-muted";
+const cardClass = "scroll-mt-24 rounded-panel border border-line bg-surface p-5 sm:p-6";
 
 function titleCase(value: string) {
   return value
@@ -70,16 +70,16 @@ function SettingToggle({
   defaultChecked: boolean;
 }) {
   return (
-    <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-3">
+    <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-control border border-line bg-white/[0.025] px-4 py-3">
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block text-[11px] leading-4 text-slate-400">{description}</span>
+        <span className="mt-0.5 block text-[11px] leading-4 text-ink-muted">{description}</span>
       </span>
       <input
         type="checkbox"
         name={name}
         defaultChecked={defaultChecked}
-        className="h-6 w-6 shrink-0 accent-[#ffc21c]"
+        className="h-6 w-6 shrink-0 accent-brand"
       />
     </label>
   );
@@ -121,10 +121,10 @@ export default async function AccountPage({
       eyebrow="User and business settings"
       description="Update your profile, control the app experience, manage Premium, and maintain payment-provider information."
     >
-      <section className="mb-4 rounded-3xl border border-[#ffc21c]/20 bg-[#ffc21c]/[0.045] p-4 sm:p-5">
+      <section className="mb-4 rounded-panel border border-brand/20 bg-brand/[0.045] p-4 sm:p-5">
         <div className="flex items-center gap-4">
           <span
-            className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#ffc21c] bg-cover bg-center text-xl font-bold text-[#071723] sm:h-20 sm:w-20"
+            className="grid h-16 w-16 shrink-0 place-items-center rounded-control bg-brand bg-cover bg-center text-xl font-bold text-on-brand sm:h-20 sm:w-20"
             style={avatarStyle}
             role="img"
             aria-label={`${account.displayName} profile photo`}
@@ -133,12 +133,12 @@ export default async function AccountPage({
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xl font-semibold sm:text-2xl">{account.displayName}</p>
-            <p className="mt-1 truncate text-sm text-slate-400">{account.email}</p>
+            <p className="mt-1 truncate text-sm text-ink-muted">{account.email}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">
+              <span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-ink-muted">
                 {titleCase(account.role)}
               </span>
-              <span className="rounded-full bg-[#ffc21c]/10 px-2.5 py-1 text-[10px] font-semibold text-[#ffc21c]">
+              <span className="rounded-full bg-brand/10 px-2.5 py-1 text-[10px] font-semibold text-brand">
                 {titleCase(account.subscription.plan)} plan
               </span>
             </div>
@@ -147,17 +147,17 @@ export default async function AccountPage({
       </section>
 
       {query.saved ? (
-        <p role="status" className="mb-4 flex items-start gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
+        <p role="status" className="mb-4 flex items-start gap-2 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
           <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {query.saved}
         </p>
       ) : null}
       {query.error ? (
-        <p role="alert" className="mb-4 flex items-start gap-2 rounded-2xl border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
+        <p role="alert" className="mb-4 flex items-start gap-2 rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {query.error}
         </p>
       ) : null}
       {query.checkout === "success" ? (
-        <p role="status" className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
+        <p role="status" className="mb-4 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
           Premium checkout completed. Stripe is confirming the subscription now.
         </p>
       ) : null}
@@ -167,10 +167,10 @@ export default async function AccountPage({
           <Link
             key={id}
             href={`/account?section=${id}#${id}`}
-            className={`tap-target inline-flex shrink-0 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold ${
+            className={`tap-target inline-flex shrink-0 items-center gap-2 rounded-chip border px-3.5 text-xs font-semibold ${
               activeSection === id
-                ? "border-[#ffc21c]/40 bg-[#ffc21c]/10 text-[#ffc21c]"
-                : "border-white/10 bg-[#0b1b27] text-slate-300"
+                ? "border-brand/40 bg-brand/10 text-brand"
+                : "border-line bg-surface text-ink-muted"
             }`}
           >
             <Icon className="h-4 w-4" aria-hidden /> {label}
@@ -181,14 +181,14 @@ export default async function AccountPage({
       <div className="space-y-4">
         <section id="profile" className={cardClass}>
           <div className="flex items-start gap-3">
-            <CircleUserRound className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+            <CircleUserRound className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
               <h2 className="font-semibold">Profile details</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Your name appears on assignments, activity, and customer-facing technician updates.</p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">Your name appears on assignments, activity, and customer-facing technician updates.</p>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 border-b border-white/10 pb-5 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="mt-5 grid gap-4 border-b border-line pb-5 lg:grid-cols-[1fr_auto] lg:items-end">
             <form action={uploadAvatar} className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <label className={`${labelClass} flex-1`}>
                 Profile photo
@@ -196,17 +196,17 @@ export default async function AccountPage({
                   type="file"
                   name="avatar"
                   accept="image/jpeg,image/png,image/webp"
-                  className={`${inputClass} cursor-pointer py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#ffc21c] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#071723]`}
+                  className={`${inputClass} cursor-pointer py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-xs file:font-semibold file:text-on-brand`}
                   required
                 />
               </label>
-              <button type="submit" className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold hover:bg-white/15">
+              <button type="submit" className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-chip bg-white/10 px-4 text-sm font-semibold hover:bg-white/15">
                 <Upload className="h-4 w-4" aria-hidden /> Upload
               </button>
             </form>
             {account.avatarUrl ? (
               <form action={removeAvatar}>
-                <button type="submit" className="tap-target min-h-12 rounded-xl border border-white/10 px-4 text-sm font-semibold text-slate-300">
+                <button type="submit" className="tap-target min-h-12 rounded-chip border border-line px-4 text-sm font-semibold text-ink-muted">
                   Remove photo
                 </button>
               </form>
@@ -225,14 +225,14 @@ export default async function AccountPage({
             <label className={labelClass}>
               Email address
               <input className={inputClass} name="email" defaultValue={account.email} autoComplete="email" type="email" inputMode="email" maxLength={254} required />
-              <span className="mt-2 block text-[10px] font-normal leading-4 text-slate-500">Changing email can require confirmation from both addresses.</span>
+              <span className="mt-2 block text-[10px] font-normal leading-4 text-ink-faint">Changing email can require confirmation from both addresses.</span>
             </label>
             <label className={labelClass}>
               Phone
               <input className={inputClass} name="phone" defaultValue={account.phone} autoComplete="tel" inputMode="tel" maxLength={30} placeholder="(805) 555-0100" />
             </label>
             <div className="sm:col-span-2 sm:flex sm:justify-end">
-              <button type="submit" className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] sm:w-auto">
+              <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">
                 Save profile
               </button>
             </div>
@@ -241,10 +241,10 @@ export default async function AccountPage({
 
         <section id="timezone" className={cardClass}>
           <div className="flex items-start gap-3">
-            <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+            <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
               <h2 className="font-semibold">Business timezone</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">
+              <p className="mt-1 text-xs leading-5 text-ink-muted">
                 Schedules, arrival windows, message timestamps, and text-message quiet hours are all shown and sent in this timezone. It applies to everyone in the business.
               </p>
             </div>
@@ -265,70 +265,70 @@ export default async function AccountPage({
                   </option>
                 ))}
               </select>
-              <span className="mt-2 block text-[10px] font-normal leading-4 text-slate-500">
+              <span className="mt-2 block text-[10px] font-normal leading-4 text-ink-faint">
                 It is currently {businessClock} for the business.
               </span>
             </label>
             <button
               type="submit"
               disabled={!account.canManageBusiness}
-              className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               Save timezone
             </button>
           </form>
           {!account.canManageBusiness ? (
-            <p className="mt-4 text-xs text-slate-400">Only an owner or administrator can change the business timezone.</p>
+            <p className="mt-4 text-xs text-ink-muted">Only an owner or administrator can change the business timezone.</p>
           ) : null}
         </section>
 
         <section id="subscription" className={cardClass}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+              <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
                 <h2 className="font-semibold">Premium subscription</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-400">Billing for Volteira is handled securely through Stripe. Square remains available for your customer payments.</p>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">Billing for Volteira is handled securely through Stripe. Square remains available for your customer payments.</p>
               </div>
             </div>
-            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${subscriptionActive ? "bg-emerald-400/10 text-emerald-300" : "bg-white/5 text-slate-300"}`}>
+            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${subscriptionActive ? "bg-emerald-400/10 text-emerald-300" : "bg-white/5 text-ink-muted"}`}>
               {titleCase(account.subscription.status)}
             </span>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-[#ffc21c]/20 bg-[#ffc21c]/[0.045] p-5">
+          <div className="mt-5 rounded-control border border-brand/20 bg-brand/[0.045] p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#ffc21c]">Current plan</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">Current plan</p>
                 <p className="mt-2 text-3xl font-semibold">{titleCase(account.subscription.plan)}</p>
-                <p className="mt-2 text-xs text-slate-400">
+                <p className="mt-2 text-xs text-ink-muted">
                   {periodEnd ? `${account.subscription.cancelAtPeriodEnd ? "Access ends" : "Renews"} ${periodEnd}` : `${account.subscription.seats} user seat${account.subscription.seats === 1 ? "" : "s"}`}
                 </p>
               </div>
               {account.canManageBusiness ? (
                 account.subscription.stripeCustomerId ? (
                   <form action={openBillingPortal}>
-                    <button type="submit" className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] sm:w-auto">
+                    <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">
                       Manage billing
                     </button>
                   </form>
                 ) : (
                   <form action={startPremiumCheckout}>
-                    <button type="submit" className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] sm:w-auto">
+                    <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">
                       Start Premium
                     </button>
                   </form>
                 )
               ) : (
-                <p className="max-w-xs text-xs leading-5 text-slate-400">Ask an owner or administrator to change the company subscription.</p>
+                <p className="max-w-xs text-xs leading-5 text-ink-muted">Ask an owner or administrator to change the company subscription.</p>
               )}
             </div>
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             {["AI-assisted intake", "Route optimization", "Advanced automation"].map((feature) => (
-              <p key={feature} className="flex min-h-11 items-center gap-2 rounded-xl bg-white/[0.03] px-3 text-xs text-slate-300">
-                <Zap className="h-4 w-4 shrink-0 fill-[#ffc21c] text-[#ffc21c]" aria-hidden /> {feature}
+              <p key={feature} className="flex min-h-11 items-center gap-2 rounded-chip bg-white/[0.03] px-3 text-xs text-ink-muted">
+                <Zap className="h-4 w-4 shrink-0 fill-brand text-brand" aria-hidden /> {feature}
               </p>
             ))}
           </div>
@@ -336,10 +336,10 @@ export default async function AccountPage({
 
         <section id="preferences" className={cardClass}>
           <div className="flex items-start gap-3">
-            <MonitorSmartphone className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+            <MonitorSmartphone className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
               <h2 className="font-semibold">App settings</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">These preferences follow your login without changing settings for coworkers.</p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">These preferences follow your login without changing settings for coworkers.</p>
             </div>
           </div>
 
@@ -381,7 +381,7 @@ export default async function AccountPage({
             </div>
 
             <div>
-              <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-300"><BellRing className="h-4 w-4 text-[#ffc21c]" aria-hidden /> Notifications</p>
+              <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-ink-muted"><BellRing className="h-4 w-4 text-brand" aria-hidden /> Notifications</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <SettingToggle name="emailNotifications" title="Email" description="Billing, jobs, and account notices" defaultChecked={account.preferences.emailNotifications} />
                 <SettingToggle name="smsNotifications" title="Text messages" description="Schedule and customer updates" defaultChecked={account.preferences.smsNotifications} />
@@ -392,7 +392,7 @@ export default async function AccountPage({
             <SettingToggle name="compactMode" title="Compact dashboard" description="Show more jobs and business information on each screen." defaultChecked={account.preferences.compactMode} />
 
             <div className="sm:flex sm:justify-end">
-              <button type="submit" className="tap-target min-h-12 w-full rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723] sm:w-auto">Save app settings</button>
+              <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">Save app settings</button>
             </div>
           </form>
         </section>
@@ -400,18 +400,18 @@ export default async function AccountPage({
         <section id="square" className={cardClass}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              <Store className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+              <Store className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
                 <h2 className="font-semibold">Square information</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-400">Choose the Square business and location Volteira should use when Square payment support is activated.</p>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">Choose the Square business and location Volteira should use when Square payment support is activated.</p>
               </div>
             </div>
-            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${account.square.status === "connected" ? "bg-emerald-400/10 text-emerald-300" : account.square.status === "pending" ? "bg-amber-400/10 text-amber-300" : "bg-white/5 text-slate-300"}`}>
+            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${account.square.status === "connected" ? "bg-emerald-400/10 text-emerald-300" : account.square.status === "pending" ? "bg-amber-400/10 text-amber-300" : "bg-white/5 text-ink-muted"}`}>
               {titleCase(account.square.status)}
             </span>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-blue-400/15 bg-blue-400/[0.045] p-4 text-xs leading-5 text-slate-300">
+          <div className="mt-4 rounded-control border border-blue-400/15 bg-blue-400/[0.045] p-4 text-xs leading-5 text-ink-muted">
             Enter identifiers only—never paste a Square access token here. A future OAuth connection will verify the merchant and retrieve selectable locations securely.
           </div>
 
@@ -450,22 +450,22 @@ export default async function AccountPage({
                 </select>
               </label>
               <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-                <a href="https://squareup.com/dashboard" target="_blank" rel="noreferrer" className="tap-target inline-flex min-h-12 items-center gap-2 text-sm font-semibold text-slate-300">
+                <a href="https://squareup.com/dashboard" target="_blank" rel="noreferrer" className="tap-target inline-flex min-h-12 items-center gap-2 text-sm font-semibold text-ink-muted">
                   Open Square Dashboard <ExternalLink className="h-4 w-4" aria-hidden />
                 </a>
-                <button type="submit" className="tap-target min-h-12 rounded-xl bg-[#ffc21c] px-5 text-sm font-semibold text-[#071723]">Save Square information</button>
+                <button type="submit" className="tap-target min-h-12 rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand">Save Square information</button>
               </div>
             </fieldset>
           </form>
-          {!account.canManageBusiness ? <p className="mt-4 text-xs text-slate-400">Only an owner or administrator can change Square information.</p> : null}
+          {!account.canManageBusiness ? <p className="mt-4 text-xs text-ink-muted">Only an owner or administrator can change Square information.</p> : null}
         </section>
 
         <section id="security" className={cardClass}>
           <div className="flex items-start gap-3">
-            <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
+            <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
               <h2 className="font-semibold">Password and security</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Changing your password requires the current password for this login.</p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">Changing your password requires the current password for this login.</p>
             </div>
           </div>
           <form action={updatePassword} className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -482,16 +482,16 @@ export default async function AccountPage({
               <input className={inputClass} name="passwordConfirmation" type="password" autoComplete="new-password" minLength={10} required />
             </label>
             <div className="sm:col-span-2 sm:flex sm:justify-between sm:gap-4">
-              <p className="flex items-center gap-2 text-xs leading-5 text-slate-400"><LockKeyhole className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden /> Passwords are managed by Supabase Auth and are never stored in the app database.</p>
-              <button type="submit" className="tap-target mt-3 min-h-12 w-full rounded-xl border border-white/10 px-5 text-sm font-semibold sm:mt-0 sm:w-auto">Update password</button>
+              <p className="flex items-center gap-2 text-xs leading-5 text-ink-muted"><LockKeyhole className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden /> Passwords are managed by Supabase Auth and are never stored in the app database.</p>
+              <button type="submit" className="tap-target mt-3 min-h-12 w-full rounded-chip border border-line px-5 text-sm font-semibold sm:mt-0 sm:w-auto">Update password</button>
             </div>
           </form>
         </section>
 
-        <Link href="/settings/integrations" className="tap-row flex min-h-16 items-center gap-3 rounded-2xl border border-white/10 bg-[#0b1b27] px-4 py-3">
-          <MapPinned className="h-5 w-5 shrink-0 text-[#ffc21c]" aria-hidden />
-          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Business integrations</span><span className="block truncate text-[11px] text-slate-400">Lowe’s, Home Depot, cloud storage, and future connections</span></span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-slate-500" aria-hidden />
+        <Link href="/settings/integrations" className="tap-row flex min-h-16 items-center gap-3 rounded-control border border-line bg-surface px-4 py-3">
+          <MapPinned className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Business integrations</span><span className="block truncate text-[11px] text-ink-muted">Lowe’s, Home Depot, cloud storage, and future connections</span></span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
         </Link>
       </div>
     </FieldPageShell>

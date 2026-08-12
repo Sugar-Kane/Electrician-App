@@ -78,9 +78,9 @@ export default async function TeamSettingsPage() {
           canManage={canManage}
         />
       ) : (
-        <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 sm:p-6">
+        <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
           <h2 className="text-lg font-semibold">No business workspace yet</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
             Finish setting up your business and this is where you invite the people who
             work in it.
           </p>

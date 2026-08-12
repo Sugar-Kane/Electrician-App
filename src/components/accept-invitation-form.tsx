@@ -15,7 +15,7 @@ function JoinButton() {
     <button
       type="submit"
       disabled={pending}
-      className="tap-target mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ffc21c] px-5 text-sm font-bold text-[#071723] disabled:cursor-wait disabled:opacity-70"
+      className="tap-target mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-bold text-on-brand disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}
       {pending ? "Joining…" : "Accept and join"}

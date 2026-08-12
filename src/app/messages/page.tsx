@@ -59,24 +59,24 @@ export default async function MessagesPage() {
       <div className="mb-4 flex justify-end">
         <Link
           href="/messages/new"
-          className="tap-target inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[#ffc21c] px-4 text-sm font-bold text-[#071723]"
+          className="tap-target inline-flex min-h-12 items-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
         >
           <PenSquare className="h-4 w-4" aria-hidden /> New message
         </Link>
       </div>
 
       {conversations.length === 0 ? (
-        <section className="rounded-3xl border border-white/10 bg-[#0b1b27] p-8 text-center">
-          <MessagesSquare className="mx-auto h-8 w-8 text-slate-600" aria-hidden />
+        <section className="rounded-panel border border-line bg-surface p-8 text-center">
+          <MessagesSquare className="mx-auto h-8 w-8 text-ink-faint" aria-hidden />
           <h2 className="mt-4 font-semibold">No conversations yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-muted">
             Start one with any customer who has opted in to text messages, or wait for
             someone to text your business number — an incoming text opens a thread here
             on its own.
           </p>
         </section>
       ) : (
-        <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1b27]">
+        <section className="overflow-hidden rounded-panel border border-line bg-surface">
           <ul>
             {conversations.map((conversation, index) => (
               <li key={conversation.id}>
@@ -87,8 +87,8 @@ export default async function MessagesPage() {
                   <span
                     className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-sm font-bold ${
                       conversation.unread
-                        ? "bg-[#ffc21c] text-[#071723]"
-                        : "bg-white/[0.06] text-slate-300"
+                        ? "bg-brand text-on-brand"
+                        : "bg-white/[0.06] text-ink-muted"
                     }`}
                     aria-hidden
                   >
@@ -98,20 +98,20 @@ export default async function MessagesPage() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-3">
                       <span
-                        className={`truncate text-sm ${conversation.unread ? "font-bold text-white" : "font-semibold text-slate-200"}`}
+                        className={`truncate text-sm ${conversation.unread ? "font-bold text-white" : "font-semibold text-ink"}`}
                       >
                         {conversation.customerName}
                       </span>
-                      <span className="shrink-0 text-[11px] text-slate-500">
+                      <span className="shrink-0 text-[11px] text-ink-faint">
                         {formatWhen(conversation.lastMessageAt, timeZone)}
                       </span>
                     </span>
                     <span className="mt-1 flex items-center gap-1.5">
                       {conversation.lastMessageDirection === "outbound" ? (
-                        <MessageSquare className="h-3 w-3 shrink-0 text-slate-600" aria-hidden />
+                        <MessageSquare className="h-3 w-3 shrink-0 text-ink-faint" aria-hidden />
                       ) : null}
                       <span
-                        className={`truncate text-xs ${conversation.unread ? "text-slate-200" : "text-slate-500"}`}
+                        className={`truncate text-xs ${conversation.unread ? "text-ink" : "text-ink-faint"}`}
                       >
                         {conversation.lastMessageBody || "No messages yet"}
                       </span>
@@ -120,11 +120,11 @@ export default async function MessagesPage() {
 
                   {conversation.unread ? (
                     <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#ffc21c]"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand"
                       aria-label="Waiting on a reply"
                     />
                   ) : (
-                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
                   )}
                 </Link>
               </li>

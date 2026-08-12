@@ -71,20 +71,20 @@ function DeliveryState({ status, errorDetail }: { status: string; errorDetail: s
   }
   if (status === "delivered") {
     return (
-      <span className="flex items-center gap-1 text-[11px] text-slate-400">
+      <span className="flex items-center gap-1 text-[11px] text-ink-muted">
         <CheckCheck className="h-3 w-3" aria-hidden /> Delivered
       </span>
     );
   }
   if (status === "sent") {
     return (
-      <span className="flex items-center gap-1 text-[11px] text-slate-500">
+      <span className="flex items-center gap-1 text-[11px] text-ink-faint">
         <Check className="h-3 w-3" aria-hidden /> Sent
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1 text-[11px] text-slate-500">
+    <span className="flex items-center gap-1 text-[11px] text-ink-faint">
       <Clock3 className="h-3 w-3" aria-hidden /> Sending…
     </span>
   );
@@ -98,7 +98,7 @@ function SendButton({ disabled }: { disabled: boolean }) {
       type="submit"
       disabled={disabled || pending}
       aria-label="Send message"
-      className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#ffc21c] text-[#071723] disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
+      className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-on-brand disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-ink-faint"
     >
       {pending ? (
         <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden />
@@ -146,10 +146,10 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
   });
 
   return (
-    <div className="flex min-h-[60vh] flex-col rounded-3xl border border-white/10 bg-[#0b1b27]">
+    <div className="flex min-h-[60vh] flex-col rounded-panel border border-line bg-surface">
       <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
         {thread.messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-500">
+          <p className="py-10 text-center text-sm text-ink-faint">
             No messages yet. Anything you send starts the thread.
           </p>
         ) : null}
@@ -160,23 +160,23 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
           return (
             <div key={message.id}>
               {showDay ? (
-                <p className="my-4 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-slate-600">
+                <p className="my-4 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-ink-faint">
                   {day}
                 </p>
               ) : null}
               <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[80%] sm:max-w-[70%] ${outbound ? "items-end" : "items-start"} flex flex-col gap-1`}>
                   <div
-                    className={`rounded-2xl px-4 py-2.5 text-sm leading-6 ${
+                    className={`rounded-control px-4 py-2.5 text-sm leading-6 ${
                       outbound
-                        ? "rounded-br-md bg-[#ffc21c] text-[#071723]"
-                        : "rounded-bl-md bg-[#14293a] text-slate-100"
+                        ? "rounded-br-md bg-brand text-on-brand"
+                        : "rounded-bl-md bg-[#14293a] text-ink"
                     }`}
                   >
                     {message.body}
                   </div>
                   <div className="flex items-center gap-2 px-1">
-                    <span className="text-[11px] text-slate-600">
+                    <span className="text-[11px] text-ink-faint">
                       {formatTime(message.createdAt, timeZone)}
                     </span>
                     {outbound ? (
@@ -191,11 +191,11 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-white/10 p-3 sm:p-4">
+      <div className="border-t border-line p-3 sm:p-4">
         {thread.canSend ? (
           <>
             {thread.quietHours.currentlyQuiet ? (
-              <p className="mb-3 flex items-start gap-2 rounded-2xl border border-indigo-300/25 bg-indigo-300/[0.07] p-3 text-xs leading-5 text-indigo-100">
+              <p className="mb-3 flex items-start gap-2 rounded-control border border-indigo-300/25 bg-indigo-300/[0.07] p-3 text-xs leading-5 text-indigo-100">
                 <MoonStar className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 It is quiet hours for this business ({thread.quietHours.start.slice(0, 5)}–
                 {thread.quietHours.end.slice(0, 5)}). Send only if the customer needs to know now.
@@ -226,21 +226,21 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
                   }
                 }}
                 placeholder="Message…"
-                className="max-h-40 min-h-12 flex-1 resize-y rounded-2xl border border-white/10 bg-[#0d202d] px-4 py-3 text-base leading-6 text-white outline-none placeholder:text-slate-600 focus:border-[#ffc21c]/70"
+                className="max-h-40 min-h-12 flex-1 resize-y rounded-control border border-line bg-raised px-4 py-3 text-base leading-6 text-white outline-none placeholder:text-ink-faint focus:border-brand/70"
               />
               <SendButton disabled={body.trim().length === 0} />
             </form>
 
             <div className="mt-2 flex items-center justify-between px-1">
-              <span className="flex items-center gap-1.5 text-[11px] text-slate-600">
+              <span className="flex items-center gap-1.5 text-[11px] text-ink-faint">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
                 Opted in{thread.consent.source ? ` · ${thread.consent.source.replace(/_/g, " ")}` : ""}
               </span>
-              <span className="text-[11px] text-slate-600">{body.length}/1600</span>
+              <span className="text-[11px] text-ink-faint">{body.length}/1600</span>
             </div>
           </>
         ) : (
-          <div className="flex items-start gap-2 rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100">
+          <div className="flex items-start gap-2 rounded-control border border-amber-300/25 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <div>
               <p className="font-semibold">You cannot text this customer.</p>
@@ -250,7 +250,7 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
         )}
 
         {state.error ? (
-          <p role="alert" className="mt-3 rounded-2xl border border-red-400/20 bg-red-400/[0.07] p-3 text-sm text-red-200">
+          <p role="alert" className="mt-3 rounded-control border border-red-400/20 bg-red-400/[0.07] p-3 text-sm text-red-200">
             {state.error}
             {state.quietHoursBlocked ? (
               <button

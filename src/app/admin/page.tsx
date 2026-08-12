@@ -13,7 +13,7 @@ const BADGE: Record<string, string> = {
   blocking: "border-rose-400/30 bg-rose-400/10 text-rose-200",
   degraded: "border-amber-300/25 bg-amber-300/[0.08] text-amber-100",
   ok: "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200",
-  note: "border-white/10 bg-white/5 text-slate-300",
+  note: "border-line bg-white/5 text-ink-muted",
 };
 
 function when(iso: string): string {
@@ -28,7 +28,7 @@ export default async function AdminOrganizationsPage() {
 
   return (
     <div className="space-y-3">
-      <p className="px-1 text-sm text-slate-400">
+      <p className="px-1 text-sm text-ink-muted">
         {organizations.length} {organizations.length === 1 ? "business" : "businesses"}
       </p>
 
@@ -40,12 +40,12 @@ export default async function AdminOrganizationsPage() {
           <Link
             key={organization.id}
             href={`/admin/organizations/${organization.id}`}
-            className="tap-row block rounded-3xl border border-white/10 bg-[#0b1b27] p-5 transition hover:border-white/20"
+            className="tap-row block rounded-panel border border-line bg-surface p-5 transition hover:border-line-strong"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold">{organization.name}</h2>
-                <p className="mt-1 truncate text-sm text-slate-400">
+                <p className="mt-1 truncate text-sm text-ink-muted">
                   {[organization.city, organization.state].filter(Boolean).join(", ") || "No address"}
                   {organization.phone ? ` · ${organization.phone}` : ""}
                 </p>
@@ -59,7 +59,7 @@ export default async function AdminOrganizationsPage() {
 
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
               <div>
-                <dt className="text-xs text-slate-500">People</dt>
+                <dt className="text-xs text-ink-faint">People</dt>
                 <dd className="font-semibold">
                   {organization.memberCount}
                   {organization.pendingInvitations > 0 ? (
@@ -70,15 +70,15 @@ export default async function AdminOrganizationsPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">Jobs</dt>
+                <dt className="text-xs text-ink-faint">Jobs</dt>
                 <dd className="font-semibold">{organization.jobCount}</dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">Bookings</dt>
+                <dt className="text-xs text-ink-faint">Bookings</dt>
                 <dd className="font-semibold">{organization.bookingCount}</dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">Last booking</dt>
+                <dt className="text-xs text-ink-faint">Last booking</dt>
                 <dd className="font-semibold">{when(organization.lastBookingAt)}</dd>
               </div>
             </dl>
@@ -87,7 +87,7 @@ export default async function AdminOrganizationsPage() {
       })}
 
       {organizations.length === 0 ? (
-        <p className="rounded-3xl border border-white/10 bg-[#0b1b27] p-5 text-sm text-slate-400">
+        <p className="rounded-panel border border-line bg-surface p-5 text-sm text-ink-muted">
           No businesses yet.
         </p>
       ) : null}
