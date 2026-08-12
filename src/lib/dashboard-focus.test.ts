@@ -9,6 +9,7 @@ import {
   isActive,
   minutesFromLabel,
   nextJob,
+  openBookingRequests,
   todaysJobs,
 } from "./dashboard-focus.ts";
 import type { PilotJob } from "./pilot-data.ts";
@@ -209,4 +210,46 @@ test("an unreadable time sorts last, not to midnight", () => {
   assert.equal(minutesFromLabel(""), Number.MAX_SAFE_INTEGER);
   assert.equal(minutesFromLabel("half seven"), Number.MAX_SAFE_INTEGER);
   assert.equal(minutesFromLabel("25:00 AM"), Number.MAX_SAFE_INTEGER);
+});
+
+test("a booking request that has been dealt with stops asking for attention", () => {
+  // A text booking accepted on Monday, turned into a job and marked
+  // `scheduled`, still read as "1 booking request" in amber on Friday — and
+  // the requests page showed a Scheduled badge rather than buttons, so there
+  // was nothing left to press to clear it.
+  assert.equal(openBookingRequests([{ status: "scheduled" }]), 0);
+  assert.equal(openBookingRequests([{ status: "dismissed" }]), 0);
+  assert.equal(openBookingRequests([{ status: "new" }]), 1);
+});
+
+test("only the new ones are counted, out of a mixed list", () => {
+  assert.equal(
+    openBookingRequests([
+      { status: "new" },
+      { status: "scheduled" },
+      { status: "new" },
+      { status: "dismissed" },
+    ]),
+    2,
+  );
+});
+
+test("a missing or empty request list is nothing to do, not a crash", () => {
+  assert.equal(openBookingRequests([]), 0);
+  assert.equal(openBookingRequests(undefined as unknown as { status: string }[]), 0);
+  // An unrecognised status is not new, so it does not nag. A status this code
+  // has never heard of has still been through something.
+  assert.equal(openBookingRequests([{ status: "" }]), 0);
+});
+
+test("a web booking waiting on review counts, a card being typed in does not", () => {
+  // The sources use different words for the same state: a text booking arrives
+  // `new`, a web booking outside the service area arrives `needs_review`.
+  assert.equal(openBookingRequests([{ status: "needs_review" }]), 1);
+  assert.equal(openBookingRequests([{ status: "new" }, { status: "needs_review" }]), 2);
+
+  // awaiting_payment is the customer's move, not the business's.
+  assert.equal(openBookingRequests([{ status: "awaiting_payment" }]), 0);
+  assert.equal(openBookingRequests([{ status: "confirmed" }]), 0);
+  assert.equal(openBookingRequests([{ status: "expired" }]), 0);
 });

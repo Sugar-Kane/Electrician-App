@@ -181,6 +181,31 @@ export async function createJob(
     return { error: "That job could not be saved. The customer was kept." };
   }
 
+  // Every job now leaves a record of where it came from, so Reports can answer
+  // "how much of my work arrives by text, and how much do I write down myself".
+  // Owner-entered work arrives already decided, so it is written as resolved —
+  // it must never appear in Needs attention as something to action, and the
+  // table has a constraint that refuses an owner row in an open state.
+  //
+  // Deliberately not failing the job if this insert does: the job is the thing
+  // the electrician asked for, and losing it to a bookkeeping row would be a
+  // poor trade.
+  await supabase.from("booking_requests").insert({
+    organization_id: organizationId,
+    source: "owner",
+    status: "scheduled",
+    intent: start ? "visit" : "callback",
+    phone: job.phone || "not recorded",
+    contact_name: job.customerName || null,
+    description: job.description || "Entered by the business.",
+    customer_id: customerId,
+    property_id: propertyId,
+    created_job_id: createdJob.id,
+    category: job.category,
+    ...(start ? { arrival_window_start: start } : {}),
+    ...(end ? { arrival_window_end: end } : {}),
+  });
+
   if (job.costCents > 0) {
     // A job created here has no paid diagnostic behind it — it is being
     // written down after the fact, and nothing has been collected yet.

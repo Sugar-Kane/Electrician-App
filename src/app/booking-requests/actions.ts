@@ -52,7 +52,7 @@ export async function dismissBookingRequest(formData: FormData) {
   if (!requestId) redirect(queueUrl("error", "That request could not be found."));
 
   const { error } = await asFlexibleClient(supabase)
-    .from("sms_booking_requests")
+    .from("booking_requests")
     .update({
       status: "dismissed",
       handled_by: authData.user.id,
