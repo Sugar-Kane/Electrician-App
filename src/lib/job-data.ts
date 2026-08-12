@@ -43,7 +43,10 @@ const JOB_STATUS: Record<string, JobStatus> = {
   completed: "Completed",
   draft: "Pending",
   awaiting_payment: "Pending",
-  needs_review: "Pending",
+  // Work that is done and not signed off. It is what the job screen calls
+  // "Ready to complete", and reading as "Pending" put a finished visit in the
+  // same bucket on the schedule as one that was never confirmed.
+  needs_review: "In progress",
   // Its own state, not a pending one: a cancelled job that reads as "Pending"
   // is indistinguishable from work still to come.
   canceled: "Canceled",

@@ -13,7 +13,7 @@
  * integer-cent prices without a database.
  */
 
-export type LineKind = "labour" | "material";
+export type LineKind = "labor" | "material";
 
 export type JobLine = {
   id: string;
@@ -28,7 +28,7 @@ export type JobLine = {
 };
 
 export type JobLineTotals = {
-  labourCents: number;
+  laborCents: number;
   materialCents: number;
   subtotalCents: number;
   lineCount: number;
@@ -70,26 +70,26 @@ export function lineTotalCents(line: {
 /**
  * The job's totals, split by kind.
  *
- * Labour and materials are summed separately as well as together because that
+ * Labor and materials are summed separately as well as together because that
  * split is the one an electrician is asked for — by a customer querying a bill,
  * and by their own accountant at the end of a quarter.
  */
 export function jobLineTotals(lines: JobLine[]): JobLineTotals {
   const safe = Array.isArray(lines) ? lines : [];
 
-  let labourCents = 0;
+  let laborCents = 0;
   let materialCents = 0;
 
   for (const line of safe) {
     const total = lineTotalCents(line);
-    if (line?.kind === "labour") labourCents += total;
+    if (line?.kind === "labor") laborCents += total;
     else materialCents += total;
   }
 
   return {
-    labourCents,
+    laborCents,
     materialCents,
-    subtotalCents: labourCents + materialCents,
+    subtotalCents: laborCents + materialCents,
     lineCount: safe.length,
   };
 }

@@ -8,6 +8,9 @@ const PAGES = [
   "/",
   "/schedule",
   "/jobs/1045",
+  // Editing and cancelling moved off the job page into their own screen, so
+  // the route the ••• menu points at has to render like any other.
+  "/jobs/1045/edit",
   "/invoices",
   "/files",
   "/materials",

@@ -24,7 +24,7 @@ export type JobLinesResult = {
 const EMPTY: JobLinesResult = {
   jobId: null,
   lines: [],
-  totals: { labourCents: 0, materialCents: 0, subtotalCents: 0, lineCount: 0 },
+  totals: { laborCents: 0, materialCents: 0, subtotalCents: 0, lineCount: 0 },
 };
 
 async function resolveContext() {
@@ -93,7 +93,7 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
 
   const lines: JobLine[] = (data ?? []).map((row: Record<string, unknown>) => ({
     id: str(row.id),
-    kind: row.kind === "labour" ? "labour" : "material",
+    kind: row.kind === "labor" ? "labor" : "material",
     description: str(row.description),
     quantity: num(row.quantity),
     unit: str(row.unit) || "each",

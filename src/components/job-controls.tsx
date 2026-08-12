@@ -13,6 +13,12 @@ import { Field, FormMessage, SelectInput, TextInput } from "@/components/ui/fiel
  * Cancelling is kept behind a second step rather than put beside Save. It ends
  * somebody's appointment and sends them a text saying so, and neither is
  * undoable — a mis-tap should not be able to do it.
+ *
+ * The status dropdown is the manual override, and it is now the only one: the
+ * field screen advances a job one step at a time through a state machine that
+ * refuses to skip. This is where somebody in the office puts a job back after
+ * it went the wrong way, or marks the customer a no-show — both real, neither
+ * worth a button on a screen used from a driveway.
  */
 
 const initialState: JobActionState = { error: "" };
@@ -76,7 +82,7 @@ export function JobControls({
   return (
     <div className="space-y-4">
       <form action={editAction}>
-        <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
+        <section id="window" className="rounded-panel border border-line bg-surface p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand/10 text-brand">
               <CalendarClock className="h-5 w-5" aria-hidden />
@@ -135,7 +141,7 @@ export function JobControls({
         </section>
       </form>
 
-      <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
+      <section id="cancel" className="rounded-panel border border-line bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold tracking-tight">Cancel this job</h2>
         <p className="mt-1 text-sm leading-6 text-ink-muted">
           The customer is told straight away, so they are not waiting at home for somebody who is

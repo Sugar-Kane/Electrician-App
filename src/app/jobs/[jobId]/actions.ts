@@ -158,6 +158,7 @@ export async function updateJob(
   });
 
   revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath(`/jobs/${jobNumber}/edit`);
   revalidatePath("/schedule");
 
   if (!moved) return { error: "", notice: "Job updated." };
@@ -231,6 +232,7 @@ export async function cancelJob(
   });
 
   revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath(`/jobs/${jobNumber}/edit`);
   revalidatePath("/schedule");
   revalidatePath("/");
 

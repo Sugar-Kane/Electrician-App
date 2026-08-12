@@ -63,11 +63,11 @@ export async function addJobLine(
   formData: FormData,
 ): Promise<LineActionState> {
   const jobNumber = text(formData, "jobNumber");
-  const kind = text(formData, "kind") === "labour" ? "labour" : "material";
+  const kind = text(formData, "kind") === "labor" ? "labor" : "material";
   const description = text(formData, "description");
 
   if (!description) {
-    return { error: kind === "labour" ? "What was the work?" : "What is the part?" };
+    return { error: kind === "labor" ? "What was the work?" : "What is the part?" };
   }
 
   // Refused rather than guessed. A quantity that silently becomes zero is a
@@ -93,7 +93,7 @@ export async function addJobLine(
     kind,
     description,
     quantity,
-    unit: text(formData, "unit") || (kind === "labour" ? "hr" : "each"),
+    unit: text(formData, "unit") || (kind === "labor" ? "hr" : "each"),
     unit_price_cents: unitPriceCents,
     // Only when it came from the stock list. A part typed by hand has no
     // inventory row, and inventing a link would let a later change to that
