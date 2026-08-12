@@ -168,8 +168,8 @@ export default async function BookingRequestsPage({
   return (
     <FieldPageShell
       title="Booking requests"
-      eyebrow="From text messages"
-      description="What customers asked for by text. A visit they accepted is already on the schedule; everything here is waiting on you."
+      eyebrow="Requests for work"
+      description="What customers have asked for, however they asked — by text, by phone, or through your booking page. A visit they accepted is already on the schedule."
     >
       {query.saved ? (
         <Banner tone="positive" className="mb-4">{query.saved}</Banner>
@@ -183,8 +183,24 @@ export default async function BookingRequestsPage({
           <MessagesSquare className="mx-auto h-7 w-7 text-ink-faint" aria-hidden />
           <h2 className="mt-3 text-lg font-semibold">No requests yet</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-muted">
-            When a customer texts the business number, what they asked for shows up here — a callback
-            to return, or a visit they have already accepted.
+            When somebody texts the business number, calls, or books through your page, what they
+            asked for shows up here — a callback to return, or a visit they have already accepted.
+          </p>
+        </div>
+      ) : null}
+
+      {/*
+        The page used to render nothing between the header and the handled
+        list when there was nothing waiting. So somebody opening it saw one
+        request card and reasonably read it as a request needing an answer,
+        when in fact it was history and the answer was given days ago.
+      */}
+      {open.length === 0 && handled.length > 0 ? (
+        <div className="rounded-panel border border-dashed border-line p-6 text-center">
+          <Check className="mx-auto h-6 w-6 text-positive" aria-hidden />
+          <p className="mt-2 text-sm font-semibold">Nothing waiting on you</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            Everything below has already been answered.
           </p>
         </div>
       ) : null}
@@ -203,7 +219,7 @@ export default async function BookingRequestsPage({
       {handled.length > 0 ? (
         <section className="mt-6 space-y-3" aria-labelledby="handled-requests">
           <h2 id="handled-requests" className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
-            Handled
+            Already handled
           </h2>
           {handled.map((request) => (
             <RequestCard key={request.id} request={request} />
