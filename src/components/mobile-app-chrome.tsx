@@ -10,7 +10,7 @@ import {
   Menu,
   MessagesSquare,
   MoreHorizontal,
-  Plus,
+  MessageCircle,
   Search,
   X,
   Zap,
@@ -33,7 +33,9 @@ import { pilotJobs } from "@/lib/pilot-data";
 const BOTTOM_ITEMS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
-  { label: "New", href: "/#new-job", icon: Plus, primary: true },
+  // The + used to jump to an anchor on the dashboard that no longer exists.
+  // The chat is what somebody wants when they reach for the middle button.
+  { label: "Ask", href: "/assistant", icon: MessageCircle, primary: true },
   { label: "Messages", href: "/messages", icon: MessagesSquare },
   { label: "More", href: "/settings", icon: MoreHorizontal },
 ];

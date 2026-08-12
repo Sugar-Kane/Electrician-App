@@ -2,9 +2,14 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircle, SendHorizontal, Sparkles } from "lucide-react";
+import { Check, LoaderCircle, SendHorizontal, Sparkles, X } from "lucide-react";
 
-import { askAssistant, type AssistantState } from "@/app/assistant/actions";
+import {
+  cancelProposal,
+  confirmProposal,
+  sendChatMessage,
+  type ChatState,
+} from "@/app/assistant/agent-actions";
 
 /**
  * Asking the business a question.
@@ -19,13 +24,15 @@ import { askAssistant, type AssistantState } from "@/app/assistant/actions";
  * pressed it.
  */
 
-const initialState: AssistantState = { turns: [], error: "" };
+const initialState: ChatState = { turns: [], error: "" };
 
 const SUGGESTIONS = [
   "What is booked tomorrow?",
   "Which invoices are unpaid?",
   "How full is next week?",
   "Which jobs have no technician assigned?",
+  "Do I have a 20 amp AFCI breaker?",
+  "What permit do I need for a service upgrade?",
 ];
 
 function SendButton() {
@@ -61,7 +68,7 @@ function Thinking() {
 }
 
 export function AssistantChat() {
-  const [state, action] = useActionState(askAssistant, initialState);
+  const [state, action] = useActionState(sendChatMessage, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -77,8 +84,9 @@ export function AssistantChat() {
             <Sparkles className="h-5 w-5 text-brand" aria-hidden />
             <p className="mt-3 text-sm font-semibold">Ask about the business</p>
             <p className="mt-1 text-sm leading-6 text-ink-muted">
-              It can read this business&rsquo;s jobs and invoices — nothing else, and nothing
-              belonging to anyone else. It cannot book, cancel, or send anything.
+              It reads this business&rsquo;s own jobs, invoices, stock and code
+              requirements. Anything that reaches a customer or changes a record is shown to
+              you first and waits for a tap.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((suggestion) => (
@@ -119,7 +127,11 @@ export function AssistantChat() {
           </div>
         ))}
 
-        <Form action={action} formRef={formRef} error={state.error} />
+        {state.proposal ? (
+          <ProposalCard proposal={state.proposal} turns={state.turns} />
+        ) : (
+          <Form action={action} formRef={formRef} error={state.error} />
+        )}
         <div ref={endRef} />
       </div>
     </div>
@@ -171,5 +183,69 @@ function Form({
         <SendButton />
       </div>
     </form>
+  );
+}
+
+/**
+ * An action waiting for a tap.
+ *
+ * Replaces the message box rather than sitting beside it, so the next thing the
+ * person does is decide about this. A proposal that can be scrolled past while
+ * typing the next question is a proposal that gets left pending and forgotten,
+ * and "I asked it to text Dana" would then be false.
+ */
+function ProposalCard({
+  proposal,
+  turns,
+}: {
+  proposal: NonNullable<ChatState["proposal"]>;
+  turns: ChatState["turns"];
+}) {
+  const [state, action] = useActionState(confirmProposal, { turns, error: "" } as ChatState);
+  const [, cancel] = useActionState(cancelProposal, { turns, error: "" } as ChatState);
+
+  return (
+    <div className="rounded-panel border border-brand/40 bg-brand/[0.06] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">
+        Waiting for you
+      </p>
+      <p className="mt-2 text-sm leading-6">{proposal.summary}</p>
+
+      {state.error ? <p className="mt-2 text-xs text-critical">{state.error}</p> : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <form action={action}>
+          <input type="hidden" name="proposal" value={JSON.stringify(proposal)} />
+          <ConfirmButton />
+        </form>
+        <form action={cancel}>
+          <button
+            type="submit"
+            className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold text-ink-muted"
+          >
+            <X className="h-4 w-4" aria-hidden />
+            Cancel
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-5 text-sm font-semibold text-on-brand disabled:opacity-60"
+    >
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <Check className="h-4 w-4" aria-hidden />
+      )}
+      {pending ? "Doing it" : "Confirm"}
+    </button>
   );
 }
