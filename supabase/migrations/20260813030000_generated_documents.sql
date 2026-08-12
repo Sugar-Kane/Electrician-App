@@ -13,13 +13,31 @@
 -- Nullable on purpose: most documents are photos and permits that belong to a
 -- job and to no invoice at all.
 
+-- `invoice_id` has been here since the storage migration; only contracts are
+-- new. Both are made to cascade below.
 alter table public.documents
-  add column if not exists invoice_id uuid references public.invoices (id) on delete cascade,
   add column if not exists contract_id uuid references public.contracts (id) on delete cascade;
+
+-- Deleting the record has to take its PDF with it.
+--
+-- `invoice_id` was declared `on delete set null`, which means deleting an
+-- invoice leaves its generated document behind pointing at nothing: a file in
+-- the bucket, a row in the table, and no way to reach either through the app.
+-- That is precisely the orphan the delete-invoice work must not create, so the
+-- constraint is replaced rather than worked around in application code.
+alter table public.documents
+  drop constraint if exists documents_invoice_id_fkey;
+alter table public.documents
+  add constraint documents_invoice_id_fkey
+  foreign key (invoice_id) references public.invoices (id) on delete cascade;
 
 -- A contract PDF had nowhere to be filed: the type list ran from 'intake' to
 -- 'other' and contracts were not in it, so they would all have landed as
 -- 'other' alongside genuinely miscellaneous files.
+--
+-- 'receipt' is in this list because the deployed database has it and no
+-- migration in this repository does. Rebuilding the constraint from the files
+-- alone would quietly withdraw a value the live schema accepts today.
 alter table public.documents
   drop constraint if exists documents_document_type_check;
 alter table public.documents
@@ -27,7 +45,7 @@ alter table public.documents
   check (document_type in (
     'intake', 'estimate', 'permit', 'photo_before', 'photo_after',
     'invoice', 'contract', 'payment', 'warranty', 'completion', 'license',
-    'insurance', 'certification', 'purchase_order', 'report', 'other'
+    'insurance', 'certification', 'purchase_order', 'report', 'receipt', 'other'
   ));
 
 -- "The current PDF for this invoice" — the newest one nobody has superseded.
