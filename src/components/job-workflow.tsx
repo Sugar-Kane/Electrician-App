@@ -136,7 +136,9 @@ export type JobWorkflowProps = {
   arrivedLabel: string;
   workStartedLabel: string;
   arrivalSource: "geofence" | "manual" | "";
-  customerNotified: boolean;
+  customerEnRouteNotified: boolean;
+  customerArrivalNotified: boolean;
+  customerEnRouteMessages: boolean;
   customerArrivalMessages: boolean;
   customerReachable: boolean;
   navigateUrl: string;
@@ -178,7 +180,9 @@ export function JobWorkflow({
   arrivedLabel,
   workStartedLabel,
   arrivalSource,
-  customerNotified,
+  customerEnRouteNotified,
+  customerArrivalNotified,
+  customerEnRouteMessages,
   customerArrivalMessages,
   customerReachable,
   navigateUrl,
@@ -311,6 +315,27 @@ export function JobWorkflow({
   const travelling = state === "en_route";
   const dialable = phone.replace(/[^\d+]/g, "");
 
+  /**
+   * What the customer is about to be sent, before any of it happens.
+   *
+   * Worth one line before Start trip, because setting off is the point of no
+   * return on it: a technician who did not know the customer gets a text has
+   * just told somebody to expect them. Which of the two goes out is the
+   * business's own switch at /settings/messages, and a customer with no phone
+   * number gets neither, so all four cases are said plainly rather than
+   * promising something that quietly will not happen.
+   */
+  const expectedTexts =
+    !customerReachable
+      ? ""
+      : customerEnRouteMessages && customerArrivalMessages
+        ? "The customer gets a text when you set off and when you arrive."
+        : customerEnRouteMessages
+          ? "The customer gets a text when you set off."
+          : customerArrivalMessages
+            ? "The customer gets a text when you arrive."
+            : "";
+
   // Said rather than stored: an address nobody has geocoded and a browser with
   // no location API are both facts about this render, and a promise of
   // automatic arrival that nothing is watching for is the one thing this screen
@@ -358,14 +383,24 @@ export function JobWorkflow({
               />
             ) : null}
 
-            {state === "arrived" && customerNotified ? (
+            {/*
+              Said after the fact, never as a promise. Whether a text actually
+              went depends on consent, the STOP ledger and quiet hours, all of
+              which are decided at the moment of sending — so this reports what
+              happened rather than what was supposed to.
+            */}
+            {travelling && customerEnRouteNotified ? (
+              <p className="mt-3 text-sm text-ink-muted">
+                The customer has been told you are on the way.
+              </p>
+            ) : null}
+
+            {state === "arrived" && customerArrivalNotified ? (
               <p className="mt-3 text-sm text-ink-muted">The customer has been told you are here.</p>
             ) : null}
 
-            {state === "scheduled" && customerArrivalMessages && customerReachable ? (
-              <p className="mt-3 text-sm text-ink-muted">
-                The customer gets a text when you arrive.
-              </p>
+            {state === "scheduled" && expectedTexts ? (
+              <p className="mt-3 text-sm text-ink-muted">{expectedTexts}</p>
             ) : null}
 
             {result.error ? (

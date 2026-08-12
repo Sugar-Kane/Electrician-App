@@ -25,10 +25,10 @@ import type { StockOption } from "@/lib/job-line-data";
  *
  * The old Materials section rendered `job.materials`, which was hardcoded to an
  * empty array for every real job — so an electrician saw "nothing listed for
- * this job yet" whatever they did, forever. Labour had no home at all, and the
+ * this job yet" whatever they did, forever. Labor had no home at all, and the
  * invoice subtotal was a number somebody typed in from memory.
  *
- * Labour and parts are one list because they are one bill. The split is shown
+ * Labor and parts are one list because they are one bill. The split is shown
  * in the totals, where it is useful, rather than as two sections to fill in.
  */
 
@@ -80,7 +80,7 @@ function AddLineForm({
   onDone,
 }: {
   jobNumber: string;
-  kind: "labour" | "material";
+  kind: "labor" | "material";
   stock: StockOption[];
   onDone: () => void;
 }) {
@@ -91,7 +91,7 @@ function AddLineForm({
   // fields stay editable, because the price on the van is not always the price.
   const [chosen, setChosen] = useState<StockOption | null>(null);
 
-  const labour = kind === "labour";
+  const labor = kind === "labor";
 
   return (
     <form action={action} className="mt-3 space-y-2 rounded-control border border-line p-3">
@@ -99,7 +99,7 @@ function AddLineForm({
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="inventoryItemId" value={chosen?.id ?? ""} />
 
-      {!labour && stock.length > 0 ? (
+      {!labor && stock.length > 0 ? (
         <label className="block">
           <span className="text-xs font-semibold text-ink-muted">From stock</span>
           <select
@@ -123,7 +123,7 @@ function AddLineForm({
 
       <label className="block">
         <span className="text-xs font-semibold text-ink-muted">
-          {labour ? "What was done" : "Part"}
+          {labor ? "What was done" : "Part"}
         </span>
         <input
           name="description"
@@ -132,7 +132,7 @@ function AddLineForm({
           // uncontrolled input that the technician may already have typed in.
           key={chosen?.id ?? "blank"}
           defaultValue={chosen?.name ?? ""}
-          placeholder={labour ? "Traced and replaced backstabbed receptacle" : "20A AFCI breaker"}
+          placeholder={labor ? "Traced and replaced backstabbed receptacle" : "20A AFCI breaker"}
           className={`mt-1 ${inputClass}`}
         />
       </label>
@@ -140,7 +140,7 @@ function AddLineForm({
       <div className="grid grid-cols-3 gap-2">
         <label className="block">
           <span className="text-xs font-semibold text-ink-muted">
-            {labour ? "Hours" : "Qty"}
+            {labor ? "Hours" : "Qty"}
           </span>
           <input
             name="quantity"
@@ -155,7 +155,7 @@ function AddLineForm({
           <input
             name="unit"
             key={`unit-${chosen?.id ?? "blank"}`}
-            defaultValue={labour ? "hr" : (chosen?.unit ?? "each")}
+            defaultValue={labor ? "hr" : (chosen?.unit ?? "each")}
             className={`mt-1 ${inputClass}`}
           />
         </label>
@@ -180,7 +180,7 @@ function AddLineForm({
       {state.error ? <p className="text-xs text-critical">{state.error}</p> : null}
 
       <div className="flex gap-2">
-        <SubmitButton label={labour ? "Add labour" : "Add part"} />
+        <SubmitButton label={labor ? "Add labor" : "Add part"} />
         <button
           type="button"
           onClick={onDone}
@@ -238,7 +238,7 @@ function InvoiceButton({ subtotalCents }: { subtotalCents: number }) {
 
 function LineRow({ jobNumber, line }: { jobNumber: string; line: JobLine }) {
   const [state, action] = useActionState(removeJobLine, initialState);
-  const Icon = line.kind === "labour" ? Clock : Package;
+  const Icon = line.kind === "labor" ? Clock : Package;
 
   return (
     <li className="flex items-center gap-2 border-b border-line py-2 last:border-b-0">
@@ -271,7 +271,7 @@ export function JobLinesPanel({
   totals: JobLineTotals;
   stock: StockOption[];
 }) {
-  const [adding, setAdding] = useState<"labour" | "material" | null>(null);
+  const [adding, setAdding] = useState<"labor" | "material" | null>(null);
 
   return (
     <section>
@@ -296,12 +296,12 @@ export function JobLinesPanel({
           </ul>
 
           {/* Split out only when there is something in both. On a parts-only
-              job a "Labour $0.00" row is a line that says nothing. */}
-          {totals.labourCents > 0 && totals.materialCents > 0 ? (
+              job a "Labor $0.00" row is a line that says nothing. */}
+          {totals.laborCents > 0 && totals.materialCents > 0 ? (
             <dl className="mt-3 space-y-1 text-xs text-ink-muted">
               <div className="flex justify-between">
-                <dt>Labour</dt>
-                <dd>{formatCents(totals.labourCents)}</dd>
+                <dt>Labor</dt>
+                <dd>{formatCents(totals.laborCents)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt>Parts</dt>
@@ -320,7 +320,7 @@ export function JobLinesPanel({
 
       {adding ? (
         <AddLineForm
-          // Remounted per kind so switching between labour and parts does not
+          // Remounted per kind so switching between labor and parts does not
           // carry the other one's half-typed line across.
           key={adding}
           jobNumber={jobNumber}
@@ -332,11 +332,11 @@ export function JobLinesPanel({
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setAdding("labour")}
+            onClick={() => setAdding("labor")}
             className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
           >
             <Clock className="h-4 w-4" aria-hidden />
-            Add labour
+            Add labor
           </button>
           <button
             type="button"

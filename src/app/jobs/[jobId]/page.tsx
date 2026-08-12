@@ -119,7 +119,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           arrivedLabel={workflow.arrivedLabel}
           workStartedLabel={workflow.workStartedLabel}
           arrivalSource={workflow.arrivalSource}
-          customerNotified={workflow.customerNotified}
+          customerEnRouteNotified={workflow.customerEnRouteNotified}
+          customerArrivalNotified={workflow.customerArrivalNotified}
+          customerEnRouteMessages={workflow.customerEnRouteMessages}
           customerArrivalMessages={workflow.customerArrivalMessages}
           customerReachable={workflow.customerReachable}
           navigateUrl={googleMapsUrl}

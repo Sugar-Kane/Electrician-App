@@ -45,7 +45,7 @@ export const REFERENCE_ENTRIES: ReferenceEntry[] = [
     section: "Verification sequence",
     title: "Facts to collect before deciding what applies",
     detail:
-      "Exact address, city, county, fire district and serving utility. Building type. New or existing, original construction year and later alteration dates. Scope of work. Total project value including labour and materials. Who contracts, permits, supervises and connects. Whether employees, trainees, apprentices, subcontractors or home-improvement salespersons are used. Whether paint, coatings, flooring, insulation or fireproofing will be disturbed, especially pre-1978. Whether public money, federal assistance or a utility incentive is involved. Whether the building stays occupied and whether energised work is proposed.",
+      "Exact address, city, county, fire district and serving utility. Building type. New or existing, original construction year and later alteration dates. Scope of work. Total project value including labor and materials. Who contracts, permits, supervises and connects. Whether employees, trainees, apprentices, subcontractors or home-improvement salespersons are used. Whether paint, coatings, flooring, insulation or fireproofing will be disturbed, especially pre-1978. Whether public money, federal assistance or a utility incentive is involved. Whether the building stays occupied and whether energised work is proposed.",
     keywords: ["intake", "what do I need to know", "before quoting", "scoping"],
   },
   {
@@ -138,7 +138,7 @@ export const REFERENCE_ENTRIES: ReferenceEntry[] = [
     section: "Licensing",
     title: "When a contractor licence is required",
     detail:
-      "Generally required when the aggregate price of labour, materials and other items is $1,000 or more, when a permit is required, when workers are employed, when the work is part of a larger project, or when the person advertises or holds out as a contractor. BPC §7048.",
+      "Generally required when the aggregate price of labor, materials and other items is $1,000 or more, when a permit is required, when workers are employed, when the work is part of a larger project, or when the person advertises or holds out as a contractor. BPC §7048.",
     source:
       "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7048.",
     keywords: ["licence threshold", "$500", "$1000", "handyman", "do I need a licence"],

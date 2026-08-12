@@ -238,44 +238,76 @@ export async function advanceJob(
   revalidatePath("/schedule");
   revalidatePath("/");
 
+  // Setting off and turning up are the two moments the customer is waiting on,
+  // so they are the two that are worth a text. Nothing else in the workflow
+  // sends anything: starting work and finishing are the business's own
+  // business, and a status tap that quietly texted somebody would be a surprise
+  // nobody asked for.
+  if (requested === "en_route" && patch.trip_started_at) {
+    const told = await tellCustomer(job, jobNumber, "en_route");
+    return { error: "", state: requested, notice: told };
+  }
+
   if (recordsArrival) {
-    const told = await tellCustomerAboutArrival(job, jobNumber);
+    const told = await tellCustomer(job, jobNumber, "arrived");
     return { error: "", state: requested, notice: told };
   }
 
   return { error: "", state: requested };
 }
 
+/** What each moment is called in the database, the templates, and to a person. */
+const NOTICES = {
+  en_route: {
+    stamp: "customer_en_route_notified_at",
+    trigger: "job_en_route",
+    said: "Customer told you are on the way.",
+  },
+  arrived: {
+    stamp: "customer_arrival_notified_at",
+    trigger: "job_arrived",
+    said: "Customer told you have arrived.",
+  },
+} as const;
+
 /**
- * Tell the customer their electrician is here, at most once per job.
+ * Tell the customer, at most once per job per moment.
  *
- * Once per job rather than once per arrival: a technician who steps out for a
- * part and comes back has not arrived twice, and a customer who is texted twice
- * about the same visit is a customer who replies STOP. The guard is the whole
- * job's rows, not this technician's, so a second van does not send a second
- * message either.
+ * Once per job rather than once per technician: a second van setting off is not
+ * a second journey from the customer's point of view, and somebody texted twice
+ * about one visit is somebody who replies STOP. So the guard reads every row on
+ * the job, not just this technician's. The same guard covers a technician who
+ * steps out for a part and comes back — they have not arrived twice.
  *
- * Everything about whether this is allowed at all — consent, quiet hours,
- * whether this business sends arrival texts — already lives in
- * `sendJobEventMessage`. Duplicating any of it here would be a second set of
- * rules to keep in step with the first.
+ * Everything about whether this is allowed at all — consent, the STOP ledger,
+ * quiet hours, and whether this business sends this particular message —
+ * already lives in `sendJobEventMessage` and its template. Duplicating any of it
+ * here would be a second set of rules to keep in step with the first, and the
+ * one that goes stale is the one that texts somebody who opted out.
  */
-async function tellCustomerAboutArrival(
+async function tellCustomer(
   job: NonNullable<Awaited<ReturnType<typeof loadJob>>>,
   jobNumber: string,
+  moment: keyof typeof NOTICES,
 ): Promise<string | undefined> {
+  const notice = NOTICES[moment];
+
   const { data: alreadyTold } = await job.supabase
     .from("job_technician_progress")
     .select("id")
     .eq("organization_id", job.organizationId)
     .eq("job_id", job.id)
-    .not("customer_notified_at", "is", null)
+    .not(notice.stamp, "is", null)
     .limit(1)
     .maybeSingle();
 
   if (alreadyTold) return undefined;
 
-  const result = await sendJobEventMessage({ jobId: job.id, trigger: "job_arrived" });
+  const result = await sendJobEventMessage({ jobId: job.id, trigger: notice.trigger });
+
+  // Nothing sent, nothing stamped. The column records when the customer was
+  // told, so writing it after a refused send would turn "the template is
+  // switched off" into "they were told" on every report that reads it.
   if (!result.sent) return undefined;
 
   const { data: mine } = await job.supabase
@@ -283,19 +315,23 @@ async function tellCustomerAboutArrival(
     .select("id")
     .eq("organization_id", job.organizationId)
     .eq("job_id", job.id)
-    .not("arrived_at", "is", null)
-    .order("arrived_at", { ascending: true })
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
   if (mine) {
+    // Widened deliberately: a computed key narrows to a string-indexed literal,
+    // which the flexible client's excess-property guard reads as a row shape it
+    // has never heard of.
+    const stamp: Record<string, unknown> = { [notice.stamp]: new Date().toISOString() };
+
     await job.supabase
       .from("job_technician_progress")
-      .update({ customer_notified_at: new Date().toISOString() })
+      .update(stamp)
       .eq("id", str((mine as Record<string, unknown>).id))
       .eq("organization_id", job.organizationId);
   }
 
   revalidatePath(`/jobs/${jobNumber}`);
-  return "Customer told you have arrived.";
+  return notice.said;
 }

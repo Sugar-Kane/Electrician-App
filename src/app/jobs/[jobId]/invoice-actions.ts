@@ -81,7 +81,7 @@ export async function raiseInvoice(
     subtotalCents = jobLineTotals(
       (lineRows ?? []).map((row: Record<string, unknown>, index: number) => ({
         id: String(index),
-        kind: row.kind === "labour" ? ("labour" as const) : ("material" as const),
+        kind: row.kind === "labor" ? ("labor" as const) : ("material" as const),
         description: "",
         // numeric arrives as a string over PostgREST, so this would concatenate
         // rather than multiply if it were passed through untouched.

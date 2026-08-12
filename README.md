@@ -10,6 +10,7 @@ A field-first business operating system for small electrical contractors. The in
 - Weekly schedule with selectable job cards and detailed field-ready job pages
 - One contextual next step per job — start trip, start work, finish job — instead of a status the technician has to manage
 - Automatic arrival from a geofence around the service address, with a manual fallback that never blocks the job (see `docs/automatic-arrival.md`)
+- Customers texted when the technician sets off and when they arrive, once each per job, through the existing consent and quiet-hours rules
 - Per-technician trip, arrival, start and completion times, so two vans on one job are two arrivals
 - Customer contact, property, work scope, access notes, documents, and material requirements
 - Material shortage review with Lowe’s and Home Depot live-search handoffs and clearly labeled pilot pricing

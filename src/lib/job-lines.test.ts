@@ -37,7 +37,7 @@ test("a fractional quantity rounds the product, not the price", () => {
   assert.equal(lineTotalCents({ quantity: 1.5, unitPriceCents: 999 }), 1499);
 });
 
-test("a quarter hour of labour bills a quarter of the rate", () => {
+test("a quarter hour of labor bills a quarter of the rate", () => {
   assert.equal(lineTotalCents({ quantity: 1.5, unitPriceCents: 12000 }), 18000);
 });
 
@@ -50,14 +50,14 @@ test("a negative price cannot credit a job", () => {
   assert.equal(lineTotalCents({ quantity: 2, unitPriceCents: -5000 }), 0);
 });
 
-test("labour and materials are summed apart and together", () => {
+test("labor and materials are summed apart and together", () => {
   const totals = jobLineTotals([
-    line({ id: "a", kind: "labour", description: "Diagnosis", quantity: 1.5, unit: "hr", unitPriceCents: 12000 }),
+    line({ id: "a", kind: "labor", description: "Diagnosis", quantity: 1.5, unit: "hr", unitPriceCents: 12000 }),
     line({ id: "b", kind: "material", quantity: 2, unitPriceCents: 5999 }),
     line({ id: "c", kind: "material", description: "Wire", quantity: 30, unit: "ft", unitPriceCents: 145 }),
   ]);
 
-  assert.equal(totals.labourCents, 18000);
+  assert.equal(totals.laborCents, 18000);
   assert.equal(totals.materialCents, 11998 + 4350);
   assert.equal(totals.subtotalCents, 18000 + 11998 + 4350);
   assert.equal(totals.lineCount, 3);

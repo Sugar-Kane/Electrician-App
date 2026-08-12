@@ -74,7 +74,8 @@ said yes on the shop tablet.
 
 Four timestamps and a note about how one of them was decided, in
 `job_technician_progress`: `trip_started_at`, `arrived_at`, `arrival_source`,
-`work_started_at`, `completed_at`, plus `customer_notified_at`.
+`work_started_at`, `completed_at`, plus `customer_en_route_notified_at` and
+`customer_arrival_notified_at`.
 
 No positions. No breadcrumb trail. There is no code path that reads the phone's
 location while a job is scheduled, being worked on, or finished — the watch lives
@@ -89,14 +90,34 @@ all read it.
 
 ## Telling the customer
 
-Reuses the `job_arrived` automatic message, so consent, STOP handling, quiet
-hours and the per-business on/off switch at `/settings/messages` are the ones
-that already exist rather than a second set of rules to keep in step.
+Two moments send a text, and they are the two the customer is actually waiting
+on: setting off (`job_en_route`) and turning up (`job_arrived`). Nothing else in
+the workflow sends anything — starting work and finishing are the business's own
+business.
 
-Sent at most once per job, guarded on `customer_notified_at` across every
-technician row. A technician who steps out for a part and comes back has not
-arrived twice, and a customer texted twice about one visit is a customer who
+Both reuse the existing automatic messages, so consent, STOP handling, quiet
+hours and the per-business on/off switches at `/settings/messages` are the ones
+that already exist rather than a second set of rules to keep in step. Either can
+be switched off independently; a business that wants only "on the way" gets only
+that.
+
+Each is sent at most once per job, guarded on its own column across every
+technician row — a second van setting off is not a second journey from the
+customer's point of view, and a technician who steps out for a part and comes
+back has not arrived twice. Someone texted twice about one visit is someone who
 replies STOP.
+
+The column records when the customer was *told*, so it is only stamped after a
+send actually succeeds. Stamping a refused send would turn "the template is
+switched off" into "they were told" on every report that reads it.
+
+> **Note on the `job_en_route` template.** Its seeded wording is
+> `your technician is on the way and should arrive within {{arrival_window}}`,
+> which now renders as "…within Wed, Aug 12, 1:00 PM–3:00 PM". It reads a little
+> oddly, and it is a business-owned row that an owner may already have edited, so
+> it is left alone rather than rewritten underneath them. Editable at
+> `/settings/messages`. A job with no arrival window sends nothing at all —
+> `decideAutomaticSend` refuses rather than blanking the placeholder.
 
 ## Platform limits
 

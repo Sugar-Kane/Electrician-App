@@ -33,9 +33,12 @@ export type JobWorkflow = {
   workStartedLabel: string;
   /** How the arrival was decided, so the screen can say "automatically". */
   arrivalSource: "geofence" | "manual" | "";
+  /** Whether the customer has already been texted that the trip started. */
+  customerEnRouteNotified: boolean;
   /** Whether the customer has already been texted about this arrival. */
-  customerNotified: boolean;
-  /** Whether this business texts customers on arrival at all. */
+  customerArrivalNotified: boolean;
+  /** Which of the two messages this business sends at all. */
+  customerEnRouteMessages: boolean;
   customerArrivalMessages: boolean;
   /** Whether there is a number to text, so the screen can stop promising one. */
   customerReachable: boolean;
@@ -86,10 +89,13 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
   const customer = (row.customers ?? null) as Record<string, unknown> | null;
 
   // Three reads that do not depend on each other, so they do not queue.
-  const [{ data: progress }, { data: settings }, { data: template }] = await Promise.all([
+  const [{ data: progress }, { data: settings }, { data: templates }] = await Promise.all([
     database
       .from("job_technician_progress")
-      .select("trip_started_at, arrived_at, arrival_source, work_started_at, customer_notified_at")
+      .select(
+        `trip_started_at, arrived_at, arrival_source, work_started_at,
+         customer_en_route_notified_at, customer_arrival_notified_at`,
+      )
       .eq("organization_id", context.organizationId)
       .eq("job_id", jobId)
       // Whoever got there first. With one technician this is the only row; with
@@ -102,19 +108,24 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
       .select("arrival_radius_meters")
       .eq("organization_id", context.organizationId)
       .maybeSingle(),
-    // The business-level switch for telling customers, which already exists as
-    // the automatic message at /settings/messages rather than as a second
-    // setting that could disagree with it.
+    // The business-level switches for telling customers, which already exist as
+    // the automatic messages at /settings/messages rather than as a second set
+    // of settings that could disagree with them.
     database
       .from("message_templates")
-      .select("is_active")
+      .select("trigger_event, is_active")
       .eq("organization_id", context.organizationId)
-      .eq("trigger_event", "job_arrived")
       .eq("channel", "sms")
-      .maybeSingle(),
+      .in("trigger_event", ["job_en_route", "job_arrived"]),
   ]);
 
   const progressRow = (progress ?? null) as Record<string, unknown> | null;
+
+  const active = new Set(
+    ((templates ?? []) as Record<string, unknown>[])
+      .filter((row) => row.is_active === true)
+      .map((row) => String(row.trigger_event)),
+  );
 
   const latitude = property?.latitude === null || property?.latitude === undefined
     ? null
@@ -138,8 +149,10 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
     arrivedLabel: clockLabel(progressRow?.arrived_at, context.timeZone),
     workStartedLabel: clockLabel(progressRow?.work_started_at, context.timeZone),
     arrivalSource: source === "geofence" || source === "manual" ? source : "",
-    customerNotified: Boolean(progressRow?.customer_notified_at),
-    customerArrivalMessages: template?.is_active === true,
+    customerEnRouteNotified: Boolean(progressRow?.customer_en_route_notified_at),
+    customerArrivalNotified: Boolean(progressRow?.customer_arrival_notified_at),
+    customerEnRouteMessages: active.has("job_en_route"),
+    customerArrivalMessages: active.has("job_arrived"),
     customerReachable: str(customer?.phone) !== "",
   };
 }

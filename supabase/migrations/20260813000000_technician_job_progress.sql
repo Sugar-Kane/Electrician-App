@@ -39,10 +39,16 @@ create table if not exists public.job_technician_progress (
   arrival_source text check (arrival_source in ('geofence', 'manual')),
   work_started_at timestamptz,
   completed_at timestamptz,
-  -- When the customer was told, not whether. A null here after an arrival means
-  -- nobody was told — which is a real answer, and the one an office needs when
-  -- somebody complains they had no warning.
-  customer_notified_at timestamptz,
+  -- When the customer was told, not whether. A null here after the matching
+  -- event means nobody was told — which is a real answer, and the one an office
+  -- needs when somebody complains they had no warning.
+  --
+  -- Two columns rather than one flag, because they answer different questions
+  -- and a customer can legitimately get one and not the other: the business may
+  -- send "on the way" and not "arrived", quiet hours are evaluated per message,
+  -- and a technician can arrive at a job they never started a trip for.
+  customer_en_route_notified_at timestamptz,
+  customer_arrival_notified_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -93,7 +99,9 @@ comment on table public.job_technician_progress is
   'When each technician set off for a job, reached it, started work and finished. Arrival is per technician because two vans arrive at two times.';
 comment on column public.job_technician_progress.arrival_source is
   'geofence when the app recognised arrival from the phone''s location, manual when somebody said so.';
-comment on column public.job_technician_progress.customer_notified_at is
+comment on column public.job_technician_progress.customer_en_route_notified_at is
+  'When the "on the way" text actually went. Null after a trip started means nobody was told.';
+comment on column public.job_technician_progress.customer_arrival_notified_at is
   'When the arrival text actually went. Null after an arrival means nobody was told.';
 
 -- How close counts as being there.
