@@ -57,7 +57,7 @@ export default async function AdminUsersPage() {
                 {user.organizationName} · {user.role}
               </Link>
             ) : (
-              <span className="flex shrink-0 items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/[0.08] px-3 py-1 text-xs font-semibold text-amber-100">
+              <span className="flex shrink-0 items-center gap-2 rounded-full border border-caution/25 bg-caution-bg px-3 py-1 text-xs font-semibold text-caution">
                 <TriangleAlert className="h-3.5 w-3.5" aria-hidden />
                 No business
               </span>
@@ -75,7 +75,7 @@ export default async function AdminUsersPage() {
             </div>
             <div>
               <dt className="text-xs text-ink-faint">Email</dt>
-              <dd className={`font-semibold ${user.emailConfirmed ? "" : "text-amber-200"}`}>
+              <dd className={`font-semibold ${user.emailConfirmed ? "" : "text-caution"}`}>
                 {user.emailConfirmed ? "Confirmed" : "Not confirmed"}
               </dd>
             </div>

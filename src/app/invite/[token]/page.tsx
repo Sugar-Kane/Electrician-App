@@ -38,7 +38,7 @@ function Refusal({ heading, detail }: { heading: string; detail: string }) {
   return (
     <Shell>
       <div className="flex items-start gap-3">
-        <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+        <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution" aria-hidden />
         <div>
           <h1 className="text-lg font-semibold">{heading}</h1>
           <p className="mt-2 text-sm leading-6 text-ink-muted">{detail}</p>
@@ -120,7 +120,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           I already have one
         </Link>
         <p className="mt-6 flex items-center gap-2 text-xs text-ink-faint">
-          <LockKeyhole className="h-4 w-4 text-emerald-400" aria-hidden />
+          <LockKeyhole className="h-4 w-4 text-positive" aria-hidden />
           You will only see this business, and only what your role allows.
         </p>
       </Shell>

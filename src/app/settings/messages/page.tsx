@@ -67,8 +67,8 @@ export default async function AutomaticMessagesPage() {
           filled in when the message is sent — an unknown one is left out rather than shown
           to the customer.
         </p>
-        <p className="mt-3 flex items-start gap-2 text-xs text-amber-100">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+        <p className="mt-3 flex items-start gap-2 text-xs text-caution">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
           Keep &ldquo;Reply STOP to opt out&rdquo; in these. It matches the sample messages
           filed with the carrier, and traffic that does not match the registration is what
           gets a messaging campaign pulled.

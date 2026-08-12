@@ -2,13 +2,14 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, ExternalLink, Globe, LoaderCircle, TriangleAlert } from "lucide-react";
+import { ExternalLink, Globe, LoaderCircle, TriangleAlert } from "lucide-react";
 
 import {
   saveTenantLegalPage,
   type LegalPageActionState,
 } from "@/app/settings/legal/actions";
 import type { OwnTenantLegalPage } from "@/lib/tenant-legal";
+import { Banner } from "@/components/ui/banner";
 
 const initialState: LegalPageActionState = { error: "" };
 const inputClass =
@@ -85,7 +86,7 @@ export function TenantLegalForm({ page }: { page: OwnTenantLegalPage }) {
         </div>
 
         {usingLoginEmail ? (
-          <p className="mt-4 flex items-start gap-2 rounded-control border border-amber-300/25 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100">
+          <p className="mt-4 flex items-start gap-2 rounded-control border border-caution/25 bg-caution-bg p-4 text-sm leading-6 text-caution">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             This is the email you signed in with. It was filled in as a starting point
             and will be published for customers and carriers to contact you. Change it
@@ -161,14 +162,10 @@ export function TenantLegalForm({ page }: { page: OwnTenantLegalPage }) {
       </section>
 
       {state.error ? (
-        <p role="alert" className="rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
-          {state.error}
-        </p>
+        <Banner tone="critical">{state.error}</Banner>
       ) : null}
       {state.saved ? (
-        <p className="flex items-center gap-2 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-100">
-          <CheckCircle2 className="h-4 w-4" aria-hidden /> Saved.
-        </p>
+        <Banner tone="positive">Saved.</Banner>
       ) : null}
 
       <SaveButton publishing={published && !page.published} />

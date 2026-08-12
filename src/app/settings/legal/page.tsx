@@ -20,13 +20,13 @@ export default async function TenantLegalSettingsPage() {
       {page ? (
         <>
           <section
-            className={`mb-4 rounded-panel border p-5 sm:p-6 ${page.published ? "border-emerald-400/20 bg-emerald-400/[0.045]" : "border-amber-300/25 bg-amber-300/[0.06]"}`}
+            className={`mb-4 rounded-panel border p-5 sm:p-6 ${page.published ? "border-positive/20 bg-positive-bg" : "border-caution/25 bg-caution-bg"}`}
           >
             <div className="flex items-start gap-3">
               {page.published ? (
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-positive" aria-hidden />
               ) : (
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution" aria-hidden />
               )}
               <div>
                 <h2 className="font-semibold">

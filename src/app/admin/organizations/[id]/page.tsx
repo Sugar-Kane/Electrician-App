@@ -21,8 +21,8 @@ export const metadata: Metadata = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const FINDING_STYLE: Record<Finding["severity"], string> = {
-  blocking: "border-rose-400/30 bg-rose-400/[0.07] text-rose-100",
-  degraded: "border-amber-300/25 bg-amber-300/[0.06] text-amber-100",
+  blocking: "border-critical/30 bg-critical-bg text-critical",
+  degraded: "border-caution/25 bg-caution-bg text-caution",
   note: "border-line bg-white/[0.03] text-ink-muted",
 };
 
@@ -112,7 +112,7 @@ export default async function AdminOrganizationPage({
 
       <Card title="What's wrong">
         {findings.length === 0 ? (
-          <p className="flex items-center gap-2 text-sm text-emerald-300">
+          <p className="flex items-center gap-2 text-sm text-positive">
             <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
             Nothing. Everything this console checks is configured.
           </p>
@@ -228,7 +228,7 @@ export default async function AdminOrganizationPage({
                     {booking.notifications.map((attempt, index) => (
                       <li
                         key={`${booking.id}-${index}`}
-                        className={`rounded-chip px-3 py-2 text-xs ${attempt.ok ? "bg-emerald-400/[0.08] text-emerald-200" : "bg-rose-400/[0.08] text-rose-200"}`}
+                        className={`rounded-chip px-3 py-2 text-xs ${attempt.ok ? "bg-positive-bg text-positive" : "bg-critical-bg text-critical"}`}
                       >
                         <span className="font-semibold">
                           {attempt.audience} {attempt.channel}
@@ -262,7 +262,7 @@ export default async function AdminOrganizationPage({
             {calls.map((call) => (
               <li
                 key={call.id}
-                className={`rounded-control border p-3 text-xs ${call.isError ? "border-rose-400/25 bg-rose-400/[0.06]" : "border-line"}`}
+                className={`rounded-control border p-3 text-xs ${call.isError ? "border-critical/25 bg-critical-bg" : "border-line"}`}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="font-semibold">

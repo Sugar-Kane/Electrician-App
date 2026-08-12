@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 };
 
 const BADGE: Record<string, string> = {
-  blocking: "border-rose-400/30 bg-rose-400/10 text-rose-200",
-  degraded: "border-amber-300/25 bg-amber-300/[0.08] text-amber-100",
-  ok: "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200",
+  blocking: "border-critical/30 bg-critical-bg text-critical",
+  degraded: "border-caution/25 bg-caution-bg text-caution",
+  ok: "border-positive/25 bg-positive-bg text-positive",
   note: "border-line bg-white/5 text-ink-muted",
 };
 
@@ -63,7 +63,7 @@ export default async function AdminOrganizationsPage() {
                 <dd className="font-semibold">
                   {organization.memberCount}
                   {organization.pendingInvitations > 0 ? (
-                    <span className="ml-1 text-xs font-normal text-amber-200">
+                    <span className="ml-1 text-xs font-normal text-caution">
                       +{organization.pendingInvitations} invited
                     </span>
                   ) : null}

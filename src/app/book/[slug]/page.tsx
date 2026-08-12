@@ -99,9 +99,9 @@ export default async function PublicBookingPageRoute({
               ))}
             </div>
 
-            <div className="mt-7 rounded-control border border-emerald-400/15 bg-emerald-400/[0.04] p-4 text-sm leading-6 text-ink-muted">
+            <div className="mt-7 rounded-control border border-positive/15 bg-positive-bg p-4 text-sm leading-6 text-ink-muted">
               <p className="flex items-center gap-2 font-semibold text-ink">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden /> No repair is charged today
+                <CheckCircle2 className="h-4 w-4 text-positive" aria-hidden /> No repair is charged today
               </p>
               <p className="mt-2">Only the diagnostic visit is paid during booking. Any repair scope is reviewed with you onsite and is due after completed work.</p>
             </div>

@@ -57,14 +57,14 @@ export function AdminInviteForm({ organizationId }: { organizationId: string }) 
       </div>
 
       {state.error ? (
-        <p className="mt-4 flex items-start gap-2 text-sm text-rose-300">
+        <p className="mt-4 flex items-start gap-2 text-sm text-critical">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {state.error}
         </p>
       ) : null}
       {state.notice ? (
         <div className="mt-4">
-          <p className="flex items-start gap-2 text-sm text-emerald-300">
+          <p className="flex items-start gap-2 text-sm text-positive">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             {state.notice}
           </p>

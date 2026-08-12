@@ -4,6 +4,7 @@ import { ChevronRight, Clock3, MapPin, Navigation, Phone, Plus, UserRound } from
 import type { CalendarDay, MonthCell } from "@/lib/calendar";
 import { formatDayLabel } from "@/lib/calendar";
 import type { PilotJob } from "@/lib/pilot-data";
+import { statusChip, statusDot } from "@/components/ui/status-badge";
 
 /**
  * The week and the month.
@@ -17,14 +18,6 @@ import type { PilotJob } from "@/lib/pilot-data";
  * view. Paging between them is a link, not a fetch, and no view has its own
  * idea of what a day contains.
  */
-
-const statusDot: Record<string, string> = {
-  "In progress": "bg-blue-400",
-  Scheduled: "bg-amber-400",
-  Pending: "bg-slate-400",
-  Canceled: "bg-rose-400",
-  Completed: "bg-emerald-400",
-};
 
 /** Canceled work is not work. It stays visible, but it never inflates a count. */
 function countable(jobs: PilotJob[]): PilotJob[] {
@@ -76,7 +69,7 @@ export function WeekView({
                 >
                   <span className="flex items-center gap-1.5">
                     <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot[job.status] ?? "bg-slate-400"}`}
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot(job.status)}`}
                       aria-hidden
                     />
                     <span className="truncate text-[11px] font-semibold">{job.time}</span>
@@ -183,14 +176,6 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
   // treats this list as the route.
   const active = jobs.filter((job) => job.status !== "Canceled");
   const canceled = jobs.filter((job) => job.status === "Canceled");
-  const statusStyles: Record<string, string> = {
-    "In progress": "border-blue-400/30 bg-blue-400/10 text-blue-300",
-    Scheduled: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-    Pending: "border-slate-400/30 bg-slate-400/10 text-ink-muted",
-    Canceled: "border-rose-400/30 bg-rose-400/10 text-rose-200",
-    Completed: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
-  };
-
   return (
     <section className="space-y-3" aria-labelledby="scheduled-jobs-heading">
       {/* The date is already in the header above; repeating it here is the
@@ -240,7 +225,7 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
                 </span>
               </div>
               <span
-                className={`mt-3 inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold ${statusStyles[job.status] ?? ""}`}
+                className={`mt-3 inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold ${statusChip(job.status)}`}
               >
                 {job.status}
               </span>

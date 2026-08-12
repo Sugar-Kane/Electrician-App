@@ -60,7 +60,7 @@ export default async function NewMessagePage() {
                         {customer.phone}
                       </span>
                     </span>
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-positive" aria-hidden />
                   </button>
                 </form>
               </li>

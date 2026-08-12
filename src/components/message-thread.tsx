@@ -19,6 +19,7 @@ import {
   type SendMessageState,
 } from "@/app/messages/actions";
 import type { ConversationThread } from "@/lib/messaging";
+import { Banner } from "@/components/ui/banner";
 
 const initialState: SendMessageState = { error: "" };
 
@@ -63,7 +64,7 @@ function formatDayLabel(iso: string, timeZone: string) {
 function DeliveryState({ status, errorDetail }: { status: string; errorDetail: string | null }) {
   if (status === "failed" || status === "undelivered") {
     return (
-      <span className="flex items-center gap-1 text-[11px] text-red-300">
+      <span className="flex items-center gap-1 text-[11px] text-critical">
         <TriangleAlert className="h-3 w-3" aria-hidden />
         {errorDetail ?? "Not delivered"}
       </span>
@@ -98,7 +99,7 @@ function SendButton({ disabled }: { disabled: boolean }) {
       type="submit"
       disabled={disabled || pending}
       aria-label="Send message"
-      className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-on-brand disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-ink-faint"
+      className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-on-brand disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? (
         <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden />
@@ -233,14 +234,14 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
 
             <div className="mt-2 flex items-center justify-between px-1">
               <span className="flex items-center gap-1.5 text-[11px] text-ink-faint">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+                <ShieldCheck className="h-3.5 w-3.5 text-positive" aria-hidden />
                 Opted in{thread.consent.source ? ` · ${thread.consent.source.replace(/_/g, " ")}` : ""}
               </span>
               <span className="text-[11px] text-ink-faint">{body.length}/1600</span>
             </div>
           </>
         ) : (
-          <div className="flex items-start gap-2 rounded-control border border-amber-300/25 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100">
+          <div className="flex items-start gap-2 rounded-control border border-caution/25 bg-caution-bg p-4 text-sm leading-6 text-caution">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <div>
               <p className="font-semibold">You cannot text this customer.</p>
@@ -250,7 +251,7 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
         )}
 
         {state.error ? (
-          <p role="alert" className="mt-3 rounded-control border border-red-400/20 bg-red-400/[0.07] p-3 text-sm text-red-200">
+          <Banner tone="critical" icon={false} className="mt-3">
             {state.error}
             {state.quietHoursBlocked ? (
               <button
@@ -264,7 +265,7 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
                 Send anyway
               </button>
             ) : null}
-          </p>
+          </Banner>
         ) : null}
       </div>
     </div>

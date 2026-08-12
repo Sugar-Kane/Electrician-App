@@ -90,7 +90,7 @@ export function OwnerNotificationForm({
         </div>
 
         {textingBlocked ? (
-          <p className="mt-5 flex items-start gap-2 rounded-control border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100">
+          <p className="mt-5 flex items-start gap-2 rounded-control border border-caution/25 bg-caution-bg p-4 text-sm leading-6 text-caution">
             <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
             <span>
               Texts are not being delivered yet — your messaging campaign is still
@@ -100,13 +100,13 @@ export function OwnerNotificationForm({
         ) : null}
 
         {state.error ? (
-          <p className="mt-4 flex items-start gap-2 text-sm text-rose-300">
+          <p className="mt-4 flex items-start gap-2 text-sm text-critical">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             {state.error}
           </p>
         ) : null}
         {state.saved ? (
-          <p className="mt-4 flex items-start gap-2 text-sm text-emerald-300">
+          <p className="mt-4 flex items-start gap-2 text-sm text-positive">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             Saved. The next booking will go here.
           </p>

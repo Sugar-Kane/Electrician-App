@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BellRing,
-  Check,
   ChevronRight,
   CircleUserRound,
   Clock3,
@@ -13,7 +12,6 @@ import {
   LockKeyhole,
   MapPinned,
   MonitorSmartphone,
-  ShieldCheck,
   Store,
   Upload,
   UserRound,
@@ -30,6 +28,7 @@ import {
   updateSquareAccount,
   uploadAvatar,
 } from "@/app/account/actions";
+import { Banner } from "@/components/ui/banner";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
 import { currentTimeIn, timezoneLabel } from "@/lib/timezones";
@@ -146,19 +145,19 @@ export default async function AccountPage({
       </section>
 
       {query.saved ? (
-        <p role="status" className="mb-4 flex items-start gap-2 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
-          <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {query.saved}
-        </p>
+        <Banner tone="positive" className="mb-4">
+          {query.saved}
+        </Banner>
       ) : null}
       {query.error ? (
-        <p role="alert" className="mb-4 flex items-start gap-2 rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {query.error}
-        </p>
+        <Banner tone="critical" className="mb-4">
+          {query.error}
+        </Banner>
       ) : null}
       {query.checkout === "success" ? (
-        <p role="status" className="mb-4 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-4 text-sm text-emerald-200">
+        <Banner tone="positive" icon={false} className="mb-4">
           Premium checkout completed. Stripe is confirming the subscription now.
-        </p>
+        </Banner>
       ) : null}
 
       <nav className="mb-4 flex gap-2 overflow-x-auto pb-1" aria-label="Account sections">
@@ -284,7 +283,7 @@ export default async function AccountPage({
                 <p className="mt-1 text-xs leading-5 text-ink-muted">Billing for Volteira is handled securely through Stripe. Square remains available for your customer payments.</p>
               </div>
             </div>
-            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${subscriptionActive ? "bg-emerald-400/10 text-emerald-300" : "bg-white/5 text-ink-muted"}`}>
+            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${subscriptionActive ? "bg-positive-bg text-positive" : "bg-white/5 text-ink-muted"}`}>
               {titleCase(account.subscription.status)}
             </span>
           </div>
@@ -399,12 +398,12 @@ export default async function AccountPage({
                 <p className="mt-1 text-xs leading-5 text-ink-muted">Choose the Square business and location Volteira should use when Square payment support is activated.</p>
               </div>
             </div>
-            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${account.square.status === "connected" ? "bg-emerald-400/10 text-emerald-300" : account.square.status === "pending" ? "bg-amber-400/10 text-amber-300" : "bg-white/5 text-ink-muted"}`}>
+            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${account.square.status === "connected" ? "bg-positive-bg text-positive" : account.square.status === "pending" ? "bg-caution-bg text-caution" : "bg-white/5 text-ink-muted"}`}>
               {titleCase(account.square.status)}
             </span>
           </div>
 
-          <div className="mt-4 rounded-control border border-blue-400/15 bg-blue-400/[0.045] p-4 text-xs leading-5 text-ink-muted">
+          <div className="mt-4 rounded-control border border-info/15 bg-info-bg p-4 text-xs leading-5 text-ink-muted">
             Enter identifiers only—never paste a Square access token here. A future OAuth connection will verify the merchant and retrieve selectable locations securely.
           </div>
 
@@ -475,7 +474,7 @@ export default async function AccountPage({
               <input className={inputClass} name="passwordConfirmation" type="password" autoComplete="new-password" minLength={10} required />
             </label>
             <div className="sm:col-span-2 sm:flex sm:justify-between sm:gap-4">
-              <p className="flex items-center gap-2 text-xs leading-5 text-ink-muted"><LockKeyhole className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden /> Passwords are managed by Supabase Auth and are never stored in the app database.</p>
+              <p className="flex items-center gap-2 text-xs leading-5 text-ink-muted"><LockKeyhole className="h-4 w-4 shrink-0 text-positive" aria-hidden /> Passwords are managed by Supabase Auth and are never stored in the app database.</p>
               <button type="submit" className="tap-target mt-3 min-h-12 w-full rounded-chip border border-line px-5 text-sm font-semibold sm:mt-0 sm:w-auto">Update password</button>
             </div>
           </form>
