@@ -15,6 +15,7 @@ import {
 import { askAboutBusiness, claudeIsConfigured, type AssistantTurn } from "@/lib/claude";
 import { getInvoices, getJobs } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
+import { getMemories, memoryBrief } from "@/lib/assistant-memory";
 import { currentContext, currentUser } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -101,6 +102,10 @@ export async function askAssistant(
     invoices: briefInvoices,
   });
 
+  // Only this business's memories, ever. The query is organization-scoped and
+  // so is the RLS behind it.
+  const memories = await getMemories();
+
   const turns: AssistantTurn[] = asked.slice(-MAX_HISTORY);
 
   // Code, licensing and permit questions are answered from the reference index
@@ -115,7 +120,7 @@ export async function askAssistant(
     system: references.length
       ? `${assistantSystemPrompt(businessName)}\n\n${referenceSystemPrompt()}`
       : assistantSystemPrompt(businessName),
-    brief: `${brief}${referenceBrief}`,
+    brief: `${brief}${memoryBrief(memories)}${referenceBrief}`,
     turns,
   });
 
