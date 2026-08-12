@@ -103,6 +103,12 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Business",
     items: [
       {
+        label: "Reports",
+        href: "/reports",
+        icon: "ChartNoAxesColumn",
+        description: "Money in, money owed, activity",
+      },
+      {
         label: "Invoices",
         href: "/invoices",
         icon: "ReceiptText",
