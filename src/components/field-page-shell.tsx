@@ -27,7 +27,13 @@ export function FieldPageShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-canvas p-2 pb-28 text-ink sm:p-3 lg:pb-3">
+    // The bottom padding clears the floating nav: 12px off the bottom, at
+    // least 64px tall, with a create button standing 28px proud of its top
+    // edge — roughly 104px before the home indicator is considered at all.
+    // `pb-28` is 112px, which cleared it on a phone with no indicator and hid
+    // the last row of every page on one with. The inset is added rather than
+    // assumed, now that it reports a real number.
+    <main className="min-h-screen bg-canvas p-2 pb-[calc(7rem+env(safe-area-inset-bottom))] text-ink sm:p-3 lg:pb-3">
       <MobileAppChrome title={title} backHref={backHref} />
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
         <AppSidebar />
@@ -35,7 +41,17 @@ export function FieldPageShell({
           <div className="hidden items-center justify-end gap-3 lg:flex">
             <AccountMenu />
           </div>
-          <header className="mb-5 mt-3 rounded-panel border border-line bg-surface p-5 lg:mt-4 lg:p-8">
+          {/*
+            Where "Skip to content" lands. `tabIndex={-1}` makes it focusable
+            by the jump without adding it to the tab order — without that,
+            focus stays on the link and the next Tab carries on through the
+            sidebar, which is the thing being skipped.
+          */}
+          <header
+            id="main-content"
+            tabIndex={-1}
+            className="mb-5 mt-3 rounded-panel border border-line bg-surface p-5 lg:mt-4 lg:p-8"
+          >
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
               {eyebrow}
             </p>

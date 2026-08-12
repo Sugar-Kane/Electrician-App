@@ -12,7 +12,7 @@
  */
 export function PageSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <main className="min-h-screen bg-canvas p-2 pb-28 text-ink sm:p-3 lg:pb-3" aria-busy="true">
+    <main className="min-h-screen bg-canvas p-2 pb-[calc(7rem+env(safe-area-inset-bottom))] text-ink sm:p-3 lg:pb-3" aria-busy="true">
       <span className="sr-only">Loading</span>
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
         <div className="hidden rounded-panel border border-line bg-sunken lg:block" />
