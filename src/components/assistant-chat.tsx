@@ -6,12 +6,7 @@ import { Check, LoaderCircle, SendHorizontal, Sparkles, X } from "lucide-react";
 
 import { parseChatMarkdown } from "@/lib/chat-markdown";
 
-import {
-  cancelProposal,
-  confirmProposal,
-  sendChatMessage,
-  type ChatState,
-} from "@/app/assistant/agent-actions";
+import { chatAction, type ChatState } from "@/app/assistant/agent-actions";
 
 /**
  * Asking the business a question.
@@ -70,7 +65,7 @@ function Thinking() {
 }
 
 export function AssistantChat() {
-  const [state, action] = useActionState(sendChatMessage, initialState);
+  const [state, action] = useActionState(chatAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +125,7 @@ export function AssistantChat() {
         ))}
 
         {state.proposal ? (
-          <ProposalCard proposal={state.proposal} turns={state.turns} />
+          <ProposalCard proposal={state.proposal} action={action} />
         ) : (
           <Form action={action} formRef={formRef} error={state.error} />
         )}
@@ -198,39 +193,53 @@ function Form({
  */
 function ProposalCard({
   proposal,
-  turns,
+  action,
 }: {
   proposal: NonNullable<ChatState["proposal"]>;
-  turns: ChatState["turns"];
+  action: (formData: FormData) => void;
 }) {
-  const [state, action] = useActionState(confirmProposal, { turns, error: "" } as ChatState);
-  const [, cancel] = useActionState(cancelProposal, { turns, error: "" } as ChatState);
-
   return (
-    <div className="rounded-panel border border-brand/40 bg-brand/[0.06] p-4">
+    <form action={action} className="rounded-panel border border-brand/40 bg-brand/[0.06] p-4">
+      <input type="hidden" name="proposal" value={JSON.stringify(proposal)} />
+
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">
         Waiting for you
       </p>
       <p className="mt-2 text-sm leading-6">{proposal.summary}</p>
 
-      {state.error ? <p className="mt-2 text-xs text-critical">{state.error}</p> : null}
+      <Working />
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <form action={action}>
-          <input type="hidden" name="proposal" value={JSON.stringify(proposal)} />
-          <ConfirmButton />
-        </form>
-        <form action={cancel}>
-          <button
-            type="submit"
-            className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold text-ink-muted"
-          >
-            <X className="h-4 w-4" aria-hidden />
-            Cancel
-          </button>
-        </form>
+        <ConfirmButton />
+        <button
+          type="submit"
+          name="intent"
+          value="cancel"
+          className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold text-ink-muted"
+        >
+          <X className="h-4 w-4" aria-hidden />
+          Cancel
+        </button>
       </div>
-    </div>
+    </form>
+  );
+}
+
+/**
+ * What the person sees between tapping and the answer arriving.
+ *
+ * Sending an invoice takes a couple of seconds against two providers, and a
+ * button that dims with nothing else changing reads as a tap that missed.
+ */
+function Working() {
+  const { pending } = useFormStatus();
+  if (!pending) return null;
+
+  return (
+    <p className="mt-3 flex items-center gap-2 text-xs text-ink-muted" aria-live="polite">
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+      Doing it now…
+    </p>
   );
 }
 
@@ -239,6 +248,8 @@ function ConfirmButton() {
   return (
     <button
       type="submit"
+      name="intent"
+      value="confirm"
       disabled={pending}
       className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-5 text-sm font-semibold text-on-brand disabled:opacity-60"
     >

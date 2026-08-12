@@ -103,7 +103,29 @@ async function buildContext() {
   return { businessName, brief };
 }
 
-export async function sendChatMessage(
+/**
+ * Every interaction with the chat, through one action.
+ *
+ * Asking, confirming and cancelling were three separate actions with three
+ * separate `useActionState` hooks, and the confirm hook's result was written
+ * into state nothing rendered — so tapping Confirm did the work and then showed
+ * the person absolutely nothing. One action and one state means an outcome
+ * cannot be produced without appearing.
+ */
+export async function chatAction(previous: ChatState, formData: FormData): Promise<ChatState> {
+  const intent = String(formData.get("intent") ?? "ask");
+  if (intent === "cancel") {
+    return {
+      turns: [...previous.turns, { role: "assistant", text: "Cancelled — nothing was sent." }],
+      proposal: undefined,
+      error: "",
+    };
+  }
+  if (intent === "confirm") return confirmProposal(previous, formData);
+  return sendChatMessage(previous, formData);
+}
+
+async function sendChatMessage(
   previous: ChatState,
   formData: FormData,
 ): Promise<ChatState> {
@@ -203,7 +225,7 @@ export async function sendChatMessage(
  * what happens is what was on the screen when they tapped — a second model call
  * here could produce a different action from the one they read.
  */
-export async function confirmProposal(
+async function confirmProposal(
   previous: ChatState,
   formData: FormData,
 ): Promise<ChatState> {
@@ -231,11 +253,3 @@ export async function confirmProposal(
   };
 }
 
-/** Dismissing a proposal without doing it. */
-export async function cancelProposal(previous: ChatState): Promise<ChatState> {
-  return {
-    turns: [...previous.turns, { role: "assistant", text: "Cancelled — nothing was sent." }],
-    proposal: undefined,
-    error: "",
-  };
-}
