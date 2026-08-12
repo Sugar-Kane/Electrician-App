@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   CalendarDays,
   Home,
-  Menu,
   MessagesSquare,
   MoreHorizontal,
   Plus,
@@ -20,31 +19,36 @@ import {
 
 import { AccountMenu } from "@/components/account-menu";
 import { NavIcon } from "@/components/ui/nav-icon";
-import { ALL_NAV_ITEMS, NAV_SECTIONS, activeNavHref } from "@/lib/navigation";
-import { pilotJobs } from "@/lib/pilot-data";
+import { NAV_SECTIONS, activeNavHref, isBeyondBottomNav } from "@/lib/navigation";
 
 /**
- * The phone's chrome: a top bar, a bottom bar, search, and the full menu.
+ * The phone's chrome: a top bar, a bottom bar, and the full menu.
  *
  * Which entry is lit used to be a string each page passed in by hand, so a page
  * that forgot said "Home" while you were somewhere else entirely. It is now
  * derived from the URL, the same way the desktop sidebar does it — there is one
  * answer to "where am I" and both menus read it.
+ *
+ * The menu used to open from a hamburger in the top-right corner — the hardest
+ * point on a phone to reach with the hand holding it — while the button under
+ * the thumb labelled "More" navigated to Settings instead of opening anything.
+ * So the menu was where the thumb was not, and where the thumb was, a control
+ * lied about what it did. More opens the menu now and the hamburger is gone.
  */
 
 /**
- * The five things under a thumb.
+ * The four things under a thumb, plus create.
  *
  * "Schedule" is a software word for a screen an electrician thinks of as their
  * jobs. The centre is creation rather than a destination — see CreateSheet for
- * why it is no longer the assistant.
+ * why it is no longer the assistant. More is a menu, not a link.
  */
 const BOTTOM_ITEMS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Jobs", href: "/schedule", icon: CalendarDays },
-  { label: "New", href: "", icon: Plus, primary: true },
+  { label: "New", href: "", icon: Plus, action: "create" as const },
   { label: "Messages", href: "/messages", icon: MessagesSquare },
-  { label: "More", href: "/settings", icon: MoreHorizontal },
+  { label: "More", href: "", icon: MoreHorizontal, action: "menu" as const },
 ];
 
 function Brand() {
@@ -61,44 +65,23 @@ function Brand() {
 }
 
 export function MobileAppChrome({ title, backHref }: { title?: string; backHref?: string }) {
-  const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const pathname = usePathname();
   const active = activeNavHref(pathname);
 
+  // Somewhere that came from the menu rather than the bottom bar. Lighting
+  // More there beats a bottom bar with nothing lit, which reads as "you are
+  // nowhere" on every page but four.
+  const beyond = isBeyondBottomNav(pathname);
+
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setSearchOpen(false);
-        setMenuOpen(false);
-      }
+      if (event.key === "Escape") setMenuOpen(false);
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
-
-  const results = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    const jobResults = pilotJobs.map((job) => ({
-      label: `${job.customer} · #${job.id}`,
-      description: `${job.workType} · ${job.address}, ${job.city}`,
-      href: `/jobs/${job.id}`,
-      icon: "CalendarDays",
-    }));
-    const navResults = ALL_NAV_ITEMS.map((item) => ({
-      label: item.label,
-      description: item.description,
-      href: item.href,
-      icon: item.icon,
-    }));
-    const all = [...jobResults, ...navResults];
-    if (!normalized) return all.slice(0, 8);
-    return all.filter((item) =>
-      `${item.label} ${item.description}`.toLowerCase().includes(normalized),
-    );
-  }, [query]);
 
   return (
     <>
@@ -116,23 +99,21 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
           <Brand />
         )}
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
+          {/*
+            A link to the real search page, not an overlay. The overlay that
+            used to open here searched `pilotJobs` — the demo fixtures — so an
+            electrician tapping it saw four invented customers and none of
+            their own work, while /search queried the database properly. One
+            search, and it is the one that returns real jobs.
+          */}
+          <Link
+            href="/search"
             className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
             aria-label="Search jobs and customers"
-            onClick={() => setSearchOpen(true)}
           >
             <Search className="h-5 w-5" aria-hidden />
-          </button>
+          </Link>
           <AccountMenu />
-          <button
-            type="button"
-            className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
-            aria-label="Open main menu"
-            onClick={() => setMenuOpen(true)}
-          >
-            <Menu className="h-5 w-5" aria-hidden />
-          </button>
         </div>
       </header>
 
@@ -140,8 +121,13 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
         className="fixed inset-x-3 bottom-3 z-50 flex min-h-[64px] items-end justify-around rounded-control border border-line bg-sunken/96 px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur lg:hidden"
         aria-label="Mobile navigation"
       >
-        {BOTTOM_ITEMS.map(({ label, href, icon: Icon, primary }) => {
-          const current = !primary && activeNavHref(href) === active && active !== null;
+        {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action }) => {
+          const create = action === "create";
+          const menu = action === "menu";
+
+          const current = menu
+            ? beyond
+            : !action && activeNavHref(href) === active && active !== null;
 
           const shell = `tap-target flex min-w-[54px] flex-col items-center justify-center gap-0.5 rounded-chip text-[10px] ${
             current ? "text-brand" : "text-ink-muted"
@@ -151,28 +137,30 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
             <>
               <span
                 className={
-                  primary
+                  create
                     ? "-mt-7 grid h-12 w-12 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-yellow-500/20"
                     : "grid h-7 place-items-center"
                 }
               >
-                <Icon className={primary ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
+                <Icon className={create ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
               </span>
               <span>{label}</span>
             </>
           );
 
-          // The centre opens a sheet rather than navigating, so it is a button.
-          // A link to "" would quietly take somebody to the dashboard.
-          if (primary) {
+          // Both the centre and More open sheets rather than navigating, so
+          // they are buttons. A link to "" would quietly take somebody to the
+          // dashboard, which is what More did in a different way before.
+          if (action) {
+            const open = create ? createOpen : menuOpen;
             return (
               <button
                 key={label}
                 type="button"
-                onClick={() => setCreateOpen(true)}
+                onClick={() => (create ? setCreateOpen(true) : setMenuOpen(true))}
                 aria-haspopup="dialog"
-                aria-expanded={createOpen}
-                aria-label="Create"
+                aria-expanded={open}
+                aria-label={create ? "Create" : "Open main menu"}
                 className={shell}
               >
                 {inner}
@@ -195,67 +183,6 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
 
       <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
 
-      {searchOpen ? (
-        <div
-          className="fixed inset-0 z-[70] bg-canvas/96 p-3 backdrop-blur-sm lg:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Search"
-        >
-          <div className="mx-auto max-w-lg">
-            <div className="flex items-center gap-2">
-              <label className="flex min-h-12 flex-1 items-center gap-3 rounded-control border border-line bg-raised px-4">
-                <Search className="h-5 w-5 text-ink-muted" aria-hidden />
-                <span className="sr-only">Search jobs, customers, addresses, and materials</span>
-                <input
-                  autoFocus
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search jobs, people, addresses…"
-                  className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-ink-faint"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => setSearchOpen(false)}
-                className="tap-target grid h-12 w-12 place-items-center rounded-control border border-line bg-raised"
-                aria-label="Close search"
-              >
-                <X className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-            <p className="mb-2 mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-ink-faint">
-              Results
-            </p>
-            <div className="space-y-2">
-              {results.map(({ label, description, href, icon }) => (
-                <Link
-                  key={`${href}-${label}`}
-                  href={href}
-                  onClick={() => setSearchOpen(false)}
-                  className="flex min-h-16 items-center gap-3 rounded-control border border-line bg-surface px-4 py-3 active:bg-raised"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-white/5 text-brand">
-                    <NavIcon name={icon} className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-ink">{label}</span>
-                    <span className="mt-0.5 block truncate text-xs text-ink-muted">
-                      {description}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-              {results.length === 0 ? (
-                <p className="rounded-control border border-line p-5 text-sm text-ink-muted">
-                  No matches yet. Try a customer name, job number, city, or work type.
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {menuOpen ? (
         <div
           className="fixed inset-0 z-[70] bg-black/60 lg:hidden"
@@ -265,7 +192,9 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
           onClick={() => setMenuOpen(false)}
         >
           <div
-            className="ml-auto flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-sunken p-4 shadow-2xl"
+            // Clears the home indicator. The last entry in a menu that ends
+            // inside the iPhone gesture area is an entry nobody can tap.
+            className="ml-auto flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-sunken p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between">

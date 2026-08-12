@@ -189,6 +189,26 @@ export function activeNavHref(
   return null;
 }
 
+/**
+ * The four destinations that get a permanent place under the thumb.
+ *
+ * Everything else lives behind More. Kept here rather than in the component so
+ * the bottom bar and the "am I somewhere in the menu" test cannot drift apart.
+ */
+export const BOTTOM_NAV_HREFS = ["/", "/schedule", "/messages"] as const;
+
+/**
+ * Whether the current page is one of the permanent four.
+ *
+ * When it is not, More is lit — because the page you are on did come from that
+ * menu, and a bottom bar with nothing highlighted reads as "you are nowhere".
+ */
+export function isBeyondBottomNav(pathname: string): boolean {
+  const active = activeNavHref(pathname);
+  if (!active) return false;
+  return !BOTTOM_NAV_HREFS.includes(active as (typeof BOTTOM_NAV_HREFS)[number]);
+}
+
 /** The entry itself, for a header that wants to name where you are. */
 export function activeNavItem(pathname: string): NavItem | null {
   const href = activeNavHref(pathname);
