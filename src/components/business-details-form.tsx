@@ -77,7 +77,7 @@ export function BusinessDetailsForm({
           </div>
 
           <Field label="Phone" hint="The number customers are told to call back on.">
-            <TextInput name="phone" type="tel" defaultValue={details.phone} placeholder="209-626-9313" />
+            <TextInput name="phone" type="tel" inputMode="tel" autoComplete="tel" defaultValue={details.phone} placeholder="209-626-9313" />
           </Field>
 
           <Field label="Timezone" hint="Arrival windows and quiet hours use this.">
@@ -111,7 +111,13 @@ export function BusinessDetailsForm({
             <TextInput name="state" defaultValue={details.state} maxLength={2} />
           </Field>
           <Field label="ZIP">
-            <TextInput name="postalCode" defaultValue={details.postalCode} />
+            <TextInput
+              name="postalCode"
+              inputMode="numeric"
+              autoComplete="postal-code"
+              maxLength={10}
+              defaultValue={details.postalCode}
+            />
           </Field>
         </div>
       </section>

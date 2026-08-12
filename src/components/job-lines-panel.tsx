@@ -10,6 +10,7 @@ import {
   type LineActionState,
 } from "@/app/jobs/[jobId]/line-actions";
 import { raiseInvoice, type RaiseInvoiceState } from "@/app/jobs/[jobId]/invoice-actions";
+import { inputClass } from "@/components/ui/field";
 import {
   formatCents,
   formatQuantity,
@@ -107,7 +108,7 @@ function AddLineForm({
               const found = stock.find((item) => item.id === event.target.value);
               setChosen(found ?? null);
             }}
-            className="mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3 text-sm"
+            className={`mt-1 ${inputClass}`}
           >
             <option value="">Not from stock</option>
             {stock.map((item) => (
@@ -132,7 +133,7 @@ function AddLineForm({
           key={chosen?.id ?? "blank"}
           defaultValue={chosen?.name ?? ""}
           placeholder={labour ? "Traced and replaced backstabbed receptacle" : "20A AFCI breaker"}
-          className="mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3 text-sm"
+          className={`mt-1 ${inputClass}`}
         />
       </label>
 
@@ -145,7 +146,7 @@ function AddLineForm({
             name="quantity"
             inputMode="decimal"
             defaultValue="1"
-            className="mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3 text-sm"
+            className={`mt-1 ${inputClass}`}
           />
         </label>
 
@@ -155,7 +156,7 @@ function AddLineForm({
             name="unit"
             key={`unit-${chosen?.id ?? "blank"}`}
             defaultValue={labour ? "hr" : (chosen?.unit ?? "each")}
-            className="mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3 text-sm"
+            className={`mt-1 ${inputClass}`}
           />
         </label>
 
@@ -171,7 +172,7 @@ function AddLineForm({
                 : ""
             }
             placeholder="0.00"
-            className="mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3 text-sm"
+            className={`mt-1 ${inputClass}`}
           />
         </label>
       </div>
