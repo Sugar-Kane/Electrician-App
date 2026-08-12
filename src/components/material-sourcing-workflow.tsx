@@ -32,6 +32,7 @@ import {
   type JobMaterial,
   type SupplierId,
 } from "@/lib/pilot-data";
+import { inputClass } from "@/components/ui/field";
 import { createClient } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "volteira:supplier-products:v1";
@@ -238,11 +239,11 @@ function ProductConfirmationForm({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="sm:col-span-2"><span className="text-xs font-semibold text-ink-muted">Product link</span><input type="url" inputMode="url" value={productUrl} onChange={(event) => setProductUrl(event.target.value)} placeholder={`Paste the ${getSupplierLabel(supplier)} product URL`} className="mt-1.5 min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base text-white outline-none placeholder:text-ink-faint" /></label>
-        <label className="sm:col-span-2"><span className="text-xs font-semibold text-ink-muted">Product name</span><input value={productName} onChange={(event) => setProductName(event.target.value)} className="mt-1.5 min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base text-white outline-none" /></label>
-        <label><span className="text-xs font-semibold text-ink-muted">Retailer SKU <span className="font-normal text-ink-faint">(optional)</span></span><input value={retailerSku} onChange={(event) => setRetailerSku(event.target.value)} className="mt-1.5 min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base text-white outline-none" /></label>
-        <label><span className="text-xs font-semibold text-ink-muted">Quantity</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="mt-1.5 min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base text-white outline-none" /></label>
+        <label className="sm:col-span-2"><span className="text-xs font-semibold text-ink-muted">Product name</span><input value={productName} onChange={(event) => setProductName(event.target.value)} className={`mt-1.5 ${inputClass}`} /></label>
+        <label><span className="text-xs font-semibold text-ink-muted">Retailer SKU <span className="font-normal text-ink-faint">(optional)</span></span><input value={retailerSku} onChange={(event) => setRetailerSku(event.target.value)} className={`mt-1.5 ${inputClass}`} /></label>
+        <label><span className="text-xs font-semibold text-ink-muted">Quantity</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={quantity} onChange={(event) => setQuantity(event.target.value)} className={`mt-1.5 ${inputClass}`} /></label>
         <label><span className="text-xs font-semibold text-ink-muted">Unit price</span><span className="mt-1.5 flex min-h-12 items-center rounded-control border border-line bg-raised px-4"><span className="text-ink-muted">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} className="min-w-0 flex-1 bg-transparent pl-1 text-base text-white outline-none" /></span></label>
-        <label><span className="text-xs font-semibold text-ink-muted">Availability shown</span><select value={availability} onChange={(event) => setAvailability(event.target.value as ProductAvailability)} className="mt-1.5 min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base text-white outline-none">{Object.entries(availabilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span className="text-xs font-semibold text-ink-muted">Availability shown</span><select value={availability} onChange={(event) => setAvailability(event.target.value as ProductAvailability)} className={`mt-1.5 ${inputClass}`}>{Object.entries(availabilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       </div>
 
       <div className="mt-4 rounded-control border border-line bg-white/[0.025] p-3">

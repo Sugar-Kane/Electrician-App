@@ -66,7 +66,7 @@ export function NewJobForm({ timeZoneLabel }: { timeZoneLabel: string }) {
           />
         </Field>
         <Field label="Mobile number" hint="Used for booking confirmations and cancellations.">
-          <TextInput name="phone" type="tel" autoComplete="off" placeholder="209-626-9313" />
+          <TextInput name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="209-626-9313" />
         </Field>
         <Field
           label="Email"
@@ -90,7 +90,13 @@ export function NewJobForm({ timeZoneLabel }: { timeZoneLabel: string }) {
           label="ZIP"
           hint="Leave the whole address blank if it is not known yet — it can be added later. A job with no address will not appear on the map."
         >
-          <TextInput name="postalCode" autoComplete="off" placeholder="93444" />
+          <TextInput
+            name="postalCode"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            maxLength={10}
+            placeholder="93444"
+          />
         </Field>
       </Section>
 
