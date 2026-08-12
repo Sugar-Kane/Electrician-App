@@ -239,11 +239,22 @@ export async function runConfirmedTool(
       return `Draft invoice for ${formatMoney(totals.totalCents / 100)} created on job #${jobNumber}. It has not been sent.`;
     }
 
-    case "draft_contract":
-      // Deliberately not done here. Contract generation already has its own
-      // action on the job page, and duplicating it would give two code paths
-      // for the same document.
-      return `Open job #${text(input.job_number)} and use Generate contract — the chat cannot draft one yet.`;
+    case "draft_contract": {
+      const jobNumber = text(input.job_number);
+      if (!jobNumber) return "That job could not be read, so no contract was drafted.";
+
+      // The job page's own generator, called rather than reimplemented. Two
+      // code paths for the same document is how the two drift, and a contract
+      // that differs depending on where it was raised is the worst version of
+      // that.
+      const { generateContract } = await import("@/app/jobs/[jobId]/contract-actions");
+      const form = new FormData();
+      form.set("jobNumber", jobNumber);
+
+      const result = await generateContract({ error: "" }, form);
+      if (result.error) return result.error;
+      return `${result.notice ?? "Draft contract created."} Open job #${jobNumber} to read it — it has not been sent.`;
+    }
 
     default:
       return `Nothing happened: ${name} is not something this can do.`;
