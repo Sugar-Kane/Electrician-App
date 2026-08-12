@@ -253,3 +253,21 @@ test("a web booking waiting on review counts, a card being typed in does not", (
   assert.equal(openBookingRequests([{ status: "confirmed" }]), 0);
   assert.equal(openBookingRequests([{ status: "expired" }]), 0);
 });
+
+test("a display name that came from an email is not a name", () => {
+  // Signing up with adamkane13.ak@gmail.com left a display_name of
+  // "adamkane13.ak", which has no space and no @, so it sailed through and the
+  // dashboard said "Good morning, adamkane13.ak".
+  assert.equal(firstName("adamkane13.ak"), "");
+  assert.equal(firstName("jsmith92"), "");
+  // The trailing token is an identifier, but "nick" on its own is a usable
+  // name, so it is kept rather than thrown away with the digits.
+  assert.equal(firstName("nick.kane92"), "Nick");
+});
+
+test("an actual name still survives", () => {
+  assert.equal(firstName("Nick Kane"), "Nick");
+  assert.equal(firstName("Nick"), "Nick");
+  // A dot is a separator, not a disqualification.
+  assert.equal(firstName("Nick.Kane"), "Nick");
+});

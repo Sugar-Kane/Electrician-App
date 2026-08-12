@@ -16,6 +16,8 @@ import { NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-
 import { todayInZone } from "@/lib/calendar";
 import {
   canceledToday,
+  firstName,
+  greeting,
   nextJob,
   todaysJobs,
   type AttentionItem,
@@ -105,18 +107,35 @@ function Sparkline({ values, large = false }: { values: number[]; large?: boolea
   );
 }
 
-function MetricCard({ metric, href }: { metric: DashboardMetric; href: string }) {
+function MetricCard({
+  metric,
+  href,
+  spanWhenOdd = false,
+}: {
+  metric: DashboardMetric;
+  href: string;
+  /** Fill the row rather than sit half empty as the last of an odd number. */
+  spanWhenOdd?: boolean;
+}) {
   return (
     <Link
       href={href}
-      className="tap-card block min-h-[112px] min-w-[180px] rounded-control border border-line bg-surface p-4"
+      // No min-width. It was there to give the old horizontal strip something
+      // to scroll, and in a two-column grid it is the thing that pushes the
+      // page wider than a 320px phone.
+      className={`tap-card block min-h-[112px] rounded-control border border-line bg-surface p-4 ${
+        spanWhenOdd ? "col-span-2 sm:col-span-1" : ""
+      }`}
       aria-label={`${metric.label}: ${metric.value}. Open details`}
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-ink-muted">
         {metric.label}
       </p>
       <div className="mt-2 flex items-end justify-between gap-2">
-        <div>
+        {/* min-w-0 so a long detail line wraps inside the tile rather than
+            refusing to shrink and shouldering the sparkline out of it. Half a
+            phone is much less room than the strip these were designed in. */}
+        <div className="min-w-0">
           <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-ink">
             {metric.value}
           </p>
@@ -160,7 +179,13 @@ function Header({
   const hour = Number(
     new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hour12: false }).format(now),
   );
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  // greeting() and firstName() have existed since Phase 1, tested, and nothing
+  // ever called them: this header rolled its own greeting and printed
+  // ownerName raw. So an account whose display name came from an email was
+  // greeted "Good morning, adamkane13.ak" — the exact thing firstName was
+  // written to stop.
+  const hello = greeting(hour);
+  const name = firstName(ownerName);
 
   return (
     <header className="flex items-center justify-between gap-4">
@@ -168,7 +193,8 @@ function Header({
         <div className="flex items-center gap-2.5">
           <Zap className="h-7 w-7 fill-brand text-brand" aria-hidden />
           <h1 className="text-[26px] font-semibold tracking-[-0.035em] text-ink">
-            {greeting}, {ownerName}
+            {/* No trailing comma when there is no name to put after it. */}
+            {name ? `${hello}, ${name}` : hello}
           </h1>
         </div>
         <div className="mt-1 flex items-center gap-2 pl-10 text-xs text-ink-muted">
@@ -372,17 +398,31 @@ export function DashboardShell({
                 Reports
               </Link>
             </div>
-            <div
-              className="grid auto-cols-[minmax(160px,1fr)] grid-flow-col gap-2 overflow-x-auto pb-2 [scrollbar-width:none] lg:grid-flow-row lg:grid-cols-5 lg:overflow-visible"
-              role="region"
-              aria-label="Business metrics"
-              tabIndex={0}
-            >
+            {/*
+              Two columns on a phone rather than a sideways scroll.
+
+              These five used to sit in a horizontal strip, so three of them
+              were off the right edge of the screen with nothing to say they
+              were there — a row of numbers only reads as a row if you can see
+              it, and nobody swipes a dashboard they think they have finished.
+
+              The odd one out spans the full width instead of sitting half
+              empty beside a gap. The wrapper is no longer a focusable scroll
+              region: it does not scroll now, and a tab stop that goes nowhere
+              is one more press between a keyboard user and the page.
+            */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {snapshot.metrics.map((metric, index) => (
                 <MetricCard
                   key={metric.label}
                   metric={metric}
                   href={metricDestinations[index] ?? "/"}
+                  // Only when it would otherwise be alone on the last row, and
+                  // only in the two-column layout that can strand it.
+                  spanWhenOdd={
+                    snapshot.metrics.length % 2 === 1 &&
+                    index === snapshot.metrics.length - 1
+                  }
                 />
               ))}
             </div>

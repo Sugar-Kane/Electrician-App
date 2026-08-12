@@ -197,8 +197,20 @@ export function greeting(hour: number): string {
  * shown rather than an address.
  */
 export function firstName(fullName: string, email = ""): string {
-  const named = (fullName ?? "").trim().split(/\s+/)[0] ?? "";
-  if (named && !named.includes("@")) return named;
+  // Split on dots as well as spaces: a display name that was filled in from an
+  // email arrives as "adamkane13.ak", one token by any space-based reckoning.
+  const named = (fullName ?? "").trim().split(/[\s.]+/)[0] ?? "";
+
+  // Digits are the tell. People are not called Adamkane13, so a name carrying
+  // them was derived from an address or a handle, and greeting somebody by it
+  // is the same failure as greeting them by the address itself — which is what
+  // this function exists to prevent and was letting through.
+  // Capitalised on the way out. A real display name already is, and one
+  // recovered from an address is not — "Good morning, nick" reads like a bug
+  // even though the name is right.
+  if (named && !named.includes("@") && !/\d/.test(named)) {
+    return named.charAt(0).toUpperCase() + named.slice(1);
+  }
 
   const local = (email ?? "").split("@")[0] ?? "";
   const cleaned = local.replace(/[._-]+/g, " ").trim().split(" ")[0] ?? "";
