@@ -22,6 +22,10 @@ import type { JobPhoto } from "@/lib/job-photo-data";
  * Two buttons rather than one with a picker: which of the two it is gets
  * decided at the moment of taking it, and asking afterwards is a question
  * nobody answers correctly on the fourth job of the day.
+ *
+ * The empty state used to explain, in a sentence and a half, that a before shot
+ * settles arguments. True, and not worth reading twice a day for the rest of
+ * somebody's career. Two buttons labelled Before and After say it.
  */
 
 const initialState: PhotoActionState = { error: "" };
@@ -156,7 +160,7 @@ export function JobPhotos({
   photos: JobPhoto[];
 }) {
   return (
-    <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+    <section>
       <h2 className="text-sm font-semibold">Photos</h2>
 
       {photos.length > 0 ? (
@@ -165,14 +169,9 @@ export function JobPhotos({
             <PhotoTile key={photo.id} jobNumber={jobNumber} photo={photo} />
           ))}
         </ul>
-      ) : (
-        <p className="mt-2 text-sm text-ink-muted">
-          Nothing yet. A before shot is what settles an argument about what the
-          panel looked like when you got there.
-        </p>
-      )}
+      ) : null}
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-2 flex gap-2">
         <UploadForm jobNumber={jobNumber} stage="before" />
         <UploadForm jobNumber={jobNumber} stage="after" />
       </div>

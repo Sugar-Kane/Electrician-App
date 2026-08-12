@@ -1,28 +1,29 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useFormStatus } from "react-dom";
-import { LoaderCircle, Mic, MicOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Mic, MicOff } from "lucide-react";
 
-import {
-  saveTechnicianNotes,
-  type LineActionState,
-} from "@/app/jobs/[jobId]/line-actions";
+import { saveTechnicianNotes } from "@/app/jobs/[jobId]/line-actions";
 
 /**
  * What the technician writes down, on site.
  *
- * The job page had `customer_description` (the complaint) and `ai_summary` (a
- * machine's reading of it), both read-only. There was nowhere for "breaker was
- * backstabbed, replaced the receptacle, told the owner about the other three" —
- * so it went into a phone's notes app, or nowhere, and was gone by the time
- * anybody wrote the invoice.
+ * There was a Save notes button, and it was the wrong shape for the job. Notes
+ * are written in pieces — a line at the panel, a line back at the van, a line
+ * while the customer talks — and every one of those pieces was a thing to
+ * remember to save with a phone in one hand. What actually happened is that a
+ * paragraph got typed, somebody tapped Navigate, and it was gone.
+ *
+ * So it saves itself, a second after typing stops, and says which of the two
+ * states it is in. The only button left is the microphone, which is a different
+ * kind of thing: it does something rather than confirming something.
  *
  * Never shown to the customer, and the label says so, because a notes field
  * somebody is unsure about is a notes field that stays empty.
  */
 
-const initialState: LineActionState = { error: "" };
+/** Long enough not to save mid-word, short enough to beat a distraction. */
+const QUIET_MS = 1000;
 
 /** The vendor-prefixed constructor, without asserting it exists. */
 type SpeechRecognitionLike = {
@@ -67,35 +68,19 @@ const subscribeToNothing = () => () => {};
 const dictationOnClient = () => recognitionConstructor() !== undefined;
 const dictationOnServer = () => false;
 
-function SaveButton() {
-  const { pending } = useFormStatus();
+type SaveState = "clean" | "saving" | "saved" | "failed";
 
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-60"
-    >
-      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-      Save notes
-    </button>
-  );
-}
-
-export function JobNotes({
-  jobNumber,
-  notes,
-}: {
-  jobNumber: string;
-  notes: string;
-}) {
-  const [state, action] = useActionState(saveTechnicianNotes, initialState);
+export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: string }) {
   const [value, setValue] = useState(notes);
+  const [saveState, setSaveState] = useState<SaveState>("clean");
+  const [error, setError] = useState("");
   const [listening, setListening] = useState(false);
 
-  // Checked on the client rather than guessed from the user agent. Firefox has
-  // no SpeechRecognition at all, and a mic button that does nothing is worse
-  // than no mic button.
+  // What the server is known to hold. Compared against before every save so a
+  // blur straight after an autosave does not post the same text twice.
+  const saved = useRef(notes);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const dictationAvailable = useSyncExternalStore(
     subscribeToNothing,
     dictationOnClient,
@@ -104,12 +89,51 @@ export function JobNotes({
 
   const recognition = useRef<SpeechRecognitionLike | null>(null);
 
+  const save = useCallback(
+    async (text: string) => {
+      if (text === saved.current) return;
+
+      setSaveState("saving");
+      const data = new FormData();
+      data.set("jobNumber", jobNumber);
+      data.set("notes", text);
+
+      const result = await saveTechnicianNotes({ error: "" }, data);
+
+      if (result.error) {
+        setError(result.error);
+        setSaveState("failed");
+        return;
+      }
+
+      saved.current = text;
+      setError("");
+      setSaveState("saved");
+    },
+    [jobNumber],
+  );
+
+  function change(text: string) {
+    setValue(text);
+    setSaveState("clean");
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => void save(text), QUIET_MS);
+  }
+
+  // A pending save is flushed rather than dropped when the field is left, so
+  // tapping Navigate a beat after typing does not lose the last sentence.
+  function flush() {
+    if (timer.current) clearTimeout(timer.current);
+    void save(value);
+  }
+
   // Stop the microphone if this unmounts mid-sentence. A recogniser left
   // running holds the mic indicator on after the page has gone.
   useEffect(() => {
     return () => {
       recognition.current?.stop();
       recognition.current = null;
+      if (timer.current) clearTimeout(timer.current);
     };
   }, []);
 
@@ -137,7 +161,13 @@ export function JobNotes({
       // Appended to whatever is already typed rather than replacing it. Losing
       // a paragraph because somebody tapped the mic to add a sentence is the
       // sort of thing that stops a feature being used twice.
-      setValue((current) => (current.trim() ? `${current.trim()} ${spoken}` : spoken));
+      setValue((current) => {
+        const next = current.trim() ? `${current.trim()} ${spoken}` : spoken;
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => void save(next), QUIET_MS);
+        return next;
+      });
+      setSaveState("clean");
     };
 
     // Both paths clear the flag: a denied microphone permission fires onerror
@@ -151,49 +181,53 @@ export function JobNotes({
   }
 
   return (
-    <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">Your notes</h2>
-        <span className="text-xs text-ink-muted">Not shown to the customer</span>
+    <section>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-sm font-semibold">Job notes</h2>
+        <p className="text-xs text-ink-muted" role="status" aria-live="polite">
+          {saveState === "saving"
+            ? "Saving…"
+            : saveState === "saved"
+              ? "Saved"
+              : saveState === "failed"
+                ? ""
+                : "Not shown to the customer"}
+        </p>
       </div>
 
-      <form action={action} className="mt-2 space-y-2">
-        <input type="hidden" name="jobNumber" value={jobNumber} />
+      <textarea
+        name="notes"
+        rows={4}
+        value={value}
+        onChange={(event) => change(event.target.value)}
+        onBlur={flush}
+        aria-label="Job notes"
+        placeholder="What did you find or repair?"
+        className="mt-2 w-full rounded-control border border-line bg-raised p-3 text-base leading-6 outline-none placeholder:text-ink-faint focus:border-brand/70"
+      />
 
-        <textarea
-          name="notes"
-          rows={4}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          placeholder="What you found, what you did, what it needs next time."
-          className="w-full rounded-control border border-line bg-surface p-3 text-sm leading-6"
-        />
+      {saveState === "failed" ? (
+        <p className="mt-1 text-xs text-critical">
+          {error || "Those notes could not be saved."}{" "}
+          <button type="button" onClick={flush} className="font-semibold underline">
+            Try again
+          </button>
+        </p>
+      ) : null}
 
-        {state.error ? <p className="text-xs text-critical">{state.error}</p> : null}
-        {state.notice ? <p className="text-xs text-positive">{state.notice}</p> : null}
-
-        <div className="flex gap-2">
-          <SaveButton />
-
-          {dictationAvailable ? (
-            <button
-              type="button"
-              onClick={toggleDictation}
-              aria-pressed={listening}
-              className={`tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border px-4 text-sm font-semibold ${
-                listening ? "border-brand bg-brand/10 text-brand" : "border-line"
-              }`}
-            >
-              {listening ? (
-                <MicOff className="h-4 w-4" aria-hidden />
-              ) : (
-                <Mic className="h-4 w-4" aria-hidden />
-              )}
-              {listening ? "Stop" : "Dictate"}
-            </button>
-          ) : null}
-        </div>
-      </form>
+      {dictationAvailable ? (
+        <button
+          type="button"
+          onClick={toggleDictation}
+          aria-pressed={listening}
+          className={`tap-target mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-control border px-4 text-sm font-semibold ${
+            listening ? "border-brand bg-brand/10 text-brand" : "border-line"
+          }`}
+        >
+          {listening ? <MicOff className="h-4 w-4" aria-hidden /> : <Mic className="h-4 w-4" aria-hidden />}
+          {listening ? "Stop" : "Dictate"}
+        </button>
+      ) : null}
     </section>
   );
 }

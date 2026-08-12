@@ -18,12 +18,25 @@ export function FieldPageShell({
   eyebrow,
   description,
   backHref = "/",
+  action,
+  compact = false,
   children,
 }: {
   title: string;
   eyebrow: string;
   description?: string;
   backHref?: string;
+  /** Sits opposite the title. For the overflow menu on a job. */
+  action?: React.ReactNode;
+  /**
+   * A smaller header, for a page whose own first block is the point.
+   *
+   * The full header is a bordered panel with a 4xl heading, which is right for
+   * a settings page and wrong for a job: it spends the top third of a phone
+   * screen restating the customer's name above the card that already says it,
+   * pushing the one button that matters below the fold.
+   */
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -50,15 +63,28 @@ export function FieldPageShell({
           <header
             id="main-content"
             tabIndex={-1}
-            className="mb-5 mt-3 rounded-panel border border-line bg-surface p-5 lg:mt-4 lg:p-8"
+            className={
+              compact
+                ? "mb-3 mt-1 flex items-start justify-between gap-3 lg:mt-4"
+                : "mb-5 mt-3 flex items-start justify-between gap-3 rounded-panel border border-line bg-surface p-5 lg:mt-4 lg:p-8"
+            }
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
-              {eyebrow}
-            </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight lg:text-4xl">{title}</h1>
-            {description ? (
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{description}</p>
-            ) : null}
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+                {eyebrow}
+              </p>
+              <h1
+                className={`mt-1 font-semibold tracking-tight ${
+                  compact ? "text-2xl lg:text-3xl" : "text-2xl lg:text-4xl"
+                }`}
+              >
+                {title}
+              </h1>
+              {description ? (
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{description}</p>
+              ) : null}
+            </div>
+            {action ? <div className="shrink-0">{action}</div> : null}
           </header>
           {children}
         </div>

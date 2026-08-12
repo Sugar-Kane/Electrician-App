@@ -274,18 +274,19 @@ export function JobLinesPanel({
   const [adding, setAdding] = useState<"labour" | "material" | null>(null);
 
   return (
-    <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+    <section>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">Work and parts</h2>
+        <h2 className="text-sm font-semibold">Work &amp; materials</h2>
         {totals.subtotalCents > 0 ? (
           <span className="text-sm font-semibold">{formatCents(totals.subtotalCents)}</span>
         ) : null}
       </div>
 
       {lines.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">
-          Nothing added yet. What goes here is what the invoice bills for.
-        </p>
+        // "What goes here is what the invoice bills for" was true and was read
+        // by the same person forty times a week. The Invoice button appearing
+        // the moment a line exists says it better than a sentence does.
+        <p className="mt-2 text-sm text-ink-muted">No items yet.</p>
       ) : (
         <>
           <ul className="mt-2">

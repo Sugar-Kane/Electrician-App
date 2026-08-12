@@ -92,12 +92,37 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+/*
+ * Form controls inherit the page's type, unless something says otherwise.
+ *
+ * In `@layer base` rather than written bare, and that is the whole point of
+ * this block rather than a detail of it. Tailwind's utilities live in a layer;
+ * an unlayered rule beats every layer no matter how specific the utility is. So
+ * while these two lines sat outside a layer they silently won every argument
+ * with every text utility ever written on a button — and the loudest thing they
+ * won was the primary action, which asks for `text-on-brand` and got #f8fafc
+ * inherited from the body instead. White on the brand yellow is a contrast
+ * ratio of about 1.5:1: the button an electrician is meant to find in direct
+ * sunlight was the least readable thing on the screen.
+ *
+ * `<a>` was never affected, which is why half the app looked right and made
+ * this hard to see: the same class string produced a yellow link and a white
+ * button.
+ */
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+}
+
 button,
 input,
 textarea,
 select {
-  font: inherit;
-  color: inherit;
   /*
    * The brand yellow on anything the browser draws itself: a select's
    * checkmark and highlighted row, a checkbox, a text selection, the caret.

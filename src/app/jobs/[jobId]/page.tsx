@@ -1,27 +1,36 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ChevronRight,
-  Mail,
-  MapPin,
-  Navigation,
-  Phone,
-  ShieldAlert,
-  UserRound,
-} from "lucide-react";
+import { Ban, ChevronDown, ChevronRight, MapPin, ShieldAlert, UserRound } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
-import { JobControls } from "@/components/job-controls";
 import { JobLinesPanel } from "@/components/job-lines-panel";
+import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
-import { JobStatusStrip } from "@/components/job-status-strip";
+import { JobWorkflow } from "@/components/job-workflow";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
 import { getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
+import { getJobWorkflow } from "@/lib/job-workflow-data";
+import { showsWorkspace } from "@/lib/job-workflow";
+
+/**
+ * One job, in the order somebody standing outside a house needs it.
+ *
+ * The page this replaces answered every question a job could ever raise, all at
+ * once, in eight bordered cards of equal weight: where it is, what to bill, what
+ * the contract says, when it is scheduled for, and whether to call it off. Half
+ * of it was administration — an arrival-window editor with two datetime pickers
+ * and a status dropdown, then a permanent card offering to cancel — and it was
+ * all above the notes field somebody actually opened the page to fill in.
+ *
+ * Now it answers five questions in the order they are asked: where am I going,
+ * what does the customer need, what do I do next, what do I write down, and how
+ * do I finish. Everything else is one tap away and nothing else is on screen.
+ */
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
@@ -32,9 +41,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   const { job } = await getJob(jobId);
   if (!job) notFound();
 
-  // Null for the signed-out demo view, where there is nothing real to edit.
-  const [controls, contracts, { lines, totals }, stock, photos] = await Promise.all([
+  // Null for the signed-out demo view, where there is nothing real to advance.
+  const [controls, workflow, contracts, { lines, totals }, stock, photos] = await Promise.all([
     getJobControls(jobId),
+    getJobWorkflow(jobId),
     getJobContracts(jobId),
     getJobLines(jobId),
     getStockOptions(),
@@ -42,86 +52,100 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   ]);
 
   const fullAddress = `${job.address}, ${job.city}`;
+  const hasAddress = fullAddress.trim() !== ",";
   const needsStop = jobNeedsMaterialStop(job);
   // Destination only, so the maps app starts from wherever the phone is. The
   // route-builder URL names the shop as the origin, which is right for planning
   // a day and wrong for a technician already standing somewhere else.
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`;
 
+  const canceled = controls?.canceled ?? job.status === "Canceled";
+  const state = workflow?.state ?? "scheduled";
+  const workspaceOpen = showsWorkspace(state) && !canceled;
+
+  /**
+   * Who, what and where — the first thing read and the least of it.
+   *
+   * Rendered into the workflow card rather than beside it, so the facts and the
+   * button that acts on them are one object.
+   */
+  const identity = (
+    <div>
+      <p className="text-sm capitalize text-ink-muted">{job.workType.replace(/_/g, " ")}</p>
+      <p className="mt-0.5 text-sm text-ink-muted">
+        {job.dateLabel} · {job.time}–{job.endTime}
+      </p>
+      {hasAddress ? (
+        <p className="mt-2 flex items-start gap-2 text-base font-medium leading-6">
+          <MapPin className="mt-1 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+          <span>
+            {job.address}
+            {job.city ? <span className="block text-ink-muted">{job.city}</span> : null}
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+
   return (
     <FieldPageShell
-      title={job.customer}
+      compact
+      title={job.contactName || job.customer}
       eyebrow={`Job #${job.id}`}
       backHref="/schedule"
+      action={controls ? <JobMenu jobNumber={controls.jobNumber} hasContract={contracts.length > 0} /> : null}
     >
-      {/*
-        Ordered the way the work happens: who and where, how to get there and
-        reach them, what state the job is in, what the customer said, what it
-        needs, and what it is worth. The page used to open with a card about
-        the customer record and reach the status control — the thing that
-        changes hourly — collapsed and below the fold.
-      */}
-      <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-ink-muted">
-              {job.dateLabel} · {job.time}–{job.endTime}
-            </p>
-            <h2 className="mt-1 text-xl font-semibold">{job.contactName}</h2>
-            <p className="mt-1 text-sm capitalize text-ink-muted">
-              {job.workType.replace(/_/g, " ")}
-            </p>
+      {canceled ? (
+        <section className="mb-3 rounded-panel border border-critical/30 bg-critical-bg p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <Ban className="mt-0.5 h-5 w-5 shrink-0 text-critical" aria-hidden />
+            <div>
+              <h2 className="font-semibold">This job is canceled</h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
+                {controls?.cancellationReason || "No reason was recorded."}
+              </p>
+            </div>
           </div>
-          <StatusBadge status={job.status} />
-        </div>
-
-        {fullAddress.trim() !== "," ? (
-          <p className="mt-3 flex items-start gap-2 text-sm text-ink-muted">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            {fullAddress}
-          </p>
-        ) : null}
-
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand text-sm font-semibold text-on-brand"
-          >
-            <Navigation className="h-4 w-4" aria-hidden />
-            Navigate
-          </a>
-          {job.phone ? (
-            <a
-              href={`tel:${job.phone.replace(/[^\d+]/g, "")}`}
-              className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
-            >
-              <Phone className="h-4 w-4" aria-hidden />
-              Call
-            </a>
-          ) : null}
-          {job.phone ? (
-            <a
-              href={`sms:${job.phone.replace(/[^\d+]/g, "")}`}
-              className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
-            >
-              <Mail className="h-4 w-4" aria-hidden />
-              Text
-            </a>
-          ) : null}
-        </div>
-      </section>
-
-      {controls ? (
-        <div className="mt-3">
-          <JobStatusStrip
-            jobNumber={controls.jobNumber}
-            status={controls.status}
-            canceled={controls.canceled}
-          />
-        </div>
+        </section>
       ) : null}
+
+      {workflow && !canceled ? (
+        <JobWorkflow
+          jobNumber={workflow.jobNumber}
+          state={workflow.state}
+          destination={workflow.destination}
+          radiusMeters={workflow.radiusMeters}
+          tripStartedLabel={workflow.tripStartedLabel}
+          arrivedLabel={workflow.arrivedLabel}
+          workStartedLabel={workflow.workStartedLabel}
+          arrivalSource={workflow.arrivalSource}
+          customerNotified={workflow.customerNotified}
+          customerArrivalMessages={workflow.customerArrivalMessages}
+          customerReachable={workflow.customerReachable}
+          navigateUrl={googleMapsUrl}
+          phone={job.phone}
+        >
+          {identity}
+        </JobWorkflow>
+      ) : (
+        // Signed out, or canceled. Both are read-only: there is no job to
+        // advance, and a Start trip button that silently saves nothing is worse
+        // than one that is not there.
+        <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <div className="mb-4">{identity}</div>
+          <StatusBadge status={job.status} />
+          {!canceled ? (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="tap-target mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand/40 bg-brand/[0.08] text-sm font-semibold text-brand"
+            >
+              Navigate
+            </a>
+          ) : null}
+        </section>
+      )}
 
       {job.summary || job.serviceNotes || job.accessNotes ? (
         <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
@@ -143,25 +167,36 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
-      {controls ? (
-        <>
-          <JobLinesPanel
-            jobNumber={controls.jobNumber}
-            lines={lines}
-            totals={totals}
-            stock={stock}
-          />
-          <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
-          <JobNotes
-            // Remounted when the saved notes change, so the textarea's initial
-            // value follows the server rather than holding what was there when
-            // the component first mounted.
-            key={controls.technicianNotes}
-            jobNumber={controls.jobNumber}
-            notes={controls.technicianNotes}
-          />
-        </>
-      ) : (
+      {/*
+        The workspace: what was done, what it took, what it looked like, and
+        what to remember. One card with three sections rather than three cards,
+        because they are one activity and the gaps between panels were most of
+        the scrolling.
+
+        It appears on arrival. Before that none of it can be filled in from a
+        van, and four empty forms between the address and the next step is
+        exactly the pile this redesign is against.
+      */}
+      {controls && workspaceOpen ? (
+        <section className="mt-3 divide-y divide-line rounded-panel border border-line bg-surface px-4 sm:px-5">
+          <div className="py-4">
+            <JobLinesPanel
+              jobNumber={controls.jobNumber}
+              lines={lines}
+              totals={totals}
+              stock={stock}
+            />
+          </div>
+          <div className="py-4">
+            <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
+          </div>
+          <div className="py-4">
+            <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
+          </div>
+        </section>
+      ) : null}
+
+      {!controls ? (
         // The signed-out demo view has no job to add lines to, and a form that
         // silently fails is worse than a sentence saying why it is not there.
         <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
@@ -190,50 +225,59 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             </ul>
           )}
         </section>
-      )}
-
-      <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Files</h2>
-          <Link
-            href={`/files?job=${job.id}`}
-            className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
-          >
-            Open files
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-        <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
-          <UserRound className="h-4 w-4 shrink-0" aria-hidden />
-          {job.technician}
-        </p>
-      </section>
-
-      {controls ? (
-        <div className="mt-3">
-          <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
-        </div>
       ) : null}
 
-      {controls ? (
-        <div className="mt-3">
-          <JobControls
-            // Remounted when the status changes, so the form's uncontrolled
-            // select picks up the new defaultValue. Without this, changing
-            // status on the strip and then saving an arrival window submits the
-            // stale status and silently reverts it.
-            key={controls.status}
-            jobNumber={controls.jobNumber}
-            status={controls.status}
-            startLocal={controls.startLocal}
-            endLocal={controls.endLocal}
-            canceled={controls.canceled}
-            cancellationReason={controls.cancellationReason}
-            customerPhone={controls.customerPhone}
-            customerEmail={controls.customerEmail}
+      {/*
+        Everything that is true about the job and is nobody's next action.
+        Closed by default and open in one tap — the contract in particular was
+        four hundred pixels of a page that gets opened at the top of a driveway.
+      */}
+      <details id="contract" className="group mt-3 rounded-panel border border-line bg-surface">
+        <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+          <span className="text-sm font-semibold">More job details</span>
+          <ChevronDown
+            className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180"
+            aria-hidden
           />
+        </summary>
+
+        <div className="divide-y divide-line border-t border-line px-4 sm:px-5">
+          <div className="flex items-center justify-between gap-3 py-4">
+            <p className="flex min-w-0 items-center gap-2 text-sm">
+              <UserRound className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+              <span className="truncate">{job.technician}</span>
+            </p>
+            <Link
+              href={`/files?job=${job.id}`}
+              className="tap-target inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-brand"
+            >
+              Files
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+
+          {job.phone || job.email ? (
+            <div className="py-4">
+              <h3 className="text-sm font-semibold">Customer</h3>
+              <p className="mt-1 text-sm text-ink-muted">{job.customer}</p>
+              {job.phone ? <p className="text-sm text-ink-muted">{job.phone}</p> : null}
+              {job.email ? <p className="text-sm text-ink-muted">{job.email}</p> : null}
+            </div>
+          ) : null}
+
+          {controls ? (
+            <div className="py-4">
+              <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </details>
+
+      {/*
+        Room under the last card for the action bar, which is fixed above the
+        bottom nav on a phone and would otherwise sit on top of the final row.
+      */}
+      {workflow && !canceled ? <div className="h-20 lg:hidden" aria-hidden /> : null}
     </FieldPageShell>
   );
 }
