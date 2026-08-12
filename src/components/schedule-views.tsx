@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Clock3, MapPin, UserRound } from "lucide-react";
+import { ChevronRight, Clock3, MapPin, Navigation, Phone, Plus, UserRound } from "lucide-react";
 
 import type { CalendarDay, MonthCell } from "@/lib/calendar";
 import { formatDayLabel } from "@/lib/calendar";
@@ -171,7 +171,18 @@ export function MonthView({
   );
 }
 
+/** Directions without asking which app. Google handles both platforms. */
+function directionsHref(job: PilotJob): string {
+  const destination = [job.address, job.city].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
+
 export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
+  // Canceled work is listed but never counted. A day that reads "3 jobs" when
+  // one is called off is a day somebody plans around wrongly — and the driver
+  // treats this list as the route.
+  const active = jobs.filter((job) => job.status !== "Canceled");
+  const canceled = jobs.filter((job) => job.status === "Canceled");
   const statusStyles: Record<string, string> = {
     "In progress": "border-blue-400/30 bg-blue-400/10 text-blue-300",
     Scheduled: "border-amber-400/30 bg-amber-400/10 text-amber-300",
@@ -182,24 +193,23 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
 
   return (
     <section className="space-y-3" aria-labelledby="scheduled-jobs-heading">
+      {/* The date is already in the header above; repeating it here is the
+          third time somebody reads it before reaching a job. */}
       <div className="flex items-end justify-between px-1">
-        <div>
-          <p className="text-xs text-ink-faint">Selected day</p>
-          <h2 id="scheduled-jobs-heading" className="text-lg font-semibold">
-            {formatDayLabel(date)}
-          </h2>
-        </div>
+        <h2 id="scheduled-jobs-heading" className="sr-only">
+          {formatDayLabel(date)}
+        </h2>
         <span className="text-xs text-ink-muted">
-          {jobs.length} {jobs.length === 1 ? "job" : "jobs"}
+          {active.length === 0 ? "No active jobs" : `${active.length} active`}
         </span>
+        {canceled.length > 0 ? (
+          <span className="text-xs text-ink-faint">{canceled.length} canceled</span>
+        ) : null}
       </div>
 
-      {jobs.map((job) => (
-        <Link
-          key={job.id}
-          href={`/jobs/${job.id}`}
-          className="tap-card block rounded-panel border border-line bg-surface p-4 active:bg-raised"
-        >
+      {active.map((job) => (
+        <div key={job.id} className="rounded-panel border border-line bg-surface p-4">
+          <Link href={`/jobs/${job.id}`} className="tap-card block active:bg-raised">
           <div className="flex items-start gap-3">
             <div className="w-16 shrink-0">
               <p className="text-sm font-semibold text-brand">{job.time}</p>
@@ -230,19 +240,79 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
                 </span>
               </div>
               <span
-                className={`mt-3 inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold ${statusStyles[job.status] ?? ""}`}
+                className={`mt-3 inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold ${statusStyles[job.status] ?? ""}`}
               >
                 {job.status}
               </span>
             </div>
           </div>
         </Link>
+
+        {/* Outside the link, because a button inside an anchor is not something
+            a browser or a screen reader can make sense of. Navigate and Call
+            are the two things done most, and going through the job first to
+            reach them is a tap that buys nothing. */}
+        {job.address || job.phone ? (
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {job.address ? (
+              <a
+                href={directionsHref(job)}
+                target="_blank"
+                rel="noreferrer"
+                className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+              >
+                <Navigation className="h-4 w-4" aria-hidden />
+                Navigate
+              </a>
+            ) : null}
+            {job.phone ? (
+              <a
+                href={`tel:${job.phone.replace(/[^\d+]/g, "")}`}
+                className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+              >
+                <Phone className="h-4 w-4" aria-hidden />
+                Call
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+        </div>
       ))}
 
-      {jobs.length === 0 ? (
-        <div className="rounded-panel border border-dashed border-line p-8 text-center text-sm text-ink-muted">
-          Nothing booked for this day.
+      {active.length === 0 ? (
+        <div className="rounded-panel border border-dashed border-line p-8 text-center">
+          <p className="text-sm text-ink-muted">Nothing booked for this day.</p>
+          <Link
+            href="/jobs/new"
+            className="tap-target mt-3 inline-flex items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            New job
+          </Link>
         </div>
+      ) : null}
+
+      {/* Collapsed, so a cancellation is findable without sitting in the route. */}
+      {canceled.length > 0 ? (
+        <details className="rounded-control border border-line">
+          <summary className="tap-target flex min-h-12 cursor-pointer items-center px-4 text-sm font-semibold text-ink-muted">
+            Canceled ({canceled.length})
+          </summary>
+          <ul className="space-y-2 px-3 pb-3">
+            {canceled.map((job) => (
+              <li key={job.id}>
+                <Link
+                  href={`/jobs/${job.id}`}
+                  className="tap-row flex min-h-12 items-center gap-3 rounded-control border border-line px-3 py-2 opacity-70"
+                >
+                  <span className="text-xs text-ink-faint">{job.time}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm line-through">{job.customer}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
     </section>
   );

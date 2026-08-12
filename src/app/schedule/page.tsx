@@ -73,9 +73,8 @@ export default async function SchedulePage({
 
   return (
     <FieldPageShell
-      title="Schedule"
-      eyebrow="Calendar view"
-      description="Tap any job to open the customer, address, scope, documents, material needs, and navigation."
+      title="Jobs"
+      eyebrow="Work"
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div
@@ -103,17 +102,14 @@ export default async function SchedulePage({
           className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"
         >
           <Plus className="h-4 w-4" aria-hidden />
-          New job
+          Job
         </Link>
       </div>
 
       <section className="rounded-panel border border-line bg-surface p-3 sm:p-5">
         <div className="flex items-center justify-between gap-2 px-1">
           <div className="min-w-0">
-            <p className="text-xs text-ink-faint">
-              {view === "month" ? "Month" : view === "week" ? "Week" : "Day"}
-            </p>
-            <h2 className="mt-0.5 truncate text-lg font-semibold">{heading}</h2>
+            <h2 className="truncate text-lg font-semibold">{heading}</h2>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Link
