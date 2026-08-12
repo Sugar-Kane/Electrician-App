@@ -28,12 +28,11 @@ import {
   updatePreferences,
   updateProfile,
   updateSquareAccount,
-  updateTimezone,
   uploadAvatar,
 } from "@/app/account/actions";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
-import { currentTimeIn, timezoneLabel, TIMEZONE_OPTIONS } from "@/lib/timezones";
+import { currentTimeIn, timezoneLabel } from "@/lib/timezones";
 
 export const metadata: Metadata = { title: "Account | Volteira" };
 
@@ -239,6 +238,18 @@ export default async function AccountPage({
           </form>
         </section>
 
+        {/*
+          The timezone is shown here and changed in Settings.
+
+          It used to be editable in both places: this page and
+          /settings/business, two forms and two save buttons writing the same
+          organizations.timezone. Whichever was saved last won, and neither
+          screen said the other existed — so the answer to "did that stick"
+          depended on which page you happened to reload.
+
+          It is a business setting, so the business page owns it. This is the
+          personal page, and it reads the value rather than competing to set it.
+        */}
         <section id="timezone" className={cardClass}>
           <div className="flex items-start gap-3">
             <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
@@ -250,36 +261,18 @@ export default async function AccountPage({
             </div>
           </div>
 
-          <form action={updateTimezone} className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-            <label className={labelClass}>
-              Timezone
-              <select
-                className={inputClass}
-                name="timezone"
-                defaultValue={account.businessTimezone}
-                disabled={!account.canManageBusiness}
-              >
-                {TIMEZONE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-2 block text-[10px] font-normal leading-4 text-ink-faint">
-                It is currently {businessClock} for the business.
-              </span>
-            </label>
-            <button
-              type="submit"
-              disabled={!account.canManageBusiness}
-              className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-            >
-              Save timezone
-            </button>
-          </form>
-          {!account.canManageBusiness ? (
-            <p className="mt-4 text-xs text-ink-muted">Only an owner or administrator can change the business timezone.</p>
-          ) : null}
+          <p className="mt-5 text-sm">
+            <span className="font-semibold">{timezoneLabel(account.businessTimezone)}</span>
+            <span className="text-ink-muted"> · it is currently {businessClock} for the business.</span>
+          </p>
+
+          <Link
+            href="/settings/business"
+            className="tap-target mt-4 inline-flex min-h-12 items-center gap-2 rounded-chip border border-line px-4 text-sm font-semibold"
+          >
+            Change it in Business details
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Link>
         </section>
 
         <section id="subscription" className={cardClass}>

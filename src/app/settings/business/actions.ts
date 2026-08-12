@@ -50,13 +50,22 @@ export async function saveBusinessDetails(
 
   const { data: membership } = await supabase
     .from("organization_members")
-    .select("organization_id")
+    .select("organization_id, role")
     .limit(1)
     .maybeSingle();
 
   const organizationId =
     typeof membership?.organization_id === "string" ? membership.organization_id : "";
   if (!organizationId) return { error: "You are not a member of a business." };
+
+  // The form disables itself for a technician, but a disabled fieldset is a
+  // courtesy to the person filling it in, not a permission check — the action
+  // is reachable without it. RLS would refuse this anyway; saying so plainly
+  // beats "Those details could not be saved.", which reads like a fault.
+  const role = typeof membership?.role === "string" ? membership.role : "";
+  if (role !== "owner" && role !== "admin") {
+    return { error: "Only an owner or administrator can change the business details." };
+  }
 
   const { error } = await supabase
     .from("organizations")
@@ -76,10 +85,12 @@ export async function saveBusinessDetails(
   if (error) return { error: "Those details could not be saved." };
 
   // The name and phone appear in every message a customer receives and on the
-  // public booking page, so several caches are now stale.
-  revalidatePath("/settings/business");
-  revalidatePath("/settings");
-  revalidatePath("/");
+  // public booking page, and the timezone decides what "today" and every
+  // arrival window read as. This page is the only thing that writes the
+  // timezone now — the account page used to as well — so the whole layout is
+  // revalidated rather than three paths, which is what the account page did
+  // and what stops a stale schedule surviving the change.
+  revalidatePath("/", "layout");
 
   return { error: "", notice: "Saved. Customers will see this on new messages." };
 }

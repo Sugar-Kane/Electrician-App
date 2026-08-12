@@ -29,6 +29,11 @@ export default async function BusinessSettingsPage() {
 
   let details = empty;
 
+  // The same rule the account page has always used. RLS is what actually
+  // refuses the write; this only stops somebody filling in a form that was
+  // never going to save.
+  const canManage = context?.role === "owner" || context?.role === "admin";
+
   if (context) {
     const supabase = asFlexibleClient(await createClient());
     const { data } = await supabase
@@ -58,7 +63,7 @@ export default async function BusinessSettingsPage() {
       description="Name, phone, timezone and where you work from."
       backHref="/settings"
     >
-      <BusinessDetailsForm details={details} />
+      <BusinessDetailsForm details={details} canManage={canManage} />
     </FieldPageShell>
   );
 }
