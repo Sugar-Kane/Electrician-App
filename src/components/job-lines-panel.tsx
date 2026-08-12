@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { Clock, LoaderCircle, Package, Plus, ReceiptText, Trash2 } from "lucide-react";
 
@@ -204,6 +205,43 @@ function AddLineForm({
 function RaiseInvoiceForm({ jobNumber, subtotalCents }: { jobNumber: string; subtotalCents: number }) {
   const [state, action] = useActionState(raiseInvoice, invoiceInitialState);
 
+  /*
+   * The job already has an invoice and nobody has said they meant it.
+   *
+   * Asked rather than blocked: a deposit and a balance are two invoices for one
+   * job and that is ordinary. What is not ordinary is finding out from the
+   * customer that they were billed twice, which is what silently creating a
+   * second one produces.
+   */
+  if (state.existing) {
+    return (
+      <div className="mt-3 rounded-control border border-caution/30 bg-caution-bg p-4">
+        <h3 className="text-sm font-semibold">This job already has an invoice</h3>
+        <p className="mt-1 text-sm leading-6 text-ink-muted">
+          Invoice {state.existing.number} for {state.existing.totalLabel}.
+        </p>
+
+        <div className="mt-4 grid gap-2">
+          <Link
+            href={`/invoices/${state.existing.invoiceId}`}
+            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
+          >
+            <ReceiptText className="h-4 w-4" aria-hidden />
+            View that invoice
+          </Link>
+
+          <form action={action}>
+            <input type="hidden" name="jobNumber" value={jobNumber} />
+            {/* The one thing that lets a second invoice be made. Nothing else
+                in the app sets it. */}
+            <input type="hidden" name="confirmDuplicate" value="yes" />
+            <SecondInvoiceButton />
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="mt-3 border-t border-line pt-3">
       <input type="hidden" name="jobNumber" value={jobNumber} />
@@ -211,10 +249,23 @@ function RaiseInvoiceForm({ jobNumber, subtotalCents }: { jobNumber: string; sub
       {state.error ? <p className="mb-2 text-xs text-critical">{state.error}</p> : null}
       {state.notice ? <p className="mb-2 text-xs text-positive">{state.notice}</p> : null}
 
-      <InvoiceButton subtotalCents={subtotalCents} />
-      <p className="mt-1.5 text-center text-xs text-ink-muted">
-        Creates a draft. Nothing is sent to the customer until you send it.
-      </p>
+      {state.invoiceId ? (
+        <Link
+          href={`/invoices/${state.invoiceId}`}
+          className="tap-target mb-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand text-sm font-bold text-on-brand"
+        >
+          <ReceiptText className="h-4 w-4" aria-hidden />
+          Open the invoice
+        </Link>
+      ) : (
+        <InvoiceButton subtotalCents={subtotalCents} />
+      )}
+
+      {state.invoiceId ? null : (
+        <p className="mt-1.5 text-center text-xs text-ink-muted">
+          Makes the PDF. Nothing is sent to the customer until you send it.
+        </p>
+      )}
     </form>
   );
 }
@@ -228,10 +279,31 @@ function InvoiceButton({ subtotalCents }: { subtotalCents: number }) {
       disabled={pending}
       className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand text-sm font-semibold text-brand disabled:opacity-60"
     >
-      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : (
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
         <ReceiptText className="h-4 w-4" aria-hidden />
       )}
-      Invoice {formatCents(subtotalCents)}
+      {/* The button says what it is doing while it does it. A slow response
+          that looks like nothing happened is what makes people tap twice, and
+          the second tap is what used to make a second invoice. */}
+      {pending ? "Creating invoice…" : `Invoice ${formatCents(subtotalCents)}`}
+    </button>
+  );
+}
+
+/** Deliberately quieter than the first one, and it says what it does. */
+function SecondInvoiceButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold disabled:opacity-60"
+    >
+      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+      {pending ? "Creating…" : "Create another invoice"}
     </button>
   );
 }
