@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { formatMoney } from "@/lib/invoice-messages";
 import { diagnosticCreditFor, invoiceTotals } from "@/lib/invoice-math";
+import { jobLineTotals } from "@/lib/job-lines";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -35,11 +36,14 @@ export async function raiseInvoice(
   const numeric = Number(jobNumber);
   if (!Number.isFinite(numeric)) return { error: "That job could not be found." };
 
-  const subtotalCents = parseCostToCents(String(formData.get("amount") ?? ""));
-  if (subtotalCents === null) {
+  // Blank means "bill what the job says it is worth". A typed figure still
+  // wins — an electrician who agreed a price on the doorstep is not overruled
+  // by the sum of the lines they happened to write down.
+  const typedAmount = String(formData.get("amount") ?? "").trim();
+  const typedCents = typedAmount ? parseCostToCents(typedAmount) : null;
+  if (typedAmount && typedCents === null) {
     return { error: "That amount could not be read. Try a figure like 1280 or 1280.50." };
   }
-  if (subtotalCents <= 0) return { error: "An invoice needs an amount." };
 
   const taxCents = parseCostToCents(String(formData.get("tax") ?? "")) ?? 0;
 
@@ -64,6 +68,37 @@ export async function raiseInvoice(
   if (!job) return { error: "That job could not be found." };
 
   const jobId = text((job as Record<string, unknown>).id);
+
+  let subtotalCents = typedCents ?? 0;
+
+  if (typedCents === null) {
+    const { data: lineRows } = await supabase
+      .from("job_line_items")
+      .select("kind, quantity, unit_price_cents")
+      .eq("organization_id", organizationId)
+      .eq("job_id", jobId);
+
+    subtotalCents = jobLineTotals(
+      (lineRows ?? []).map((row: Record<string, unknown>, index: number) => ({
+        id: String(index),
+        kind: row.kind === "labour" ? ("labour" as const) : ("material" as const),
+        description: "",
+        // numeric arrives as a string over PostgREST, so this would concatenate
+        // rather than multiply if it were passed through untouched.
+        quantity: Number(row.quantity ?? 0),
+        unit: "each",
+        unitPriceCents: Number(row.unit_price_cents ?? 0),
+      })),
+    ).subtotalCents;
+  }
+
+  if (subtotalCents <= 0) {
+    return {
+      error: typedCents === null
+        ? "This job has no work or parts on it yet, so there is nothing to bill."
+        : "An invoice needs an amount.",
+    };
+  }
 
   // Existing invoices decide two things: whether this is a follow-up at all,
   // and how much of the diagnostic has already been given back.
