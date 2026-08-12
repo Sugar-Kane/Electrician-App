@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { Banner } from "@/components/ui/banner";
 import {
-  AlertCircle,
   ArrowRight,
   Building2,
   CalendarDays,
@@ -222,7 +222,7 @@ export function OnboardingForm({
 
       <section className="rounded-[24px] border border-line bg-[#081925] p-4 sm:p-6">
         <div className="flex items-start gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-emerald-400/10 text-emerald-300">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-positive-bg text-positive">
             <CalendarDays className="h-5 w-5" aria-hidden />
           </span>
           <div>
@@ -282,7 +282,7 @@ export function OnboardingForm({
             <ul className="mt-3 grid gap-2 text-sm text-ink-muted sm:grid-cols-2">
               {["$100 one-hour diagnostic", "$100 credited toward repair", "$150 after-hours visit", "$200 emergency visit", "$50 late cancellation", "Payment required to confirm"].map((item) => (
                 <li key={item} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden /> {item}
+                  <Check className="h-4 w-4 shrink-0 text-positive" aria-hidden /> {item}
                 </li>
               ))}
             </ul>
@@ -291,10 +291,9 @@ export function OnboardingForm({
       </section>
 
       {state.error ? (
-        <p role="alert" className="flex items-start gap-2 rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm leading-6 text-red-200">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <Banner tone="critical">
           {state.error}
-        </p>
+        </Banner>
       ) : null}
 
       <SubmitButton />

@@ -33,6 +33,7 @@ import {
 } from "@/lib/booking-safety";
 import type { PublicBookingPage, PublicBookingSlot } from "@/lib/public-booking";
 import { smsConsentDisclosure } from "@/lib/sms-consent";
+import { Banner } from "@/components/ui/banner";
 
 const initialActionState: BookingActionState = { error: "" };
 const inputClass =
@@ -206,8 +207,8 @@ export function PublicBookingFlow({
 
   if (actionState.outcome === "needs_review") {
     return (
-      <section className="rounded-[28px] border border-emerald-400/20 bg-[#081925] p-5 text-center sm:p-8">
-        <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-400/10 text-emerald-300">
+      <section className="rounded-[28px] border border-positive/20 bg-[#081925] p-5 text-center sm:p-8">
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-positive-bg text-positive">
           <CheckCircle2 className="h-8 w-8" aria-hidden />
         </span>
         <h2 className="mt-5 text-2xl font-semibold text-white">Your request is with the team.</h2>
@@ -267,9 +268,9 @@ export function PublicBookingFlow({
 
       <section className="min-h-[420px] rounded-[28px] border border-line bg-[#081925] p-4 sm:p-6">
         {checkoutCanceled ? (
-          <p className="mb-4 rounded-control border border-amber-300/20 bg-amber-300/[0.07] p-3 text-sm text-amber-100">
+          <Banner tone="caution" className="mb-4">
             Checkout was canceled. Your appointment is not confirmed; choose a time and try again.
-          </p>
+          </Banner>
         ) : null}
 
         {step === 1 ? (
@@ -347,14 +348,14 @@ export function PublicBookingFlow({
             </div>
 
             {safety.outcome === "emergency_services" ? (
-              <div role="alert" className="mt-5 rounded-control border border-red-400/30 bg-red-400/[0.08] p-4 text-sm leading-6 text-red-100">
+              <div role="alert" className="mt-5 rounded-control border border-critical/30 bg-critical-bg p-4 text-sm leading-6 text-critical">
                 <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-5 w-5" aria-hidden /> Stop and address the immediate hazard.</p>
                 <p className="mt-2">Leave the affected area and call 911 for fire, smoke, or injury. For a downed power line, stay well away and call the utility. Do not touch wet or energized equipment.</p>
               </div>
             ) : null}
 
             {safety.outcome === "utility_referral" ? (
-              <div role="alert" className="mt-5 rounded-control border border-amber-300/25 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100">
+              <div role="alert" className="mt-5 rounded-control border border-caution/25 bg-caution-bg p-4 text-sm leading-6 text-caution">
                 <p className="font-semibold">Contact the electric utility first.</p>
                 <p className="mt-2">An outage affecting nearby properties is usually handled by the utility. Once service is restored, return here if the property still has an electrical problem.</p>
               </div>
@@ -371,7 +372,7 @@ export function PublicBookingFlow({
 
         {step === 3 ? (
           <div>
-            <span className="grid h-12 w-12 place-items-center rounded-control bg-emerald-400/10 text-emerald-300">
+            <span className="grid h-12 w-12 place-items-center rounded-control bg-positive-bg text-positive">
               <UserRound className="h-6 w-6" aria-hidden />
             </span>
             <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-brand">Step 3</p>
@@ -540,14 +541,10 @@ export function PublicBookingFlow({
         ) : null}
 
         {stepError ? (
-          <p role="alert" className="mt-5 rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm text-red-200">
-            {stepError}
-          </p>
+          <Banner tone="critical" className="mt-5">{stepError}</Banner>
         ) : null}
         {actionState.error ? (
-          <p role="alert" className="mt-5 rounded-control border border-red-400/20 bg-red-400/[0.07] p-4 text-sm leading-6 text-red-200">
-            {actionState.error}
-          </p>
+          <Banner tone="critical" className="mt-5">{actionState.error}</Banner>
         ) : null}
       </section>
 
@@ -568,7 +565,7 @@ export function PublicBookingFlow({
             type="button"
             onClick={nextStep}
             disabled={step === 2 && blockedSafetyOutcome}
-            className="tap-target flex min-h-14 flex-1 items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-bold text-on-brand disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-ink-muted"
+            className="tap-target flex min-h-14 flex-1 items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-bold text-on-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             Continue <ArrowRight className="h-4 w-4" aria-hidden />
           </button>

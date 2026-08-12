@@ -3,9 +3,10 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { Banner } from "@/components/ui/banner";
 
 type AuthMode = "login" | "signup";
 
@@ -77,13 +78,13 @@ export function AuthForm({ mode, nextPath, initialError, defaultEmail }: { mode:
         <label className="block"><span className="mb-2 block text-sm font-medium text-ink">Password</span><span className="flex min-h-13 items-center gap-3 rounded-control border border-line bg-raised px-4 focus-within:border-brand/60"><LockKeyhole className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden /><input type={showPassword ? "text" : "password"} name="password" autoComplete={isSignup ? "new-password" : "current-password"} required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" className="min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="tap-target -mr-2 grid min-w-11 place-items-center text-ink-muted" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}</button></span></label>
         {isSignup ? <label className="block"><span className="mb-2 block text-sm font-medium text-ink">Confirm password</span><span className="flex min-h-13 items-center gap-3 rounded-control border border-line bg-raised px-4 focus-within:border-brand/60"><LockKeyhole className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden /><input type={showPassword ? "text" : "password"} name="confirmPassword" autoComplete="new-password" required minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Enter it again" className="min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint" /></span></label> : null}
 
-        {error ? <p role="alert" className="flex items-start gap-2 rounded-control border border-red-400/20 bg-red-400/[0.07] p-3 text-sm leading-5 text-red-200"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{error}</p> : null}
-        {message ? <p role="status" className="flex items-start gap-2 rounded-control border border-emerald-400/20 bg-emerald-400/[0.07] p-3 text-sm leading-5 text-emerald-200"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{message}</p> : null}
+        {error ? <Banner tone="critical">{error}</Banner> : null}
+        {message ? <Banner tone="positive">{message}</Banner> : null}
 
         <button type="submit" disabled={submitting || Boolean(message)} className="tap-target flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-semibold text-on-brand shadow-lg shadow-yellow-500/10 disabled:cursor-not-allowed disabled:opacity-60">{submitting ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}{submitting ? (isSignup ? "Creating account…" : "Signing in…") : (isSignup ? "Create account" : "Sign in")} {!submitting ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}</button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-ink-muted">{isSignup ? "Already have an account?" : "New to Volteira?"} <Link href={alternateHref} className="tap-target inline-flex items-center font-semibold text-brand hover:text-yellow-300">{isSignup ? "Sign in" : "Create an account"}</Link></p>
+      <p className="mt-6 text-center text-sm text-ink-muted">{isSignup ? "Already have an account?" : "New to Volteira?"} <Link href={alternateHref} className="tap-target inline-flex items-center font-semibold text-brand hover:text-caution">{isSignup ? "Sign in" : "Create an account"}</Link></p>
     </>
   );
 }

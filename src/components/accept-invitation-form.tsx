@@ -30,7 +30,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
     <form action={formAction}>
       <input type="hidden" name="token" value={token} />
       {state.error ? (
-        <p className="mt-4 flex items-start gap-2 text-sm text-rose-300">
+        <p className="mt-4 flex items-start gap-2 text-sm text-critical">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {state.error}
         </p>

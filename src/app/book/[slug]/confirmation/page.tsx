@@ -52,7 +52,7 @@ export default async function BookingConfirmationPage({
     return (
       <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
         <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 text-center sm:p-8">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-300/10 text-amber-200">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-caution-bg text-caution">
             <Clock3 className="h-7 w-7" aria-hidden />
           </span>
           <h1 className="mt-5 text-2xl font-semibold">Payment is still being confirmed</h1>
@@ -90,11 +90,11 @@ export default async function BookingConfirmationPage({
         </header>
 
         <section className="mt-8 overflow-hidden rounded-[30px] border border-line bg-[#081925]">
-          <div className="border-b border-emerald-400/15 bg-emerald-400/[0.05] p-6 text-center sm:p-8">
-            <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-400/10 text-emerald-300">
+          <div className="border-b border-positive/15 bg-positive-bg p-6 text-center sm:p-8">
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-positive-bg text-positive">
               <CheckCircle2 className="h-9 w-9" aria-hidden />
             </span>
-            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Payment received</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-positive">Payment received</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">You’re booked, {confirmation.customer_first_name}.</h1>
             <p className="mt-3 text-sm leading-6 text-ink-muted">Your diagnostic visit is confirmed. A receipt has been sent by Stripe.</p>
           </div>
@@ -128,7 +128,7 @@ export default async function BookingConfirmationPage({
 
           <div className="border-t border-line p-5 sm:p-6">
             <p className="flex items-start gap-2 text-sm leading-6 text-ink-muted">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-positive" aria-hidden />
               The electrician will diagnose the issue onsite and review any repair scope with you before additional work is charged.
             </p>
             {confirmation.business_phone ? (

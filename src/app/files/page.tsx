@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  CheckCircle2,
   ChevronRight,
   Cloud,
   CloudCog,
@@ -20,6 +19,7 @@ import {
 import { FieldPageShell } from "@/components/field-page-shell";
 import { todayInZone } from "@/lib/calendar";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
+import { Banner } from "@/components/ui/banner";
 import {
   buildStandardDocumentName,
   getDocumentWorkspace,
@@ -102,14 +102,13 @@ export default async function FilesPage({
       description="Files are filed by year, month, and job. Customer, property, payment status, and document type are filters in the app, not folders — so each file exists exactly once."
     >
       {query.connected === "google_drive" ? (
-        <div className="mb-4 flex items-start gap-3 rounded-panel border border-emerald-400/20 bg-emerald-400/[0.05] p-4 text-sm text-emerald-100">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
+        <Banner tone="positive" className="mb-4">
           Google Drive is connected and the standard folder structure was created.
-        </div>
+        </Banner>
       ) : null}
       {query.drive && query.drive !== "connected" ? (
-        <div className="mb-4 flex items-start gap-3 rounded-panel border border-amber-400/20 bg-amber-400/[0.05] p-4 text-sm text-amber-100">
-          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden />
+        <div className="mb-4 flex items-start gap-3 rounded-panel border border-caution/20 bg-caution-bg p-4 text-sm text-caution">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution" aria-hidden />
           Google Drive setup did not finish. No files were exposed; reconnect when you are back at the laptop.
         </div>
       ) : null}
@@ -132,7 +131,7 @@ export default async function FilesPage({
           </div>
 
           {workspace.source === "demo" ? (
-            <p className="mt-3 text-xs leading-5 text-amber-200">Preview structure shown. The folders become live after the document migration is applied to Supabase.</p>
+            <p className="mt-3 text-xs leading-5 text-caution">Preview structure shown. The folders become live after the document migration is applied to Supabase.</p>
           ) : null}
         </section>
 
@@ -143,7 +142,7 @@ export default async function FilesPage({
                 <p className="text-xs text-ink-faint">Primary cloud mirror</p>
                 <h2 className="mt-1 text-lg font-semibold">Google Drive</h2>
               </div>
-              <span className={`rounded-full px-3 py-1.5 text-[10px] font-semibold ${connected ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>
+              <span className={`rounded-full px-3 py-1.5 text-[10px] font-semibold ${connected ? "bg-positive-bg text-positive" : "bg-caution-bg text-caution"}`}>
                 {connected ? "Connected" : "Ready to connect"}
               </span>
             </div>
@@ -169,7 +168,7 @@ export default async function FilesPage({
             )}
 
             <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-ink-muted">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-positive" aria-hidden />
               The app requests access only to folders and files it creates or that the user explicitly shares with it—not the entire Drive.
             </p>
           </section>
@@ -196,7 +195,7 @@ export default async function FilesPage({
               </div>
             </div>
             <div className="mt-4 flex items-start gap-3 rounded-control bg-white/[0.03] p-4">
-              <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+              <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-positive" aria-hidden />
               <p className="text-xs leading-5 text-ink-muted">Refresh tokens are encrypted before storage and never sent to the phone or browser.</p>
             </div>
           </section>

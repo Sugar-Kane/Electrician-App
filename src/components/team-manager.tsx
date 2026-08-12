@@ -140,10 +140,10 @@ export function TeamManager({
             ))}
           </ul>
           {revokeState.error ? (
-            <p className="mt-4 text-sm text-rose-300">{revokeState.error}</p>
+            <p className="mt-4 text-sm text-critical">{revokeState.error}</p>
           ) : null}
           {revokeState.notice ? (
-            <p className="mt-4 text-sm text-emerald-300">{revokeState.notice}</p>
+            <p className="mt-4 text-sm text-positive">{revokeState.notice}</p>
           ) : null}
         </section>
       ) : null}
@@ -185,13 +185,13 @@ export function TeamManager({
             </div>
 
             {inviteState.error ? (
-              <p className="mt-4 flex items-start gap-2 text-sm text-rose-300">
+              <p className="mt-4 flex items-start gap-2 text-sm text-critical">
                 <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 {inviteState.error}
               </p>
             ) : null}
             {inviteState.notice ? (
-              <p className="mt-4 flex items-start gap-2 break-words text-sm text-emerald-300">
+              <p className="mt-4 flex items-start gap-2 break-words text-sm text-positive">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 {inviteState.notice}
               </p>

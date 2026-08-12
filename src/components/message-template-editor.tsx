@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, LoaderCircle, MoonStar, TriangleAlert, Zap } from "lucide-react";
+import { Banner } from "@/components/ui/banner";
 
 import {
   saveMessageTemplate,
@@ -104,7 +105,7 @@ export function MessageTemplateEditor({
       </p>
 
       {unsupported.length > 0 ? (
-        <p className="mt-3 flex items-start gap-2 rounded-control border border-amber-300/25 bg-amber-300/[0.07] p-3 text-xs leading-5 text-amber-100">
+        <p className="mt-3 flex items-start gap-2 rounded-control border border-caution/25 bg-caution-bg p-3 text-xs leading-5 text-caution">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <span>
             This will not send while it contains{" "}
@@ -128,7 +129,7 @@ export function MessageTemplateEditor({
         </span>
         <div className="flex items-center gap-3">
           {state.saved && !state.error ? (
-            <span className="flex items-center gap-1 text-xs text-emerald-300">
+            <span className="flex items-center gap-1 text-xs text-positive">
               <Check className="h-3.5 w-3.5" aria-hidden /> Saved
             </span>
           ) : null}
@@ -138,9 +139,7 @@ export function MessageTemplateEditor({
       </div>
 
       {state.error ? (
-        <p role="alert" className="mt-3 rounded-control border border-red-400/20 bg-red-400/[0.07] p-3 text-sm text-red-200">
-          {state.error}
-        </p>
+        <Banner tone="critical" className="mt-3">{state.error}</Banner>
       ) : null}
     </form>
   );

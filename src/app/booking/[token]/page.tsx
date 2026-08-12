@@ -73,7 +73,7 @@ export default async function BookingConfirmationPage({
     return (
       <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
         <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 text-center sm:p-8">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-300/10 text-amber-200">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-caution-bg text-caution">
             <Clock3 className="h-7 w-7" aria-hidden />
           </span>
           <h1 className="mt-5 text-2xl font-semibold">We could not find that appointment</h1>
@@ -108,7 +108,7 @@ export default async function BookingConfirmationPage({
   return (
     <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
       <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 sm:p-8">
-        <span className="grid h-14 w-14 place-items-center rounded-full bg-emerald-400/10 text-emerald-300">
+        <span className="grid h-14 w-14 place-items-center rounded-full bg-positive-bg text-positive">
           <CalendarCheck2 className="h-7 w-7" aria-hidden />
         </span>
 

@@ -44,7 +44,7 @@ export default async function OnboardingPage() {
             VOLTEIRA
           </div>
           <p className="hidden items-center gap-2 text-xs text-ink-muted sm:flex">
-            <LockKeyhole className="h-4 w-4 text-emerald-400" aria-hidden /> Secure owner setup
+            <LockKeyhole className="h-4 w-4 text-positive" aria-hidden /> Secure owner setup
           </p>
         </header>
 
@@ -75,7 +75,7 @@ export default async function OnboardingPage() {
 
             <div className="mt-7 rounded-control border border-line bg-white/[0.03] p-4 text-sm leading-6 text-ink-muted">
               <p className="flex items-center gap-2 font-semibold text-ink">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden /> Nothing is public yet
+                <CheckCircle2 className="h-4 w-4 text-positive" aria-hidden /> Nothing is public yet
               </p>
               <p className="mt-2">You’ll review the customer-facing booking page before sharing it.</p>
             </div>

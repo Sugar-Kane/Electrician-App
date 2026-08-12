@@ -255,7 +255,7 @@ function ProductConfirmationForm({
       </div>
 
       <label className="tap-row mt-4 flex min-h-14 cursor-pointer items-start gap-3 rounded-control border border-line p-3"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1 h-5 w-5 accent-brand" /><span className="text-xs leading-5 text-ink-muted">I checked this product, price, availability, and store on the retailer’s live page.</span></label>
-      {error ? <p role="alert" className="mt-3 flex items-start gap-2 text-xs text-rose-300"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{error}</p> : null}
+      {error ? <p role="alert" className="mt-3 flex items-start gap-2 text-xs text-critical"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{error}</p> : null}
       <button type="submit" className="tap-target mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"><Save className="h-5 w-5" aria-hidden /> Save verified product</button>
     </form>
   );
@@ -384,7 +384,7 @@ export function MaterialSourcingWorkflow({
 
   return (
     <div>
-      <div className="mb-4 flex items-start gap-3 rounded-control border border-line bg-white/[0.025] p-3" aria-live="polite"><PackageCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" aria-hidden /><div><p className="text-xs font-semibold">User-confirmed sourcing</p><p className="mt-1 text-[11px] leading-5 text-ink-muted">{isSyncing ? "Syncing…" : saveMessage}</p></div></div>
+      <div className="mb-4 flex items-start gap-3 rounded-control border border-line bg-white/[0.025] p-3" aria-live="polite"><PackageCheck className="mt-0.5 h-5 w-5 shrink-0 text-positive" aria-hidden /><div><p className="text-xs font-semibold">User-confirmed sourcing</p><p className="mt-1 text-[11px] leading-5 text-ink-muted">{isSyncing ? "Syncing…" : saveMessage}</p></div></div>
       <div className="space-y-3">
         {materials.map((material) => {
           const shortage = Math.max(0, material.quantity - material.truckStock);
@@ -394,7 +394,7 @@ export function MaterialSourcingWorkflow({
 
           return (
             <article key={material.name} className="rounded-panel border border-line bg-white/[0.025] p-4">
-              <div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{material.name}</h2><p className="mt-1 text-xs text-ink-muted">Need {material.quantity} {material.unit} · Truck has {material.truckStock}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${shortage > 0 ? "bg-amber-400/10 text-amber-300" : "bg-emerald-400/10 text-emerald-300"}`}>{shortage > 0 ? `Buy ${shortage}` : "On truck"}</span></div>
+              <div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{material.name}</h2><p className="mt-1 text-xs text-ink-muted">Need {material.quantity} {material.unit} · Truck has {material.truckStock}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${shortage > 0 ? "bg-caution-bg text-caution" : "bg-positive-bg text-positive"}`}>{shortage > 0 ? `Buy ${shortage}` : "On truck"}</span></div>
               <div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-control bg-white/[0.035] p-3"><p className="text-[10px] text-ink-faint">Pilot unit estimate</p><p className="mt-1 text-lg font-semibold">{money.format(material.estimatedUnitPrice)}</p></div><div className="rounded-control bg-white/[0.035] p-3"><p className="text-[10px] text-ink-faint">Estimated shortage cost</p><p className="mt-1 text-lg font-semibold">{money.format(estimatedTotal)}</p></div></div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <a href={buildLowesSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-brand" aria-hidden /> Lowe’s live results</span><ExternalLink className="h-4 w-4 text-ink-faint" aria-hidden /></a>
@@ -408,8 +408,8 @@ export function MaterialSourcingWorkflow({
                 <div className="mt-4 space-y-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">Saved products</p>
                   {materialSelections.map((selection) => (
-                    <div key={selection.id} className="rounded-control border border-emerald-400/20 bg-emerald-400/[0.045] p-3">
-                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{selection.productName}</p><p className="mt-1 text-[11px] text-ink-muted">{getSupplierLabel(selection.supplier)} · {money.format(selection.unitPriceCents / 100)} each · Qty {selection.quantity}</p></div><span className="shrink-0 rounded-full bg-white/5 px-2 py-1 text-[9px] text-emerald-300">{availabilityLabels[selection.availability]}</span></div>
+                    <div key={selection.id} className="rounded-control border border-positive/20 bg-positive-bg p-3">
+                      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{selection.productName}</p><p className="mt-1 text-[11px] text-ink-muted">{getSupplierLabel(selection.supplier)} · {money.format(selection.unitPriceCents / 100)} each · Qty {selection.quantity}</p></div><span className="shrink-0 rounded-full bg-white/5 px-2 py-1 text-[9px] text-positive">{availabilityLabels[selection.availability]}</span></div>
                       <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-4 text-ink-faint"><MapPin className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />{selection.storeAddress || "Store not selected"}</p>
                       <p className="mt-1 text-[10px] text-ink-faint">Checked {dateTime.format(new Date(selection.verifiedAt))}</p>
                       <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
