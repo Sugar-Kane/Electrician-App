@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Ban, ChevronDown, ChevronRight, MapPin, ShieldAlert, UserRound } from "lucide-react";
+import { Ban, ChevronDown, ChevronRight, MapPin, ShieldAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
@@ -10,6 +10,7 @@ import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
 import { JobWorkflow } from "@/components/job-workflow";
+import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
@@ -249,10 +250,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
         <div className="divide-y divide-line border-t border-line px-4 sm:px-5">
           <div className="flex items-center justify-between gap-3 py-4">
-            <p className="flex min-w-0 items-center gap-2 text-sm">
-              <UserRound className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
-              <span className="truncate">{job.technician}</span>
-            </p>
+            <p className="text-sm text-ink-muted">On this job</p>
+            {controls ? (
+              <AssignTechnician jobNumber={controls.jobNumber} technician={job.technician} />
+            ) : (
+              <span className="text-sm">{job.technician}</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 py-4">
+            <p className="text-sm text-ink-muted">Documents and photos</p>
             <Link
               href={`/files?job=${job.id}`}
               className="tap-target inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-brand"

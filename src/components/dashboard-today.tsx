@@ -8,9 +8,10 @@ import {
   Plus,
 } from "lucide-react";
 
+import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { statusTone } from "@/components/ui/status-badge";
-import type { AttentionItem } from "@/lib/dashboard-focus";
+import { needsTechnician, type AttentionItem } from "@/lib/dashboard-focus";
 import type { PilotJob } from "@/lib/pilot-data";
 
 /**
@@ -140,11 +141,17 @@ export function TodaysJobs({
       ) : (
         <ul className="space-y-2">
           {jobs.map((job) => (
-            <li key={job.id}>
-              <Link
-                href={`/jobs/${job.id}`}
-                className="tap-row flex min-h-16 items-center gap-3 rounded-control border border-line bg-surface px-4 py-3 active:bg-raised"
-              >
+            /*
+              The row is a link and the assign control is a button, so they are
+              siblings rather than nested — a button inside an anchor is invalid
+              markup, and in practice the tap lands on whichever the browser
+              feels like.
+            */
+            <li
+              key={job.id}
+              className="tap-row flex min-h-16 items-center gap-2 rounded-control border border-line bg-surface pr-3 active:bg-raised"
+            >
+              <Link href={`/jobs/${job.id}`} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4">
                 <span className="w-16 shrink-0">
                   <span className="block text-sm font-semibold text-brand">{job.time}</span>
                   <span className="mt-0.5 block text-xs text-ink-faint">{job.endTime}</span>
@@ -161,13 +168,31 @@ export function TodaysJobs({
                     <JobSource channel={job.channel} className="hidden shrink-0 sm:inline-flex" />
                   </span>
                 </span>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(job.status)}`}
-                >
-                  {job.status}
-                </span>
-                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+                {/*
+                  One trailing element, never two. A status pill and an assign
+                  control side by side left about ninety pixels for the customer
+                  at 390px, which rendered "Coastal Dental" as "C.".
+                */}
+                {needsTechnician(job) ? null : (
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(job.status)}`}
+                  >
+                    {job.status}
+                  </span>
+                )}
               </Link>
+
+              {/*
+                Exactly where the row would otherwise say "Unassigned", and
+                nowhere else. A job with somebody on it needs no dispatching,
+                and reassigning is a job-page decision rather than something to
+                crowd a list with.
+              */}
+              {needsTechnician(job) ? (
+                <AssignTechnician jobNumber={job.id} technician={job.technician} size="sm" />
+              ) : (
+                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+              )}
             </li>
           ))}
         </ul>
