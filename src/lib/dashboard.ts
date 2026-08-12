@@ -211,6 +211,12 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .from("jobs")
           .select("id,status,scheduled_start")
           .eq("organization_id", organizationId)
+          // Archived work is not work. Every other job query in the app filters
+          // this and metrics did not, so an archived job kept its place in
+          // "Jobs today" while the list of jobs underneath — which reads
+          // through getJobs — correctly showed nothing. A metric that
+          // contradicts the list beneath it is worse than no metric.
+          .is("archived_at", null)
           .gte("scheduled_start", dayStart.toISOString())
           .lt("scheduled_start", dayEnd.toISOString()),
         supabase

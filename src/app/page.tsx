@@ -1,7 +1,7 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { todayInZone } from "@/lib/calendar";
 import { getDashboardSnapshot } from "@/lib/dashboard";
-import { attentionItems, todaysJobs } from "@/lib/dashboard-focus";
+import { attentionItems, openBookingRequests, todaysJobs } from "@/lib/dashboard-focus";
 import { getBookingRequests } from "@/lib/booking-requests";
 import { getInventory, getInvoices, getJobs } from "@/lib/job-data";
 
@@ -21,7 +21,7 @@ export default async function Page() {
   // Counted here rather than inside the shell so the component stays a
   // rendering concern and the arithmetic stays testable.
   const attention = attentionItems({
-    bookingRequests: bookings.requests.length,
+    bookingRequests: openBookingRequests(bookings.requests),
     overdueInvoices: invoices.filter((invoice) => invoice.status === "Overdue").length,
     unsentInvoices: invoices.filter(
       (invoice) => invoice.status !== "Paid" && !invoice.sentLabel,

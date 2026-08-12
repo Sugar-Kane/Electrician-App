@@ -91,6 +91,25 @@ export function nextJob(jobs: PilotJob[], today: string): PilotJob | undefined {
     .sort((a, b) => (a.date === b.date ? byTime(a, b) : a.date.localeCompare(b.date)))[0];
 }
 
+/**
+ * Booking requests still waiting on somebody.
+ *
+ * The dashboard counted every request the business had ever received, whatever
+ * had become of it. A text booking accepted on Monday — turned into a job, with
+ * the request marked `scheduled` — still read as "1 booking request" in Needs
+ * attention on Friday, in amber, marked urgent, with no way to clear it: the
+ * requests page correctly showed a "Scheduled" badge rather than buttons, so
+ * there was nothing left to press.
+ *
+ * An alert that cannot be cleared is an alert people stop reading, which costs
+ * the real one that arrives later.
+ */
+export function openBookingRequests(requests: { status: string }[]): number {
+  if (!Array.isArray(requests)) return 0;
+  // Anything not explicitly new has been dealt with — scheduled or dismissed.
+  return requests.filter((request) => request?.status === "new").length;
+}
+
 export type AttentionItem = {
   label: string;
   href: string;
