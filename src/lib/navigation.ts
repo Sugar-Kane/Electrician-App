@@ -46,10 +46,10 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Work",
     items: [
       {
-        label: "Assistant",
-        href: "/assistant",
-        icon: "Sparkles",
-        description: "Ask about jobs and invoices",
+        label: "Stock",
+        href: "/inventory",
+        icon: "Package",
+        description: "What is on the van and the shelf",
       },
       {
         label: "Schedule",

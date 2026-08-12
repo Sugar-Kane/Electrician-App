@@ -451,3 +451,51 @@ export async function getJobContracts(jobNumber: string): Promise<
     }),
   }));
 }
+
+/**
+ * The business's stock, newest names first.
+ *
+ * Read through the caller's session, so RLS decides whose stock this is.
+ * Returns an empty list rather than fixtures — a business with no stock list
+ * has no stock list, and inventing one would make the materials page claim
+ * parts are on the van that are not.
+ */
+export async function getInventory(): Promise<
+  {
+    id: string;
+    name: string;
+    partNumber: string;
+    quantity: number;
+    unit: string;
+    supplier: string;
+    unitCost: number | null;
+    location: string;
+    notes: string;
+    photoUrl: string;
+  }[]
+> {
+  const context = await resolveContext();
+  if (!context) return [];
+
+  const { data } = await context.database
+    .from("inventory_items")
+    .select("id, name, sku, category, quantity_on_hand, reorder_point, unit, supplier, unit_cost_cents, location, notes, photo_url")
+    .eq("organization_id", context.organizationId)
+    .is("archived_at", null)
+    .order("name", { ascending: true });
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    name: typeof row.name === "string" ? row.name : "",
+    partNumber: typeof row.sku === "string" ? row.sku : "",
+    quantity: Number(row.quantity_on_hand ?? 0),
+    unit: typeof row.unit === "string" ? row.unit : "each",
+    supplier: typeof row.supplier === "string" ? row.supplier : "",
+    // The column is NOT NULL default 0, so zero means "not recorded" rather
+    // than "free" — showing $0.00 against every part would be worse than blank.
+    unitCost: Number(row.unit_cost_cents ?? 0) > 0 ? Number(row.unit_cost_cents) / 100 : null,
+    location: typeof row.location === "string" ? row.location : "",
+    notes: typeof row.notes === "string" ? row.notes : "",
+    photoUrl: typeof row.photo_url === "string" ? row.photo_url : "",
+  }));
+}
