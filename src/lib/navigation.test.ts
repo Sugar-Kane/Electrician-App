@@ -159,3 +159,22 @@ test("a page in no menu section lights nothing at all", () => {
   assert.equal(isBeyondBottomNav("/login"), false);
   assert.equal(isBeyondBottomNav(""), false);
 });
+
+test("a settings link into the account page names which section it wants", () => {
+  // /account defaults to Profile. A settings entry that links there bare lands
+  // somewhere unrelated to its own label and looks like a broken link, which is
+  // what "Payments" did before it was split into Card payments and the plan.
+  for (const link of ALL_SETTINGS_LINKS) {
+    if (!link.href.startsWith("/account")) continue;
+    assert.match(link.href, /\?section=[a-z]+$/, link.label);
+  }
+});
+
+test("no settings link points at a page that is not in the app", () => {
+  // Every href is a route, not an anchor on the settings page itself. The one
+  // exception is the query string above, which selects a section.
+  for (const link of ALL_SETTINGS_LINKS) {
+    assert.match(link.href, /^\//, link.label);
+    assert.doesNotMatch(link.href, /#/, link.label);
+  }
+});

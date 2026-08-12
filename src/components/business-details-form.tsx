@@ -10,12 +10,12 @@ import { TIMEZONE_OPTIONS } from "@/lib/timezones";
 
 const initialState: BusinessState = { error: "" };
 
-function SaveButton() {
+function SaveButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-5 text-sm font-semibold text-on-brand disabled:opacity-60"
     >
       {pending ? (
@@ -38,11 +38,36 @@ export type BusinessDetails = {
   timezone: string;
 };
 
-export function BusinessDetailsForm({ details }: { details: BusinessDetails }) {
+export function BusinessDetailsForm({
+  details,
+  canManage,
+}: {
+  details: BusinessDetails;
+  canManage: boolean;
+}) {
   const [state, action] = useActionState(saveBusinessDetails, initialState);
 
   return (
     <form action={action} className="space-y-4">
+      {/*
+        A technician could fill this whole form in and only find out on Save
+        that RLS would refuse it — "Those details could not be saved.", which
+        reads like a bug rather than a permission. The account page has always
+        disabled its controls and said why; this page never did.
+      */}
+      {!canManage ? (
+        <p className="rounded-control border border-line bg-raised p-4 text-sm text-ink-muted">
+          Only an owner or administrator can change the business details. You
+          can see what they are set to.
+        </p>
+      ) : null}
+
+      {/*
+        A fieldset rather than a `disabled` on each input: it is the browser's
+        own answer to "none of this is editable", so a control added later is
+        covered without anybody remembering to thread the flag through it.
+      */}
+      <fieldset disabled={!canManage} className="space-y-4 disabled:opacity-60">
       <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -90,9 +115,10 @@ export function BusinessDetailsForm({ details }: { details: BusinessDetails }) {
           </Field>
         </div>
       </section>
+      </fieldset>
 
       <FormMessage error={state.error} notice={state.notice} />
-      <SaveButton />
+      <SaveButton disabled={!canManage} />
     </form>
   );
 }

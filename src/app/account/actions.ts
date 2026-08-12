@@ -9,7 +9,6 @@ import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
-import { isSupportedTimezone, timezoneLabel } from "@/lib/timezones";
 
 type AccountContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
@@ -126,49 +125,6 @@ export async function updateProfile(formData: FormData) {
       ? "Profile saved. Check both email addresses to confirm the email change."
       : "Profile saved.";
   redirect(accountUrl("profile", "saved", message));
-}
-
-/**
- * Set the business timezone.
- *
- * `organizations.timezone` is what quiet hours, arrival windows, message
- * timestamps and the schedule are rendered in, so this is a business setting
- * rather than a personal one — a crew that disagreed about what "today" means
- * would send customers conflicting arrival times. The user's own
- * `user_profiles.timezone` is kept in step so the two never drift apart.
- */
-export async function updateTimezone(formData: FormData) {
-  const context = await getAccountContext();
-  if (!context) redirect("/login?next=/account");
-  if (!context.organizationId || !canManageBusiness(context)) {
-    redirect(accountUrl("timezone", "error", "Only an owner or administrator can change the business timezone."));
-  }
-
-  const timezone = value(formData, "timezone");
-  if (!isSupportedTimezone(timezone)) {
-    redirect(accountUrl("timezone", "error", "Choose a timezone from the list."));
-  }
-
-  const { error } = await context.database
-    .from("organizations")
-    .update({ timezone })
-    .eq("id", context.organizationId);
-  if (error) {
-    redirect(accountUrl("timezone", "error", "The business timezone could not be saved."));
-  }
-
-  // An update rather than an upsert: user_profiles.display_name is required, and
-  // a personal timezone is not worth inventing a profile row for.
-  await context.database
-    .from("user_profiles")
-    .update({ timezone })
-    .eq("user_id", context.user.id);
-
-  // Every dated screen reads this, so none of them may keep a stale render.
-  revalidatePath("/", "layout");
-  redirect(
-    accountUrl("timezone", "saved", `Business timezone set to ${timezoneLabel(timezone)}.`),
-  );
 }
 
 export async function uploadAvatar(formData: FormData) {

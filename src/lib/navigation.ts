@@ -296,10 +296,20 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         description: "Lowe's and Home Depot programs",
       },
       {
-        label: "Payments",
+        // Anchored at Square because that is where this lands. It used to say
+        // "Square and subscription billing" while jumping to Square alone, so
+        // somebody sent here to change their Volteira plan arrived at a card
+        // about taking customer payments and had to go looking.
+        label: "Card payments",
         href: "/account?section=square",
         icon: "CreditCard",
-        description: "Square and subscription billing",
+        description: "Square, for taking money from customers",
+      },
+      {
+        label: "Your Volteira plan",
+        href: "/account?section=subscription",
+        icon: "Sparkles",
+        description: "Premium billing and invoices",
       },
     ],
   },
