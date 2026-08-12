@@ -124,6 +124,14 @@ function mapJob(row: any, timeZone: string): PilotJob {
   const property = row.properties ?? {};
   const technician = row.technicians ?? {};
 
+  // Embedded from the request that created this job, if there was one. A job
+  // with none was typed in by the business, which is what "manual" means — so
+  // the absence of a row is the answer rather than a missing value.
+  const request = Array.isArray(row.booking_requests)
+    ? row.booking_requests[0]
+    : (row.booking_requests ?? null);
+  const channel = request?.communication_channel;
+
   const customerName: string =
     customer.company_name ||
     [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
@@ -152,6 +160,8 @@ function mapJob(row: any, timeZone: string): PilotJob {
     technicianInitials: initialsOf(technicianName),
     accessNotes: property.access_notes ?? "",
     serviceNotes: row.ai_summary ?? "",
+    channel:
+      channel === "phone" || channel === "sms" || channel === "web" ? channel : "manual",
     // Null when the address has never been geocoded, rather than 0,0 — which
     // is a real point in the Atlantic and would put every phone-booked job in
     // the ocean the moment anything plotted it.
@@ -173,7 +183,8 @@ const JOB_SELECT = `
   scheduled_start, scheduled_end,
   customers ( first_name, last_name, company_name, phone, email ),
   properties ( address_line_1, city, latitude, longitude, access_notes ),
-  technicians ( display_name )
+  technicians ( display_name ),
+  booking_requests ( communication_channel )
 `;
 
 export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {

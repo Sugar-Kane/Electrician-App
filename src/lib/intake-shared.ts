@@ -220,6 +220,16 @@ export async function recordBookingRequest(input: {
   deliveryPreference?: "text" | "email" | "both";
   /** The deposit as quoted to them, frozen at the moment they agreed. */
   depositCents?: number;
+  /**
+   * How the customer actually reached us.
+   *
+   * Required, and deliberately not defaulted: this function is shared by the
+   * text intake and the phone intake, and for as long as it wrote nothing the
+   * column fell to its `default 'sms'` — so every booking taken over the phone
+   * was filed as a text message. A caller that forgets this now fails to
+   * compile rather than quietly mislabelling a lead.
+   */
+  channel: "phone" | "sms";
 }): Promise<RecordedRequest> {
   const { action } = input;
   if (action.kind !== "callback" && action.kind !== "book") {
@@ -232,6 +242,13 @@ export async function recordBookingRequest(input: {
       organization_id: input.organizationId,
       conversation_id: input.conversationId ?? null,
       customer_id: input.customerId,
+      communication_channel: input.channel,
+      // Both intakes that reach here are the AI receptionist. A booking typed
+      // in by the business does not come through this function at all.
+      created_by: "ai",
+      // Kept in step so anything still reading the older column agrees with the
+      // two that replaced it.
+      source: input.channel === "phone" ? "voice" : "sms",
       intent: action.kind === "book" ? "visit" : "callback",
       phone: input.phone,
       contact_name: action.contactName || null,

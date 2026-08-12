@@ -8,6 +8,7 @@ import {
   Plus,
 } from "lucide-react";
 
+import { JobSource } from "@/components/ui/job-source";
 import { statusTone } from "@/components/ui/status-badge";
 import type { AttentionItem } from "@/lib/dashboard-focus";
 import type { PilotJob } from "@/lib/pilot-data";
@@ -150,9 +151,14 @@ export function TodaysJobs({
                 </span>
                 <span className="min-w-0 flex-1 border-l border-line pl-3">
                   <span className="block truncate text-sm font-semibold">{job.customer}</span>
-                  <span className="mt-0.5 block truncate text-xs text-ink-muted">
-                    {job.workType}
-                    {job.city ? ` · ${job.city}` : ""}
+                  <span className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
+                    <span className="min-w-0 truncate">
+                      {job.workType}
+                      {job.city ? ` · ${job.city}` : ""}
+                    </span>
+                    {/* Secondary metadata, and kept off the narrowest screens
+                        where the customer and the time are what matter. */}
+                    <JobSource channel={job.channel} className="hidden shrink-0 sm:inline-flex" />
                   </span>
                 </span>
                 <span

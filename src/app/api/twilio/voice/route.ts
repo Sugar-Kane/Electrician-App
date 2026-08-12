@@ -127,6 +127,9 @@ export async function POST(request: Request) {
           organizationId,
           customerId: String(existingCall.customer_id),
           phone: from,
+          // A Twilio voice webhook. The transport is the phone, whoever or
+          // whatever held the conversation.
+          channel: "phone",
           action: {
             kind: "callback",
             contactName: "",
@@ -230,6 +233,7 @@ export async function POST(request: Request) {
         organizationId,
         customerId,
         phone: from,
+        channel: "phone",
         action,
         callerText: speech,
         model: decision ? "claude-opus-5" : null,

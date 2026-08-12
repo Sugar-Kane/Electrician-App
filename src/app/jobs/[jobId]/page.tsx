@@ -10,6 +10,7 @@ import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
 import { JobWorkflow } from "@/components/job-workflow";
+import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
 import { getJobLines, getStockOptions } from "@/lib/job-line-data";
@@ -71,7 +72,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
    */
   const identity = (
     <div>
-      <p className="text-sm capitalize text-ink-muted">{job.workType.replace(/_/g, " ")}</p>
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm capitalize text-ink-muted">
+        {job.workType.replace(/_/g, " ")}
+        <JobSource channel={job.channel} className="normal-case" />
+      </p>
       <p className="mt-0.5 text-sm text-ink-muted">
         {job.dateLabel} · {job.time}–{job.endTime}
       </p>

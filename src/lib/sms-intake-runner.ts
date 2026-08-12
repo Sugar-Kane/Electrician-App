@@ -88,6 +88,7 @@ export async function handleInboundText(input: {
       organizationId: input.organizationId,
       customerId: input.customerId,
       phone: input.phone,
+      channel: "sms",
       conversationId: input.conversationId,
       action,
       callerText: input.body,

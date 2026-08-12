@@ -119,6 +119,9 @@ export async function runBookingTool(input: {
     organizationId: input.session.organizationId,
     customerId,
     phone,
+    // The realtime voice model books through these tools, so this is a
+    // call however the words got to it.
+    channel: "phone",
     action,
     callerText,
     model: "grok-voice",
