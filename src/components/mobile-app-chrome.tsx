@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { CreateSheet } from "@/components/create-sheet";
 import {
   ArrowLeft,
   CalendarDays,
@@ -10,7 +12,7 @@ import {
   Menu,
   MessagesSquare,
   MoreHorizontal,
-  MessageCircle,
+  Plus,
   Search,
   X,
   Zap,
@@ -30,12 +32,17 @@ import { pilotJobs } from "@/lib/pilot-data";
  * answer to "where am I" and both menus read it.
  */
 
+/**
+ * The five things under a thumb.
+ *
+ * "Schedule" is a software word for a screen an electrician thinks of as their
+ * jobs. The centre is creation rather than a destination — see CreateSheet for
+ * why it is no longer the assistant.
+ */
 const BOTTOM_ITEMS = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Schedule", href: "/schedule", icon: CalendarDays },
-  // The + used to jump to an anchor on the dashboard that no longer exists.
-  // The chat is what somebody wants when they reach for the middle button.
-  { label: "Ask", href: "/assistant", icon: MessageCircle, primary: true },
+  { label: "Jobs", href: "/schedule", icon: CalendarDays },
+  { label: "New", href: "", icon: Plus, primary: true },
   { label: "Messages", href: "/messages", icon: MessagesSquare },
   { label: "More", href: "/settings", icon: MoreHorizontal },
 ];
@@ -56,6 +63,7 @@ function Brand() {
 export function MobileAppChrome({ title, backHref }: { title?: string; backHref?: string }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
   const pathname = usePathname();
   const active = activeNavHref(pathname);
@@ -134,15 +142,13 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
       >
         {BOTTOM_ITEMS.map(({ label, href, icon: Icon, primary }) => {
           const current = !primary && activeNavHref(href) === active && active !== null;
-          return (
-            <Link
-              key={label}
-              href={href}
-              aria-current={current ? "page" : undefined}
-              className={`tap-target flex min-w-[54px] flex-col items-center justify-center gap-0.5 rounded-chip text-[9px] ${
-                current ? "text-brand" : "text-ink-muted"
-              }`}
-            >
+
+          const shell = `tap-target flex min-w-[54px] flex-col items-center justify-center gap-0.5 rounded-chip text-[10px] ${
+            current ? "text-brand" : "text-ink-muted"
+          }`;
+
+          const inner = (
+            <>
               <span
                 className={
                   primary
@@ -153,10 +159,41 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
                 <Icon className={primary ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
               </span>
               <span>{label}</span>
+            </>
+          );
+
+          // The centre opens a sheet rather than navigating, so it is a button.
+          // A link to "" would quietly take somebody to the dashboard.
+          if (primary) {
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={createOpen}
+                aria-label="Create"
+                className={shell}
+              >
+                {inner}
+              </button>
+            );
+          }
+
+          return (
+            <Link
+              key={label}
+              href={href}
+              aria-current={current ? "page" : undefined}
+              className={shell}
+            >
+              {inner}
             </Link>
           );
         })}
       </nav>
+
+      <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {searchOpen ? (
         <div

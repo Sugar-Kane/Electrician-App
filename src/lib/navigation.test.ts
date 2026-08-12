@@ -81,7 +81,7 @@ test("the longest matching entry wins", () => {
 
 test("the active entry can be named, for a header that says where you are", () => {
   assert.equal(activeNavItem("/messages/6f1c")?.label, "Messages");
-  assert.equal(activeNavItem("/jobs/1045")?.label, "Schedule");
+  assert.equal(activeNavItem("/jobs/1045")?.label, "Jobs");
   assert.equal(activeNavItem("/login"), null);
 });
 
