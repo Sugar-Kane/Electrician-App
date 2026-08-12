@@ -1,23 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Boxes,
-  CalendarDays,
   ChevronRight,
-  ClipboardList,
-  FileText,
   Mail,
   MapPin,
   Navigation,
   Phone,
-  Route,
   ShieldAlert,
   UserRound,
 } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import {
-  buildAppleDirectionsUrl,
   buildGoogleDirectionsUrl,
   jobNeedsMaterialStop,
   pilotJobs,
@@ -25,6 +19,8 @@ import {
 } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobControls } from "@/components/job-controls";
+import { JobStatusStrip } from "@/components/job-status-strip";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
 
 export function generateStaticParams() {
@@ -45,73 +41,151 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   const fullAddress = `${job.address}, ${job.city}`;
   const needsStop = jobNeedsMaterialStop(job);
   const googleMapsUrl = buildGoogleDirectionsUrl([serviceBase.address, fullAddress]);
-  const appleMapsUrl = buildAppleDirectionsUrl(fullAddress);
 
   return (
-    <FieldPageShell title={job.customer} eyebrow={`Job #${job.id}`} description={`${job.workType} · ${job.dateLabel}, ${job.time}–${job.endTime}`}>
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-        <div className="space-y-4">
-          <section className="rounded-panel border border-line bg-surface p-5">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-ink-faint">Customer and property</p><h2 className="mt-1 text-xl font-semibold">{job.contactName}</h2></div><span className="grid h-11 w-11 place-items-center rounded-control bg-[#163044] font-semibold">{job.technicianInitials}</span></div>
-            <div className="mt-4 space-y-2">
-              <a href={`tel:${job.phone.replace(/[^\d+]/g, "")}`} className="tap-row flex min-h-12 items-center gap-3 rounded-control border border-line px-3"><Phone className="h-5 w-5 text-brand" aria-hidden /><span className="flex-1 text-sm">{job.phone}</span><ChevronRight className="h-4 w-4 text-ink-faint" aria-hidden /></a>
-              <a href={`mailto:${job.email}`} className="tap-row flex min-h-12 items-center gap-3 rounded-control border border-line px-3"><Mail className="h-5 w-5 text-brand" aria-hidden /><span className="min-w-0 flex-1 truncate text-sm">{job.email}</span><ChevronRight className="h-4 w-4 text-ink-faint" aria-hidden /></a>
-              <a href={appleMapsUrl} target="_blank" rel="noreferrer" className="tap-row flex min-h-14 items-center gap-3 rounded-control border border-line px-3"><MapPin className="h-5 w-5 shrink-0 text-brand" aria-hidden /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{job.address}</span><span className="block text-xs text-ink-muted">{job.city}</span></span><ChevronRight className="h-4 w-4 text-ink-faint" aria-hidden /></a>
-            </div>
-          </section>
-
-          <section className="rounded-panel border border-line bg-surface p-5">
-            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-control bg-white/5 text-brand"><ClipboardList className="h-5 w-5" aria-hidden /></span><div><p className="text-xs text-ink-faint">Type of work</p><h2 className="text-lg font-semibold">{job.workType}</h2></div></div>
-            <p className="mt-4 text-sm leading-6 text-ink-muted">{job.summary}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-control bg-white/[0.03] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-faint">Access</p><p className="mt-1.5 text-xs leading-5 text-ink-muted">{job.accessNotes}</p></div>
-              <div className="rounded-control bg-white/[0.03] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-faint">Service notes</p><p className="mt-1.5 text-xs leading-5 text-ink-muted">{job.serviceNotes}</p></div>
-            </div>
-          </section>
-
-          <section id="documents" className="rounded-panel border border-line bg-surface p-5">
-            <div className="flex items-center justify-between gap-3"><div><p className="text-xs text-ink-faint">Job files</p><h2 className="mt-1 text-lg font-semibold">Documentation</h2></div><Link href={`/files?job=${job.id}`} className="tap-target inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-brand">Open files <ChevronRight className="h-4 w-4" aria-hidden /></Link></div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {job.documents.map((document) => (
-                <Link key={document.name} href={`/jobs/${job.id}?document=${encodeURIComponent(document.name)}#documents`} className="tap-row flex min-h-14 items-center gap-3 rounded-control border border-line px-3 active:bg-white/5">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-chip bg-white/5"><FileText className="h-4 w-4 text-ink-muted" aria-hidden /></span>
-                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{document.name}</span><span className="block text-[10px] text-ink-faint">{document.kind} · {document.updated}</span></span>
-                  <ChevronRight className="h-4 w-4 text-ink-faint" aria-hidden />
-                </Link>
-              ))}
-            </div>
-          </section>
+    <FieldPageShell
+      title={job.customer}
+      eyebrow={`Job #${job.id}`}
+      backHref="/schedule"
+    >
+      {/*
+        Ordered the way the work happens: who and where, how to get there and
+        reach them, what state the job is in, what the customer said, what it
+        needs, and what it is worth. The page used to open with a card about
+        the customer record and reach the status control — the thing that
+        changes hourly — collapsed and below the fold.
+      */}
+      <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-ink-muted">
+              {job.dateLabel} · {job.time}–{job.endTime}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">{job.contactName}</h2>
+            <p className="mt-1 text-sm capitalize text-ink-muted">
+              {job.workType.replace(/_/g, " ")}
+            </p>
+          </div>
+          <StatusBadge status={job.status} />
         </div>
 
-        <div className="space-y-4">
-          <section className="rounded-panel border border-line bg-surface p-5">
-            <div className="flex items-center justify-between"><div><p className="text-xs text-ink-faint">Assigned</p><h2 className="mt-1 text-lg font-semibold">{job.technician}</h2></div><UserRound className="h-5 w-5 text-brand" aria-hidden /></div>
-            <div className="mt-4 space-y-2 text-sm"><p className="flex items-center gap-2 text-ink-muted"><CalendarDays className="h-4 w-4 text-ink-faint" aria-hidden />{job.dateLabel}, {job.time}</p><p className="flex items-center gap-2 text-ink-muted"><ShieldAlert className="h-4 w-4 text-ink-faint" aria-hidden />{job.status}</p></div>
-          </section>
+        {fullAddress.trim() !== "," ? (
+          <p className="mt-3 flex items-start gap-2 text-sm text-ink-muted">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            {fullAddress}
+          </p>
+        ) : null}
 
-          <section className="rounded-panel border border-line bg-surface p-5">
-            <div className="flex items-center justify-between"><div><p className="text-xs text-ink-faint">Required for this job</p><h2 className="mt-1 text-lg font-semibold">Materials</h2></div><Boxes className="h-5 w-5 text-brand" aria-hidden /></div>
-            <div className="mt-4 space-y-3">
-              {job.materials.map((material) => {
-                const shortage = Math.max(0, material.quantity - material.truckStock);
-                return <div key={material.name} className="rounded-control bg-white/[0.03] p-3"><div className="flex justify-between gap-3"><p className="text-sm font-semibold">{material.name}</p><p className="shrink-0 text-sm text-brand">{material.quantity} {material.unit}</p></div><p className="mt-1 text-[11px] text-ink-muted">Truck: {material.truckStock} · {shortage > 0 ? `Buy ${shortage}` : "Ready on truck"}</p></div>;
-              })}
-              {job.materials.length === 0 ? <p className="text-sm text-ink-muted">No materials are required for this estimate visit.</p> : null}
-            </div>
-            <Link href={`/materials?job=${job.id}`} className="tap-target mt-4 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"><Boxes className="h-4 w-4" aria-hidden /> Find materials and prices</Link>
-            {needsStop ? <p className="mt-2 text-center text-[10px] text-amber-300">A supply stop will be included when the route is built.</p> : null}
-          </section>
-
-          <section className="rounded-panel border border-line bg-surface p-5">
-            <p className="text-xs text-ink-faint">Navigation</p><h2 className="mt-1 text-lg font-semibold">Build the route first</h2>
-            <Link href={`/route?job=${job.id}`} className="tap-target mt-4 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"><Route className="h-4 w-4" aria-hidden /> Optimize route</Link>
-            <div className="mt-2 grid grid-cols-2 gap-2"><a href={googleMapsUrl} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-center gap-1.5 rounded-control border border-line text-xs"><Navigation className="h-4 w-4" aria-hidden /> Google</a><a href={appleMapsUrl} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-center gap-1.5 rounded-control border border-line text-xs"><Navigation className="h-4 w-4" aria-hidden /> Apple</a></div>
-          </section>
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand text-sm font-semibold text-on-brand"
+          >
+            <Navigation className="h-4 w-4" aria-hidden />
+            Navigate
+          </a>
+          {job.phone ? (
+            <a
+              href={`tel:${job.phone.replace(/[^\d+]/g, "")}`}
+              className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+            >
+              <Phone className="h-4 w-4" aria-hidden />
+              Call
+            </a>
+          ) : null}
+          {job.phone ? (
+            <a
+              href={`sms:${job.phone.replace(/[^\d+]/g, "")}`}
+              className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+            >
+              <Mail className="h-4 w-4" aria-hidden />
+              Text
+            </a>
+          ) : null}
         </div>
-      </div>
+      </section>
 
       {controls ? (
-        <div className="mt-4">
+        <div className="mt-3">
+          <JobStatusStrip
+            jobNumber={controls.jobNumber}
+            status={controls.status}
+            canceled={controls.canceled}
+          />
+        </div>
+      ) : null}
+
+      {job.summary || job.accessNotes ? (
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <h2 className="text-sm font-semibold">What the customer said</h2>
+          {job.summary ? (
+            <p className="mt-2 text-sm leading-6 text-ink-muted">{job.summary}</p>
+          ) : null}
+          {job.accessNotes ? (
+            <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
+              {job.accessNotes}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Materials</h2>
+          <Link
+            href={`/materials?job=${job.id}`}
+            className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
+          >
+            {needsStop ? "Buy what is short" : "Check stock"}
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+        {job.materials.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-muted">
+            Nothing listed for this job yet.
+          </p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {job.materials.map((material) => (
+              <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate">{material.name}</span>
+                <span className="shrink-0 text-ink-muted">
+                  {material.quantity} {material.unit}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Files</h2>
+          <Link
+            href={`/files?job=${job.id}`}
+            className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
+          >
+            Open files
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+        <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
+          <UserRound className="h-4 w-4 shrink-0" aria-hidden />
+          {job.technician}
+        </p>
+      </section>
+
+      {controls ? (
+        <div className="mt-3">
+          <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
+        </div>
+      ) : null}
+
+      {controls ? (
+        <div className="mt-3">
           <JobControls
             jobNumber={controls.jobNumber}
             status={controls.status}
@@ -122,12 +196,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             customerPhone={controls.customerPhone}
             customerEmail={controls.customerEmail}
           />
-        </div>
-      ) : null}
-
-      {controls ? (
-        <div className="mt-4">
-          <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
         </div>
       ) : null}
     </FieldPageShell>
