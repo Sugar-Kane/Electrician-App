@@ -106,8 +106,15 @@ export function nextJob(jobs: PilotJob[], today: string): PilotJob | undefined {
  */
 export function openBookingRequests(requests: { status: string }[]): number {
   if (!Array.isArray(requests)) return 0;
-  // Anything not explicitly new has been dealt with — scheduled or dismissed.
-  return requests.filter((request) => request?.status === "new").length;
+  // Two words, because the sources use different ones for the same state. A
+  // text booking arrives `new`; a web booking that fell outside the service
+  // area arrives `needs_review`. Both are somebody waiting on an answer.
+  //
+  // `awaiting_payment` is deliberately not here: that is the customer's move,
+  // not the business's, and a card being typed in is not a task.
+  return requests.filter(
+    (request) => request?.status === "new" || request?.status === "needs_review",
+  ).length;
 }
 
 export type AttentionItem = {

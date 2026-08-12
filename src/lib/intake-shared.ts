@@ -227,7 +227,7 @@ export async function recordBookingRequest(input: {
   }
 
   const { data: created } = await input.database
-    .from("sms_booking_requests")
+    .from("booking_requests")
     .insert({
       organization_id: input.organizationId,
       conversation_id: input.conversationId ?? null,

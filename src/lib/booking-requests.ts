@@ -12,9 +12,22 @@ import { DEFAULT_TIMEZONE } from "@/lib/timezones";
  * not finish — the work that used to sit in a table with no screen.
  */
 
+export type BookingSource = "sms" | "voice" | "web" | "owner";
+
 export type BookingRequest = {
   id: string;
-  status: "new" | "scheduled" | "dismissed";
+  /** How the customer asked. One table, categorised rather than duplicated. */
+  source: BookingSource;
+  status:
+    | "new"
+    | "needs_review"
+    | "awaiting_payment"
+    | "safety_escalated"
+    | "confirmed"
+    | "scheduled"
+    | "dismissed"
+    | "canceled"
+    | "expired";
   intent: "callback" | "visit" | "emergency";
   phone: string;
   contactName: string;
@@ -71,9 +84,9 @@ export async function getBookingRequests(): Promise<BookingRequestQueue> {
   const timezone = text(row?.organizations?.timezone) || DEFAULT_TIMEZONE;
 
   const { data } = await database
-    .from("sms_booking_requests")
+    .from("booking_requests")
     .select(
-      "id, status, intent, phone, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id",
+      "id, source, status, intent, phone, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id",
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
@@ -84,6 +97,7 @@ export async function getBookingRequests(): Promise<BookingRequestQueue> {
     const end = text(row.arrival_window_end);
     return {
       id: text(row.id),
+      source: (text(row.source) || "sms") as BookingSource,
       status: (text(row.status) || "new") as BookingRequest["status"],
       intent: (text(row.intent) || "callback") as BookingRequest["intent"],
       phone: text(row.phone),

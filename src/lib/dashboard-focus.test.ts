@@ -241,3 +241,15 @@ test("a missing or empty request list is nothing to do, not a crash", () => {
   // has never heard of has still been through something.
   assert.equal(openBookingRequests([{ status: "" }]), 0);
 });
+
+test("a web booking waiting on review counts, a card being typed in does not", () => {
+  // The sources use different words for the same state: a text booking arrives
+  // `new`, a web booking outside the service area arrives `needs_review`.
+  assert.equal(openBookingRequests([{ status: "needs_review" }]), 1);
+  assert.equal(openBookingRequests([{ status: "new" }, { status: "needs_review" }]), 2);
+
+  // awaiting_payment is the customer's move, not the business's.
+  assert.equal(openBookingRequests([{ status: "awaiting_payment" }]), 0);
+  assert.equal(openBookingRequests([{ status: "confirmed" }]), 0);
+  assert.equal(openBookingRequests([{ status: "expired" }]), 0);
+});

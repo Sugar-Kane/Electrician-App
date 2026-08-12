@@ -27,9 +27,37 @@ const intentStyles: Record<BookingRequest["intent"], { label: string; className:
   visit: { label: "Visit", className: "border-positive/30 bg-positive-bg text-positive" },
 };
 
+/**
+ * Where the request came from.
+ *
+ * One table holds all of them now, so the screen has to say which is which:
+ * a text booking and a web booking look identical once they are rows, and the
+ * difference decides what the customer has already been told.
+ */
+const SOURCE_LABELS: Record<string, string> = {
+  sms: "Text",
+  voice: "Phone call",
+  web: "Booking page",
+  owner: "Entered by you",
+};
+
+/** Waiting on the business. The two words mean the same thing from different sources. */
+const OPEN_STATUSES = new Set(["new", "needs_review"]);
+
+/** What happened to it, for the ones that are done. */
+const HANDLED_LABELS: Record<string, string> = {
+  scheduled: "Scheduled",
+  confirmed: "Booked and paid",
+  dismissed: "Dismissed",
+  canceled: "Canceled",
+  expired: "Expired",
+  awaiting_payment: "Waiting on payment",
+  safety_escalated: "Safety escalated",
+};
+
 function RequestCard({ request }: { request: BookingRequest }) {
   const intent = intentStyles[request.intent];
-  const handled = request.status !== "new";
+  const handled = !OPEN_STATUSES.has(request.status);
 
   return (
     <article
@@ -50,9 +78,12 @@ function RequestCard({ request }: { request: BookingRequest }) {
                 <TriangleAlert className="h-3 w-3" aria-hidden /> Urgent
               </span>
             ) : null}
+            <span className="inline-flex min-h-7 items-center rounded-full border border-line px-2.5 text-[10px] font-semibold text-ink-muted">
+              {SOURCE_LABELS[request.source] ?? "Text"}
+            </span>
             {handled ? (
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
-                {request.status === "scheduled" ? "Scheduled" : "Dismissed"}
+                {HANDLED_LABELS[request.status] ?? request.status}
               </span>
             ) : null}
           </div>
@@ -131,8 +162,8 @@ export default async function BookingRequestsPage({
   const [queue, query] = await Promise.all([getBookingRequests(), searchParams]);
   if (queue.requiresLogin) redirect("/login?next=/booking-requests");
 
-  const open = queue.requests.filter((request) => request.status === "new");
-  const handled = queue.requests.filter((request) => request.status !== "new");
+  const open = queue.requests.filter((request) => OPEN_STATUSES.has(request.status));
+  const handled = queue.requests.filter((request) => !OPEN_STATUSES.has(request.status));
 
   return (
     <FieldPageShell

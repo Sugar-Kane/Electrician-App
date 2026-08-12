@@ -162,7 +162,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // books twice, must not text the same customer about the same appointment
   // twice — and the claim is worth more than the send.
   const { data: claimed } = await database
-    .from("sms_booking_requests")
+    .from("booking_requests")
     .update({ confirmed_notified_at: new Date().toISOString() })
     .eq("id", input.requestId)
     .is("confirmed_notified_at", null)
@@ -325,7 +325,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // was attempted, and it is the answer to "was anybody actually told?".
   try {
     await database
-      .from("sms_booking_requests")
+      .from("booking_requests")
       .update({ notification_results: attempts })
       .eq("id", input.requestId);
   } catch {
