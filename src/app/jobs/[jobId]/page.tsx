@@ -14,9 +14,14 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobControls } from "@/components/job-controls";
+import { JobLinesPanel } from "@/components/job-lines-panel";
+import { JobNotes } from "@/components/job-notes";
+import { JobPhotos } from "@/components/job-photos";
 import { JobStatusStrip } from "@/components/job-status-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
+import { getJobLines, getStockOptions } from "@/lib/job-line-data";
+import { getJobPhotos } from "@/lib/job-photo-data";
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
@@ -28,9 +33,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to edit.
-  const [controls, contracts] = await Promise.all([
+  const [controls, contracts, { lines, totals }, stock, photos] = await Promise.all([
     getJobControls(jobId),
     getJobContracts(jobId),
+    getJobLines(jobId),
+    getStockOptions(),
+    getJobPhotos(jobId),
   ]);
 
   const fullAddress = `${job.address}, ${job.city}`;
@@ -135,34 +143,54 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
-      <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Materials</h2>
-          <Link
-            href={`/materials?job=${job.id}`}
-            className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
-          >
-            {needsStop ? "Buy what is short" : "Check stock"}
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-        {job.materials.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-muted">
-            Nothing listed for this job yet.
-          </p>
-        ) : (
-          <ul className="mt-2 space-y-1.5">
-            {job.materials.map((material) => (
-              <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
-                <span className="min-w-0 truncate">{material.name}</span>
-                <span className="shrink-0 text-ink-muted">
-                  {material.quantity} {material.unit}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {controls ? (
+        <>
+          <JobLinesPanel
+            jobNumber={controls.jobNumber}
+            lines={lines}
+            totals={totals}
+            stock={stock}
+          />
+          <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
+          <JobNotes
+            // Remounted when the saved notes change, so the textarea's initial
+            // value follows the server rather than holding what was there when
+            // the component first mounted.
+            key={controls.technicianNotes}
+            jobNumber={controls.jobNumber}
+            notes={controls.technicianNotes}
+          />
+        </>
+      ) : (
+        // The signed-out demo view has no job to add lines to, and a form that
+        // silently fails is worse than a sentence saying why it is not there.
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Materials</h2>
+            <Link
+              href={`/materials?job=${job.id}`}
+              className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
+            >
+              {needsStop ? "Buy what is short" : "Check stock"}
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          {job.materials.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">Nothing listed for this job yet.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {job.materials.map((material) => (
+                <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate">{material.name}</span>
+                  <span className="shrink-0 text-ink-muted">
+                    {material.quantity} {material.unit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">

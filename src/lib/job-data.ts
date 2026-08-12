@@ -24,9 +24,11 @@ import {
  * demo snapshot. That keeps the signed-out marketing view working while giving
  * signed-in users their real records.
  *
- * Not yet backed by the database: job documents and per-job materials. There
- * are no tables for either, so those fields come through empty rather than
- * showing another job's mock attachments.
+ * The `documents` and `materials` fields on `PilotJob` stay empty here. Both
+ * are real now — documents in `public.documents`, hours and parts in
+ * `public.job_line_items` — but they are read by `job-line-data.ts` and the
+ * files page, which return them in their own shapes rather than squeezing them
+ * into fixtures written for the demo view.
  */
 
 type Source = "demo" | "supabase";
@@ -285,6 +287,7 @@ export async function getJobControls(jobNumber: string): Promise<{
   cancellationReason: string;
   customerPhone: string;
   customerEmail: string;
+  technicianNotes: string;
 } | null> {
   const context = await resolveContext();
   if (!context) return null;
@@ -295,7 +298,7 @@ export async function getJobControls(jobNumber: string): Promise<{
   const { data } = await context.database
     .from("jobs")
     .select(
-      `job_number, status, canceled_at, cancellation_reason,
+      `job_number, status, canceled_at, cancellation_reason, technician_notes,
        scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        customers ( phone, email )`,
     )
@@ -321,6 +324,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     cancellationReason: str(row.cancellation_reason),
     customerPhone: str(customer?.phone),
     customerEmail: str(customer?.email),
+    technicianNotes: str(row.technician_notes),
   };
 }
 
