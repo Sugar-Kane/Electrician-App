@@ -43,7 +43,9 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
   return (
     <FieldPageShell title="Material sourcing" eyebrow={selectedJob ? `Job #${selectedJob.id}` : "Inventory and suppliers"} description="Review what is already on the truck, identify shortages, and check live retailer results before adding a supply stop.">
       <div className="grid gap-4 lg:grid-cols-[1fr_.72fr]">
-        <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
+        {/* Same reason as the files page: a grid item will not shrink below its
+            widest child unless told to, and a part number is a long word. */}
+        <section className="min-w-0 rounded-panel border border-line bg-surface p-4 sm:p-6">
           <form action="/materials" className="flex gap-2"><input type="hidden" name="job" value={jobId ?? ""} /><label className="flex min-h-12 flex-1 items-center gap-2 rounded-control border border-line bg-raised px-4"><Search className="h-4 w-4 text-ink-faint" aria-hidden /><span className="sr-only">Search required materials</span><input name="query" defaultValue={query} placeholder="Search materials…" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint" /></label><button className="tap-target grid h-12 w-12 place-items-center rounded-control bg-brand text-on-brand" aria-label="Search materials"><PackageSearch className="h-5 w-5" aria-hidden /></button></form>
           <p className="mt-4 rounded-control border border-line bg-white/[0.025] px-4 py-3 text-xs leading-5 text-ink-muted">
             {coverage}{" "}
