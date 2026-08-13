@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { DOCUMENTS_BUCKET, documentStoragePath, ensureDocumentsBucket } from "@/lib/document-storage";
+import { jobFolderKey } from "@/lib/document-folders";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -120,12 +121,14 @@ async function resolveJob(
 }
 
 /**
- * The folder a job's documents belong in, made if it is not there.
+ * The folder a job's documents belong in.
  *
  * `documents.folder_id` is not null and restricts deletes, so nothing can be
- * filed without one. Most businesses have no folder rows at all — the files
- * page renders a blueprint client-side rather than writing them — so the first
- * photo on the first job is what actually creates one.
+ * filed without one — but the folder is almost never made here. A database
+ * trigger files every job under Jobs → year → month as it is created, keyed
+ * `job:<uuid>`, and keeps the name in step afterwards. Writing `job/<uuid>`
+ * instead gave each job a second, orphaned folder holding its photos, parented
+ * nowhere and absent from the files tree.
  */
 async function jobFolderId(
   supabase: SessionClient,
@@ -133,7 +136,7 @@ async function jobFolderId(
   jobId: string,
   jobNumber: string,
 ): Promise<string | null> {
-  const folderKey = `job/${jobId}`;
+  const folderKey = jobFolderKey(jobId);
 
   const { data: existing } = await supabase
     .from("document_folders")
@@ -150,7 +153,9 @@ async function jobFolderId(
     .insert({
       organization_id: organizationId,
       folder_key: folderKey,
-      display_name: `Job #${jobNumber}`,
+      // The trigger's vocabulary, not a second one. It renames and reparents
+      // this on the next change to the job.
+      display_name: `JOB-${jobNumber || "?"}`,
       folder_type: "job",
       entity_id: jobId,
     })

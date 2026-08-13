@@ -1,6 +1,6 @@
 import "server-only";
 
-import { documentFolderId } from "@/lib/pdf/folders";
+import { documentFolderId } from "@/lib/document-folders";
 import { InvoiceDocument, invoiceFileName } from "@/lib/pdf/invoice-document";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import { formatCents, formatQuantity } from "@/lib/job-lines";

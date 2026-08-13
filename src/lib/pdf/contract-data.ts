@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ContractDocument, contractFileName } from "@/lib/pdf/contract-document";
-import { documentFolderId } from "@/lib/pdf/folders";
+import { documentFolderId } from "@/lib/document-folders";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
