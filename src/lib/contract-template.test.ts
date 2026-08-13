@@ -10,6 +10,7 @@ import {
   unknownPlaceholders,
   type ContractFacts,
 } from "./contract-template.ts";
+import { bodyProvidesSignatures } from "./contract-signatures.ts";
 
 const facts: ContractFacts = {
   business_name: "Pacific Plains Electric",
@@ -115,10 +116,22 @@ test("the starter template only uses placeholders that can be filled", () => {
 
 test("the starter template carries the parts that make it a contract", () => {
   assert.match(STARTER_TEMPLATE, /SCOPE OF WORK/);
-  assert.match(STARTER_TEMPLATE, /signature/i);
+  assert.match(STARTER_TEMPLATE, /PRICE/);
+  // Both parties named in the agreement's own words, not only in the document's
+  // header blocks — a contract that identifies who it binds only in a letterhead
+  // is a letter.
+  assert.match(STARTER_TEMPLATE, /\{\{business_name\}\}/);
+  assert.match(STARTER_TEMPLATE, /\{\{customer_name\}\}/);
   // Work beyond scope needing approval is the clause that stops an argument on
   // the day.
   assert.match(STARTER_TEMPLATE, /will not begin without your\s+approval/);
+});
+
+test("the starter template leaves signing to the document", () => {
+  // It used to end with its own two signature lines, from when the filled text
+  // was the whole contract. The PDF prints a signature block now, and a template
+  // that carries one too produces a page with two places to sign.
+  assert.equal(bodyProvidesSignatures(STARTER_TEMPLATE), false);
 });
 
 test("every documented placeholder is one fillTemplate handles", () => {

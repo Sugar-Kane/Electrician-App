@@ -107,16 +107,23 @@ export function fillTemplate(template: string, facts: Partial<ContractFacts>): F
   return { body, unfilled };
 }
 
-/** A starting template, for a business that has not pasted its own yet. */
-export const STARTER_TEMPLATE = `{{business_name}}
-{{business_phone}}
+/**
+ * A starting template, for a business that has not pasted its own yet.
+ *
+ * Written to sit inside the generated document rather than to be one. It used to
+ * open with the business name and phone, restate the customer and the address,
+ * and close with two signature lines — all of which the PDF now prints around
+ * it, as a letterhead, a pair of labelled blocks and a signature block. Left as
+ * it was, every contract said everything twice and offered two places to sign.
+ *
+ * A pasted template that still does all of that is not touched: it is their
+ * contract. The document notices the signing lines and leaves its own out.
+ */
+export const STARTER_TEMPLATE = `WORK AGREEMENT
 
-WORK AGREEMENT — Job {{job_number}}
-Date: {{today}}
-
-Customer: {{customer_name}}
-Service address: {{service_address}}
-Scheduled: {{job_date}}
+This agreement is made on {{today}} between {{business_name}} ("the Contractor")
+and {{customer_name}} ("the Customer") for {{work_type}} work at
+{{service_address}}, booked as job {{job_number}} and scheduled for {{job_date}}.
 
 SCOPE OF WORK
 {{scope}}
@@ -129,9 +136,14 @@ The price above covers the scope of work described. Work found to be necessary
 beyond that scope will be quoted separately and will not begin without your
 approval.
 
-Customer signature: ______________________  Date: ____________
+PAYMENT
+The balance is due on completion of the work described above.
 
-{{business_name}} representative: ______________________  Date: ____________
+ACCESS AND CONDITIONS
+The Customer agrees to provide access to the working area and to the electrical
+service on the scheduled date. Concealed conditions found once work has begun —
+existing wiring that does not meet code, undisclosed alterations, damage behind
+finished surfaces — will be reported before any additional work is carried out.
 `;
 
 /**

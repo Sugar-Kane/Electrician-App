@@ -195,6 +195,91 @@ export type StoredDocument = {
 const SIGNED_URL_SECONDS = 3600;
 
 /**
+ * The current PDFs for several records at once, keyed by the record's id.
+ *
+ * The single version signs one URL per call, which is a round trip to storage
+ * each; a job with a handful of contract drafts on it would make that many
+ * before the page could render. This reads the rows in one query and signs them
+ * in one batch.
+ *
+ * Records with no document are simply absent from the map, which is an ordinary
+ * state rather than an error.
+ */
+export async function currentDocuments(input: {
+  database: FlexibleSupabaseClient;
+  organizationId: string;
+  column: "invoice_id" | "contract_id";
+  ids: string[];
+  timeZone: string;
+}): Promise<Map<string, StoredDocument>> {
+  const found = new Map<string, StoredDocument>();
+  const ids = input.ids.filter(Boolean);
+  if (ids.length === 0) return found;
+
+  const { data } = await input.database
+    .from("documents")
+    .select(`id, ${input.column}, storage_path, file_name, version_number, created_at`)
+    .eq("organization_id", input.organizationId)
+    .in(input.column, ids)
+    .is("archived_at", null)
+    .order("version_number", { ascending: false });
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+
+  // Ordered newest version first, so the first row seen for a record is the one
+  // that counts and the rest are superseded versions still on file.
+  const newest = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    const owner = str(row[input.column]);
+    if (owner && !newest.has(owner)) newest.set(owner, row);
+  }
+  if (newest.size === 0) return found;
+
+  let admin: ReturnType<typeof getSupabaseAdmin>;
+  try {
+    admin = getSupabaseAdmin();
+  } catch {
+    return found;
+  }
+
+  const paths = [...newest.values()].map((row) => str(row.storage_path));
+  const signed = await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS);
+  if (signed.error || !signed.data) return found;
+
+  const urls = new Map(
+    signed.data
+      .filter((entry) => entry.signedUrl)
+      // `path` comes back as the path that was asked for, which is how a
+      // partially failed batch is matched up rather than assumed to be in order.
+      .map((entry) => [str(entry.path), entry.signedUrl]),
+  );
+
+  for (const [owner, row] of newest) {
+    const url = urls.get(str(row.storage_path));
+    if (!url) continue;
+
+    const createdAt = str(row.created_at);
+    found.set(owner, {
+      documentId: str(row.id),
+      url,
+      fileName: str(row.file_name) || "document.pdf",
+      versionNumber: Number(row.version_number ?? 1),
+      generatedLabel: createdAt
+        ? new Intl.DateTimeFormat("en-US", {
+            timeZone: input.timeZone,
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          }).format(new Date(createdAt))
+        : "",
+    });
+  }
+
+  return found;
+}
+
+/**
  * The current PDF for a record, with a URL that works for an hour.
  *
  * Null when there is not one yet, which is an ordinary state: an invoice raised

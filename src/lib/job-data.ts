@@ -424,15 +424,27 @@ export async function placeTodaysStops(): Promise<{
   });
 }
 
+export type JobContract = {
+  id: string;
+  createdLabel: string;
+  body: string;
+  unfilled: string[];
+  /** The stored PDF, or empty when one has not been built yet. */
+  document: { url: string; fileName: string; versionNumber: number } | null;
+};
+
 /**
  * The contracts already generated for a job.
  *
  * Read through the caller's session, so RLS decides which business's contracts
  * these are. Newest first: the last draft is the one somebody is about to send.
+ *
+ * The PDFs come with them, signed in one batch. Every draft gets its document,
+ * not just the newest: an electrician comparing what they sent last week with
+ * what they are about to send needs to open both, and a superseded draft that
+ * can only be read as plain text is the thing this replaced.
  */
-export async function getJobContracts(jobNumber: string): Promise<
-  { id: string; createdLabel: string; body: string; unfilled: string[] }[]
-> {
+export async function getJobContracts(jobNumber: string): Promise<JobContract[]> {
   const context = await resolveContext();
   if (!context) return [];
 
@@ -457,17 +469,40 @@ export async function getJobContracts(jobNumber: string): Promise<
     .order("created_at", { ascending: false })
     .limit(10);
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-    id: String(row.id),
-    body: typeof row.body === "string" ? row.body : "",
-    unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
-    createdLabel: inZone(row.created_at as string | null, context.timeZone, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-  }));
+  const rows = (data ?? []) as Record<string, unknown>[];
+
+  const { currentDocuments } = await import("@/lib/pdf/store");
+  const stored = await currentDocuments({
+    database: context.database,
+    organizationId: context.organizationId,
+    column: "contract_id",
+    ids: rows.map((row) => String(row.id)),
+    timeZone: context.timeZone,
+  });
+
+  return rows.map((row) => {
+    const id = String(row.id);
+    const document = stored.get(id) ?? null;
+
+    return {
+      id,
+      body: typeof row.body === "string" ? row.body : "",
+      unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+      createdLabel: inZone(row.created_at as string | null, context.timeZone, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      document: document
+        ? {
+            url: document.url,
+            fileName: document.fileName,
+            versionNumber: document.versionNumber,
+          }
+        : null,
+    };
+  });
 }
 
 /**

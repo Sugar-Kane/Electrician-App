@@ -18,9 +18,19 @@ import { createClient } from "@/lib/supabase/server";
  *
  * The result is stored as text and never regenerated. A contract that changes
  * after it was agreed is the one thing a contract may not do.
+ *
+ * The PDF is a rendering of that stored text, so rebuilding one is safe in a way
+ * that redrafting is not: the same words, laid out again. That distinction is
+ * the reason `rebuildContractPdf` exists and there is no "regenerate this
+ * contract" anywhere.
  */
 
-export type ContractState = { error: string; notice?: string };
+export type ContractState = {
+  error: string;
+  notice?: string;
+  /** The draft just written, so the screen can open it without a round trip. */
+  contractId?: string;
+};
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -35,6 +45,10 @@ export async function generateContract(
   if (!Number.isFinite(numeric)) return { error: "That job could not be found." };
 
   const supabase = asFlexibleClient(await createClient());
+
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id ?? "";
+  if (!userId) return { error: "You are not signed in." };
 
   const { data: membership } = await supabase
     .from("organization_members")
@@ -127,22 +141,99 @@ export async function generateContract(
 
   const filled = fillTemplate(body, facts);
 
-  const { error } = await supabase.from("contracts").insert({
-    organization_id: organizationId,
-    job_id: text(row.id),
-    body: filled.body,
-    unfilled: filled.unfilled,
-    status: "draft",
-  });
+  const { data: created, error } = await supabase
+    .from("contracts")
+    .insert({
+      organization_id: organizationId,
+      job_id: text(row.id),
+      body: filled.body,
+      unfilled: filled.unfilled,
+      status: "draft",
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) return { error: "That contract could not be saved." };
+  if (error || !created) return { error: "That contract could not be saved." };
+
+  const contractId = text(created.id);
+
+  // Made now rather than when somebody asks to look at it, so the document on
+  // screen is the same file the customer is sent rather than a second render of
+  // it. A failure here is reported and does not undo the contract: the drafted
+  // text is the work, and the PDF can be rebuilt from it at any point.
+  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+  const document = await generateContractPdf({
+    database: supabase,
+    organizationId,
+    contractId,
+    timeZone,
+    uploadedBy: userId,
+  });
 
   revalidatePath(`/jobs/${jobNumber}`);
 
+  const blanks = filled.unfilled.length
+    ? `Draft contract created, with ${filled.unfilled.length} ${filled.unfilled.length === 1 ? "blank" : "blanks"} to fill in: ${filled.unfilled.map((key) => `{{${key}}}`).join(", ")}.`
+    : "Draft contract created. Read it before you send it.";
+
   return {
     error: "",
-    notice: filled.unfilled.length
-      ? `Draft contract created, with ${filled.unfilled.length} ${filled.unfilled.length === 1 ? "blank" : "blanks"} to fill in: ${filled.unfilled.map((key) => `{{${key}}}`).join(", ")}.`
-      : "Draft contract created. Read it before you send it.",
+    contractId,
+    notice: document.error
+      ? `${blanks} The PDF could not be produced — open the draft to try again.`
+      : blanks,
   };
+}
+
+/**
+ * Build the PDF for a contract that has not got one.
+ *
+ * Every contract drafted before documents existed is in that state, and so is
+ * one whose render failed. It is not a redraft: the stored text is read back
+ * untouched and laid out again, which is why this is offered and "generate this
+ * contract again" is not.
+ */
+export async function rebuildContractPdf(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const contractId = String(formData.get("contractId") ?? "").trim();
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  if (!contractId) return { error: "That contract could not be found." };
+
+  const supabase = asFlexibleClient(await createClient());
+
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id ?? "";
+  if (!userId) return { error: "You are not signed in." };
+
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .limit(1)
+    .maybeSingle();
+
+  const organizationId = text(membership?.organization_id);
+  if (!organizationId) return { error: "You are not a member of a business." };
+
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("timezone")
+    .eq("id", organizationId)
+    .maybeSingle();
+
+  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+  const document = await generateContractPdf({
+    database: supabase,
+    organizationId,
+    contractId,
+    timeZone: text(organization?.timezone) || "America/Los_Angeles",
+    uploadedBy: userId,
+  });
+
+  if (document.error) return { error: document.error };
+
+  if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
+
+  return { error: "", contractId, notice: "Contract PDF ready." };
 }

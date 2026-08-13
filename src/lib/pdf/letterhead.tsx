@@ -192,18 +192,33 @@ export function DocumentFooter({
   return (
     <View style={sheet.footer}>
       {note ? <Text style={{ marginBottom: 3 }}>{note}</Text> : null}
-      <View style={[sheet.row, { justifyContent: "space-between" }]}>
-        <Text>
-          {[business.name, business.phone, business.licenseNumber ? `Lic. ${business.licenseNumber}` : ""]
-            .filter(Boolean)
-            .join("  ·  ")}
-        </Text>
-        {/*
-          `fixed` so the callback is evaluated per page. It reports the page it
-          is drawn on, which for an in-flow footer is the last one.
-        */}
-        <Text fixed render={({ totalPages }) => `${totalPages} ${totalPages === 1 ? "page" : "pages"}`} />
-      </View>
+      <Text>
+        {[business.name, business.phone, business.licenseNumber ? `Lic. ${business.licenseNumber}` : ""]
+          .filter(Boolean)
+          .join("  ·  ")}
+      </Text>
     </View>
   );
 }
+
+/*
+ * No "Page 2 of 4", and it is not for want of trying.
+ *
+ * @react-pdf 4.6.0 resolves a `render` callback only on pages that do not
+ * inherit a `lineHeight` from the Page style. Bisected: an identical `fixed`
+ * absolutely-positioned Text prints on every page under `{ padding: 44,
+ * fontSize: 10 }` and prints on none under the same style plus `lineHeight:
+ * 1.4`. Adding an explicit lineHeight, an explicit height, or wrapping it in a
+ * fixed View changes nothing — it is the page's inherited value that decides.
+ *
+ * Two ways out, both refused. Dropping `lineHeight` from `sheet.page` costs the
+ * spacing that keeps an ordinary invoice on one page, which is the reason it is
+ * 1.4 and not 1.5. Moving it onto a View wrapping the content does work — and
+ * repaginated the test document from two pages to three, because a single view
+ * splitting across pages packs differently from the page's own children. An
+ * extra sheet of paper on every contract is a poor trade for a page number.
+ *
+ * So the count stays where the reader already has it: the viewer says how many
+ * pages a document has before it opens, and every PDF reader numbers pages
+ * itself. Worth re-testing on a later @react-pdf; not worth working around.
+ */

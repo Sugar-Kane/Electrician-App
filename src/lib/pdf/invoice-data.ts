@@ -1,5 +1,6 @@
 import "server-only";
 
+import { documentFolderId } from "@/lib/pdf/folders";
 import { InvoiceDocument, invoiceFileName } from "@/lib/pdf/invoice-document";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import { formatCents, formatQuantity } from "@/lib/job-lines";
@@ -148,7 +149,16 @@ export async function generateInvoicePdf(input: {
     database: input.database,
     organizationId: input.organizationId,
     jobId: jobId || null,
-    folderId: await invoiceFolderId(input.database, input.organizationId, jobId, str(job?.job_number)),
+    folderId: await documentFolderId({
+      database: input.database,
+      organizationId: input.organizationId,
+      jobId,
+      // String, not `str`: job_number is an integer over PostgREST and the
+      // string guard would quietly hand the folder the name "Job #".
+      jobNumber: String(job?.job_number ?? ""),
+      fallbackKey: "invoices",
+      fallbackName: "Invoices",
+    }),
     invoiceId: input.invoiceId,
     documentType: "invoice",
     displayName: `Invoice ${invoiceNumber}`,
@@ -192,54 +202,4 @@ export async function generateInvoicePdf(input: {
       },
     }),
   }).then((result) => ("error" in result ? { error: result.error } : { error: "" as const }));
-}
-
-/**
- * Where a job's paperwork is filed, made if it is not there.
- *
- * `documents.folder_id` is not null, so nothing can be stored without one, and
- * most businesses have no folder rows at all until their first upload.
- */
-async function invoiceFolderId(
-  database: FlexibleSupabaseClient,
-  organizationId: string,
-  jobId: string,
-  jobNumber: string,
-): Promise<string> {
-  const folderKey = jobId ? `job/${jobId}` : "invoices";
-
-  const { data: existing } = await database
-    .from("document_folders")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("folder_key", folderKey)
-    .maybeSingle();
-
-  const found = str(existing?.id);
-  if (found) return found;
-
-  const { data: created } = await database
-    .from("document_folders")
-    .insert({
-      organization_id: organizationId,
-      folder_key: folderKey,
-      display_name: jobId ? `Job #${jobNumber}` : "Invoices",
-      folder_type: jobId ? "job" : "system",
-      entity_id: jobId || null,
-    })
-    .select("id")
-    .maybeSingle();
-
-  const madeId = str(created?.id);
-  if (madeId) return madeId;
-
-  // Lost a race against another upload; the folder it wanted now exists.
-  const { data: raced } = await database
-    .from("document_folders")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("folder_key", folderKey)
-    .maybeSingle();
-
-  return str(raced?.id);
 }

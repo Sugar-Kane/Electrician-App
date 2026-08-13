@@ -1,5 +1,6 @@
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 
+import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import {
   DocumentFooter,
   Labelled,
@@ -23,7 +24,9 @@ import {
  *
  * The signature block is real space on the page rather than a picture of one, so
  * a printed copy can be signed by hand today and an electronic signature can be
- * placed against the same coordinates later.
+ * placed against the same coordinates later — and it is omitted entirely when
+ * the business's own text already ends with somewhere to sign, because two
+ * signature blocks on one contract is not a tidiness problem.
  */
 
 export type ContractDocumentData = {
@@ -105,6 +108,7 @@ function SignatureLine({ role, name }: { role: string; name?: string }) {
 
 export function ContractDocument({ data }: { data: ContractDocumentData }) {
   const { business } = data;
+  const ownSignatures = bodyProvidesSignatures(data.body);
 
   return (
     <Document
@@ -162,16 +166,18 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
 
         <Body body={data.body} />
 
-        <View style={{ marginTop: 30 }} wrap={false}>
-          <Text style={sheet.sectionHeading}>SIGNATURES</Text>
-          <Text style={[sheet.muted, { marginBottom: 6 }]}>
-            By signing below both parties agree to the work and the price set out above.
-          </Text>
-          <View style={[sheet.row, { justifyContent: "space-between", marginTop: 6 }]}>
-            <SignatureLine role="Customer signature" name={data.customer.name} />
-            <SignatureLine role="Contractor signature" name={business.name} />
+        {ownSignatures ? null : (
+          <View style={{ marginTop: 30 }} wrap={false}>
+            <Text style={sheet.sectionHeading}>SIGNATURES</Text>
+            <Text style={[sheet.muted, { marginBottom: 6 }]}>
+              By signing below both parties agree to the work and the price set out above.
+            </Text>
+            <View style={[sheet.row, { justifyContent: "space-between", marginTop: 6 }]}>
+              <SignatureLine role="Customer signature" name={data.customer.name} />
+              <SignatureLine role="Contractor signature" name={business.name} />
+            </View>
           </View>
-        </View>
+        )}
 
         <DocumentFooter business={business} />
       </Page>
