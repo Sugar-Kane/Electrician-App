@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { CheckCircle2, ChevronRight, CircleDollarSign, Clock3, ReceiptText, TriangleAlert } from "lucide-react";
+import { CircleDollarSign } from "lucide-react";
 
-import { InvoiceSend } from "@/components/invoice-send";
+import { InvoiceRow } from "@/components/invoice-row";
 import type { PilotInvoice } from "@/lib/pilot-data";
 
 /**
@@ -25,18 +24,6 @@ const FILTERS = [
   { label: "Unpaid", value: "unpaid" },
   { label: "Overdue", value: "overdue" },
 ] as const;
-
-const STATUS_STYLES: Record<string, string> = {
-  Paid: "bg-positive-bg text-positive",
-  Unpaid: "bg-info-bg text-info",
-  Overdue: "bg-critical-bg text-critical",
-};
-
-const STATUS_ICONS: Record<string, typeof CheckCircle2> = {
-  Paid: CheckCircle2,
-  Unpaid: Clock3,
-  Overdue: TriangleAlert,
-};
 
 export function InvoiceList({
   invoices,
@@ -95,48 +82,15 @@ export function InvoiceList({
       </div>
 
       <div className="mt-4 space-y-2">
-        {visible.map((invoice) => {
-          const Icon = STATUS_ICONS[invoice.status] ?? ReceiptText;
-          // The send control cannot live inside the row link — a button nested
-          // in an anchor is not something a browser or a screen reader can make
-          // sense of. So the row is a container, and the link is the part of it
-          // that navigates.
-          return (
-            <div
-              key={invoice.id}
-              className="rounded-control border border-line px-4 py-3"
-            >
-              <Link
-                href={`/jobs/${invoice.jobId}`}
-                className="tap-row flex min-h-[52px] items-center gap-3 active:bg-white/5"
-              >
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5">
-                  <Icon className="h-5 w-5 text-brand" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{invoice.customer}</span>
-                  <span className="mt-0.5 block truncate text-xs text-ink-muted">
-                    {invoice.id} · due {invoice.due}
-                    {invoice.sentLabel ? ` · sent ${invoice.sentLabel}` : ""}
-                  </span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className="block text-sm font-semibold">
-                    ${invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </span>
-                  <span
-                    className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[invoice.status] ?? ""}`}
-                  >
-                    {invoice.status}
-                  </span>
-                </span>
-                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
-              </Link>
-
-              {invoice.status === "Paid" ? null : <InvoiceSend invoice={invoice} />}
-            </div>
-          );
-        })}
+        {/*
+          Each row owns its own delete gesture and confirmation. Keeping that
+          here would have meant one open-row and one confirming-row state for
+          the whole list, which is how a confirmation ends up over the wrong
+          invoice after a filter change.
+        */}
+        {visible.map((invoice) => (
+          <InvoiceRow key={invoice.id} invoice={invoice} />
+        ))}
 
         {visible.length === 0 ? (
           <p className="rounded-control border border-dashed border-line p-8 text-center text-sm text-ink-muted">

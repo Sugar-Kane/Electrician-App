@@ -6,11 +6,14 @@ import {
   canceledToday,
   firstName,
   greeting,
+  greetingName,
   isActive,
   minutesFromLabel,
+  needsTechnician,
   nextJob,
   openBookingRequests,
   todaysJobs,
+  unassignedToday,
 } from "./dashboard-focus.ts";
 import type { PilotJob } from "./pilot-data.ts";
 
@@ -113,6 +116,54 @@ test("completed and canceled are both inactive", () => {
   assert.equal(isActive({ status: "In progress" }), true);
   assert.equal(isActive({ status: "Completed" }), false);
   assert.equal(isActive({ status: "Canceled" }), false);
+});
+
+test("a finished job does not need anybody sent to it", () => {
+  // The reported bug: a job completed by whoever happened to be there, with the
+  // technician field never filled in, sat in Needs attention in amber for the
+  // rest of the day — and nothing could clear it, because the work was over.
+  assert.equal(needsTechnician({ status: "Completed", technician: "Unassigned" }), false);
+  assert.equal(needsTechnician({ status: "Canceled", technician: "Unassigned" }), false);
+});
+
+test("work still to come with nobody on it does need somebody", () => {
+  assert.equal(needsTechnician({ status: "Scheduled", technician: "Unassigned" }), true);
+  assert.equal(needsTechnician({ status: "Scheduled", technician: "" }), true);
+  assert.equal(needsTechnician({ status: "In progress", technician: "Unassigned" }), true);
+});
+
+test("a job with a technician on it needs nothing", () => {
+  assert.equal(needsTechnician({ status: "Scheduled", technician: "Nick" }), false);
+  assert.equal(needsTechnician({ status: "In progress", technician: "Nick" }), false);
+});
+
+test("drafts and unpaid bookings are not dispatch problems", () => {
+  // Same reasoning as openBookingRequests leaving awaiting_payment out: a card
+  // being typed in is not a task, and neither is a draft nobody has confirmed.
+  assert.equal(needsTechnician({ status: "Pending", technician: "Unassigned" }), false);
+});
+
+test("only today's unassigned work is counted", () => {
+  const jobs = [
+    { date: "2026-08-12", status: "Completed", technician: "Unassigned" },
+    { date: "2026-08-12", status: "Scheduled", technician: "Unassigned" },
+    { date: "2026-08-12", status: "Scheduled", technician: "Nick" },
+    { date: "2026-08-13", status: "Scheduled", technician: "Unassigned" },
+  ];
+
+  assert.equal(unassignedToday(jobs, "2026-08-12"), 1);
+});
+
+test("a name is found wherever one honestly is", () => {
+  // The profile column is NOT NULL, so signing up fills it with the local part
+  // of an email. That is the case this exists for: skip it, and take the name a
+  // person actually typed somewhere else.
+  assert.equal(greetingName(["adamkane13.ak", "Adam Kane"]), "Adam");
+  assert.equal(greetingName(["Nick Turner"]), "Nick");
+  // Nothing usable anywhere is a bare greeting, not a greeting by an address.
+  assert.equal(greetingName(["adamkane13.ak"], "adamkane13.ak@gmail.com"), "");
+  assert.equal(greetingName([], "nick@pacificplains.com"), "Nick");
+  assert.equal(greetingName([null, undefined, ""]), "");
 });
 
 test("nothing wrong means nothing shown", () => {

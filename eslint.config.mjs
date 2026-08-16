@@ -13,6 +13,27 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      /*
+       * Honour the underscore the codebase already writes.
+       *
+       * Server actions are called as `action(previousState, formData)` whether
+       * or not they read either, so `_previous` is everywhere. The default rule
+       * reports only *trailing* unused arguments, which meant the convention
+       * appeared to work right up until an action ignored both — and then
+       * warned about a signature React requires.
+       */
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

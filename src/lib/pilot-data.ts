@@ -45,6 +45,11 @@ export type PilotJob = {
   technicianInitials: string;
   accessNotes: string;
   serviceNotes: string;
+  /**
+   * How the customer reached us. "manual" when the business typed the job in
+   * themselves, which is what a job with no booking request behind it is.
+   */
+  channel: "phone" | "sms" | "web" | "manual";
   /** Null until the address has been geocoded. Never 0,0. */
   coordinates: { lat: number; lng: number } | null;
   documents: JobDocument[];
@@ -98,6 +103,7 @@ export const pilotJobs: PilotJob[] = [
     technicianInitials: "MD",
     accessNotes: "Driveway parking is available. Panel is on the west side of the garage.",
     serviceNotes: "Customer requested the service remain available until the planned shutdown.",
+    channel: "phone",
     coordinates: { lat: 34.953, lng: -120.435 },
     documents: [
       ...commonDocuments,
@@ -129,6 +135,7 @@ export const pilotJobs: PilotJob[] = [
     technicianInitials: "JR",
     accessNotes: "Check in at the loading dock office. Ladder access is clear after 10:00 AM.",
     serviceNotes: "Phase one covers the west aisle only.",
+    channel: "sms",
     coordinates: { lat: 35.121, lng: -120.588 },
     documents: [...commonDocuments, { name: "Lighting layout", kind: "Estimate", updated: "Aug 1" }],
     materials: [
@@ -155,6 +162,7 @@ export const pilotJobs: PilotJob[] = [
     technicianInitials: "MS",
     accessNotes: "Dog will be secured. Use the right-side gate to reach the garage panel.",
     serviceNotes: "Panel photo shows two open spaces; verify load calculation onsite.",
+    channel: "web",
     coordinates: { lat: 35.039, lng: -120.483 },
     documents: [...commonDocuments, { name: "EV charger specification", kind: "Estimate", updated: "Aug 2" }],
     materials: [
@@ -181,6 +189,7 @@ export const pilotJobs: PilotJob[] = [
     technicianInitials: "AB",
     accessNotes: "Street parking. Customer will meet the technician at the front door.",
     serviceNotes: "No smoke, heat, or active sparking reported during intake.",
+    channel: "phone",
     coordinates: { lat: 35.102, lng: -120.609 },
     documents: commonDocuments,
     materials: [
@@ -207,6 +216,7 @@ export const pilotJobs: PilotJob[] = [
     technicianInitials: "MD",
     accessNotes: "Call on arrival for gate access.",
     serviceNotes: "Estimate visit only; no shutdown planned.",
+    channel: "manual",
     coordinates: { lat: 35.282, lng: -120.659 },
     documents: commonDocuments,
     materials: [],
@@ -230,6 +240,7 @@ export const pilotJobs: PilotJob[] = [
     technicianInitials: "JR",
     accessNotes: "Work must be completed before the first patient at 11:00 AM.",
     serviceNotes: "Coordinate any shutdown with the office manager.",
+    channel: "sms",
     coordinates: { lat: 35.121, lng: -120.621 },
     documents: commonDocuments,
     materials: [

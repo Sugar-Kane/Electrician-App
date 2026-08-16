@@ -1,5 +1,7 @@
+import { BookingPageSettings, type BookingDomain } from "@/components/booking-page-settings";
 import { BusinessDetailsForm, type BusinessDetails } from "@/components/business-details-form";
 import { FieldPageShell } from "@/components/field-page-shell";
+import { logoUrl } from "@/lib/branding-storage";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -28,6 +30,10 @@ export default async function BusinessSettingsPage() {
   };
 
   let details = empty;
+  let logo = "";
+  let brandColor = "";
+  let domains: BookingDomain[] = [];
+  let bookingUrl = "";
 
   // The same rule the account page has always used. RLS is what actually
   // refuses the write; this only stops somebody filling in a form that was
@@ -38,7 +44,9 @@ export default async function BusinessSettingsPage() {
     const supabase = asFlexibleClient(await createClient());
     const { data } = await supabase
       .from("organizations")
-      .select("name, phone, base_address_line_1, base_city, base_state, base_postal_code, timezone")
+      .select(
+        "name, phone, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color",
+      )
       .eq("id", context.organizationId)
       .maybeSingle();
 
@@ -54,6 +62,25 @@ export default async function BusinessSettingsPage() {
       postalCode: text(row.base_postal_code),
       timezone: text(row.timezone) || DEFAULT_TIMEZONE,
     };
+
+    logo = logoUrl(text(row.logo_path));
+    brandColor = text(row.brand_color);
+
+    const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+    const slug = text(row.slug);
+    bookingUrl = origin && slug ? `${origin}/book/${slug}` : "";
+
+    const { data: domainRows } = await supabase
+      .from("organization_domains")
+      .select("id, hostname, verified_at")
+      .eq("organization_id", context.organizationId)
+      .order("created_at", { ascending: true });
+
+    domains = ((domainRows ?? []) as Record<string, unknown>[]).map((domainRow) => ({
+      id: text(domainRow.id),
+      hostname: text(domainRow.hostname),
+      verifiedAt: text(domainRow.verified_at),
+    }));
   }
 
   return (
@@ -64,6 +91,17 @@ export default async function BusinessSettingsPage() {
       backHref="/settings"
     >
       <BusinessDetailsForm details={details} canManage={canManage} />
+
+      {canManage ? (
+        <div className="mt-3">
+          <BookingPageSettings
+            logo={logo}
+            brandColor={brandColor}
+            domains={domains}
+            bookingUrl={bookingUrl}
+          />
+        </div>
+      ) : null}
     </FieldPageShell>
   );
 }

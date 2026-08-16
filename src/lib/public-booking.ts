@@ -21,6 +21,10 @@ export type PublicBookingPage = {
   cancellation_fee_cents: number;
   free_reschedule_hours: number;
   business_hours: Json;
+  /** Empty until the tenant uploads one; the page falls back to a wordmark. */
+  logo_path: string | null;
+  /** Empty until the tenant picks one; the page falls back to the product's. */
+  brand_color: string | null;
 };
 
 export type PublicBookingSlot = {
@@ -48,6 +52,29 @@ export async function getPublicBookingPage(slug: string) {
   const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("get_public_booking_page", {
     p_slug: slug,
+  });
+
+  if (error) return null;
+  return ((data as PublicBookingPage[] | null)?.[0] ?? null);
+}
+
+/**
+ * The booking page for a hostname a tenant pointed at us.
+ *
+ * Reads the header the middleware set rather than the raw `Host`, so the
+ * normalisation rules — case, port, trailing dot, forwarded lists — live in one
+ * place and cannot disagree between the routing decision and the lookup.
+ *
+ * Null for a host nobody has claimed, which the route turns into a 404. That is
+ * the honest answer: somebody has pointed DNS at us for a name we have never
+ * heard of.
+ */
+export async function getBookingPageByHost(host: string) {
+  if (!host) return null;
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("get_booking_page_by_host", {
+    p_host: host,
   });
 
   if (error) return null;

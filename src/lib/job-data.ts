@@ -124,6 +124,14 @@ function mapJob(row: any, timeZone: string): PilotJob {
   const property = row.properties ?? {};
   const technician = row.technicians ?? {};
 
+  // Embedded from the request that created this job, if there was one. A job
+  // with none was typed in by the business, which is what "manual" means — so
+  // the absence of a row is the answer rather than a missing value.
+  const request = Array.isArray(row.booking_requests)
+    ? row.booking_requests[0]
+    : (row.booking_requests ?? null);
+  const channel = request?.communication_channel;
+
   const customerName: string =
     customer.company_name ||
     [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
@@ -152,6 +160,8 @@ function mapJob(row: any, timeZone: string): PilotJob {
     technicianInitials: initialsOf(technicianName),
     accessNotes: property.access_notes ?? "",
     serviceNotes: row.ai_summary ?? "",
+    channel:
+      channel === "phone" || channel === "sms" || channel === "web" ? channel : "manual",
     // Null when the address has never been geocoded, rather than 0,0 — which
     // is a real point in the Atlantic and would put every phone-booked job in
     // the ocean the moment anything plotted it.
@@ -173,7 +183,8 @@ const JOB_SELECT = `
   scheduled_start, scheduled_end,
   customers ( first_name, last_name, company_name, phone, email ),
   properties ( address_line_1, city, latitude, longitude, access_notes ),
-  technicians ( display_name )
+  technicians ( display_name ),
+  booking_requests ( communication_channel )
 `;
 
 export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {
@@ -331,50 +342,149 @@ export async function getJobControls(jobNumber: string): Promise<{
   };
 }
 
+export type TechnicianBlackout = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  label: string;
+  reason: string;
+};
+
 export type TechnicianWorkload = {
   id: string;
   name: string;
   initials: string;
   phone: string;
   isActive: boolean;
+  /** True when this row is the signed-in user's own. */
+  isMe: boolean;
+  hours: { weekday: number; start: string; end: string }[];
+  blackouts: TechnicianBlackout[];
   jobs: { id: string; customer: string; time: string; status: JobStatus; city: string }[];
 };
 
-/**
- * Who is on the crew, and what each of them is doing today.
- *
- * The "Techs working" tile linked to the route builder, which answers a
- * different question entirely — how to drive between stops, rather than who is
- * out and where. This is the answer to the question the tile actually asks.
- */
-export async function getTechnicianWorkloads(): Promise<{
+export type CrewRoster = {
   technicians: TechnicianWorkload[];
   source: Source;
-}> {
-  const context = await resolveContext();
-  if (!context) return { technicians: [], source: "demo" };
+  /** Whether the caller may change any of this. */
+  canManage: boolean;
+  /** False when the owner is not on the crew, which is what offers the button. */
+  selfIsElectrician: boolean;
+  /** Days the whole business is closed — blackouts with no electrician named. */
+  businessBlackouts: TechnicianBlackout[];
+};
 
-  const [{ data: crew }, { jobs }] = await Promise.all([
-    context.database
-      .from("technicians")
-      .select("id, display_name, phone, is_active")
-      .eq("organization_id", context.organizationId)
-      .order("display_name"),
-    getJobs(),
-  ]);
+/**
+ * Who is on the crew, when they work, and what each of them is doing today.
+ *
+ * The crew tile linked to the route builder, which answers a
+ * different question entirely — how to drive between stops, rather than who is
+ * out and where. This is the answer to the question the tile actually asks.
+ *
+ * Hours and time off come back with the crew rather than being fetched per
+ * person as the screen expands them. It is one small business's roster, so it
+ * is two more queries rather than two per electrician, and the page can render
+ * "Mon–Fri, 8am–5pm" under a name without a round trip.
+ */
+export async function getTechnicianWorkloads(): Promise<CrewRoster> {
+  const context = await resolveContext();
+  if (!context) {
+    return {
+      technicians: [],
+      source: "demo",
+      canManage: false,
+      selfIsElectrician: false,
+      businessBlackouts: [],
+    };
+  }
+
+  const { data: auth } = await context.database.auth.getUser();
+  const userId = auth.user?.id ?? "";
+
+  const [{ data: crew }, { jobs }, { data: membership }, { data: hourRows }, { data: blackoutRows }] =
+    await Promise.all([
+      context.database
+        .from("technicians")
+        .select("id, display_name, phone, is_active, user_id")
+        .eq("organization_id", context.organizationId)
+        .order("display_name"),
+      getJobs(),
+      context.database
+        .from("organization_members")
+        .select("role")
+        .limit(1)
+        .maybeSingle(),
+      context.database
+        .from("technician_hours")
+        .select("technician_id, weekday, starts_at, ends_at")
+        .eq("organization_id", context.organizationId),
+      context.database
+        .from("blackout_periods")
+        .select("id, technician_id, starts_at, ends_at, reason")
+        .eq("organization_id", context.organizationId)
+        // Yesterday's day off is history nobody needs to see on this screen.
+        .gte("ends_at", new Date().toISOString())
+        .order("starts_at", { ascending: true }),
+    ]);
 
   const today = todayInZone(context.timeZone);
+
+  const hoursByTechnician = new Map<string, { weekday: number; start: string; end: string }[]>();
+  for (const row of (hourRows ?? []) as Record<string, unknown>[]) {
+    const key = String(row.technician_id ?? "");
+    const list = hoursByTechnician.get(key) ?? [];
+    list.push({
+      weekday: Number(row.weekday ?? 0),
+      // Postgres hands back "08:00:00"; the form and the label both want "08:00".
+      start: String(row.starts_at ?? "").slice(0, 5),
+      end: String(row.ends_at ?? "").slice(0, 5),
+    });
+    hoursByTechnician.set(key, list);
+  }
+
+  const blackoutsByTechnician = new Map<string, TechnicianBlackout[]>();
+  const businessBlackouts: TechnicianBlackout[] = [];
+
+  for (const row of (blackoutRows ?? []) as Record<string, unknown>[]) {
+    const startsAt = String(row.starts_at ?? "");
+    const endsAt = String(row.ends_at ?? "");
+
+    const blackout: TechnicianBlackout = {
+      id: String(row.id ?? ""),
+      startsAt,
+      endsAt,
+      reason: typeof row.reason === "string" ? row.reason : "",
+      label: blackoutLabel(startsAt, endsAt, context.timeZone),
+    };
+
+    // No electrician named means the whole business is shut. Keyed under "" by
+    // a naive group-by, which would file it against nobody and lose it.
+    if (typeof row.technician_id !== "string" || row.technician_id === "") {
+      businessBlackouts.push(blackout);
+      continue;
+    }
+
+    const list = blackoutsByTechnician.get(row.technician_id) ?? [];
+    list.push(blackout);
+    blackoutsByTechnician.set(row.technician_id, list);
+  }
 
   const technicians: TechnicianWorkload[] = (crew ?? []).map((row) => {
     const record = row as Record<string, unknown>;
     const name = typeof record.display_name === "string" ? record.display_name : "";
+    const id = String(record.id ?? "");
 
     return {
-      id: String(record.id ?? ""),
+      id,
       name,
       initials: initialsOf(name),
       phone: typeof record.phone === "string" ? record.phone : "",
       isActive: record.is_active !== false,
+      isMe: Boolean(userId) && record.user_id === userId,
+      hours: (hoursByTechnician.get(id) ?? []).sort(
+        (a, b) => a.weekday - b.weekday || a.start.localeCompare(b.start),
+      ),
+      blackouts: blackoutsByTechnician.get(id) ?? [],
       jobs: jobs
         .filter((job) => job.technician === name && job.date === today)
         .map((job) => ({
@@ -387,7 +497,32 @@ export async function getTechnicianWorkloads(): Promise<{
     };
   });
 
-  return { technicians, source: "supabase" };
+  return {
+    technicians,
+    source: "supabase",
+    canManage: ["owner", "admin"].includes(
+      typeof membership?.role === "string" ? membership.role : "",
+    ),
+    selfIsElectrician: technicians.some((technician) => technician.isMe),
+    businessBlackouts,
+  };
+}
+
+/** "Fri 21 Aug" for a whole day, "Fri 21 Aug, 1pm–5pm" for part of one. */
+function blackoutLabel(startsAt: string, endsAt: string, timeZone: string): string {
+  if (!startsAt || !endsAt) return "";
+
+  const day = inZone(startsAt, timeZone, { weekday: "short", month: "short", day: "numeric" });
+  const endDay = inZone(endsAt, timeZone, { weekday: "short", month: "short", day: "numeric" });
+
+  const startClock = inZone(startsAt, timeZone, { hour: "numeric", minute: "2-digit" });
+  const endClock = inZone(endsAt, timeZone, { hour: "numeric", minute: "2-digit" });
+
+  // Saved as 00:00 to 23:59, which is this screen's way of writing "all day".
+  const wholeDay = startClock.startsWith("12:00 AM") && endClock.startsWith("11:59 PM");
+
+  if (day !== endDay) return wholeDay ? `${day} – ${endDay}` : `${day} ${startClock} – ${endDay} ${endClock}`;
+  return wholeDay ? day : `${day}, ${startClock}–${endClock}`;
 }
 
 /**
@@ -413,15 +548,27 @@ export async function placeTodaysStops(): Promise<{
   });
 }
 
+export type JobContract = {
+  id: string;
+  createdLabel: string;
+  body: string;
+  unfilled: string[];
+  /** The stored PDF, or empty when one has not been built yet. */
+  document: { url: string; fileName: string; versionNumber: number } | null;
+};
+
 /**
  * The contracts already generated for a job.
  *
  * Read through the caller's session, so RLS decides which business's contracts
  * these are. Newest first: the last draft is the one somebody is about to send.
+ *
+ * The PDFs come with them, signed in one batch. Every draft gets its document,
+ * not just the newest: an electrician comparing what they sent last week with
+ * what they are about to send needs to open both, and a superseded draft that
+ * can only be read as plain text is the thing this replaced.
  */
-export async function getJobContracts(jobNumber: string): Promise<
-  { id: string; createdLabel: string; body: string; unfilled: string[] }[]
-> {
+export async function getJobContracts(jobNumber: string): Promise<JobContract[]> {
   const context = await resolveContext();
   if (!context) return [];
 
@@ -446,17 +593,40 @@ export async function getJobContracts(jobNumber: string): Promise<
     .order("created_at", { ascending: false })
     .limit(10);
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-    id: String(row.id),
-    body: typeof row.body === "string" ? row.body : "",
-    unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
-    createdLabel: inZone(row.created_at as string | null, context.timeZone, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-  }));
+  const rows = (data ?? []) as Record<string, unknown>[];
+
+  const { currentDocuments } = await import("@/lib/pdf/store");
+  const stored = await currentDocuments({
+    database: context.database,
+    organizationId: context.organizationId,
+    column: "contract_id",
+    ids: rows.map((row) => String(row.id)),
+    timeZone: context.timeZone,
+  });
+
+  return rows.map((row) => {
+    const id = String(row.id);
+    const document = stored.get(id) ?? null;
+
+    return {
+      id,
+      body: typeof row.body === "string" ? row.body : "",
+      unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+      createdLabel: inZone(row.created_at as string | null, context.timeZone, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      document: document
+        ? {
+            url: document.url,
+            fileName: document.fileName,
+            versionNumber: document.versionNumber,
+          }
+        : null,
+    };
+  });
 }
 
 /**

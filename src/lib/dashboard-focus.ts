@@ -48,6 +48,38 @@ export function isActive(job: { status: string }): boolean {
 }
 
 /**
+ * Whether this job still needs somebody sent to it.
+ *
+ * The dashboard counted every job today with no technician on it, including the
+ * ones that were already finished. So a job somebody did themselves without
+ * ever filling in the technician field sat in Needs attention in amber, marked
+ * urgent, for the rest of the day — and nothing could clear it, because the work
+ * was over. An alert that cannot be cleared is an alert people stop reading,
+ * which costs the real one that arrives later.
+ *
+ * "Pending" is out for the same reason `openBookingRequests` leaves
+ * `awaiting_payment` out: it covers drafts and bookings the customer has not
+ * paid for yet, which are not commitments anybody needs dispatching to. What is
+ * left is work that is going to happen or is happening now.
+ */
+export function needsTechnician(job: { status: string; technician: string }): boolean {
+  if (job.status !== "Scheduled" && job.status !== "In progress") return false;
+  const assigned = (job.technician ?? "").trim();
+  return assigned === "" || assigned === UNASSIGNED;
+}
+
+/** What `mapJob` writes when a job has no technician on it. */
+export const UNASSIGNED = "Unassigned";
+
+/** Today's jobs that still need somebody sent to them. */
+export function unassignedToday(
+  jobs: { date: string; status: string; technician: string }[],
+  today: string,
+): number {
+  return jobs.filter((job) => job.date === today && needsTechnician(job)).length;
+}
+
+/**
  * Today's jobs, in the order they happen.
  *
  * Canceled work is excluded rather than struck through, because a count that
@@ -186,6 +218,28 @@ export function greeting(hour: number): string {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
+}
+
+/**
+ * The best real name among everywhere one might be stored, or nothing.
+ *
+ * There are four places a name can come from and they are not equally
+ * trustworthy. `user_profiles.display_name` is NOT NULL, so signing up fills it
+ * with whatever is to hand — on this deployment it holds "adamkane13.ak",
+ * the local part of an email. The technician record and the identity provider's
+ * `full_name` are typed by a person, so they are worth more.
+ *
+ * Each candidate goes through `firstName`, which refuses anything carrying
+ * digits or an @. The first one that survives wins; if none does, the header
+ * says "Good afternoon" and nothing else, because a greeting is not worth
+ * getting somebody's name wrong for.
+ */
+export function greetingName(candidates: (string | null | undefined)[], email = ""): string {
+  for (const candidate of candidates) {
+    const name = firstName(candidate ?? "");
+    if (name) return name;
+  }
+  return firstName("", email);
 }
 
 /**
