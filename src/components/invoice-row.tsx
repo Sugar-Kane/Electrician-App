@@ -20,14 +20,18 @@ import type { PilotInvoice } from "@/lib/pilot-data";
 /**
  * One invoice in the list, and the swipe that removes it.
  *
- * The swipe is a phone gesture and it is not the only way in: the row also has
- * a delete button that appears when it is pulled open, and the same button is
- * reachable with a keyboard. A gesture nobody can discover and nobody can
- * operate with a keyboard would be a feature for exactly one kind of user.
+ * Swipe left, the delete button appears, tapping it deletes. There is no
+ * confirmation step: the swipe is the deliberate act, and asking twice for
+ * something the gesture already gated turned a two-tap job into four.
  *
- * Nothing is deleted by the swipe itself. Pulling the row open reveals a
- * button; the button asks; the confirmation deletes. An invoice removed by a
- * pocket-swipe would be a record of money gone with no undo.
+ * What survives instead is the part that cannot be undone by hand. A paid
+ * invoice is refused by the server whatever this screen does — money received
+ * does not get swiped away — and the button only exists on rows that have a
+ * real record behind them.
+ *
+ * The gesture is not the only way in: the same button is reachable with a
+ * keyboard. A control nobody can discover and nobody can operate without a
+ * touchscreen would be a feature for exactly one kind of user.
  */
 
 const STATUS_STYLES: Record<string, string> = {
@@ -47,7 +51,6 @@ const initialState: InvoiceActionState = { error: "" };
 export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
   const [state, remove, removing] = useActionState(deleteInvoice, initialState);
   const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const start = useRef<{ x: number; y: number } | null>(null);
 
   const Icon = STATUS_ICONS[invoice.status] ?? ReceiptText;
@@ -70,46 +73,6 @@ export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
 
     if (intent === "open") setOpen(true);
     if (intent === "close") setOpen(false);
-  }
-
-  if (confirming) {
-    return (
-      <div className="rounded-control border border-critical/30 bg-critical-bg p-4">
-        <h3 className="text-sm font-semibold">Delete invoice {invoice.id}?</h3>
-        <p className="mt-1 text-sm leading-6 text-ink-muted">
-          {invoice.customer} ·{" "}
-          {invoice.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })}. This
-          cannot be undone, and the PDF goes with it.
-        </p>
-
-        {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
-
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          <form action={remove}>
-            <input type="hidden" name="invoiceId" value={invoice.recordId ?? ""} />
-            <button
-              type="submit"
-              disabled={removing}
-              className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-critical/40 bg-critical/15 px-4 text-sm font-semibold text-critical disabled:opacity-60"
-            >
-              {removing ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {removing ? "Deleting…" : "Delete invoice"}
-            </button>
-          </form>
-          <button
-            type="button"
-            onClick={() => {
-              setConfirming(false);
-              setOpen(false);
-            }}
-            disabled={removing}
-            className="tap-target inline-flex min-h-12 items-center justify-center rounded-control border border-line px-4 text-sm font-semibold"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -143,14 +106,21 @@ export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
         </Link>
 
         {open && deletable ? (
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            aria-label={`Delete invoice ${invoice.id}`}
-            className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-control border border-critical/40 bg-critical/15 text-critical"
-          >
-            <Trash2 className="h-5 w-5" aria-hidden />
-          </button>
+          <form action={remove}>
+            <input type="hidden" name="invoiceId" value={invoice.recordId ?? ""} />
+            <button
+              type="submit"
+              disabled={removing}
+              aria-label={`Delete invoice ${invoice.id}`}
+              className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-control border border-critical/40 bg-critical/15 text-critical disabled:opacity-60"
+            >
+              {removing ? (
+                <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden />
+              ) : (
+                <Trash2 className="h-5 w-5" aria-hidden />
+              )}
+            </button>
+          </form>
         ) : null}
       </div>
 
@@ -160,19 +130,20 @@ export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
         every row for people who have the gesture.
       */}
       {deletable && !open ? (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          className="sr-only focus:not-sr-only focus:mt-2 focus:inline-flex focus:min-h-11 focus:items-center focus:gap-2 focus:rounded-control focus:border focus:border-critical/40 focus:px-3 focus:text-sm focus:font-semibold focus:text-critical"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-          Delete invoice {invoice.id}
-        </button>
+        <form action={remove}>
+          <input type="hidden" name="invoiceId" value={invoice.recordId ?? ""} />
+          <button
+            type="submit"
+            disabled={removing}
+            className="sr-only focus:not-sr-only focus:mt-2 focus:inline-flex focus:min-h-11 focus:items-center focus:gap-2 focus:rounded-control focus:border focus:border-critical/40 focus:px-3 focus:text-sm focus:font-semibold focus:text-critical"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Delete invoice {invoice.id}
+          </button>
+        </form>
       ) : null}
 
-      {state.error && !confirming ? (
-        <p className="mt-2 text-sm text-critical">{state.error}</p>
-      ) : null}
+      {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
 
       {invoice.status === "Paid" ? null : <InvoiceSend invoice={invoice} />}
     </div>

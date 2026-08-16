@@ -2,7 +2,15 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import { CalendarOff, ChevronRight, Clock, LoaderCircle, Phone, UserRound } from "lucide-react";
+import {
+  CalendarOff,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  LoaderCircle,
+  Phone,
+  UserRound,
+} from "lucide-react";
 
 import {
   saveElectricianHours,
@@ -154,27 +162,54 @@ export function ElectricianCard({
   electrician: TechnicianWorkload;
   canManage: boolean;
 }) {
-  const [panel, setPanel] = useState<"hours" | "time-off" | null>(null);
+  const [sheet, setSheet] = useState<"closed" | "hours" | "time-off">("closed");
+  const open = sheet !== "closed";
 
   return (
     <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
-      <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand/10 text-sm font-bold text-brand">
-          {electrician.initials || <UserRound className="h-5 w-5" aria-hidden />}
-        </span>
+      {/*
+        The whole person is the control. Tapping anywhere on the row opens their
+        settings, which is the thing an owner came here to do — the previous
+        layout put two buttons on every card and turned a five-person crew into
+        a wall of them.
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold">
-            {electrician.name}
-            {electrician.isMe ? <span className="text-ink-muted"> · you</span> : null}
-          </p>
-          <p className="text-xs text-ink-muted">
-            {electrician.isActive ? "Working" : "Not working"} ·{" "}
-            {electrician.jobs.length === 0
-              ? "nothing scheduled today"
-              : `${electrician.jobs.length} job${electrician.jobs.length === 1 ? "" : "s"} today`}
-          </p>
-        </div>
+        The summary stays on the closed row rather than moving inside, because
+        "Mon–Fri, 8am–5pm" is worth reading without opening anything.
+      */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => canManage && setSheet(open ? "closed" : "hours")}
+          aria-expanded={canManage ? open : undefined}
+          disabled={!canManage}
+          className="tap-row flex min-h-[52px] min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand/10 text-sm font-bold text-brand">
+            {electrician.initials || <UserRound className="h-5 w-5" aria-hidden />}
+          </span>
+
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-base font-semibold">
+              {electrician.name}
+              {electrician.isMe ? <span className="text-ink-muted"> · you</span> : null}
+            </span>
+            <span className="block truncate text-xs text-ink-muted">
+              {electrician.isActive ? "Working" : "Not working"} ·{" "}
+              {canManage
+                ? describeWeek(electrician.hours)
+                : electrician.jobs.length === 0
+                  ? "nothing scheduled today"
+                  : `${electrician.jobs.length} job${electrician.jobs.length === 1 ? "" : "s"} today`}
+            </span>
+          </span>
+
+          {canManage ? (
+            <ChevronDown
+              className={`h-5 w-5 shrink-0 text-ink-faint transition-transform ${open ? "rotate-180" : ""}`}
+              aria-hidden
+            />
+          ) : null}
+        </button>
 
         {electrician.phone ? (
           <a
@@ -185,42 +220,60 @@ export function ElectricianCard({
             <Phone className="h-5 w-5" aria-hidden />
           </a>
         ) : null}
-
-        {canManage ? <WorkingToggle electrician={electrician} /> : null}
       </div>
 
-      {canManage ? (
-        <>
+      {canManage && open ? (
+        <div className="mt-3 rounded-control border border-line p-3">
+          {/*
+            The switch lives in here now. It is the one control that changes
+            what customers are offered the moment it is touched, and a switch
+            sitting on a collapsed row is too easy to catch with a thumb while
+            scrolling past somebody.
+          */}
+          <div className="flex items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">Working</span>
+              <span className="block text-xs text-ink-muted">
+                {electrician.isActive
+                  ? "Offered to customers booking online"
+                  : "Not offered to customers, and not counted as available"}
+              </span>
+            </span>
+            <WorkingToggle electrician={electrician} />
+          </div>
+
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => setPanel(panel === "hours" ? null : "hours")}
-              aria-expanded={panel === "hours"}
-              className="tap-target flex min-h-12 items-center gap-2 rounded-control border border-line px-3 text-left text-sm"
+              onClick={() => setSheet("hours")}
+              aria-pressed={sheet === "hours"}
+              className={`tap-target flex min-h-12 items-center gap-2 rounded-control border px-3 text-left text-sm ${
+                sheet === "hours" ? "border-brand bg-brand/10" : "border-line"
+              }`}
             >
               <Clock className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
-              <span className="min-w-0 flex-1 truncate font-semibold">
-                {describeWeek(electrician.hours)}
-              </span>
+              <span className="min-w-0 flex-1 truncate font-semibold">Hours</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setPanel(panel === "time-off" ? null : "time-off")}
-              aria-expanded={panel === "time-off"}
-              className="tap-target flex min-h-12 items-center gap-2 rounded-control border border-line px-3 text-left text-sm"
+              onClick={() => setSheet("time-off")}
+              aria-pressed={sheet === "time-off"}
+              className={`tap-target flex min-h-12 items-center gap-2 rounded-control border px-3 text-left text-sm ${
+                sheet === "time-off" ? "border-brand bg-brand/10" : "border-line"
+              }`}
             >
               <CalendarOff className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
               <span className="min-w-0 flex-1 truncate font-semibold">
                 {electrician.blackouts.length === 0
-                  ? "No time off"
-                  : `${electrician.blackouts.length} time off booked`}
+                  ? "Time off"
+                  : `Time off · ${electrician.blackouts.length}`}
               </span>
             </button>
           </div>
 
-          {panel === "hours" ? <HoursEditor electrician={electrician} /> : null}
-          {panel === "time-off" ? (
+          {sheet === "hours" ? <HoursEditor electrician={electrician} /> : null}
+          {sheet === "time-off" ? (
             <div className="mt-3">
               <BlackoutManager
                 technicianId={electrician.id}
@@ -230,7 +283,7 @@ export function ElectricianCard({
               />
             </div>
           ) : null}
-        </>
+        </div>
       ) : null}
 
       {electrician.jobs.length > 0 ? (
