@@ -342,50 +342,131 @@ export async function getJobControls(jobNumber: string): Promise<{
   };
 }
 
+export type TechnicianBlackout = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  label: string;
+  reason: string;
+};
+
 export type TechnicianWorkload = {
   id: string;
   name: string;
   initials: string;
   phone: string;
   isActive: boolean;
+  /** True when this row is the signed-in user's own. */
+  isMe: boolean;
+  hours: { weekday: number; start: string; end: string }[];
+  blackouts: TechnicianBlackout[];
   jobs: { id: string; customer: string; time: string; status: JobStatus; city: string }[];
 };
 
-/**
- * Who is on the crew, and what each of them is doing today.
- *
- * The "Techs working" tile linked to the route builder, which answers a
- * different question entirely — how to drive between stops, rather than who is
- * out and where. This is the answer to the question the tile actually asks.
- */
-export async function getTechnicianWorkloads(): Promise<{
+export type CrewRoster = {
   technicians: TechnicianWorkload[];
   source: Source;
-}> {
-  const context = await resolveContext();
-  if (!context) return { technicians: [], source: "demo" };
+  /** Whether the caller may change any of this. */
+  canManage: boolean;
+  /** False when the owner is not on the crew, which is what offers the button. */
+  selfIsElectrician: boolean;
+};
 
-  const [{ data: crew }, { jobs }] = await Promise.all([
-    context.database
-      .from("technicians")
-      .select("id, display_name, phone, is_active")
-      .eq("organization_id", context.organizationId)
-      .order("display_name"),
-    getJobs(),
-  ]);
+/**
+ * Who is on the crew, when they work, and what each of them is doing today.
+ *
+ * The crew tile linked to the route builder, which answers a
+ * different question entirely — how to drive between stops, rather than who is
+ * out and where. This is the answer to the question the tile actually asks.
+ *
+ * Hours and time off come back with the crew rather than being fetched per
+ * person as the screen expands them. It is one small business's roster, so it
+ * is two more queries rather than two per electrician, and the page can render
+ * "Mon–Fri, 8am–5pm" under a name without a round trip.
+ */
+export async function getTechnicianWorkloads(): Promise<CrewRoster> {
+  const context = await resolveContext();
+  if (!context) {
+    return { technicians: [], source: "demo", canManage: false, selfIsElectrician: false };
+  }
+
+  const { data: auth } = await context.database.auth.getUser();
+  const userId = auth.user?.id ?? "";
+
+  const [{ data: crew }, { jobs }, { data: membership }, { data: hourRows }, { data: blackoutRows }] =
+    await Promise.all([
+      context.database
+        .from("technicians")
+        .select("id, display_name, phone, is_active, user_id")
+        .eq("organization_id", context.organizationId)
+        .order("display_name"),
+      getJobs(),
+      context.database
+        .from("organization_members")
+        .select("role")
+        .limit(1)
+        .maybeSingle(),
+      context.database
+        .from("technician_hours")
+        .select("technician_id, weekday, starts_at, ends_at")
+        .eq("organization_id", context.organizationId),
+      context.database
+        .from("blackout_periods")
+        .select("id, technician_id, starts_at, ends_at, reason")
+        .eq("organization_id", context.organizationId)
+        // Yesterday's day off is history nobody needs to see on this screen.
+        .gte("ends_at", new Date().toISOString())
+        .order("starts_at", { ascending: true }),
+    ]);
 
   const today = todayInZone(context.timeZone);
+
+  const hoursByTechnician = new Map<string, { weekday: number; start: string; end: string }[]>();
+  for (const row of (hourRows ?? []) as Record<string, unknown>[]) {
+    const key = String(row.technician_id ?? "");
+    const list = hoursByTechnician.get(key) ?? [];
+    list.push({
+      weekday: Number(row.weekday ?? 0),
+      // Postgres hands back "08:00:00"; the form and the label both want "08:00".
+      start: String(row.starts_at ?? "").slice(0, 5),
+      end: String(row.ends_at ?? "").slice(0, 5),
+    });
+    hoursByTechnician.set(key, list);
+  }
+
+  const blackoutsByTechnician = new Map<string, TechnicianBlackout[]>();
+  for (const row of (blackoutRows ?? []) as Record<string, unknown>[]) {
+    const key = String(row.technician_id ?? "");
+    const list = blackoutsByTechnician.get(key) ?? [];
+    const startsAt = String(row.starts_at ?? "");
+    const endsAt = String(row.ends_at ?? "");
+
+    list.push({
+      id: String(row.id ?? ""),
+      startsAt,
+      endsAt,
+      reason: typeof row.reason === "string" ? row.reason : "",
+      label: blackoutLabel(startsAt, endsAt, context.timeZone),
+    });
+    blackoutsByTechnician.set(key, list);
+  }
 
   const technicians: TechnicianWorkload[] = (crew ?? []).map((row) => {
     const record = row as Record<string, unknown>;
     const name = typeof record.display_name === "string" ? record.display_name : "";
+    const id = String(record.id ?? "");
 
     return {
-      id: String(record.id ?? ""),
+      id,
       name,
       initials: initialsOf(name),
       phone: typeof record.phone === "string" ? record.phone : "",
       isActive: record.is_active !== false,
+      isMe: Boolean(userId) && record.user_id === userId,
+      hours: (hoursByTechnician.get(id) ?? []).sort(
+        (a, b) => a.weekday - b.weekday || a.start.localeCompare(b.start),
+      ),
+      blackouts: blackoutsByTechnician.get(id) ?? [],
       jobs: jobs
         .filter((job) => job.technician === name && job.date === today)
         .map((job) => ({
@@ -398,7 +479,31 @@ export async function getTechnicianWorkloads(): Promise<{
     };
   });
 
-  return { technicians, source: "supabase" };
+  return {
+    technicians,
+    source: "supabase",
+    canManage: ["owner", "admin"].includes(
+      typeof membership?.role === "string" ? membership.role : "",
+    ),
+    selfIsElectrician: technicians.some((technician) => technician.isMe),
+  };
+}
+
+/** "Fri 21 Aug" for a whole day, "Fri 21 Aug, 1pm–5pm" for part of one. */
+function blackoutLabel(startsAt: string, endsAt: string, timeZone: string): string {
+  if (!startsAt || !endsAt) return "";
+
+  const day = inZone(startsAt, timeZone, { weekday: "short", month: "short", day: "numeric" });
+  const endDay = inZone(endsAt, timeZone, { weekday: "short", month: "short", day: "numeric" });
+
+  const startClock = inZone(startsAt, timeZone, { hour: "numeric", minute: "2-digit" });
+  const endClock = inZone(endsAt, timeZone, { hour: "numeric", minute: "2-digit" });
+
+  // Saved as 00:00 to 23:59, which is this screen's way of writing "all day".
+  const wholeDay = startClock.startsWith("12:00 AM") && endClock.startsWith("11:59 PM");
+
+  if (day !== endDay) return wholeDay ? `${day} – ${endDay}` : `${day} ${startClock} – ${endDay} ${endClock}`;
+  return wholeDay ? day : `${day}, ${startClock}–${endClock}`;
 }
 
 /**

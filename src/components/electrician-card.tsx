@@ -1,0 +1,397 @@
+"use client";
+
+import { useActionState, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  CalendarOff,
+  ChevronRight,
+  Clock,
+  LoaderCircle,
+  Phone,
+  Plus,
+  Trash2,
+  UserRound,
+} from "lucide-react";
+
+import {
+  addBlackout,
+  removeBlackout,
+  saveElectricianHours,
+  setElectricianWorking,
+  type ElectricianState,
+} from "@/app/technicians/actions";
+import {
+  DEFAULT_END,
+  DEFAULT_START,
+  describeWeek,
+  WEEKDAYS,
+} from "@/lib/electrician-hours";
+import type { TechnicianWorkload } from "@/lib/job-data";
+
+/**
+ * One electrician: whether they are working, when, and what they are doing today.
+ *
+ * The toggle is the important control and it sits at the top with the name,
+ * because turning somebody off is what an owner comes here to do when a person
+ * calls in sick at seven in the morning. It is not a preference — it takes them
+ * out of the availability the booking page offers customers immediately, which
+ * is why the label says "Working" rather than "Active".
+ *
+ * Hours and time off are folded away. Most days nobody touches them, and a card
+ * that opens with a seven-row form for every person on the crew is a screen you
+ * have to scroll past rather than read.
+ */
+
+const initialState: ElectricianState = { error: "" };
+
+const STATUS_STYLES: Record<string, string> = {
+  "In progress": "bg-info-bg text-info",
+  Scheduled: "bg-caution-bg text-caution",
+  Completed: "bg-positive-bg text-positive",
+  Canceled: "bg-critical-bg text-critical",
+  Pending: "bg-white/5 text-ink-muted",
+};
+
+function WorkingToggle({ electrician }: { electrician: TechnicianWorkload }) {
+  const [state, submit, pending] = useActionState(setElectricianWorking, initialState);
+  const form = useRef<HTMLFormElement>(null);
+
+  return (
+    <form action={submit} ref={form} className="shrink-0">
+      <input type="hidden" name="technicianId" value={electrician.id} />
+      {/*
+        The value is carried by a hidden input rather than the checkbox itself,
+        so the form posts the state being moved to. A bare checkbox posts
+        nothing when it is being switched off, which is indistinguishable from a
+        field that was never rendered.
+      */}
+      <input type="hidden" name="working" value={electrician.isActive ? "no" : "yes"} />
+      <button
+        type="submit"
+        disabled={pending}
+        role="switch"
+        aria-checked={electrician.isActive}
+        aria-label={`${electrician.name} is working`}
+        className={`tap-target relative inline-flex h-11 w-[4.25rem] shrink-0 items-center rounded-full border px-1 transition-colors disabled:opacity-60 ${
+          electrician.isActive
+            ? "border-positive/40 bg-positive/20"
+            : "border-line bg-white/5"
+        }`}
+      >
+        <span
+          className={`grid h-8 w-8 place-items-center rounded-full bg-white text-ink shadow transition-transform ${
+            electrician.isActive ? "translate-x-[2.1rem]" : "translate-x-0"
+          }`}
+        >
+          {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+        </span>
+      </button>
+      {state.error ? <p className="mt-1 text-xs text-critical">{state.error}</p> : null}
+    </form>
+  );
+}
+
+function HoursEditor({ electrician }: { electrician: TechnicianWorkload }) {
+  const [state, submit, saving] = useActionState(saveElectricianHours, initialState);
+
+  const byDay = new Map(electrician.hours.map((entry) => [entry.weekday, entry]));
+
+  return (
+    <form action={submit} className="mt-3 rounded-control border border-line p-3">
+      <input type="hidden" name="technicianId" value={electrician.id} />
+
+      <p className="text-xs leading-5 text-ink-muted">
+        Days left off are days they are not offered to customers. Set none and they are available
+        whenever the business is open.
+      </p>
+
+      <ul className="mt-3 space-y-2">
+        {WEEKDAYS.map((day) => {
+          const entry = byDay.get(day.value);
+          return (
+            <li key={day.value} className="flex flex-wrap items-center gap-2">
+              <label className="flex min-w-[6.5rem] flex-1 items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  name={`enabled-${day.value}`}
+                  value="yes"
+                  defaultChecked={Boolean(entry)}
+                  className="h-5 w-5 rounded border-line"
+                />
+                {day.label}
+              </label>
+              <span className="flex items-center gap-1">
+                <input
+                  type="time"
+                  name={`start-${day.value}`}
+                  defaultValue={entry?.start ?? DEFAULT_START}
+                  aria-label={`${day.label} start`}
+                  className="min-h-11 rounded-control border border-line bg-transparent px-2 text-sm"
+                />
+                <span className="text-xs text-ink-faint">to</span>
+                <input
+                  type="time"
+                  name={`end-${day.value}`}
+                  defaultValue={entry?.end ?? DEFAULT_END}
+                  aria-label={`${day.label} finish`}
+                  className="min-h-11 rounded-control border border-line bg-transparent px-2 text-sm"
+                />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
+      {state.notice ? <p className="mt-2 text-sm text-positive">{state.notice}</p> : null}
+
+      <button
+        type="submit"
+        disabled={saving}
+        className="tap-target mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
+      >
+        {saving ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+        {saving ? "Saving…" : "Save hours"}
+      </button>
+    </form>
+  );
+}
+
+function BlackoutManager({ electrician }: { electrician: TechnicianWorkload }) {
+  const [addState, add, adding] = useActionState(addBlackout, initialState);
+  const [removeState, remove] = useActionState(removeBlackout, initialState);
+  const [allDay, setAllDay] = useState(true);
+
+  return (
+    <div className="mt-3 rounded-control border border-line p-3">
+      {electrician.blackouts.length > 0 ? (
+        <ul className="mb-3 space-y-2">
+          {electrician.blackouts.map((blackout) => (
+            <li
+              key={blackout.id}
+              className="flex items-center gap-2 rounded-control border border-line px-3 py-2"
+            >
+              <CalendarOff className="h-4 w-4 shrink-0 text-caution" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{blackout.label}</span>
+                {blackout.reason ? (
+                  <span className="block truncate text-xs text-ink-muted">{blackout.reason}</span>
+                ) : null}
+              </span>
+              <form action={remove}>
+                <input type="hidden" name="blackoutId" value={blackout.id} />
+                <button
+                  type="submit"
+                  aria-label={`Remove time off on ${blackout.label}`}
+                  className="tap-target grid h-11 w-11 shrink-0 place-items-center rounded-control border border-line text-critical"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mb-3 text-xs text-ink-muted">No time off booked.</p>
+      )}
+
+      {removeState.error ? (
+        <p className="mb-2 text-sm text-critical">{removeState.error}</p>
+      ) : null}
+
+      <form action={add} className="space-y-2">
+        <input type="hidden" name="technicianId" value={electrician.id} />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex-1">
+            <span className="mb-1 block text-xs font-semibold text-ink-muted">From</span>
+            <input
+              type="date"
+              name="startDate"
+              required
+              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+            />
+          </label>
+          <label className="flex-1">
+            <span className="mb-1 block text-xs font-semibold text-ink-muted">To</span>
+            <input
+              type="date"
+              name="endDate"
+              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+            />
+          </label>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
+            name="allDay"
+            value="yes"
+            checked={allDay}
+            onChange={(event) => setAllDay(event.target.checked)}
+            className="h-5 w-5 rounded border-line"
+          />
+          All day
+        </label>
+
+        {/*
+          Hidden rather than removed when the whole day is blocked. The server
+          fills in midnight to one-to-midnight in that case, and leaving the
+          inputs mounted keeps whatever was typed if somebody unticks it again.
+        */}
+        <div className={`flex items-center gap-2 ${allDay ? "hidden" : ""}`}>
+          <label className="flex-1">
+            <span className="mb-1 block text-xs font-semibold text-ink-muted">Start</span>
+            <input
+              type="time"
+              name="startTime"
+              defaultValue="08:00"
+              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+            />
+          </label>
+          <label className="flex-1">
+            <span className="mb-1 block text-xs font-semibold text-ink-muted">Finish</span>
+            <input
+              type="time"
+              name="endTime"
+              defaultValue="17:00"
+              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+            />
+          </label>
+        </div>
+
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink-muted">Reason (optional)</span>
+          <input
+            type="text"
+            name="reason"
+            maxLength={120}
+            placeholder="Holiday, training, wholesaler run"
+            className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+          />
+        </label>
+
+        {addState.error ? <p className="text-sm text-critical">{addState.error}</p> : null}
+        {addState.notice ? <p className="text-sm text-positive">{addState.notice}</p> : null}
+
+        <button
+          type="submit"
+          disabled={adding}
+          className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60"
+        >
+          {adding ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Plus className="h-4 w-4" aria-hidden />
+          )}
+          {adding ? "Saving…" : "Block out time"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export function ElectricianCard({
+  electrician,
+  canManage,
+}: {
+  electrician: TechnicianWorkload;
+  canManage: boolean;
+}) {
+  const [panel, setPanel] = useState<"hours" | "time-off" | null>(null);
+
+  return (
+    <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand/10 text-sm font-bold text-brand">
+          {electrician.initials || <UserRound className="h-5 w-5" aria-hidden />}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold">
+            {electrician.name}
+            {electrician.isMe ? <span className="text-ink-muted"> · you</span> : null}
+          </p>
+          <p className="text-xs text-ink-muted">
+            {electrician.isActive ? "Working" : "Not working"} ·{" "}
+            {electrician.jobs.length === 0
+              ? "nothing scheduled today"
+              : `${electrician.jobs.length} job${electrician.jobs.length === 1 ? "" : "s"} today`}
+          </p>
+        </div>
+
+        {electrician.phone ? (
+          <a
+            href={`tel:${electrician.phone.replace(/[^\d+]/g, "")}`}
+            className="tap-target grid h-11 w-11 shrink-0 place-items-center rounded-chip border border-line text-brand"
+            aria-label={`Call ${electrician.name}`}
+          >
+            <Phone className="h-5 w-5" aria-hidden />
+          </a>
+        ) : null}
+
+        {canManage ? <WorkingToggle electrician={electrician} /> : null}
+      </div>
+
+      {canManage ? (
+        <>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setPanel(panel === "hours" ? null : "hours")}
+              aria-expanded={panel === "hours"}
+              className="tap-target flex min-h-12 items-center gap-2 rounded-control border border-line px-3 text-left text-sm"
+            >
+              <Clock className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+              <span className="min-w-0 flex-1 truncate font-semibold">
+                {describeWeek(electrician.hours)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPanel(panel === "time-off" ? null : "time-off")}
+              aria-expanded={panel === "time-off"}
+              className="tap-target flex min-h-12 items-center gap-2 rounded-control border border-line px-3 text-left text-sm"
+            >
+              <CalendarOff className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+              <span className="min-w-0 flex-1 truncate font-semibold">
+                {electrician.blackouts.length === 0
+                  ? "No time off"
+                  : `${electrician.blackouts.length} time off booked`}
+              </span>
+            </button>
+          </div>
+
+          {panel === "hours" ? <HoursEditor electrician={electrician} /> : null}
+          {panel === "time-off" ? <BlackoutManager electrician={electrician} /> : null}
+        </>
+      ) : null}
+
+      {electrician.jobs.length > 0 ? (
+        <ul className="mt-4 space-y-2">
+          {electrician.jobs.map((job) => (
+            <li key={job.id}>
+              <Link
+                href={`/jobs/${job.id}`}
+                className="tap-row flex min-h-14 items-center gap-3 rounded-control border border-line px-4"
+              >
+                <time className="shrink-0 text-xs font-semibold text-info">{job.time}</time>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{job.customer}</span>
+                  <span className="block truncate text-xs text-ink-muted">{job.city}</span>
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${STATUS_STYLES[job.status] ?? ""}`}
+                >
+                  {job.status}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}

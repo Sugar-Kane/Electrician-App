@@ -80,7 +80,7 @@ const demoSnapshot: DashboardSnapshot = {
       chart: [12, 18, 16, 28, 23, 37, 31, 49, 38, 54],
     },
     { label: "Jobs today", value: "8", detail: "3 in progress" },
-    { label: "Techs working", value: "6", detail: "2 on the way" },
+    { label: "Electricians", value: "6", detail: "2 on the way" },
     { label: "Open estimates", value: "12", detail: "$45,680 pending" },
     {
       label: "Unpaid invoices",
@@ -380,7 +380,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           ...jobsDetail({ inProgress, total: jobsToday.length, canceled: canceledToday }),
         },
         {
-          label: "Techs working",
+          label: "Electricians",
           value: String(activeTechnicians),
           ...techniciansDetail({ active: activeTechnicians, enRoute }),
         },

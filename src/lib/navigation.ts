@@ -115,10 +115,10 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Billing and what is owed",
       },
       {
-        label: "Team",
+        label: "Electricians",
         href: "/technicians",
         icon: "UsersRound",
-        description: "Technicians, workload and access",
+        description: "Who is working, their hours and time off",
       },
       {
         label: "Files",
@@ -248,10 +248,10 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         description: "Name, phone, timezone and where you work from",
       },
       {
-        label: "Team",
+        label: "Electricians",
         href: "/technicians",
         icon: "UsersRound",
-        description: "Technicians and access",
+        description: "Who is working, hours and access",
       },
       {
         label: "Booking alerts",

@@ -106,7 +106,7 @@ export function AssignTechnician({
         disabled={pending}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={assigned ? `Change who is on job ${jobNumber}` : `Assign a technician to job ${jobNumber}`}
+        aria-label={assigned ? `Change who is on job ${jobNumber}` : `Assign an electrician to job ${jobNumber}`}
         className={`tap-target inline-flex items-center gap-1.5 rounded-control border font-semibold disabled:opacity-60 ${
           compact ? "min-h-11 px-2.5 text-xs" : "min-h-12 px-3 text-sm"
         } ${
@@ -122,18 +122,18 @@ export function AssignTechnician({
         ) : (
           <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
         )}
-        <span className="max-w-32 truncate">{assigned ? technician : "Assign tech"}</span>
+        <span className="max-w-32 truncate">{assigned ? technician : "Assign"}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
       </button>
 
       {open ? (
         <div
           role="menu"
-          aria-label="Assign technician"
+          aria-label="Assign electrician"
           className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(260px,calc(100vw-32px))] overflow-hidden rounded-control border border-line bg-sunken p-2 shadow-2xl shadow-black/40"
         >
           <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-faint">
-            Assign technician
+            Assign electrician
           </p>
 
           {loadFailed ? (
