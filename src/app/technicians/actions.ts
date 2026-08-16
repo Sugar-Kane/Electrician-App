@@ -236,7 +236,15 @@ export async function saveElectricianHours(
   };
 }
 
-/** Book somebody out — a holiday, a morning off, a day at the wholesaler. */
+/**
+ * Book time out — a holiday, a morning off, a day at the wholesaler.
+ *
+ * With no electrician named it closes the whole business, which is a null
+ * `technician_id`. That saves adding a row per person for a public holiday and,
+ * more to the point, saves the business from selling an appointment on Christmas
+ * Day because somebody joined the crew in November and nobody went back to
+ * block them out too.
+ */
 export async function addBlackout(
   _previous: ElectricianState,
   formData: FormData,
@@ -250,7 +258,7 @@ export async function addBlackout(
   const context = await ownerContext();
   if (!context) return { error: "You are not signed in." };
   if (!context.canManage) return { error: "Only an owner can block out time." };
-  if (!(await ownedTechnician(context, technicianId))) {
+  if (technicianId && !(await ownedTechnician(context, technicianId))) {
     return { error: "That person is not on your crew." };
   }
   if (!startDate) return { error: "Pick a day to block out." };
@@ -281,7 +289,9 @@ export async function addBlackout(
 
   const { error } = await context.supabase.from("blackout_periods").insert({
     organization_id: context.organizationId,
-    technician_id: technicianId,
+    // Null is the whole business, which is why this is not `|| null` on a value
+    // that could arrive as a stray empty string from somewhere else.
+    technician_id: technicianId || null,
     starts_at: startsAt.toISOString(),
     ends_at: endsAt.toISOString(),
     block_type: "hard",
@@ -295,7 +305,10 @@ export async function addBlackout(
   }
 
   revalidatePath("/technicians");
-  return { error: "", notice: "Time off saved." };
+  return {
+    error: "",
+    notice: technicianId ? "Time off saved." : "The business is closed for that time.",
+  };
 }
 
 export async function removeBlackout(

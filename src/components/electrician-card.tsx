@@ -2,24 +2,14 @@
 
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  CalendarOff,
-  ChevronRight,
-  Clock,
-  LoaderCircle,
-  Phone,
-  Plus,
-  Trash2,
-  UserRound,
-} from "lucide-react";
+import { CalendarOff, ChevronRight, Clock, LoaderCircle, Phone, UserRound } from "lucide-react";
 
 import {
-  addBlackout,
-  removeBlackout,
   saveElectricianHours,
   setElectricianWorking,
   type ElectricianState,
 } from "@/app/technicians/actions";
+import { BlackoutManager } from "@/components/blackout-manager";
 import {
   DEFAULT_END,
   DEFAULT_START,
@@ -157,140 +147,6 @@ function HoursEditor({ electrician }: { electrician: TechnicianWorkload }) {
   );
 }
 
-function BlackoutManager({ electrician }: { electrician: TechnicianWorkload }) {
-  const [addState, add, adding] = useActionState(addBlackout, initialState);
-  const [removeState, remove] = useActionState(removeBlackout, initialState);
-  const [allDay, setAllDay] = useState(true);
-
-  return (
-    <div className="mt-3 rounded-control border border-line p-3">
-      {electrician.blackouts.length > 0 ? (
-        <ul className="mb-3 space-y-2">
-          {electrician.blackouts.map((blackout) => (
-            <li
-              key={blackout.id}
-              className="flex items-center gap-2 rounded-control border border-line px-3 py-2"
-            >
-              <CalendarOff className="h-4 w-4 shrink-0 text-caution" aria-hidden />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{blackout.label}</span>
-                {blackout.reason ? (
-                  <span className="block truncate text-xs text-ink-muted">{blackout.reason}</span>
-                ) : null}
-              </span>
-              <form action={remove}>
-                <input type="hidden" name="blackoutId" value={blackout.id} />
-                <button
-                  type="submit"
-                  aria-label={`Remove time off on ${blackout.label}`}
-                  className="tap-target grid h-11 w-11 shrink-0 place-items-center rounded-control border border-line text-critical"
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mb-3 text-xs text-ink-muted">No time off booked.</p>
-      )}
-
-      {removeState.error ? (
-        <p className="mb-2 text-sm text-critical">{removeState.error}</p>
-      ) : null}
-
-      <form action={add} className="space-y-2">
-        <input type="hidden" name="technicianId" value={electrician.id} />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex-1">
-            <span className="mb-1 block text-xs font-semibold text-ink-muted">From</span>
-            <input
-              type="date"
-              name="startDate"
-              required
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-            />
-          </label>
-          <label className="flex-1">
-            <span className="mb-1 block text-xs font-semibold text-ink-muted">To</span>
-            <input
-              type="date"
-              name="endDate"
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-            />
-          </label>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm font-semibold">
-          <input
-            type="checkbox"
-            name="allDay"
-            value="yes"
-            checked={allDay}
-            onChange={(event) => setAllDay(event.target.checked)}
-            className="h-5 w-5 rounded border-line"
-          />
-          All day
-        </label>
-
-        {/*
-          Hidden rather than removed when the whole day is blocked. The server
-          fills in midnight to one-to-midnight in that case, and leaving the
-          inputs mounted keeps whatever was typed if somebody unticks it again.
-        */}
-        <div className={`flex items-center gap-2 ${allDay ? "hidden" : ""}`}>
-          <label className="flex-1">
-            <span className="mb-1 block text-xs font-semibold text-ink-muted">Start</span>
-            <input
-              type="time"
-              name="startTime"
-              defaultValue="08:00"
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-            />
-          </label>
-          <label className="flex-1">
-            <span className="mb-1 block text-xs font-semibold text-ink-muted">Finish</span>
-            <input
-              type="time"
-              name="endTime"
-              defaultValue="17:00"
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-            />
-          </label>
-        </div>
-
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-ink-muted">Reason (optional)</span>
-          <input
-            type="text"
-            name="reason"
-            maxLength={120}
-            placeholder="Holiday, training, wholesaler run"
-            className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-          />
-        </label>
-
-        {addState.error ? <p className="text-sm text-critical">{addState.error}</p> : null}
-        {addState.notice ? <p className="text-sm text-positive">{addState.notice}</p> : null}
-
-        <button
-          type="submit"
-          disabled={adding}
-          className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60"
-        >
-          {adding ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <Plus className="h-4 w-4" aria-hidden />
-          )}
-          {adding ? "Saving…" : "Block out time"}
-        </button>
-      </form>
-    </div>
-  );
-}
-
 export function ElectricianCard({
   electrician,
   canManage,
@@ -364,7 +220,16 @@ export function ElectricianCard({
           </div>
 
           {panel === "hours" ? <HoursEditor electrician={electrician} /> : null}
-          {panel === "time-off" ? <BlackoutManager electrician={electrician} /> : null}
+          {panel === "time-off" ? (
+            <div className="mt-3">
+              <BlackoutManager
+                technicianId={electrician.id}
+                blackouts={electrician.blackouts}
+                emptyText="No time off booked."
+                addLabel="Block out time"
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
 

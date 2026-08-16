@@ -370,6 +370,8 @@ export type CrewRoster = {
   canManage: boolean;
   /** False when the owner is not on the crew, which is what offers the button. */
   selfIsElectrician: boolean;
+  /** Days the whole business is closed — blackouts with no electrician named. */
+  businessBlackouts: TechnicianBlackout[];
 };
 
 /**
@@ -387,7 +389,13 @@ export type CrewRoster = {
 export async function getTechnicianWorkloads(): Promise<CrewRoster> {
   const context = await resolveContext();
   if (!context) {
-    return { technicians: [], source: "demo", canManage: false, selfIsElectrician: false };
+    return {
+      technicians: [],
+      source: "demo",
+      canManage: false,
+      selfIsElectrician: false,
+      businessBlackouts: [],
+    };
   }
 
   const { data: auth } = await context.database.auth.getUser();
@@ -435,20 +443,30 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
   }
 
   const blackoutsByTechnician = new Map<string, TechnicianBlackout[]>();
+  const businessBlackouts: TechnicianBlackout[] = [];
+
   for (const row of (blackoutRows ?? []) as Record<string, unknown>[]) {
-    const key = String(row.technician_id ?? "");
-    const list = blackoutsByTechnician.get(key) ?? [];
     const startsAt = String(row.starts_at ?? "");
     const endsAt = String(row.ends_at ?? "");
 
-    list.push({
+    const blackout: TechnicianBlackout = {
       id: String(row.id ?? ""),
       startsAt,
       endsAt,
       reason: typeof row.reason === "string" ? row.reason : "",
       label: blackoutLabel(startsAt, endsAt, context.timeZone),
-    });
-    blackoutsByTechnician.set(key, list);
+    };
+
+    // No electrician named means the whole business is shut. Keyed under "" by
+    // a naive group-by, which would file it against nobody and lose it.
+    if (typeof row.technician_id !== "string" || row.technician_id === "") {
+      businessBlackouts.push(blackout);
+      continue;
+    }
+
+    const list = blackoutsByTechnician.get(row.technician_id) ?? [];
+    list.push(blackout);
+    blackoutsByTechnician.set(row.technician_id, list);
   }
 
   const technicians: TechnicianWorkload[] = (crew ?? []).map((row) => {
@@ -486,6 +504,7 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
       typeof membership?.role === "string" ? membership.role : "",
     ),
     selfIsElectrician: technicians.some((technician) => technician.isMe),
+    businessBlackouts,
   };
 }
 
