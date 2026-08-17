@@ -47,6 +47,7 @@ export default async function JobSettingsPage({ params }: { params: Promise<{ jo
           status={controls.status}
           startLocal={controls.startLocal}
           endLocal={controls.endLocal}
+          timeZone={controls.timeZone}
           canceled={controls.canceled}
           cancellationReason={controls.cancellationReason}
           customerPhone={controls.customerPhone}

@@ -29,6 +29,7 @@ import {
   uploadAvatar,
 } from "@/app/account/actions";
 import { Banner } from "@/components/ui/banner";
+import { SelectField } from "@/components/ui/select-field";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
 import { currentTimeIn, timezoneLabel } from "@/lib/timezones";
@@ -339,36 +340,27 @@ export default async function AccountPage({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={labelClass}>
                 Appearance
-                <select className={inputClass} name="theme" defaultValue={account.preferences.theme}>
-                  <option value="system">Match device</option>
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
-                </select>
+                <span className="mt-2 block">
+                  <SelectField name="theme" defaultValue={account.preferences.theme} label="Appearance" choices={[{ value: "system", label: "Match device" }, { value: "dark", label: "Dark" }, { value: "light", label: "Light" }]} />
+                </span>
               </label>
               <label className={labelClass}>
                 Text size
-                <select className={inputClass} name="textSize" defaultValue={account.preferences.textSize}>
-                  <option value="standard">Standard</option>
-                  <option value="large">Large</option>
-                  <option value="extra_large">Extra large</option>
-                </select>
+                <span className="mt-2 block">
+                  <SelectField name="textSize" defaultValue={account.preferences.textSize} label="Text size" choices={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }, { value: "extra_large", label: "Extra large" }]} />
+                </span>
               </label>
               <label className={labelClass}>
                 Preferred maps app
-                <select className={inputClass} name="defaultMapApp" defaultValue={account.preferences.defaultMapApp}>
-                  <option value="system">Ask each time</option>
-                  <option value="apple_maps">Apple Maps</option>
-                  <option value="google_maps">Google Maps</option>
-                </select>
+                <span className="mt-2 block">
+                  <SelectField name="defaultMapApp" defaultValue={account.preferences.defaultMapApp} label="Preferred maps app" choices={[{ value: "system", label: "Ask each time" }, { value: "apple_maps", label: "Apple Maps" }, { value: "google_maps", label: "Google Maps" }]} />
+                </span>
               </label>
               <label className={labelClass}>
                 Starting screen
-                <select className={inputClass} name="defaultLandingPage" defaultValue={account.preferences.defaultLandingPage}>
-                  <option value="dashboard">Dashboard</option>
-                  <option value="schedule">Schedule</option>
-                  <option value="jobs">Jobs</option>
-                  <option value="route">Route builder</option>
-                </select>
+                <span className="mt-2 block">
+                  <SelectField name="defaultLandingPage" defaultValue={account.preferences.defaultLandingPage} label="Starting screen" choices={[{ value: "dashboard", label: "Dashboard" }, { value: "schedule", label: "Schedule" }, { value: "jobs", label: "Jobs" }, { value: "route", label: "Route builder" }]} />
+                </span>
               </label>
             </div>
 
@@ -427,19 +419,15 @@ export default async function AccountPage({
               </label>
               <label className={labelClass}>
                 Environment
-                <select className={inputClass} name="environment" defaultValue={account.square.environment}>
-                  <option value="production">Production</option>
-                  <option value="sandbox">Sandbox testing</option>
-                </select>
+                <span className="mt-2 block">
+                  <SelectField name="environment" defaultValue={account.square.environment} label="Square environment" choices={[{ value: "production", label: "Production" }, { value: "sandbox", label: "Sandbox testing" }]} />
+                </span>
               </label>
               <label className={labelClass}>
                 Currency
-                <select className={inputClass} name="currency" defaultValue={account.square.currency}>
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="CAD">CAD — Canadian Dollar</option>
-                  <option value="AUD">AUD — Australian Dollar</option>
-                  <option value="GBP">GBP — British Pound</option>
-                </select>
+                <span className="mt-2 block">
+                  <SelectField name="currency" defaultValue={account.square.currency} label="Currency" choices={[{ value: "USD", label: "USD — US Dollar" }, { value: "CAD", label: "CAD — Canadian Dollar" }, { value: "AUD", label: "AUD — Australian Dollar" }, { value: "GBP", label: "GBP — British Pound" }]} />
+                </span>
               </label>
               <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
                 <a href="https://squareup.com/dashboard" target="_blank" rel="noreferrer" className="tap-target inline-flex min-h-12 items-center gap-2 text-sm font-semibold text-ink-muted">

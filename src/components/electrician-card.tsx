@@ -18,12 +18,8 @@ import {
   type ElectricianState,
 } from "@/app/technicians/actions";
 import { BlackoutManager } from "@/components/blackout-manager";
-import {
-  DEFAULT_END,
-  DEFAULT_START,
-  describeWeek,
-  WEEKDAYS,
-} from "@/lib/electrician-hours";
+import { HoursCalendar } from "@/components/hours-calendar";
+import { describeWeek, type DayHours } from "@/lib/electrician-hours";
 import type { TechnicianWorkload } from "@/lib/job-data";
 
 /**
@@ -89,78 +85,18 @@ function WorkingToggle({ electrician }: { electrician: TechnicianWorkload }) {
   );
 }
 
-function HoursEditor({ electrician }: { electrician: TechnicianWorkload }) {
-  const [state, submit, saving] = useActionState(saveElectricianHours, initialState);
-
-  const byDay = new Map(electrician.hours.map((entry) => [entry.weekday, entry]));
-
-  return (
-    <form action={submit} className="mt-3 rounded-control border border-line p-3">
-      <input type="hidden" name="technicianId" value={electrician.id} />
-
-      <p className="text-xs leading-5 text-ink-muted">
-        Days left off are days they are not offered to customers. Set none and they are available
-        whenever the business is open.
-      </p>
-
-      <ul className="mt-3 space-y-2">
-        {WEEKDAYS.map((day) => {
-          const entry = byDay.get(day.value);
-          return (
-            <li key={day.value} className="flex flex-wrap items-center gap-2">
-              <label className="flex min-w-[6.5rem] flex-1 items-center gap-2 text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  name={`enabled-${day.value}`}
-                  value="yes"
-                  defaultChecked={Boolean(entry)}
-                  className="h-5 w-5 rounded border-line"
-                />
-                {day.label}
-              </label>
-              <span className="flex items-center gap-1">
-                <input
-                  type="time"
-                  name={`start-${day.value}`}
-                  defaultValue={entry?.start ?? DEFAULT_START}
-                  aria-label={`${day.label} start`}
-                  className="min-h-11 rounded-control border border-line bg-transparent px-2 text-sm"
-                />
-                <span className="text-xs text-ink-faint">to</span>
-                <input
-                  type="time"
-                  name={`end-${day.value}`}
-                  defaultValue={entry?.end ?? DEFAULT_END}
-                  aria-label={`${day.label} finish`}
-                  className="min-h-11 rounded-control border border-line bg-transparent px-2 text-sm"
-                />
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-
-      {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
-      {state.notice ? <p className="mt-2 text-sm text-positive">{state.notice}</p> : null}
-
-      <button
-        type="submit"
-        disabled={saving}
-        className="tap-target mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
-      >
-        {saving ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-        {saving ? "Saving…" : "Save hours"}
-      </button>
-    </form>
-  );
-}
-
 export function ElectricianCard({
   electrician,
   canManage,
+  businessHours,
+  timeZone,
 }: {
   electrician: TechnicianWorkload;
   canManage: boolean;
+  /** So the calendar can admit when a day it is offering is a day the shop is shut. */
+  businessHours: DayHours[];
+  /** The business's clock, so "today" is ringed on the right date. */
+  timeZone: string;
 }) {
   const [sheet, setSheet] = useState<"closed" | "hours" | "time-off">("closed");
   const open = sheet !== "closed";
@@ -223,7 +159,13 @@ export function ElectricianCard({
       </div>
 
       {canManage && open ? (
-        <div className="mt-3 rounded-control border border-line p-3">
+        /*
+          No border and no padding on a phone. Seven calendar columns are laid
+          out inside this, and every level of nesting comes straight off the
+          width of a cell somebody has to hit with a thumb. The card around it
+          is already a box; a second one inside it was decoration.
+        */
+        <div className="mt-3 rounded-control border-line sm:border sm:p-3">
           {/*
             The switch lives in here now. It is the one control that changes
             what customers are offered the moment it is touched, and a switch
@@ -272,7 +214,17 @@ export function ElectricianCard({
             </button>
           </div>
 
-          {sheet === "hours" ? <HoursEditor electrician={electrician} /> : null}
+          {sheet === "hours" ? (
+            <HoursCalendar
+              action={saveElectricianHours}
+              subject="electrician"
+              technicianId={electrician.id}
+              hours={electrician.hours}
+              blackouts={electrician.blackouts}
+              businessHours={businessHours}
+              timeZone={timeZone}
+            />
+          ) : null}
           {sheet === "time-off" ? (
             <div className="mt-3">
               <BlackoutManager
@@ -280,6 +232,7 @@ export function ElectricianCard({
                 blackouts={electrician.blackouts}
                 emptyText="No time off booked."
                 addLabel="Block out time"
+                timeZone={timeZone}
               />
             </div>
           ) : null}

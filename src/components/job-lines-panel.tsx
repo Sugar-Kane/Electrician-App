@@ -12,6 +12,7 @@ import {
 } from "@/app/jobs/[jobId]/line-actions";
 import { raiseInvoice, type RaiseInvoiceState } from "@/app/jobs/[jobId]/invoice-actions";
 import { inputClass } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 import {
   formatCents,
   formatQuantity,
@@ -103,22 +104,23 @@ function AddLineForm({
       {!labor && stock.length > 0 ? (
         <label className="block">
           <span className="text-xs font-semibold text-ink-muted">From stock</span>
-          <select
-            value={chosen?.id ?? ""}
-            onChange={(event) => {
-              const found = stock.find((item) => item.id === event.target.value);
-              setChosen(found ?? null);
-            }}
-            className={`mt-1 ${inputClass}`}
-          >
-            <option value="">Not from stock</option>
-            {stock.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-                {item.quantityOnHand > 0 ? ` · ${item.quantityOnHand} on hand` : " · none on hand"}
-              </option>
-            ))}
-          </select>
+          <span className="mt-1 block">
+            <SelectField
+              label="From stock"
+              placeholder="Not from stock"
+              value={chosen?.id ?? ""}
+              onChange={(next) => setChosen(stock.find((item) => item.id === next) ?? null)}
+              choices={[
+                { value: "", label: "Not from stock" },
+                ...stock.map((item) => ({
+                  value: item.id,
+                  label: item.name,
+                  description:
+                    item.quantityOnHand > 0 ? `${item.quantityOnHand} on hand` : "None on hand",
+                })),
+              ]}
+            />
+          </span>
         </label>
       ) : null}
 

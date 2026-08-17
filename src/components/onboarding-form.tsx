@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Banner } from "@/components/ui/banner";
+import { TimeField } from "@/components/ui/time-field";
 import {
   ArrowRight,
   Building2,
@@ -263,13 +264,13 @@ export function OnboardingForm({
             <span className="flex items-center gap-2 text-sm font-medium text-ink">
               <Clock3 className="h-4 w-4 text-ink-faint" aria-hidden /> Start time
             </span>
-            <input type="time" name="startTime" required defaultValue="08:00" className={inputClass} />
+            <TimeField name="startTime" required defaultValue="08:00" label="Start time" />
           </label>
           <label className="block">
             <span className="flex items-center gap-2 text-sm font-medium text-ink">
               <Clock3 className="h-4 w-4 text-ink-faint" aria-hidden /> End time
             </span>
-            <input type="time" name="endTime" required defaultValue="17:00" className={inputClass} />
+            <TimeField name="endTime" required defaultValue="17:00" label="End time" />
           </label>
         </div>
       </section>

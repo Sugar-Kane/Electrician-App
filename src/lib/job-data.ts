@@ -2,8 +2,10 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
+import type { DayHours } from "@/lib/electrician-hours";
 import { currentContext } from "@/lib/request-context";
 import { isoToZonedWallClock } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -297,6 +299,8 @@ export async function getJobControls(jobNumber: string): Promise<{
   status: string;
   startLocal: string;
   endLocal: string;
+  /** The zone those wall-clock strings belong to, for the date picker. */
+  timeZone: string;
   canceled: boolean;
   cancellationReason: string;
   customerPhone: string;
@@ -334,6 +338,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     status: str(row.status),
     startLocal: isoToZonedWallClock(start, context.timeZone),
     endLocal: isoToZonedWallClock(end, context.timeZone),
+    timeZone: context.timeZone,
     canceled: str(row.status) === "canceled",
     cancellationReason: str(row.cancellation_reason),
     customerPhone: str(customer?.phone),
@@ -372,6 +377,13 @@ export type CrewRoster = {
   selfIsElectrician: boolean;
   /** Days the whole business is closed — blackouts with no electrician named. */
   businessBlackouts: TechnicianBlackout[];
+  /**
+   * The days the business is open at all. The outer bound on everybody: a
+   * closed day is skipped before any electrician's hours are looked at.
+   */
+  businessHours: DayHours[];
+  /** The business's own clock, which every date on this screen is read in. */
+  timeZone: string;
 };
 
 /**
@@ -395,14 +407,25 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
       canManage: false,
       selfIsElectrician: false,
       businessBlackouts: [],
+      // Not `[]`. An empty list is the honest answer to "which days is this
+      // business open" only if the answer is none, and rendering the signed-out
+      // view as a permanently shut business would be a lie about nobody.
+      businessHours: defaultBusinessHours(),
+      timeZone: DEFAULT_TIMEZONE,
     };
   }
 
   const { data: auth } = await context.database.auth.getUser();
   const userId = auth.user?.id ?? "";
 
-  const [{ data: crew }, { jobs }, { data: membership }, { data: hourRows }, { data: blackoutRows }] =
-    await Promise.all([
+  const [
+    { data: crew },
+    { jobs },
+    { data: membership },
+    { data: hourRows },
+    { data: blackoutRows },
+    { data: settings },
+  ] = await Promise.all([
       context.database
         .from("technicians")
         .select("id, display_name, phone, is_active, user_id")
@@ -425,6 +448,11 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
         // Yesterday's day off is history nobody needs to see on this screen.
         .gte("ends_at", new Date().toISOString())
         .order("starts_at", { ascending: true }),
+      context.database
+        .from("service_settings")
+        .select("business_hours")
+        .eq("organization_id", context.organizationId)
+        .maybeSingle(),
     ]);
 
   const today = todayInZone(context.timeZone);
@@ -505,6 +533,8 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
     ),
     selfIsElectrician: technicians.some((technician) => technician.isMe),
     businessBlackouts,
+    businessHours: parseBusinessHours(settings?.business_hours),
+    timeZone: context.timeZone,
   };
 }
 

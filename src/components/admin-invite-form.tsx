@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { CheckCircle2, LoaderCircle, TriangleAlert } from "lucide-react";
 
 import { adminInvite, type AdminInviteState } from "@/app/admin/organizations/[id]/actions";
+import { SelectField } from "@/components/ui/select-field";
 
 const initialState: AdminInviteState = { error: "" };
 const inputClass =
@@ -44,16 +45,23 @@ export function AdminInviteForm({ organizationId }: { organizationId: string }) 
             className={inputClass}
           />
         </label>
-        <label className="block">
+        <div className="block">
           <span className="text-sm font-medium text-ink">Role</span>
-          <select name="role" defaultValue="owner" className={inputClass}>
-            <option value="owner">Owner</option>
-            <option value="admin">Administrator</option>
-            <option value="dispatcher">Dispatcher</option>
-            <option value="technician">Technician</option>
-            <option value="accountant">Accountant</option>
-          </select>
-        </label>
+          <span className="mt-2 block">
+            <SelectField
+              name="role"
+              defaultValue="owner"
+              label="Role"
+              choices={[
+                { value: "owner", label: "Owner" },
+                { value: "admin", label: "Administrator" },
+                { value: "dispatcher", label: "Dispatcher" },
+                { value: "technician", label: "Technician" },
+                { value: "accountant", label: "Accountant" },
+              ]}
+            />
+          </span>
+        </div>
       </div>
 
       {state.error ? (

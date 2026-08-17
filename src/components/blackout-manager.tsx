@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { CalendarOff, LoaderCircle, Plus, Trash2 } from "lucide-react";
 
 import { addBlackout, removeBlackout, type ElectricianState } from "@/app/technicians/actions";
+import { DateField } from "@/components/ui/date-field";
+import { TimeField } from "@/components/ui/time-field";
 import type { TechnicianBlackout } from "@/lib/job-data";
 
 /**
@@ -24,12 +26,15 @@ export function BlackoutManager({
   blackouts,
   emptyText,
   addLabel,
+  timeZone,
 }: {
   /** Omitted for a business-wide closure. */
   technicianId?: string;
   blackouts: TechnicianBlackout[];
   emptyText: string;
   addLabel: string;
+  /** The business's clock, so the calendar rings the right day as today. */
+  timeZone: string;
 }) {
   const [addState, add, adding] = useActionState(addBlackout, initialState);
   const [removeState, remove] = useActionState(removeBlackout, initialState);
@@ -77,24 +82,33 @@ export function BlackoutManager({
           <input type="hidden" name="technicianId" value={technicianId} />
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex-1">
+        {/*
+          Stacked, at every width, because each of these opens a calendar
+          underneath itself and a calendar needs a whole row. Side by side they
+          each got half the form: measured at 360px the day cells came out
+          17.8px wide, which is a calendar in name only. The panel expands in
+          flow, so its width is its column's width — there is no arrangement
+          where two of these share a line and both stay usable.
+        */}
+        <div className="space-y-2">
+          <div>
             <span className="mb-1 block text-xs font-semibold text-ink-muted">From</span>
-            <input
-              type="date"
+            <DateField
               name="startDate"
               required
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+              label={technicianId ? "First day off" : "First day closed"}
+              timeZone={timeZone}
             />
-          </label>
-          <label className="flex-1">
+          </div>
+          <div>
             <span className="mb-1 block text-xs font-semibold text-ink-muted">To</span>
-            <input
-              type="date"
+            <DateField
               name="endDate"
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+              placeholder="Same day"
+              label={technicianId ? "Last day off" : "Last day closed"}
+              timeZone={timeZone}
             />
-          </label>
+          </div>
         </div>
 
         <label className="flex items-center gap-2 text-sm font-semibold">
@@ -114,25 +128,15 @@ export function BlackoutManager({
           fills in midnight to one-to-midnight in that case, and leaving the
           inputs mounted keeps whatever was typed if somebody unticks it again.
         */}
-        <div className={`flex items-center gap-2 ${allDay ? "hidden" : ""}`}>
-          <label className="flex-1">
+        <div className={`flex flex-wrap items-start gap-2 ${allDay ? "hidden" : ""}`}>
+          <div className="min-w-[9rem] flex-1">
             <span className="mb-1 block text-xs font-semibold text-ink-muted">Start</span>
-            <input
-              type="time"
-              name="startTime"
-              defaultValue="08:00"
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-            />
-          </label>
-          <label className="flex-1">
+            <TimeField name="startTime" defaultValue="08:00" label="Time off starts" />
+          </div>
+          <div className="min-w-[9rem] flex-1">
             <span className="mb-1 block text-xs font-semibold text-ink-muted">Finish</span>
-            <input
-              type="time"
-              name="endTime"
-              defaultValue="17:00"
-              className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
-            />
-          </label>
+            <TimeField name="endTime" defaultValue="17:00" label="Time off ends" />
+          </div>
         </div>
 
         <label className="block">

@@ -5,7 +5,9 @@ import { CalendarClock, Ban, X } from "lucide-react";
 
 import { cancelJob, updateJob, type JobActionState } from "@/app/jobs/[jobId]/actions";
 import { Button, SubmitButton } from "@/components/ui/button";
-import { Field, FormMessage, SelectInput, TextInput } from "@/components/ui/field";
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { Field, FormMessage, TextInput } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 
 /**
  * Moving a job, and calling it off.
@@ -38,6 +40,7 @@ export function JobControls({
   status,
   startLocal,
   endLocal,
+  timeZone,
   canceled,
   cancellationReason,
   customerPhone,
@@ -48,6 +51,8 @@ export function JobControls({
   /** Wall-clock values for the inputs, already in the business's zone. */
   startLocal: string;
   endLocal: string;
+  /** The zone those wall-clock values belong to, so the calendar rings today. */
+  timeZone: string;
   canceled: boolean;
   cancellationReason: string;
   customerPhone: string;
@@ -97,22 +102,26 @@ export function JobControls({
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <Field label="Arrival window starts">
-              <TextInput type="datetime-local" name="start" defaultValue={startLocal} />
+              <DateTimeField
+                name="start"
+                defaultValue={startLocal}
+                label="Arrival window starts"
+                timeZone={timeZone}
+              />
             </Field>
             <Field label="Arrival window ends">
-              <TextInput type="datetime-local" name="end" defaultValue={endLocal} />
+              <DateTimeField
+                name="end"
+                defaultValue={endLocal}
+                label="Arrival window ends"
+                timeZone={timeZone}
+              />
             </Field>
           </div>
 
           <div className="mt-4">
             <Field label="Status">
-              <SelectInput name="status" defaultValue={status}>
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectInput>
+              <SelectField name="status" defaultValue={status} label="Status" choices={STATUS_OPTIONS} />
             </Field>
           </div>
 

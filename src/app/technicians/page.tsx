@@ -3,7 +3,7 @@ import Link from "next/link";
 import { UserRoundPlus } from "lucide-react";
 
 import { AddSelfElectrician } from "@/components/add-self-electrician";
-import { BusinessClosures } from "@/components/business-closures";
+import { BusinessAvailability } from "@/components/business-availability";
 import { ElectricianCard } from "@/components/electrician-card";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getTechnicianWorkloads } from "@/lib/job-data";
@@ -23,8 +23,14 @@ export const metadata: Metadata = { title: "Electricians | Volteira" };
  * and a settings screen.
  */
 export default async function ElectriciansPage() {
-  const { technicians, canManage, selfIsElectrician, businessBlackouts } =
-    await getTechnicianWorkloads();
+  const {
+    technicians,
+    canManage,
+    selfIsElectrician,
+    businessBlackouts,
+    businessHours,
+    timeZone,
+  } = await getTechnicianWorkloads();
 
   const working = technicians.filter((electrician) => electrician.isActive).length;
   const outToday = technicians.filter((electrician) => electrician.jobs.length > 0).length;
@@ -52,13 +58,21 @@ export default async function ElectriciansPage() {
       <div className="space-y-3">
         {canManage && !selfIsElectrician ? <AddSelfElectrician /> : null}
 
-        {canManage ? <BusinessClosures closures={businessBlackouts} /> : null}
+        {canManage ? (
+          <BusinessAvailability
+            hours={businessHours}
+            closures={businessBlackouts}
+            timeZone={timeZone}
+          />
+        ) : null}
 
         {technicians.map((electrician) => (
           <ElectricianCard
             key={electrician.id}
             electrician={electrician}
             canManage={canManage}
+            businessHours={businessHours}
+            timeZone={timeZone}
           />
         ))}
 

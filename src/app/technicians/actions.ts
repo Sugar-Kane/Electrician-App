@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
+import { buildBusinessHours } from "@/lib/business-hours";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
-import { parseHourRange, WEEKDAYS } from "@/lib/electrician-hours";
+import { describeWeek, parseHourRange, WEEKDAYS, type DayHours } from "@/lib/electrician-hours";
 
 /**
  * Who is working, when, and who is not.
@@ -160,6 +161,33 @@ export async function addSelfAsElectrician(
 }
 
 /**
+ * The week as the calendar posts it, validated.
+ *
+ * One reader for both actions. The calendar is a single component serving an
+ * electrician and the business, so the two actions have to agree on the field
+ * names down to the last character — a second copy of this loop is a second
+ * chance to drift.
+ */
+function readWeek(formData: FormData): { days: DayHours[] } | { error: string } {
+  const days: DayHours[] = [];
+
+  for (const day of WEEKDAYS) {
+    if (String(formData.get(`enabled-${day.value}`) ?? "") !== "yes") continue;
+
+    const parsed = parseHourRange(
+      String(formData.get(`start-${day.value}`) ?? ""),
+      String(formData.get(`end-${day.value}`) ?? ""),
+    );
+
+    if (!parsed.ok) return { error: `${day.label}: ${parsed.error}` };
+
+    days.push({ weekday: day.value, start: parsed.start, end: parsed.end });
+  }
+
+  return { days };
+}
+
+/**
  * Replace one electrician's whole week.
  *
  * Written as a delete and an insert rather than a diff. The form posts the
@@ -180,24 +208,14 @@ export async function saveElectricianHours(
     return { error: "That person is not on your crew." };
   }
 
-  const rows: { weekday: number; starts_at: string; ends_at: string }[] = [];
+  const week = readWeek(formData);
+  if ("error" in week) return { error: week.error };
 
-  for (const day of WEEKDAYS) {
-    if (String(formData.get(`enabled-${day.value}`) ?? "") !== "yes") continue;
-
-    const parsed = parseHourRange(
-      String(formData.get(`start-${day.value}`) ?? ""),
-      String(formData.get(`end-${day.value}`) ?? ""),
-    );
-
-    if (!parsed.ok) return { error: `${day.label}: ${parsed.error}` };
-
-    rows.push({
-      weekday: day.value,
-      starts_at: parsed.start,
-      ends_at: parsed.end,
-    });
-  }
+  const rows = week.days.map((day) => ({
+    weekday: day.weekday,
+    starts_at: day.start,
+    ends_at: day.end,
+  }));
 
   const { error: cleared } = await context.supabase
     .from("technician_hours")
@@ -233,6 +251,69 @@ export async function saveElectricianHours(
       rows.length === 0
         ? "Hours cleared. Available whenever the business is open."
         : `Hours saved for ${rows.length} ${rows.length === 1 ? "day" : "days"}.`,
+  };
+}
+
+/**
+ * When the business itself is open.
+ *
+ * These were set once during onboarding and there has never been a screen that
+ * changed them, so a business that started opening Saturdays had no way to say
+ * so. They matter more than any one person's hours: `list_public_booking_slots`
+ * skips a closed day outright, before it counts a single electrician, so this
+ * is the setting that can empty the booking page.
+ *
+ * Zero days is allowed. It means the business is shut, which is a real thing an
+ * owner might be saying, and refusing it would be inventing a rule. The
+ * calendar warns before the tap rather than the action refusing after it.
+ */
+export async function saveBusinessHours(
+  _previous: ElectricianState,
+  formData: FormData,
+): Promise<ElectricianState> {
+  const context = await ownerContext();
+  if (!context) return { error: "You are not signed in." };
+  if (!context.canManage) return { error: "Only an owner can change business hours." };
+
+  const week = readWeek(formData);
+  if ("error" in week) return { error: week.error };
+
+  // Read before writing so the days being switched off keep the times they had.
+  // The whole object is rewritten either way — it is one JSONB column, not a
+  // row per day — so without this a Saturday turned off and on again would come
+  // back as eight-to-five instead of the nine-to-one it was.
+  const { data: existing, error: unreadable } = await context.supabase
+    .from("service_settings")
+    .select("business_hours")
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+
+  if (unreadable) {
+    console.error("electricians: could not read business hours", unreadable);
+    return { error: "Those hours could not be saved. Try again." };
+  }
+
+  const { error } = await context.supabase
+    .from("service_settings")
+    .update({ business_hours: buildBusinessHours(week.days, existing?.business_hours) })
+    .eq("organization_id", context.organizationId);
+
+  if (error) {
+    console.error("electricians: could not save business hours", error);
+    return { error: "Those hours could not be saved. Try again." };
+  }
+
+  revalidatePath("/technicians");
+  revalidatePath("/settings/business");
+
+  return {
+    error: "",
+    // The red block above the button already spells out what no days means, and
+    // it is still on screen. This only has to confirm the write landed.
+    notice:
+      week.days.length === 0
+        ? "Saved. The business is now closed every day."
+        : `Open ${describeWeek(week.days)}.`,
   };
 }
 

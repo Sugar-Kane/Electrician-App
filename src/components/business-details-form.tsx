@@ -5,7 +5,8 @@ import { useFormStatus } from "react-dom";
 import { LoaderCircle, Save } from "lucide-react";
 
 import { saveBusinessDetails, type BusinessState } from "@/app/settings/business/actions";
-import { Field, FormMessage, SelectInput, TextInput } from "@/components/ui/field";
+import { Field, FormMessage, TextInput } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 import { TIMEZONE_OPTIONS } from "@/lib/timezones";
 
 const initialState: BusinessState = { error: "" };
@@ -81,13 +82,7 @@ export function BusinessDetailsForm({
           </Field>
 
           <Field label="Timezone" hint="Arrival windows and quiet hours use this.">
-            <SelectInput name="timezone" defaultValue={details.timezone}>
-              {TIMEZONE_OPTIONS.map((zone) => (
-                <option key={zone.value} value={zone.value}>
-                  {zone.label}
-                </option>
-              ))}
-            </SelectInput>
+            <SelectField name="timezone" defaultValue={details.timezone} label="Timezone" choices={TIMEZONE_OPTIONS} />
           </Field>
         </div>
       </section>

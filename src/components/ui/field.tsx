@@ -35,9 +35,12 @@ export function TextInput(props: React.ComponentProps<"input">) {
   return <input {...props} className={`${inputClass} ${props.className ?? ""}`} />;
 }
 
-export function SelectInput(props: React.ComponentProps<"select">) {
-  return <select {...props} className={`${inputClass} ${props.className ?? ""}`} />;
-}
+/*
+ * `SelectInput` used to be here, wrapping a native `<select>`. It is now
+ * `SelectField` in `select-field.tsx`, because a native select's open list on a
+ * phone is drawn by the operating system and nothing on the page reaches inside
+ * it. Import that instead — it takes `choices` rather than `<option>` children.
+ */
 
 /**
  * What a form says back.

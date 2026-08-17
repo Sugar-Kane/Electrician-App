@@ -94,6 +94,10 @@ export async function updateProfile(formData: FormData) {
     }
   }
 
+  // Saving this also renames the person on the crew, if they are on it. That is
+  // a trigger on `user_profiles` rather than a second write from here: the
+  // technicians table is owner-only now, and a rule that depends on every
+  // future caller remembering to make the second write is not a rule.
   const { error } = await context.database.from("user_profiles").upsert(
     {
       user_id: context.user.id,
@@ -110,13 +114,6 @@ export async function updateProfile(formData: FormData) {
   await context.supabase.auth.updateUser({
     data: { ...context.user.user_metadata, full_name: displayName },
   });
-  if (context.organizationId) {
-    await context.database
-      .from("technicians")
-      .update({ display_name: displayName })
-      .eq("organization_id", context.organizationId)
-      .eq("user_id", context.user.id);
-  }
 
   revalidatePath("/");
   revalidatePath("/account");
