@@ -182,14 +182,20 @@ export function HoursCalendar({
   const wasted = selected.filter(isShut);
 
   /*
-   * Pulled out of the panel's padding on a phone. Seven columns at 44px plus
-   * their gaps need 332px, and four nested levels of padding left 296 — so the
-   * last column was clipped at every width. Measured, not guessed: the grid's
-   * scrollWidth exceeded its clientWidth on a 390px viewport while the page
-   * itself reported no overflow at all, which is why it was invisible.
+   * Flush to the inside of the card on a phone. `-mx-4` cancels the card's own
+   * `p-4` — a number that stays right if the card's padding ever changes,
+   * rather than a measured constant that quietly goes stale — and the
+   * disclosure panel around this drops its padding below `sm` so there is
+   * nothing else in the way.
+   *
+   * Worth the trouble because of the arithmetic: seven 44px columns with their
+   * gaps need 332px, and every pixel of nesting comes straight off the cells.
+   * Measured, not guessed — an earlier version overflowed its own grid on a
+   * 390px viewport while the page reported no overflow at all, which is why
+   * nobody could see the last column was being clipped.
    */
   return (
-    <form action={submit} className="-mx-2 mt-3 rounded-control border border-line p-1 sm:mx-0 sm:p-3">
+    <form action={submit} className="-mx-4 mt-3 rounded-control border border-line p-1 sm:mx-0 sm:p-3">
       {technicianId ? <input type="hidden" name="technicianId" value={technicianId} /> : null}
       {/*
         The whole pattern, in the fields the action has always read. Rendering
@@ -242,7 +248,12 @@ export function HoursCalendar({
             onClick={() => toggleWeekday(day.value)}
             aria-pressed={pattern.has(day.value)}
             aria-label={`${day.label}s`}
-            className={`grid h-8 place-items-center rounded-control text-[11px] font-bold uppercase tracking-wide ${
+            /*
+              A real control, so a real target. It duplicates what the cells
+              below do, which is an argument for keeping it small and a worse
+              argument than not shipping a 32px button.
+            */
+            className={`grid min-h-11 min-w-0 place-items-center rounded-control text-[11px] font-bold uppercase tracking-wide ${
               pattern.has(day.value) ? "bg-brand/20 text-brand" : "text-ink-faint"
             } ${isShut(day.value) ? "opacity-60" : ""}`}
           >
@@ -281,7 +292,22 @@ export function HoursCalendar({
               aria-label={`${WEEKDAYS[cell.weekday]?.label}s, ${working ? copy.on : copy.off}${
                 shut ? ", the business is closed" : ""
               }${blocked ? `, ${copy.timeOff} on ${dateLabel(cell.iso)}` : ""}`}
-              className={`relative grid aspect-square place-items-center rounded-control text-sm font-semibold transition-colors ${fill} ${
+              /*
+                Square where there is room, never shorter than 44px anywhere.
+                Seven 44px columns need the entire 320px of the narrowest phone,
+                so a square that big cannot fit there — and height is the
+                dimension a thumb misses on, so height is the one that holds.
+
+                All three sizing classes are load-bearing, and `max-w-full` is
+                the one that is not obvious. An aspect-ratio box transfers its
+                `min-height` back through the ratio into a minimum *width*, and
+                `min-w-0` does not stop it: measured at 320px, the track came out
+                40px and the button rendered 44px inside it, overflowing the grid
+                by 4px — the same invisible clipping as before, arriving by a
+                different route. `max-w-full` clamps the button to its track,
+                and the min-height keeps the 44.
+              */
+              className={`relative grid aspect-square min-h-11 min-w-0 max-w-full place-items-center rounded-control text-sm font-semibold transition-colors ${fill} ${
                 cell.inMonth ? "" : "opacity-35"
               } ${cell.iso === today ? "ring-2 ring-info ring-offset-1 ring-offset-surface" : ""}`}
             >

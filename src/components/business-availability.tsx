@@ -71,7 +71,9 @@ export function BusinessAvailability({
       </button>
 
       {open ? (
-        <div className="mt-3 rounded-control border border-line p-3">
+        /* Padding-free on a phone for the same reason as an electrician's card:
+           it is the calendar's width, one nesting level at a time. */
+        <div className="mt-3 rounded-control border-line sm:border sm:p-3">
           <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"

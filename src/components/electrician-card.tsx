@@ -159,7 +159,13 @@ export function ElectricianCard({
       </div>
 
       {canManage && open ? (
-        <div className="mt-3 rounded-control border border-line p-3">
+        /*
+          No border and no padding on a phone. Seven calendar columns are laid
+          out inside this, and every level of nesting comes straight off the
+          width of a cell somebody has to hit with a thumb. The card around it
+          is already a box; a second one inside it was decoration.
+        */
+        <div className="mt-3 rounded-control border-line sm:border sm:p-3">
           {/*
             The switch lives in here now. It is the one control that changes
             what customers are offered the moment it is touched, and a switch
