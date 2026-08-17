@@ -5,7 +5,9 @@ import { useFormStatus } from "react-dom";
 import { LoaderCircle, Plus } from "lucide-react";
 
 import { createJob, type NewJobState } from "@/app/jobs/new/actions";
-import { Field, FormMessage, SelectInput, TextInput, inputClass } from "@/components/ui/field";
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 import { JOB_CATEGORIES } from "@/lib/new-job-input";
 
 /**
@@ -51,7 +53,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function NewJobForm({ timeZoneLabel }: { timeZoneLabel: string }) {
+export function NewJobForm({
+  timeZone,
+  timeZoneLabel,
+}: {
+  /** The IANA zone, so the calendar rings today on the right day. */
+  timeZone: string;
+  timeZoneLabel: string;
+}) {
   const [state, action] = useActionState(createJob, initialState);
 
   return (
@@ -102,19 +111,13 @@ export function NewJobForm({ timeZoneLabel }: { timeZoneLabel: string }) {
 
       <Section title="The work">
         <Field label="Kind of work">
-          <SelectInput name="category" defaultValue="diagnostic">
-            {JOB_CATEGORIES.map((category) => (
-              <option key={category.value} value={category.value}>
-                {category.label}
-              </option>
-            ))}
-          </SelectInput>
+          <SelectField name="category" defaultValue="diagnostic" label="Type of work" choices={JOB_CATEGORIES} />
         </Field>
         <Field label="How long it should take" hint="Hours. Two if left blank.">
           <TextInput name="durationHours" inputMode="decimal" placeholder="2" />
         </Field>
         <Field label="Start" hint={`Times are ${timeZoneLabel}. Leave blank to save it unscheduled.`}>
-          <TextInput name="startLocal" type="datetime-local" />
+          <DateTimeField name="startLocal" label="Start" timeZone={timeZone} />
         </Field>
         <Field label="Cost" hint="Optional. A figure here raises a draft invoice, which is not sent until you send it.">
           <TextInput name="cost" inputMode="decimal" placeholder="1280.00" />

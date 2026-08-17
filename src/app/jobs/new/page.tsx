@@ -22,7 +22,7 @@ export default async function NewJobPage() {
       description="For work booked any way other than through the phone line."
       backHref="/schedule"
     >
-      <NewJobForm timeZoneLabel={timezoneLabel(timeZone)} />
+      <NewJobForm timeZone={timeZone} timeZoneLabel={timezoneLabel(timeZone)} />
     </FieldPageShell>
   );
 }

@@ -117,6 +117,7 @@ export function BusinessAvailability({
                 blackouts={closures}
                 emptyText="The business is open on every working day."
                 addLabel="Close the business"
+                timeZone={timeZone}
               />
             </div>
           ) : null}

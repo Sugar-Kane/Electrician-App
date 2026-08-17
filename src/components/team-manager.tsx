@@ -9,6 +9,7 @@ import {
   revokeInvitation,
   type TeamActionState,
 } from "@/app/settings/team/actions";
+import { SelectField } from "@/components/ui/select-field";
 import { roleLabel } from "@/lib/invitation-message";
 
 export type Member = {
@@ -172,16 +173,27 @@ export function TeamManager({
                 />
               </label>
 
-              <label className="block">
+              <div className="block">
                 <span className="text-sm font-medium text-ink">Role</span>
-                <select name="role" defaultValue="technician" className={inputClass}>
-                  <option value="owner">Owner — full access, including billing</option>
-                  <option value="admin">Administrator — everything except billing</option>
-                  <option value="dispatcher">Dispatcher — schedule and customers</option>
-                  <option value="technician">Technician — their own jobs</option>
-                  <option value="accountant">Accountant — invoices and payments</option>
-                </select>
-              </label>
+                <span className="mt-2 block">
+                  {/*
+                    What each role can do is a second line now rather than an
+                    em-dash the option list used to truncate on a phone.
+                  */}
+                  <SelectField
+                    name="role"
+                    defaultValue="technician"
+                    label="Role"
+                    choices={[
+                      { value: "owner", label: "Owner", description: "Full access, including billing" },
+                      { value: "admin", label: "Administrator", description: "Everything except billing" },
+                      { value: "dispatcher", label: "Dispatcher", description: "Schedule and customers" },
+                      { value: "technician", label: "Technician", description: "Their own jobs" },
+                      { value: "accountant", label: "Accountant", description: "Invoices and payments" },
+                    ]}
+                  />
+                </span>
+              </div>
             </div>
 
             {inviteState.error ? (

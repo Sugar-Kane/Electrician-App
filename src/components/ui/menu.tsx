@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
+
+import { useDismissable } from "@/components/ui/popover-field";
 
 /**
  * Every dropdown in the app, behaving the same way.
@@ -42,27 +44,16 @@ export function Menu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
-  useEffect(() => {
-    if (!open) return;
-
-    function onPointerDown(event: MouseEvent) {
-      if (root.current && !root.current.contains(event.target as Node)) setOpen(false);
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      // Without this the focus ring is left on an element that has just been
-      // unmounted, and the next Tab starts from the top of the document.
-      triggerRef.current?.focus();
-    }
-
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  // Outside click, Escape, and putting focus back where it came from. Shared
+  // with the pickers rather than kept here in a third copy — this was the
+  // second, and the fields that replaced the native date and select controls
+  // needed exactly the same thing.
+  useDismissable({
+    open,
+    onClose: () => setOpen(false),
+    root,
+    trigger: triggerRef,
+  });
 
   return (
     <div ref={root} className="relative">

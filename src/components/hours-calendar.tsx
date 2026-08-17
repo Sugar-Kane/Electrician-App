@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { CalendarOff, ChevronLeft, ChevronRight, LoaderCircle, TriangleAlert } from "lucide-react";
 
 import type { ElectricianState } from "@/app/technicians/actions";
+import { CALENDAR_CELL, CALENDAR_ROW } from "@/components/ui/calendar-grid";
+import { TimeField } from "@/components/ui/time-field";
 import {
   dateLabel,
   monthGrid,
@@ -240,7 +242,7 @@ export function HoursCalendar({
         in, but somebody who has understood that this is a weekly pattern
         reaches for the column, and finding it inert would be a small betrayal.
       */}
-      <div className="mt-2 grid grid-cols-7 gap-0.5 sm:gap-1">
+      <div className={`mt-2 ${CALENDAR_ROW}`}>
         {WEEKDAYS.map((day) => (
           <button
             key={day.value}
@@ -262,7 +264,7 @@ export function HoursCalendar({
         ))}
       </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-0.5 sm:gap-1">
+      <div className={`mt-1 ${CALENDAR_ROW}`}>
         {weeks.flat().map((cell) => {
           const working = pattern.has(cell.weekday);
           const blocked = blockedDates.has(cell.iso);
@@ -307,7 +309,7 @@ export function HoursCalendar({
                 different route. `max-w-full` clamps the button to its track,
                 and the min-height keeps the 44.
               */
-              className={`relative grid aspect-square min-h-11 min-w-0 max-w-full place-items-center rounded-control text-sm font-semibold transition-colors ${fill} ${
+              className={`${CALENDAR_CELL} relative grid place-items-center rounded-control text-sm font-semibold transition-colors ${fill} ${
                 cell.inMonth ? "" : "opacity-35"
               } ${cell.iso === today ? "ring-2 ring-info ring-offset-1 ring-offset-surface" : ""}`}
             >
@@ -368,27 +370,23 @@ export function HoursCalendar({
 
       {selected.length > 0 ? (
         <div className="mt-3 border-t border-line pt-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex-1">
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-[8rem] flex-1">
               <span className="mb-1 block text-xs font-semibold text-ink-muted">Start</span>
-              <input
-                type="time"
+              <TimeField
                 value={shared.start}
-                onChange={(event) => setSharedHours("start", event.target.value)}
-                aria-label="Start time for the selected days"
-                className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+                onChange={(next) => setSharedHours("start", next)}
+                label="Start time for the selected days"
               />
-            </label>
-            <label className="flex-1">
+            </div>
+            <div className="min-w-[8rem] flex-1">
               <span className="mb-1 block text-xs font-semibold text-ink-muted">Finish</span>
-              <input
-                type="time"
+              <TimeField
                 value={shared.end}
-                onChange={(event) => setSharedHours("end", event.target.value)}
-                aria-label="Finish time for the selected days"
-                className="min-h-12 w-full rounded-control border border-line bg-transparent px-3 text-sm"
+                onChange={(next) => setSharedHours("end", next)}
+                label="Finish time for the selected days"
               />
-            </label>
+            </div>
           </div>
 
           <button
@@ -412,25 +410,24 @@ export function HoursCalendar({
               {selected.map((weekday) => {
                 const entry = pattern.get(weekday)!;
                 return (
-                  <li key={weekday} className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-[5rem] flex-1 text-sm font-semibold">
+                  <li key={weekday} className="flex flex-wrap items-start gap-2">
+                    <span className="mt-3 w-full text-sm font-semibold sm:mt-0 sm:w-auto sm:min-w-[5rem] sm:flex-1">
                       {WEEKDAYS[weekday]?.label}
                     </span>
-                    <input
-                      type="time"
-                      value={entry.start}
-                      onChange={(event) => setDayHours(weekday, "start", event.target.value)}
-                      aria-label={`${WEEKDAYS[weekday]?.label} start`}
-                      className="min-h-11 rounded-control border border-line bg-transparent px-2 text-sm"
-                    />
-                    <span className="text-xs text-ink-faint">to</span>
-                    <input
-                      type="time"
-                      value={entry.end}
-                      onChange={(event) => setDayHours(weekday, "end", event.target.value)}
-                      aria-label={`${WEEKDAYS[weekday]?.label} finish`}
-                      className="min-h-11 rounded-control border border-line bg-transparent px-2 text-sm"
-                    />
+                    <div className="min-w-[7rem] flex-1">
+                      <TimeField
+                        value={entry.start}
+                        onChange={(next) => setDayHours(weekday, "start", next)}
+                        label={`${WEEKDAYS[weekday]?.label} start`}
+                      />
+                    </div>
+                    <div className="min-w-[7rem] flex-1">
+                      <TimeField
+                        value={entry.end}
+                        onChange={(next) => setDayHours(weekday, "end", next)}
+                        label={`${WEEKDAYS[weekday]?.label} finish`}
+                      />
+                    </div>
                   </li>
                 );
               })}

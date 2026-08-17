@@ -232,6 +232,7 @@ export function ElectricianCard({
                 blackouts={electrician.blackouts}
                 emptyText="No time off booked."
                 addLabel="Block out time"
+                timeZone={timeZone}
               />
             </div>
           ) : null}

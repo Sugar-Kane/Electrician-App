@@ -124,19 +124,25 @@ input,
 textarea,
 select {
   /*
-   * The brand yellow on anything the browser draws itself: a select's
-   * checkmark and highlighted row, a checkbox, a text selection, the caret.
+   * The brand yellow on anything the browser still draws itself: a checkbox, a
+   * text selection, the caret, a file button.
    *
-   * This is as far as theming a native <select> goes. The open option list is
-   * drawn by the operating system, not by the page — on iOS it is a UIKit
-   * menu — so no CSS reaches its background or its text. `color-scheme: dark`
-   * on <html> is what makes it dark rather than white, and accent-color is
-   * what makes the selected row ours rather than the system blue.
+   * This used to say that a native <select> was worth keeping and that
+   * accent-color was as far as theming it could go. Half of that was true. The
+   * open list is drawn by the operating system, not by the page — on iOS a
+   * UIKit panel — so no rule here reaches its background, its type or its
+   * layout, and `color-scheme: dark` plus this line was genuinely the end of
+   * what CSS could do.
    *
-   * Replacing selects with custom listboxes would give full control and take
-   * away the native picker, which on a phone is the better control: it is
-   * bigger, it scrolls under the thumb, and it is the one every other app
-   * uses. Not worth trading for a colour.
+   * What settled it was seeing one. A date field on a phone put a system-blue
+   * calendar in system type over a near-black and yellow app, and it did not
+   * look like a picker belonging to this app because it was not one. So the
+   * date, time and select controls are the app's own now — `date-field.tsx`,
+   * `time-field.tsx`, `select-field.tsx` — and this property is left doing the
+   * smaller job it was always doing underneath.
+   *
+   * `<input type="file">` stays native and always will: nothing else can open
+   * a camera.
    */
   accent-color: var(--color-brand);
 }

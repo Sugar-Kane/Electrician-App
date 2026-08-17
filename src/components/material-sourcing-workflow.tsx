@@ -33,6 +33,7 @@ import {
   type SupplierId,
 } from "@/lib/pilot-data";
 import { inputClass } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 import { createClient } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "volteira:supplier-products:v1";
@@ -243,7 +244,7 @@ function ProductConfirmationForm({
         <label><span className="text-xs font-semibold text-ink-muted">Retailer SKU <span className="font-normal text-ink-faint">(optional)</span></span><input value={retailerSku} onChange={(event) => setRetailerSku(event.target.value)} className={`mt-1.5 ${inputClass}`} /></label>
         <label><span className="text-xs font-semibold text-ink-muted">Quantity</span><input type="number" min="0.01" step="0.01" inputMode="decimal" value={quantity} onChange={(event) => setQuantity(event.target.value)} className={`mt-1.5 ${inputClass}`} /></label>
         <label><span className="text-xs font-semibold text-ink-muted">Unit price</span><span className="mt-1.5 flex min-h-12 items-center rounded-control border border-line bg-raised px-4"><span className="text-ink-muted">$</span><input type="number" min="0" step="0.01" inputMode="decimal" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} className="min-w-0 flex-1 bg-transparent pl-1 text-base text-white outline-none" /></span></label>
-        <label><span className="text-xs font-semibold text-ink-muted">Availability shown</span><select value={availability} onChange={(event) => setAvailability(event.target.value as ProductAvailability)} className={`mt-1.5 ${inputClass}`}>{Object.entries(availabilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span className="text-xs font-semibold text-ink-muted">Availability shown</span><span className="mt-1.5 block"><SelectField label="Availability shown" value={availability} onChange={(next) => setAvailability(next as ProductAvailability)} choices={Object.entries(availabilityLabels).map(([value, label]) => ({ value, label }))} /></span></label>
       </div>
 
       <div className="mt-4 rounded-control border border-line bg-white/[0.025] p-3">

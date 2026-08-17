@@ -299,6 +299,8 @@ export async function getJobControls(jobNumber: string): Promise<{
   status: string;
   startLocal: string;
   endLocal: string;
+  /** The zone those wall-clock strings belong to, for the date picker. */
+  timeZone: string;
   canceled: boolean;
   cancellationReason: string;
   customerPhone: string;
@@ -336,6 +338,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     status: str(row.status),
     startLocal: isoToZonedWallClock(start, context.timeZone),
     endLocal: isoToZonedWallClock(end, context.timeZone),
+    timeZone: context.timeZone,
     canceled: str(row.status) === "canceled",
     cancellationReason: str(row.cancellation_reason),
     customerPhone: str(customer?.phone),
