@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ChevronRight, Clock } from "lucide-react";
+
 import { BookingPageSettings, type BookingDomain } from "@/components/booking-page-settings";
 import { BusinessDetailsForm, type BusinessDetails } from "@/components/business-details-form";
 import { FieldPageShell } from "@/components/field-page-shell";
@@ -91,6 +94,27 @@ export default async function BusinessSettingsPage() {
       backHref="/settings"
     >
       <BusinessDetailsForm details={details} canManage={canManage} />
+
+      {/*
+        A pointer, not a second copy of the form. Opening hours change what
+        customers are offered, so they live with everything else that does —
+        beside the crew, their hours and the days the business is shut.
+      */}
+      {canManage ? (
+        <Link
+          href="/technicians"
+          className="tap-row mt-3 flex min-h-14 items-center gap-3 rounded-panel border border-line bg-surface px-4"
+        >
+          <Clock className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">Opening hours and closures</span>
+            <span className="block truncate text-xs text-ink-muted">
+              On the Electricians page, with the crew&rsquo;s hours
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+        </Link>
+      ) : null}
 
       {canManage ? (
         <div className="mt-3">

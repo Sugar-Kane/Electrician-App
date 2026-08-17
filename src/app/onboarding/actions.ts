@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { Json } from "@/lib/database.types";
+import { buildBusinessHours, DAY_KEYS, dayKeyFor } from "@/lib/business-hours";
+import { WEEKDAYS } from "@/lib/electrician-hours";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,35 +13,12 @@ export type OnboardingActionState = {
   error: string;
 };
 
-const dayKeys = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-] as const;
-
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
 function isValidTime(value: string) {
   return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
-}
-
-function buildBusinessHours(
-  workingDays: Set<string>,
-  start: string,
-  end: string,
-): Json {
-  return Object.fromEntries(
-    dayKeys.map((day) => [
-      day,
-      { enabled: workingDays.has(day), start, end },
-    ]),
-  );
 }
 
 export async function createOwnerWorkspace(
@@ -60,7 +39,7 @@ export async function createOwnerWorkspace(
     formData
       .getAll("workingDays")
       .map(String)
-      .filter((day) => dayKeys.includes(day as (typeof dayKeys)[number])),
+      .filter((day) => DAY_KEYS.includes(day)),
   );
 
   if (businessName.length < 2 || businessName.length > 120) {
@@ -108,7 +87,16 @@ export async function createOwnerWorkspace(
       p_base_city: city,
       p_base_postal_code: postalCode,
       p_base_state: state,
-      p_business_hours: buildBusinessHours(workingDays, startTime, endTime),
+      // One start and finish across every day picked, which is all this step
+      // asks for. The shape itself is `business-hours.ts`'s business, so the
+      // day-name keys the booking SQL reads are defined in exactly one place.
+      p_business_hours: buildBusinessHours(
+        WEEKDAYS.filter((day) => workingDays.has(dayKeyFor(day.value))).map((day) => ({
+          weekday: day.value,
+          start: startTime,
+          end: endTime,
+        })),
+      ) as Json,
       p_business_name: businessName,
       p_owner_display_name: ownerName,
       p_phone: phone,
