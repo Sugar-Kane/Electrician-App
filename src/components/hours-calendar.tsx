@@ -3,6 +3,9 @@
 import { useActionState, useState } from "react";
 import { CalendarOff, ChevronLeft, ChevronRight, LoaderCircle, TriangleAlert } from "lucide-react";
 
+import { DateHoursEditor } from "@/components/date-hours-editor";
+import { hoursOn, isDated, type DateHours } from "@/lib/date-hours";
+
 import type { ElectricianState } from "@/app/technicians/actions";
 import { CALENDAR_CELL, CALENDAR_ROW } from "@/components/ui/calendar-grid";
 import { TimeField } from "@/components/ui/time-field";
@@ -80,8 +83,10 @@ export function HoursCalendar({
   subject,
   technicianId,
   hours,
+  dateHours,
   blackouts,
   businessHours,
+  businessDateHours,
   timeZone,
 }: {
   /** Passed in, not imported, so one calendar serves a person and the business. */
@@ -90,6 +95,8 @@ export function HoursCalendar({
   /** Omitted when the subject is the business, which has nobody to name. */
   technicianId?: string;
   hours: DayHours[];
+  /** Days set on their own, which answer ahead of the weekly pattern. */
+  dateHours: DateHours[];
   /** Drawn, never edited here. Time off is its own tab. */
   blackouts: TechnicianBlackout[];
   /**
@@ -98,6 +105,8 @@ export function HoursCalendar({
    * until now nothing on this screen said so.
    */
   businessHours?: DayHours[];
+  /** And the days it set its own hours for, which beat the usual week. */
+  businessDateHours?: DateHours[];
   timeZone: string;
 }) {
   const [state, submit, saving] = useActionState(action, initialState);
@@ -115,6 +124,19 @@ export function HoursCalendar({
     () => new Map(hours.map((entry) => [entry.weekday, { start: entry.start, end: entry.end }])),
   );
   const [showPerDay, setShowPerDay] = useState(false);
+
+  /*
+   * Which question a tap is answering.
+   *
+   * "Every week" is what this calendar has always done — the month is the
+   * picture and the weekday is the control. But a week that differs from the
+   * last one cannot be said that way at all, so the same grid answers a second
+   * question when asked: what about this one day. Two modes rather than a menu
+   * on every tap, because the weekly case is the common one by a mile and
+   * putting a choice in front of it would tax the wrong path.
+   */
+  const [mode, setMode] = useState<"week" | "date">("week");
+  const [openDate, setOpenDate] = useState("");
 
   const selected = [...pattern.keys()].sort((a, b) => a - b);
 
@@ -174,14 +196,23 @@ export function HoursCalendar({
     blackouts.map((blackout) => blackout.startsAt.slice(0, 10)).filter(Boolean),
   );
 
-  // Only meaningful on an electrician's calendar. The business's own calendar is
-  // what defines these days, so shading itself would be circular.
-  const openWeekdays = businessHours ? new Set(businessHours.map((day) => day.weekday)) : null;
-  const isShut = (weekday: number) => openWeekdays !== null && !openWeekdays.has(weekday);
+  /*
+   * Only meaningful on an electrician's calendar. The business's own calendar is
+   * what defines these days, so shading itself would be circular.
+   *
+   * Asked per date, not per weekday, because the business can open a single
+   * Saturday too — and it does exactly that when somebody is given a shift on a
+   * day the shop is normally shut. Reading the weekday alone would keep drawing
+   * that Saturday as closed after it had been opened.
+   */
+  const isShutOn = (iso: string) =>
+    businessHours !== undefined && hoursOn(iso, businessHours, businessDateHours ?? []) === null;
 
   // Named only when it actually costs something. Saturday being shut is not
   // news; setting somebody to work a Saturday that is shut is.
-  const wasted = selected.filter(isShut);
+  const wasted = selected.filter(
+    (weekday) => businessHours !== undefined && !businessHours.some((day) => day.weekday === weekday),
+  );
 
   /*
    * Flush to the inside of the card on a phone. `-mx-4` cancels the card's own
@@ -197,7 +228,8 @@ export function HoursCalendar({
    * nobody could see the last column was being clipped.
    */
   return (
-    <form action={submit} className="-mx-4 mt-3 rounded-control border border-line p-1 sm:mx-0 sm:p-3">
+    <div className="-mx-4 mt-3 rounded-control border border-line p-1 sm:mx-0 sm:p-3">
+      <form action={submit}>
       {technicianId ? <input type="hidden" name="technicianId" value={technicianId} /> : null}
       {/*
         The whole pattern, in the fields the action has always read. Rendering
@@ -214,6 +246,33 @@ export function HoursCalendar({
           </span>
         ) : null;
       })}
+
+      {/*
+        What a tap means. Named after the question rather than the mechanism:
+        "every week" and "just one day" are how somebody describes the two
+        things they came here to do.
+      */}
+      <div className="mb-2 grid grid-cols-2 gap-1 rounded-control bg-sunken p-1">
+        {([
+          ["week", "Every week"],
+          ["date", "Just one day"],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => {
+              setMode(value);
+              setOpenDate("");
+            }}
+            aria-pressed={mode === value}
+            className={`tap-target min-h-11 rounded-chip px-2 text-xs font-semibold ${
+              mode === value ? "bg-brand text-on-brand" : "text-ink-muted"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex items-center justify-between gap-2">
         <button
@@ -257,7 +316,11 @@ export function HoursCalendar({
             */
             className={`grid min-h-11 min-w-0 place-items-center rounded-control text-[11px] font-bold uppercase tracking-wide ${
               pattern.has(day.value) ? "bg-brand/20 text-brand" : "text-ink-faint"
-            } ${isShut(day.value) ? "opacity-60" : ""}`}
+            } ${
+              businessHours !== undefined && !businessHours.some((open) => open.weekday === day.value)
+                ? "opacity-60"
+                : ""
+            }`}
           >
             {day.short.slice(0, 1)}
           </button>
@@ -266,9 +329,12 @@ export function HoursCalendar({
 
       <div className={`mt-1 ${CALENDAR_ROW}`}>
         {weeks.flat().map((cell) => {
-          const working = pattern.has(cell.weekday);
+          const onItsOwn = isDated(cell.iso, dateHours);
+          // A dated day answers for itself, so the grid has to show what that
+          // day actually is rather than what its weekday would have been.
+          const working = onItsOwn || pattern.has(cell.weekday);
           const blocked = blockedDates.has(cell.iso);
-          const shut = isShut(cell.weekday);
+          const shut = isShutOn(cell.iso);
 
           /*
            * Four states, and the pair that matters is a day set on a weekday the
@@ -289,8 +355,10 @@ export function HoursCalendar({
             <button
               key={cell.iso}
               type="button"
-              onClick={() => toggleWeekday(cell.weekday)}
-              aria-pressed={working}
+              onClick={() =>
+                mode === "week" ? toggleWeekday(cell.weekday) : setOpenDate(cell.iso)
+              }
+              aria-pressed={mode === "week" ? working : cell.iso === openDate}
               aria-label={`${WEEKDAYS[cell.weekday]?.label}s, ${working ? copy.on : copy.off}${
                 shut ? ", the business is closed" : ""
               }${blocked ? `, ${copy.timeOff} on ${dateLabel(cell.iso)}` : ""}`}
@@ -314,6 +382,14 @@ export function HoursCalendar({
               } ${cell.iso === today ? "ring-2 ring-info ring-offset-1 ring-offset-surface" : ""}`}
             >
               {cell.day}
+              {onItsOwn ? (
+                <span
+                  className={`absolute left-1 top-1 h-1.5 w-1.5 rounded-full ${
+                    working && !shut ? "bg-on-brand" : "bg-brand"
+                  }`}
+                  aria-hidden
+                />
+              ) : null}
               {/*
                 Time off, shown and not touchable. A calendar that showed
                 somebody working on a day they are booked off would be lying;
@@ -340,11 +416,19 @@ export function HoursCalendar({
       </div>
 
       <p className="mt-2 text-xs leading-5 text-ink-muted">
-        {copy.prompt}{" "}
+        {mode === "date" ? "Tap a day to set that day on its own. " : `${copy.prompt} `}
         {selected.length === 0 && subject === "business"
           ? "Closed every day."
           : describeWeek(selected.map((weekday) => ({ weekday, ...pattern.get(weekday)! })))}
       </p>
+
+      {dateHours.length > 0 ? (
+        <p className="mt-1 flex items-center gap-1 text-xs text-ink-faint">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
+          {dateHours.length} {dateHours.length === 1 ? "day is" : "days are"} set on their own,
+          ahead of the usual week.
+        </p>
+      ) : null}
 
       {blackouts.length > 0 ? (
         <p className="mt-1 flex items-center gap-1 text-xs text-ink-faint">
@@ -463,8 +547,23 @@ export function HoursCalendar({
         className="tap-target mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
       >
         {saving ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-        {saving ? "Saving…" : "Save hours"}
-      </button>
-    </form>
+          {saving ? "Saving…" : "Save hours"}
+        </button>
+      </form>
+
+      {/*
+        Outside the weekly form on purpose: this one posts a single date to a
+        different action, and a form inside a form is not something HTML has.
+      */}
+      {mode === "date" && openDate ? (
+        <DateHoursEditor
+          technicianId={technicianId}
+          date={openDate}
+          pattern={selected.map((weekday) => ({ weekday, ...pattern.get(weekday)! }))}
+          dated={dateHours}
+          subject={subject}
+        />
+      ) : null}
+    </div>
   );
 }

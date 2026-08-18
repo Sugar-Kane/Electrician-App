@@ -2,10 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 
-import { buildBusinessHours } from "@/lib/business-hours";
+import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
+import { weekdayOfIso } from "@/lib/date-hours";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
-import { describeWeek, parseHourRange, WEEKDAYS, type DayHours } from "@/lib/electrician-hours";
+import {
+  describeWeek,
+  friendlyTime,
+  parseHourRange,
+  WEEKDAYS,
+  type DayHours,
+} from "@/lib/electrician-hours";
 
 /**
  * Who is working, when, and who is not.
@@ -315,6 +322,152 @@ export async function saveBusinessHours(
         ? "Saved. The business is now closed every day."
         : `Open ${describeWeek(week.days)}.`,
   };
+}
+
+/**
+ * The hours for one particular date, whatever the usual week says.
+ *
+ * This is the half `technician_hours` could never express: a week with a
+ * different shape from the last one, or a single Saturday somebody agrees to
+ * work. The row answers for that date completely — it replaces the pattern
+ * rather than adding to it, which is the same rule `private.window_is_staffed`
+ * applies when the booking page works out what is available.
+ */
+export async function saveDateHours(
+  _previous: ElectricianState,
+  formData: FormData,
+): Promise<ElectricianState> {
+  const technicianId = String(formData.get("technicianId") ?? "").trim();
+  const onDate = String(formData.get("onDate") ?? "").trim();
+
+  const context = await ownerContext();
+  if (!context) return { error: "You are not signed in." };
+  if (!context.canManage) return { error: "Only an owner can set hours." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(onDate)) return { error: "Pick a day first." };
+  if (technicianId && !(await ownedTechnician(context, technicianId))) {
+    return { error: "That person is not on your crew." };
+  }
+
+  const parsed = parseHourRange(
+    String(formData.get("start") ?? ""),
+    String(formData.get("end") ?? ""),
+  );
+  if (!parsed.ok) return { error: parsed.error };
+
+  const { error } = await context.supabase.from("technician_date_hours").upsert(
+    {
+      organization_id: context.organizationId,
+      technician_id: technicianId || null,
+      on_date: onDate,
+      starts_at: parsed.start,
+      ends_at: parsed.end,
+    },
+    { onConflict: technicianId ? "organization_id,technician_id,on_date" : "organization_id,on_date" },
+  );
+
+  if (error) {
+    console.error("electricians: could not set the hours for a date", error);
+    return { error: "Those hours could not be saved. Try again." };
+  }
+
+  /*
+   * A day for one person on a day the shop is shut sells nothing.
+   *
+   * The business's hours outrank everybody's — that is what stops one person
+   * accidentally opening on Christmas — so setting Nick to work a Saturday
+   * while Saturday is closed produces exactly zero bookable slots. Measured,
+   * not assumed: the same fixture gave 0 slots with only the personal row and 1
+   * with both.
+   *
+   * So the business is opened for that date too, and the notice says so. Doing
+   * it silently would be worse than not doing it: the owner would never learn
+   * that the shop is now open that day.
+   */
+  let alsoOpened = false;
+  if (technicianId) {
+    const [{ data: settings }, { data: existing }] = await Promise.all([
+      context.supabase
+        .from("service_settings")
+        .select("business_hours")
+        .eq("organization_id", context.organizationId)
+        .maybeSingle(),
+      context.supabase
+        .from("technician_date_hours")
+        .select("id")
+        .eq("organization_id", context.organizationId)
+        .is("technician_id", null)
+        .eq("on_date", onDate)
+        .maybeSingle(),
+    ]);
+
+    const open = parseBusinessHours(settings?.business_hours);
+    const weekday = weekdayOfIso(onDate);
+    const usual = open.find((day) => day.weekday === weekday);
+    const coversIt = usual && usual.start <= parsed.start && usual.end >= parsed.end;
+
+    if (!existing?.id && !coversIt) {
+      const { error: openError } = await context.supabase.from("technician_date_hours").insert({
+        organization_id: context.organizationId,
+        technician_id: null,
+        on_date: onDate,
+        starts_at: parsed.start,
+        ends_at: parsed.end,
+      });
+
+      if (openError) {
+        console.error("electricians: could not open the business for a date", openError);
+        return {
+          error: "Those hours were saved, but the business is still closed that day. Open it under Business hours.",
+        };
+      }
+      alsoOpened = true;
+    }
+  }
+
+  revalidatePath("/technicians");
+
+  return {
+    error: "",
+    notice: alsoOpened
+      ? `Saved. The business is now open that day, ${friendlyTime(parsed.start)}–${friendlyTime(parsed.end)}.`
+      : `Saved for that day, ${friendlyTime(parsed.start)}–${friendlyTime(parsed.end)}.`,
+  };
+}
+
+/** Hand a date back to the usual week. */
+export async function clearDateHours(
+  _previous: ElectricianState,
+  formData: FormData,
+): Promise<ElectricianState> {
+  const technicianId = String(formData.get("technicianId") ?? "").trim();
+  const onDate = String(formData.get("onDate") ?? "").trim();
+
+  const context = await ownerContext();
+  if (!context) return { error: "You are not signed in." };
+  if (!context.canManage) return { error: "Only an owner can set hours." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(onDate)) return { error: "That day could not be read." };
+
+  // The business row it may have created is left alone. Opening the shop for a
+  // Saturday is its own decision, and quietly closing it again because one
+  // person's shift was removed would surprise anybody else who had been given
+  // that day.
+  const query = context.supabase
+    .from("technician_date_hours")
+    .delete()
+    .eq("organization_id", context.organizationId)
+    .eq("on_date", onDate);
+
+  const { error } = technicianId
+    ? await query.eq("technician_id", technicianId)
+    : await query.is("technician_id", null);
+
+  if (error) {
+    console.error("electricians: could not clear the hours for a date", error);
+    return { error: "That day could not be reset. Try again." };
+  }
+
+  revalidatePath("/technicians");
+  return { error: "", notice: "Back to the usual week for that day." };
 }
 
 /**

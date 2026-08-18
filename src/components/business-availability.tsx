@@ -6,6 +6,7 @@ import { CalendarOff, ChevronDown, Clock, Store } from "lucide-react";
 import { saveBusinessHours } from "@/app/technicians/actions";
 import { BlackoutManager } from "@/components/blackout-manager";
 import { HoursCalendar } from "@/components/hours-calendar";
+import type { DateHours } from "@/lib/date-hours";
 import { describeWeek, type DayHours } from "@/lib/electrician-hours";
 import type { TechnicianBlackout } from "@/lib/job-data";
 
@@ -29,10 +30,13 @@ import type { TechnicianBlackout } from "@/lib/job-data";
 
 export function BusinessAvailability({
   hours,
+  dateHours,
   closures,
   timeZone,
 }: {
   hours: DayHours[];
+  /** Days the business set its own hours for, whatever the usual week says. */
+  dateHours: DateHours[];
   closures: TechnicianBlackout[];
   timeZone: string;
 }) {
@@ -107,6 +111,7 @@ export function BusinessAvailability({
               action={saveBusinessHours}
               subject="business"
               hours={hours}
+              dateHours={dateHours}
               blackouts={closures}
               timeZone={timeZone}
             />
