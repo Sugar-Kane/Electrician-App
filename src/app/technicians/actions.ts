@@ -325,7 +325,24 @@ export async function saveBusinessHours(
 }
 
 /**
- * The hours for one particular date, whatever the usual week says.
+ * The dates a form is talking about.
+ *
+ * Deduplicated and sorted, and anything that is not a date is dropped rather
+ * than passed to the database to be rejected there — the upsert would fail as a
+ * whole, so one bad value would lose the good ones with it.
+ */
+function readDates(formData: FormData): string[] {
+  const seen = new Set(
+    formData
+      .getAll("onDate")
+      .map((value) => String(value).trim())
+      .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value)),
+  );
+  return [...seen].sort();
+}
+
+/**
+ * The hours for one or more particular dates, whatever the usual week says.
  *
  * This is the half `technician_hours` could never express: a week with a
  * different shape from the last one, or a single Saturday somebody agrees to
@@ -338,12 +355,15 @@ export async function saveDateHours(
   formData: FormData,
 ): Promise<ElectricianState> {
   const technicianId = String(formData.get("technicianId") ?? "").trim();
-  const onDate = String(formData.get("onDate") ?? "").trim();
+  // Repeated, not one value: the calendar lets somebody choose a handful of
+  // days and give them all the same hours in one go, which is the whole reason
+  // a week with a different shape is now sayable at all.
+  const dates = readDates(formData);
 
   const context = await ownerContext();
   if (!context) return { error: "You are not signed in." };
   if (!context.canManage) return { error: "Only an owner can set hours." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(onDate)) return { error: "Pick a day first." };
+  if (dates.length === 0) return { error: "Choose at least one day first." };
   if (technicianId && !(await ownedTechnician(context, technicianId))) {
     return { error: "That person is not on your crew." };
   }
@@ -355,13 +375,13 @@ export async function saveDateHours(
   if (!parsed.ok) return { error: parsed.error };
 
   const { error } = await context.supabase.from("technician_date_hours").upsert(
-    {
+    dates.map((onDate) => ({
       organization_id: context.organizationId,
       technician_id: technicianId || null,
       on_date: onDate,
       starts_at: parsed.start,
       ends_at: parsed.end,
-    },
+    })),
     { onConflict: technicianId ? "organization_id,technician_id,on_date" : "organization_id,on_date" },
   );
 
@@ -379,13 +399,13 @@ export async function saveDateHours(
    * not assumed: the same fixture gave 0 slots with only the personal row and 1
    * with both.
    *
-   * So the business is opened for that date too, and the notice says so. Doing
-   * it silently would be worse than not doing it: the owner would never learn
-   * that the shop is now open that day.
+   * So the business is opened for those dates too, and the notice says so.
+   * Doing it silently would be worse than not doing it: the owner would never
+   * learn that the shop is now open those days.
    */
-  let alsoOpened = false;
+  const opened: string[] = [];
   if (technicianId) {
-    const [{ data: settings }, { data: existing }] = await Promise.all([
+    const [{ data: settings }, { data: already }] = await Promise.all([
       context.supabase
         .from("service_settings")
         .select("business_hours")
@@ -393,69 +413,82 @@ export async function saveDateHours(
         .maybeSingle(),
       context.supabase
         .from("technician_date_hours")
-        .select("id")
+        .select("on_date")
         .eq("organization_id", context.organizationId)
         .is("technician_id", null)
-        .eq("on_date", onDate)
-        .maybeSingle(),
+        .in("on_date", dates),
     ]);
 
     const open = parseBusinessHours(settings?.business_hours);
-    const weekday = weekdayOfIso(onDate);
-    const usual = open.find((day) => day.weekday === weekday);
-    const coversIt = usual && usual.start <= parsed.start && usual.end >= parsed.end;
+    const hasOwnRow = new Set(
+      ((already ?? []) as Record<string, unknown>[]).map((row) =>
+        String(row.on_date ?? "").slice(0, 10),
+      ),
+    );
 
-    if (!existing?.id && !coversIt) {
-      const { error: openError } = await context.supabase.from("technician_date_hours").insert({
-        organization_id: context.organizationId,
-        technician_id: null,
-        on_date: onDate,
-        starts_at: parsed.start,
-        ends_at: parsed.end,
-      });
+    const needed = dates.filter((onDate) => {
+      if (hasOwnRow.has(onDate)) return false;
+      const usual = open.find((day) => day.weekday === weekdayOfIso(onDate));
+      return !(usual && usual.start <= parsed.start && usual.end >= parsed.end);
+    });
+
+    if (needed.length > 0) {
+      const { error: openError } = await context.supabase.from("technician_date_hours").insert(
+        needed.map((onDate) => ({
+          organization_id: context.organizationId,
+          technician_id: null,
+          on_date: onDate,
+          starts_at: parsed.start,
+          ends_at: parsed.end,
+        })),
+      );
 
       if (openError) {
         console.error("electricians: could not open the business for a date", openError);
         return {
-          error: "Those hours were saved, but the business is still closed that day. Open it under Business hours.",
+          error:
+            "Those hours were saved, but the business is still closed on some of those days. Open them under Business hours.",
         };
       }
-      alsoOpened = true;
+      opened.push(...needed);
     }
   }
 
   revalidatePath("/technicians");
 
+  const span = `${friendlyTime(parsed.start)}–${friendlyTime(parsed.end)}`;
+  const many = `${dates.length} ${dates.length === 1 ? "day" : "days"}`;
+
   return {
     error: "",
-    notice: alsoOpened
-      ? `Saved. The business is now open that day, ${friendlyTime(parsed.start)}–${friendlyTime(parsed.end)}.`
-      : `Saved for that day, ${friendlyTime(parsed.start)}–${friendlyTime(parsed.end)}.`,
+    notice:
+      opened.length > 0
+        ? `Saved ${many}, ${span}. The business is now open on ${opened.length} of them.`
+        : `Saved ${many}, ${span}.`,
   };
 }
 
-/** Hand a date back to the usual week. */
+/** Hand some dates back to the usual week. */
 export async function clearDateHours(
   _previous: ElectricianState,
   formData: FormData,
 ): Promise<ElectricianState> {
   const technicianId = String(formData.get("technicianId") ?? "").trim();
-  const onDate = String(formData.get("onDate") ?? "").trim();
+  const dates = readDates(formData);
 
   const context = await ownerContext();
   if (!context) return { error: "You are not signed in." };
   if (!context.canManage) return { error: "Only an owner can set hours." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(onDate)) return { error: "That day could not be read." };
+  if (dates.length === 0) return { error: "Those days could not be read." };
 
-  // The business row it may have created is left alone. Opening the shop for a
-  // Saturday is its own decision, and quietly closing it again because one
-  // person's shift was removed would surprise anybody else who had been given
-  // that day.
+  // The business rows these may have created are left alone. Opening the shop
+  // for a Saturday is its own decision, and quietly closing it again because
+  // one person's shift was removed would surprise anybody else given that day.
   const query = context.supabase
     .from("technician_date_hours")
     .delete()
     .eq("organization_id", context.organizationId)
-    .eq("on_date", onDate);
+    .in("on_date", dates);
 
   const { error } = technicianId
     ? await query.eq("technician_id", technicianId)
@@ -463,11 +496,14 @@ export async function clearDateHours(
 
   if (error) {
     console.error("electricians: could not clear the hours for a date", error);
-    return { error: "That day could not be reset. Try again." };
+    return { error: "Those days could not be reset. Try again." };
   }
 
   revalidatePath("/technicians");
-  return { error: "", notice: "Back to the usual week for that day." };
+  return {
+    error: "",
+    notice: `Back to the usual week for ${dates.length} ${dates.length === 1 ? "day" : "days"}.`,
+  };
 }
 
 /**
