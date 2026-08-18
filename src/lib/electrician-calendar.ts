@@ -104,6 +104,79 @@ export function monthGrid(year: number, month: number): CalendarCell[][] {
   return weeks;
 }
 
+/** A `CalendarCell` for a YYYY-MM-DD, or null if that is not a date. */
+function cellFor(iso: string): CalendarCell | null {
+  const at = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(at.getTime())) return null;
+
+  return {
+    iso: at.toISOString().slice(0, 10),
+    day: at.getUTCDate(),
+    weekday: at.getUTCDay(),
+    // A week has no out-of-month padding: every day in it is a day of the week
+    // being looked at. `inMonth` drives a 35% dimming, and dimming a week
+    // because it happens to cross into September would be nonsense.
+    inMonth: true,
+  };
+}
+
+/**
+ * The week containing a date, Sunday first.
+ *
+ * Seven cells, and column *n* is weekday *n* — the same guarantee `monthGrid`
+ * makes, and for the same reason: the grid's columns are how somebody reads
+ * which day they are tapping.
+ */
+export function weekGrid(iso: string): CalendarCell[] {
+  const start = cellFor(iso);
+  if (!start) return [];
+
+  const sunday = new Date(`${start.iso}T00:00:00Z`);
+  sunday.setUTCDate(sunday.getUTCDate() - start.weekday);
+
+  const week: CalendarCell[] = [];
+  for (let index = 0; index < 7; index += 1) {
+    const at = new Date(sunday);
+    at.setUTCDate(sunday.getUTCDate() + index);
+    week.push(cellFor(at.toISOString().slice(0, 10))!);
+  }
+
+  return week;
+}
+
+/** The same weekday `delta` weeks away. */
+export function shiftWeek(iso: string, delta: number): string {
+  const at = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(at.getTime())) return iso;
+
+  at.setUTCDate(at.getUTCDate() + delta * 7);
+  return at.toISOString().slice(0, 10);
+}
+
+/**
+ * "17–23 August", and the two shapes that are not that.
+ *
+ * A week is the only span on this screen that routinely crosses a month and
+ * occasionally a year, and reading "29–4 December" would be worse than useless.
+ */
+export function weekLabel(iso: string): string {
+  const week = weekGrid(iso);
+  const first = week[0];
+  const last = week[6];
+  if (!first || !last) return "";
+
+  const month = (cell: CalendarCell) => MONTH_NAMES[Number(cell.iso.slice(5, 7)) - 1] ?? "";
+  const year = (cell: CalendarCell) => cell.iso.slice(0, 4);
+
+  if (year(first) !== year(last)) {
+    return `${first.day} ${month(first)} ${year(first)} – ${last.day} ${month(last)} ${year(last)}`;
+  }
+  if (month(first) !== month(last)) {
+    return `${first.day} ${month(first)} – ${last.day} ${month(last)}`;
+  }
+  return `${first.day}–${last.day} ${month(first)}`;
+}
+
 /** The month `delta` months away, wrapping the year. */
 export function shiftMonth(
   year: number,
@@ -140,6 +213,43 @@ export function dateLabel(iso: string): string {
   if (!name || !day) return iso;
 
   return `${name} ${Number(day)}`;
+}
+
+/**
+ * "25, 27 and 29 August" — a handful of chosen days, read back.
+ *
+ * Day-first and the month said once, which is how somebody says a list of dates
+ * out loud and half the width of "August 25, August 27, August 29" on a phone.
+ * Two shapes it has to get right rather than nearly right: a selection that
+ * crosses a month has to name both months, or "29 and 2 August" is simply
+ * false; and a long selection is capped, because a fortnight of chosen days
+ * would push the hours fields it is labelling off the bottom of the screen.
+ */
+export function listDates(dates: string[], limit = 6): string {
+  const sorted = dates.filter((iso) => /^\d{4}-\d{2}-\d{2}$/.test(iso)).sort();
+  if (sorted.length === 0) return "";
+  if (sorted.length === 1) return dateLabel(sorted[0]!);
+
+  const shown = sorted.slice(0, limit);
+  const rest = sorted.length - shown.length;
+
+  const day = (iso: string) => Number(iso.slice(8, 10));
+  const month = (iso: string) => MONTH_NAMES[Number(iso.slice(5, 7)) - 1] ?? "";
+  // Only over what is shown: the ones behind "and 3 more" are not named, so
+  // whichever month they fall in cannot make the visible part wrong.
+  const oneMonth = shown.every((iso) => iso.slice(0, 7) === shown[0]!.slice(0, 7));
+
+  const parts = shown.map((iso) => (oneMonth ? `${day(iso)}` : `${day(iso)} ${month(iso)}`));
+
+  // "and" only when the list is finished. "25, 27 and 29 August and 3 more"
+  // reads as though the 29th were the last of them.
+  const joined =
+    rest > 0
+      ? parts.join(", ")
+      : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+
+  const body = oneMonth ? `${joined} ${month(shown[0]!)}` : joined;
+  return rest > 0 ? `${body} and ${rest} more` : body;
 }
 
 /** Today where the business is, as YYYY-MM-DD. */

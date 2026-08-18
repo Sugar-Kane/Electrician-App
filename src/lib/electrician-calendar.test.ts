@@ -3,10 +3,14 @@ import assert from "node:assert/strict";
 
 import {
   dateLabel,
+  listDates,
   monthGrid,
   monthLabel,
   shiftMonth,
+  shiftWeek,
   weekdayOf,
+  weekGrid,
+  weekLabel,
 } from "./electrician-calendar.ts";
 
 test("every column is its own weekday, in every month", () => {
@@ -97,4 +101,90 @@ test("a date is spoken without an ordinal", () => {
   // Nonsense in, the input back out — never "undefined NaN" in somebody's ear.
   assert.equal(dateLabel(""), "");
   assert.equal(dateLabel("not-a-date"), "not-a-date");
+});
+
+test("a week is seven days, and every column is its own weekday", () => {
+  // The same guarantee monthGrid makes, and the same reason: the column is how
+  // somebody reads which day they are tapping.
+  for (const iso of ["2026-08-17", "2026-08-22", "2026-08-23", "2026-02-29", "2027-01-01"]) {
+    const week = weekGrid(iso);
+    assert.equal(week.length, 7, iso);
+    week.forEach((cell, column) => {
+      assert.equal(cell.weekday, column, `${iso} → ${cell.iso}`);
+    });
+  }
+});
+
+test("a week starts on the Sunday and contains the date asked for", () => {
+  // 2026-08-17 is a Monday, so its week runs from Sunday the 16th.
+  const week = weekGrid("2026-08-17");
+  assert.equal(week[0]?.iso, "2026-08-16");
+  assert.equal(week[6]?.iso, "2026-08-22");
+  assert.ok(week.some((cell) => cell.iso === "2026-08-17"));
+
+  // A Sunday is the start of its own week, not the end of the previous one.
+  assert.equal(weekGrid("2026-08-16")[0]?.iso, "2026-08-16");
+});
+
+test("a week crossing a month keeps real dates on both sides", () => {
+  const week = weekGrid("2026-09-02");
+  assert.equal(week[0]?.iso, "2026-08-30");
+  assert.equal(week[6]?.iso, "2026-09-05");
+  // No padding in a week, so nothing is dimmed for being in the other month.
+  assert.equal(week.every((cell) => cell.inMonth), true);
+});
+
+test("weeks shift in both directions and across a year", () => {
+  assert.equal(shiftWeek("2026-08-17", 1), "2026-08-24");
+  assert.equal(shiftWeek("2026-08-17", -1), "2026-08-10");
+  assert.equal(shiftWeek("2026-08-17", 0), "2026-08-17");
+  assert.equal(shiftWeek("2026-12-29", 1), "2027-01-05");
+  assert.equal(shiftWeek("2027-01-05", -1), "2026-12-29");
+  assert.equal(shiftWeek("nonsense", 1), "nonsense");
+});
+
+test("a week reads the way somebody says it", () => {
+  assert.equal(weekLabel("2026-08-17"), "16–22 August");
+  // Crossing a month has to name both, or "30–5 September" is a lie.
+  assert.equal(weekLabel("2026-09-02"), "30 August – 5 September");
+  // And crossing a year has to name both years.
+  assert.equal(weekLabel("2026-12-31"), "27 December 2026 – 2 January 2027");
+  assert.equal(weekLabel("nonsense"), "");
+});
+
+test("a handful of chosen days reads as a list", () => {
+  assert.equal(listDates([]), "");
+  assert.equal(listDates(["2026-08-25"]), "August 25");
+  assert.equal(listDates(["2026-08-25", "2026-08-27", "2026-08-29"]), "25, 27 and 29 August");
+  // Tapped in whatever order they were tapped in, read back in date order.
+  assert.equal(listDates(["2026-08-29", "2026-08-25"]), "25 and 29 August");
+});
+
+test("a list crossing a month names both months", () => {
+  // "29 and 2 August" would be a plain lie about the second date.
+  assert.equal(listDates(["2026-08-29", "2026-09-02"]), "29 August and 2 September");
+  assert.equal(
+    listDates(["2026-12-30", "2027-01-02"]),
+    "30 December and 2 January",
+  );
+});
+
+test("a long list is capped rather than pushing the fields off the screen", () => {
+  const nine = Array.from({ length: 9 }, (_, index) => `2026-08-0${index + 1}`);
+  assert.equal(listDates(nine), "1, 2, 3, 4, 5, 6 August and 3 more");
+  assert.equal(listDates(nine, 2), "1, 2 August and 7 more");
+  // Exactly on the limit is a finished list, so it keeps its "and".
+  assert.equal(listDates(nine.slice(0, 3), 3), "1, 2 and 3 August");
+});
+
+test("nonsense in a list is dropped, never rendered", () => {
+  assert.equal(listDates(["not-a-date"]), "");
+  assert.equal(listDates(["not-a-date", "2026-08-25"]), "August 25");
+});
+
+test("a week survives a leap day", () => {
+  const week = weekGrid("2024-02-29");
+  assert.equal(week.length, 7);
+  assert.ok(week.some((cell) => cell.iso === "2024-02-29"));
+  assert.equal(week[0]?.iso, "2024-02-25");
 });
