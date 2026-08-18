@@ -29,6 +29,7 @@ export default async function ElectriciansPage() {
     selfIsElectrician,
     businessBlackouts,
     businessHours,
+    businessDateHours,
     timeZone,
   } = await getTechnicianWorkloads();
 
@@ -61,6 +62,7 @@ export default async function ElectriciansPage() {
         {canManage ? (
           <BusinessAvailability
             hours={businessHours}
+            dateHours={businessDateHours}
             closures={businessBlackouts}
             timeZone={timeZone}
           />
@@ -72,6 +74,7 @@ export default async function ElectriciansPage() {
             electrician={electrician}
             canManage={canManage}
             businessHours={businessHours}
+            businessDateHours={businessDateHours}
             timeZone={timeZone}
           />
         ))}

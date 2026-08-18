@@ -19,6 +19,7 @@ import {
 } from "@/app/technicians/actions";
 import { BlackoutManager } from "@/components/blackout-manager";
 import { HoursCalendar } from "@/components/hours-calendar";
+import type { DateHours } from "@/lib/date-hours";
 import { describeWeek, type DayHours } from "@/lib/electrician-hours";
 import type { TechnicianWorkload } from "@/lib/job-data";
 
@@ -89,12 +90,15 @@ export function ElectricianCard({
   electrician,
   canManage,
   businessHours,
+  businessDateHours,
   timeZone,
 }: {
   electrician: TechnicianWorkload;
   canManage: boolean;
   /** So the calendar can admit when a day it is offering is a day the shop is shut. */
   businessHours: DayHours[];
+  /** And the days it set its own hours for, which beat the usual week. */
+  businessDateHours: DateHours[];
   /** The business's clock, so "today" is ringed on the right date. */
   timeZone: string;
 }) {
@@ -220,8 +224,10 @@ export function ElectricianCard({
               subject="electrician"
               technicianId={electrician.id}
               hours={electrician.hours}
+              dateHours={electrician.dateHours}
               blackouts={electrician.blackouts}
               businessHours={businessHours}
+              businessDateHours={businessDateHours}
               timeZone={timeZone}
             />
           ) : null}

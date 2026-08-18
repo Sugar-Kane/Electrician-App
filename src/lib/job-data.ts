@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
+import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
 import type { DayHours } from "@/lib/electrician-hours";
@@ -364,6 +365,8 @@ export type TechnicianWorkload = {
   /** True when this row is the signed-in user's own. */
   isMe: boolean;
   hours: { weekday: number; start: string; end: string }[];
+  /** Days set on their own, which answer ahead of the weekly pattern. */
+  dateHours: DateHours[];
   blackouts: TechnicianBlackout[];
   jobs: { id: string; customer: string; time: string; status: JobStatus; city: string }[];
 };
@@ -382,6 +385,8 @@ export type CrewRoster = {
    * closed day is skipped before any electrician's hours are looked at.
    */
   businessHours: DayHours[];
+  /** Days the business set its own hours for, whatever the usual week says. */
+  businessDateHours: DateHours[];
   /** The business's own clock, which every date on this screen is read in. */
   timeZone: string;
 };
@@ -411,6 +416,7 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
       // business open" only if the answer is none, and rendering the signed-out
       // view as a permanently shut business would be a lie about nobody.
       businessHours: defaultBusinessHours(),
+      businessDateHours: [],
       timeZone: DEFAULT_TIMEZONE,
     };
   }
@@ -425,6 +431,7 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
     { data: hourRows },
     { data: blackoutRows },
     { data: settings },
+    { data: dateHourRows },
   ] = await Promise.all([
       context.database
         .from("technicians")
@@ -453,9 +460,41 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
         .select("business_hours")
         .eq("organization_id", context.organizationId)
         .maybeSingle(),
+      context.database
+        .from("technician_date_hours")
+        .select("technician_id, on_date, starts_at, ends_at")
+        .eq("organization_id", context.organizationId)
+        // Last month's one-off Saturday cannot be acted on and only makes the
+        // list longer, the same reason yesterday's day off is left out above.
+        .gte("on_date", todayInZone(context.timeZone))
+        .order("on_date", { ascending: true }),
     ]);
 
   const today = todayInZone(context.timeZone);
+
+  // Dated hours, split the same way blackouts are: a null technician is the
+  // business saying it is open that day, not a row that lost its owner.
+  const dateHoursByTechnician = new Map<string, DateHours[]>();
+  const businessDateHours: DateHours[] = [];
+
+  for (const row of (dateHourRows ?? []) as Record<string, unknown>[]) {
+    const entry: DateHours = {
+      date: String(row.on_date ?? "").slice(0, 10),
+      // Postgres hands back "08:00:00"; every form and label wants "08:00".
+      start: String(row.starts_at ?? "").slice(0, 5),
+      end: String(row.ends_at ?? "").slice(0, 5),
+    };
+    if (!entry.date) continue;
+
+    if (typeof row.technician_id !== "string" || row.technician_id === "") {
+      businessDateHours.push(entry);
+      continue;
+    }
+
+    const list = dateHoursByTechnician.get(row.technician_id) ?? [];
+    list.push(entry);
+    dateHoursByTechnician.set(row.technician_id, list);
+  }
 
   const hoursByTechnician = new Map<string, { weekday: number; start: string; end: string }[]>();
   for (const row of (hourRows ?? []) as Record<string, unknown>[]) {
@@ -513,6 +552,7 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
         (a, b) => a.weekday - b.weekday || a.start.localeCompare(b.start),
       ),
       blackouts: blackoutsByTechnician.get(id) ?? [],
+      dateHours: dateHoursByTechnician.get(id) ?? [],
       jobs: jobs
         .filter((job) => job.technician === name && job.date === today)
         .map((job) => ({
@@ -534,6 +574,7 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
     selfIsElectrician: technicians.some((technician) => technician.isMe),
     businessBlackouts,
     businessHours: parseBusinessHours(settings?.business_hours),
+    businessDateHours,
     timeZone: context.timeZone,
   };
 }
