@@ -2,7 +2,8 @@ import "server-only";
 
 import { sendBookingConfirmations } from "@/lib/booking-notifications";
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
-import { loadIntakeContext, recordBookingRequest } from "@/lib/intake-shared";
+import { HOLD_MINUTES, heldReply } from "@/lib/booking-hold";
+import { loadIntakeContext, recordBookingRequest, slotLabel } from "@/lib/intake-shared";
 import {
   buildIntakeSystemPrompt,
   decideIntakeAction,
@@ -83,7 +84,7 @@ export async function handleInboundText(input: {
 
     await recordExtractedName(database, input.customerId, action);
 
-    const { requestId, jobId, publicToken } = await recordBookingRequest({
+    const recorded = await recordBookingRequest({
       database,
       organizationId: input.organizationId,
       customerId: input.customerId,
@@ -99,14 +100,38 @@ export async function handleInboundText(input: {
       // sentence.
       intakeAnswers: action.kind === "book" ? action.intakeAnswers : undefined,
       deliveryPreference: action.kind === "book" ? action.deliveryPreference : undefined,
+      // Quoted here so it is frozen against this booking. Without it the fee
+      // was stated in the conversation, agreed to in principle, and recorded
+      // nowhere — which is also why nothing was ever held for payment.
+      depositCents: action.kind === "book" ? context.diagnosticFeeCents : undefined,
     });
+
+    const { requestId, jobId, publicToken } = recorded;
+
+    /*
+     * A held time is not a booked one, and must not be told to the customer as
+     * though it were. The intake composes "booked for Thursday 8-10am"; when
+     * the slot is only reserved until the fee is paid, that sentence is
+     * replaced rather than appended to.
+     */
+    const held =
+      action.kind === "book" && recorded.payUrl && recorded.feeCents
+        ? heldReply({
+            businessName: context.businessName,
+            slotLabel: slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString()),
+            feeCents: recorded.feeCents,
+            payUrl: recorded.payUrl,
+            holdMinutes: HOLD_MINUTES,
+            businessPhone: context.businessPhone,
+          })
+        : "";
 
     await replyToCustomer({
       database,
       organizationId: input.organizationId,
       conversationId: input.conversationId,
       to: input.phone,
-      body: action.reply,
+      body: held || action.reply,
       messagingServiceSid,
     });
 
@@ -134,6 +159,7 @@ export async function handleInboundText(input: {
         intakeAnswers: action.intakeAnswers,
         deliveryPreference: action.deliveryPreference,
         customerAlreadyToldBySms: true,
+        held: Boolean(recorded.payUrl),
       });
     }
 

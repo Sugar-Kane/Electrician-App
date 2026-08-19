@@ -1,8 +1,10 @@
 import "server-only";
 
 import { recordActivity } from "@/lib/activity";
+import { decideHold, payLinkFor } from "@/lib/booking-hold";
 import { calendarDate, nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
+import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
@@ -192,9 +194,16 @@ export async function findOrCreateCustomerByPhone(input: {
 
 export type RecordedRequest = {
   requestId?: string;
+  /** Set when the appointment became a job outright. Absent when it is held. */
   jobId?: string;
   /** The unguessable handle for this booking, safe to put in a message. */
   publicToken?: string;
+  /** Where the customer pays. Set only when the slot is being held. */
+  payUrl?: string;
+  /** When the hold lapses, as an instant. */
+  heldUntil?: string;
+  /** What they owe to confirm it. */
+  feeCents?: number;
 };
 
 /**
@@ -300,6 +309,79 @@ export async function recordBookingRequest(input: {
   }
 
   if (action.kind !== "book" || !requestId) return { requestId, publicToken };
+
+  /*
+   * Held, or booked outright.
+   *
+   * The web booking page has always reserved the slot, taken the fee, and only
+   * then written a job. This path wrote the job immediately — same appointment,
+   * same fee quoted, nothing collected. Now both channels produce a booking in
+   * `awaiting_payment` and both are finished by the same Stripe webhook.
+   *
+   * `decideHold` is the one place that decides which, and its fallback is what
+   * makes this unable to be worse than what it replaced: with no payment
+   * provider there is no link to send, so it books exactly as before.
+   */
+  const decision = decideHold({
+    intent: "book",
+    depositCents: input.depositCents,
+    paymentsAvailable: Boolean(getStripe()),
+  });
+
+  if (decision.kind === "hold") {
+    const payUrl = publicToken
+      ? payLinkFor(process.env.NEXT_PUBLIC_APP_URL ?? "", publicToken)
+      : "";
+
+    if (payUrl) {
+      const heldUntil = new Date(Date.now() + decision.holdMinutes * 60_000).toISOString();
+
+      await input.database
+        .from("booking_requests")
+        .update({ status: "awaiting_payment", expires_at: heldUntil })
+        .eq("id", requestId);
+
+      await recordActivity(input.database, {
+        organizationId: input.organizationId,
+        eventType: "booking.hold_placed",
+        label: "Appointment held, waiting on the diagnostic fee",
+        customerId: input.customerId,
+        bookingRequestId: requestId,
+        metadata: {
+          amount_cents: decision.feeCents,
+          via: input.channel === "phone" ? "voice" : "sms",
+        },
+      });
+
+      return { requestId, publicToken, payUrl, heldUntil, feeCents: decision.feeCents };
+    }
+
+    /*
+     * A fee to collect, a provider to collect it with, and nowhere to send the
+     * customer. Booking it outright is still right — the appointment is real
+     * and they are expecting it — but this is a misconfiguration rather than a
+     * decision, and it is invisible from the outside: the booking just goes
+     * back to being unpaid, exactly as it looked before any of this existed.
+     */
+    console.error(
+      publicToken
+        ? "booking hold skipped: NEXT_PUBLIC_APP_URL is not a usable https origin, so no payment link could be built"
+        : "booking hold skipped: the booking row came back without a public token",
+      { requestId, organizationId: input.organizationId, feeCents: decision.feeCents },
+    );
+  } else if ((input.depositCents ?? 0) > 0) {
+    /*
+     * A fee was quoted to this customer and nothing will be collected before
+     * the visit. Expected where payments are not configured at all, which is
+     * why it is the deliberate fallback — but a business that thinks it is
+     * taking deposits should be able to find out that it is not.
+     */
+    console.warn(`booking hold skipped: ${decision.because}`, {
+      requestId,
+      organizationId: input.organizationId,
+      depositCents: input.depositCents,
+    });
+  }
 
   const { data: scheduled } = await input.database.rpc("schedule_sms_booking_request", {
     p_request_id: requestId,

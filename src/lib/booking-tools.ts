@@ -154,6 +154,7 @@ export async function runBookingTool(input: {
       deliveryPreference: preference || "text",
       jobId: recorded.jobId,
       owner,
+      held: Boolean(recorded.payUrl),
     });
   }
 
@@ -163,5 +164,6 @@ export async function runBookingTool(input: {
     context,
     phone,
     deliveryPreference: preference,
+    held: Boolean(recorded.payUrl),
   });
 }

@@ -69,6 +69,13 @@ export type BookingNotification = {
    * heard nothing.
    */
   customerAlreadyToldBySms?: boolean;
+  /**
+   * The slot is reserved and the fee is not paid yet.
+   *
+   * Only changes what the owner is told. A held time on his phone as "New
+   * booking" is a day planned around an appointment that may never be paid for.
+   */
+  held?: boolean;
 };
 
 function factsFor(input: BookingNotification): BookingFacts {
@@ -243,7 +250,11 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // reports it as blocking.
   const ownerPhone = input.owner?.phone ?? "";
   if (messagingServiceSid && ownerPhone) {
-    const sent = await sendSms({ to: ownerPhone, body: ownerBookingSms(facts), messagingServiceSid });
+    const sent = await sendSms({
+      to: ownerPhone,
+      body: ownerBookingSms(facts, input.held ?? false),
+      messagingServiceSid,
+    });
     note({
       channel: "sms",
       to: ownerPhone,

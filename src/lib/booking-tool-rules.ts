@@ -328,6 +328,8 @@ export function describeOutcome(input: {
   context: IntakeContext;
   phone: string;
   deliveryPreference?: "text" | "email" | "both" | "";
+  /** The slot is reserved and the fee is not paid yet. */
+  held?: boolean;
 }): ToolResult {
   const { action, context } = input;
 
@@ -353,10 +355,17 @@ export function describeOutcome(input: {
 
       return {
         text: [
-          `Booked: ${action.slot.label} at ${where}.`,
+          // "Booked" was already a stretch — the script promised a payment link
+          // that nothing sent. Now the link is real, and so is the difference
+          // between a time held and a time confirmed.
+          input.held
+            ? `Held, not yet confirmed: ${action.slot.label} at ${where}.`
+            : `Booked: ${action.slot.label} at ${where}.`,
           "Say this back to the customer, in your own voice, all of it:",
           `1. The window and the address, so they can correct you.`,
-          `2. "There is a ${context.diagnosticFee} deposit to hold the appointment."`,
+          input.held
+            ? `2. "I am holding that time. It is confirmed once the ${context.diagnosticFee} diagnostic fee is paid."`
+            : `2. "There is a ${context.diagnosticFee} deposit to hold the appointment."`,
           `3. "An electrician will call you later today to go over a few more details."`,
           `4. "I am sending your booking and payment link ${delivery} now."`,
           "Then ask if there is anything else, and close with a proper goodbye before ending the call.",
