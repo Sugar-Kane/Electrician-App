@@ -328,8 +328,10 @@ export async function recordBookingRequest(input: {
     paymentsAvailable: Boolean(getStripe()),
   });
 
-  if (decision.kind === "hold" && publicToken) {
-    const payUrl = payLinkFor(process.env.NEXT_PUBLIC_APP_URL ?? "", publicToken);
+  if (decision.kind === "hold") {
+    const payUrl = publicToken
+      ? payLinkFor(process.env.NEXT_PUBLIC_APP_URL ?? "", publicToken)
+      : "";
 
     if (payUrl) {
       const heldUntil = new Date(Date.now() + decision.holdMinutes * 60_000).toISOString();
@@ -353,6 +355,32 @@ export async function recordBookingRequest(input: {
 
       return { requestId, publicToken, payUrl, heldUntil, feeCents: decision.feeCents };
     }
+
+    /*
+     * A fee to collect, a provider to collect it with, and nowhere to send the
+     * customer. Booking it outright is still right — the appointment is real
+     * and they are expecting it — but this is a misconfiguration rather than a
+     * decision, and it is invisible from the outside: the booking just goes
+     * back to being unpaid, exactly as it looked before any of this existed.
+     */
+    console.error(
+      publicToken
+        ? "booking hold skipped: NEXT_PUBLIC_APP_URL is not a usable https origin, so no payment link could be built"
+        : "booking hold skipped: the booking row came back without a public token",
+      { requestId, organizationId: input.organizationId, feeCents: decision.feeCents },
+    );
+  } else if ((input.depositCents ?? 0) > 0) {
+    /*
+     * A fee was quoted to this customer and nothing will be collected before
+     * the visit. Expected where payments are not configured at all, which is
+     * why it is the deliberate fallback — but a business that thinks it is
+     * taking deposits should be able to find out that it is not.
+     */
+    console.warn(`booking hold skipped: ${decision.because}`, {
+      requestId,
+      organizationId: input.organizationId,
+      depositCents: input.depositCents,
+    });
   }
 
   const { data: scheduled } = await input.database.rpc("schedule_sms_booking_request", {
