@@ -14,6 +14,7 @@ import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
+import { getJobConversation, getMessagingContext } from "@/lib/messaging";
 import { getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
@@ -44,14 +45,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to advance.
-  const [controls, workflow, contracts, { lines, totals }, stock, photos] = await Promise.all([
-    getJobControls(jobId),
-    getJobWorkflow(jobId),
-    getJobContracts(jobId),
-    getJobLines(jobId),
-    getStockOptions(),
-    getJobPhotos(jobId),
-  ]);
+  const [controls, workflow, contracts, { lines, totals }, stock, photos, messaging] =
+    await Promise.all([
+      getJobControls(jobId),
+      getJobWorkflow(jobId),
+      getJobContracts(jobId),
+      getJobLines(jobId),
+      getStockOptions(),
+      getJobPhotos(jobId),
+      getMessagingContext(),
+    ]);
+
+  const conversations = messaging ? await getJobConversation(messaging, jobId) : [];
 
   const fullAddress = `${job.address}, ${job.city}`;
   const hasAddress = fullAddress.trim() !== ",";
@@ -200,6 +205,57 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           <div className="py-4">
             <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
           </div>
+        </section>
+      ) : null}
+
+      {/*
+        The texts that belong to this job, read straight from the conversation
+        rather than through the inbox. Clearing a thread out of Messages is one
+        person tidying a list; what was agreed with the customer about this job
+        is the job's record, and it stays here either way.
+      */}
+      {conversations.length > 0 ? (
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Conversation</h2>
+            <Link
+              href={`/messages/${conversations[0]?.id}`}
+              className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
+            >
+              Open in Messages
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+
+          {conversations.map((conversation) => (
+            <div key={conversation.id} className="mt-2">
+              {conversation.archived || conversation.deleted ? (
+                <p className="mb-2 text-[11px] text-ink-faint">
+                  {conversation.deleted ? "Deleted from the inbox" : "Archived"} · kept here in
+                  full.
+                </p>
+              ) : null}
+
+              <ul className="space-y-1.5">
+                {conversation.messages.map((message) => (
+                  <li
+                    key={message.id}
+                    className={`max-w-[85%] rounded-control px-3 py-2 text-sm leading-5 ${
+                      message.direction === "inbound"
+                        ? "bg-white/[0.04] text-ink"
+                        : "ml-auto bg-brand/10 text-ink"
+                    }`}
+                  >
+                    {message.body}
+                  </li>
+                ))}
+              </ul>
+
+              {conversation.messages.length === 0 ? (
+                <p className="text-sm text-ink-muted">No texts on this job yet.</p>
+              ) : null}
+            </div>
+          ))}
         </section>
       ) : null}
 

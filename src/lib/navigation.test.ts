@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   ALL_NAV_ITEMS,
@@ -17,6 +18,30 @@ test("no destination is listed twice", () => {
   // so two things lit up at once and neither told you where you were.
   const hrefs = ALL_NAV_ITEMS.map((item) => item.href);
   assert.deepEqual([...new Set(hrefs)], hrefs);
+});
+
+test("every menu entry has an icon that actually exists", () => {
+  /*
+   * `NavIcon` falls back to a cog for a name it does not know, which is right
+   * for robustness and silent for a typo — Search was listed with the icon
+   * "Search", which was never in the map, so the menu showed two settings cogs
+   * and one of them was the search entry.
+   *
+   * Read as text rather than imported: the map lives in a .tsx client component
+   * and the test runner strips types, not JSX.
+   */
+  const source = readFileSync(new URL("../components/ui/nav-icon.tsx", import.meta.url), "utf8");
+  const known = new Set(
+    source
+      .slice(source.indexOf("const ICONS"), source.indexOf("export function NavIcon"))
+      .split("\n")
+      .map((line) => line.trim().replace(/,$/, ""))
+      .filter((line) => /^[A-Z][A-Za-z0-9]*$/.test(line)),
+  );
+
+  for (const item of [...ALL_NAV_ITEMS, ...ALL_SETTINGS_LINKS]) {
+    assert.ok(known.has(item.icon), `${item.label} asks for the icon "${item.icon}"`);
+  }
 });
 
 test("no menu entry is a query string or an anchor on another page", () => {

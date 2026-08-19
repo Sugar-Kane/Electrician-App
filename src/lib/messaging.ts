@@ -21,6 +21,12 @@ export type ConversationSummary = {
   lastMessageBody: string;
   lastMessageDirection: string;
   unread: boolean;
+  /** Out of the inbox, kept in full. */
+  archived: boolean;
+  /** Hidden from the inbox, kept in full. */
+  deleted: boolean;
+  /** The job this thread belongs to, when it belongs to one. */
+  jobId: string | null;
 };
 
 export type ThreadMessage = {
@@ -158,16 +164,36 @@ async function getMessagingSettings(context: MessagingContext) {
   };
 }
 
+/**
+ * Which conversations the inbox is showing.
+ *
+ * Archived and deleted are both timestamps rather than removals — the messages,
+ * the customer, the inquiry and the job all stay exactly where they were — so
+ * these are three views of one table rather than three fates.
+ */
+export type ConversationView = "active" | "archived" | "deleted";
+
 export async function listConversations(
   context: MessagingContext,
+  view: ConversationView = "active",
 ): Promise<ConversationSummary[]> {
-  const { data } = await context.database
+  const query = context.database
     .from("conversations")
     .select(
-      "id, customer_id, status, last_message_at, customers(first_name, last_name, company_name, phone)",
+      "id, customer_id, status, last_message_at, archived_at, deleted_at, job_id, customers(first_name, last_name, company_name, phone)",
     )
-    .eq("organization_id", context.organizationId)
-    .is("archived_at", null)
+    .eq("organization_id", context.organizationId);
+
+  // Deleted outranks archived: a thread that was archived and later deleted
+  // belongs in one list, and it is the one that says it is gone.
+  const scoped =
+    view === "deleted"
+      ? query.not("deleted_at", "is", null)
+      : view === "archived"
+        ? query.is("deleted_at", null).not("archived_at", "is", null)
+        : query.is("deleted_at", null).is("archived_at", null);
+
+  const { data } = await scoped
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(CONVERSATION_LIMIT);
 
@@ -211,6 +237,9 @@ export async function listConversations(
       // An inbound message nobody has replied to is the thing a dispatcher
       // needs to see first.
       unread: text(lastMessage?.direction) === "inbound",
+      archived: Boolean(row.archived_at),
+      deleted: Boolean(row.deleted_at),
+      jobId: row.job_id ? text(row.job_id) : null,
     };
   });
 }
@@ -343,4 +372,87 @@ export async function listStartableCustomers(
 
 export async function getSendingConfiguration(context: MessagingContext) {
   return getMessagingSettings(context);
+}
+
+export type JobConversation = {
+  id: string;
+  customerName: string;
+  /** Out of the inbox, but not out of the record. */
+  archived: boolean;
+  deleted: boolean;
+  messages: ThreadMessage[];
+};
+
+/**
+ * The texts that belong to a job, whatever the inbox has been told to hide.
+ *
+ * Deliberately blind to `archived_at` and `deleted_at`. Clearing a thread out of
+ * the inbox is a statement about one person's list of things to read; the same
+ * messages are the record of what was agreed on this job, and that record does
+ * not move. This function is the reason the delete can be safe.
+ *
+ * Addressed by job number, because that is what the URL carries and what a
+ * person reads off the screen.
+ */
+export async function getJobConversation(
+  context: MessagingContext,
+  jobNumber: string,
+): Promise<JobConversation[]> {
+  const numeric = Number(jobNumber);
+  if (!Number.isFinite(numeric)) return [];
+
+  const { data: job } = await context.database
+    .from("jobs")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  if (!job?.id) return [];
+
+  const { data: rows } = await context.database
+    .from("conversations")
+    .select(
+      "id, archived_at, deleted_at, customers(first_name, last_name, company_name)",
+    )
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", String(job.id))
+    .order("last_message_at", { ascending: false, nullsFirst: false });
+
+  const conversations = (rows ?? []) as Record<string, unknown>[];
+  if (conversations.length === 0) return [];
+
+  const { data: messageRows } = await context.database
+    .from("messages")
+    .select("id, conversation_id, direction, body, status, created_at, sent_at, delivered_at, error_detail")
+    .in(
+      "conversation_id",
+      conversations.map((row) => text(row.id)),
+    )
+    .order("created_at", { ascending: true });
+
+  const byConversation = new Map<string, ThreadMessage[]>();
+  for (const row of (messageRows ?? []) as Record<string, unknown>[]) {
+    const key = text(row.conversation_id);
+    const list = byConversation.get(key) ?? [];
+    list.push({
+      id: text(row.id),
+      direction: text(row.direction) === "inbound" ? "inbound" : "outbound",
+      body: text(row.body),
+      status: text(row.status),
+      createdAt: String(row.created_at ?? ""),
+      sentAt: row.sent_at ? String(row.sent_at) : null,
+      deliveredAt: row.delivered_at ? String(row.delivered_at) : null,
+      errorDetail: row.error_detail ? String(row.error_detail) : null,
+    });
+    byConversation.set(key, list);
+  }
+
+  return conversations.map((row) => ({
+    id: text(row.id),
+    customerName: displayNameFor((row.customers ?? {}) as Record<string, unknown>),
+    archived: Boolean(row.archived_at),
+    deleted: Boolean(row.deleted_at),
+    messages: byConversation.get(text(row.id)) ?? [],
+  }));
 }

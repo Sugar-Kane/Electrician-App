@@ -11,7 +11,9 @@ import {
   Inbox,
   FileText,
   LayoutDashboard,
+  MessageCircle,
   Package,
+  Search,
   Sparkles,
   MessagesSquare,
   PlugZap,
@@ -42,7 +44,11 @@ const ICONS: Record<string, LucideIcon> = {
   Inbox,
   FileText,
   LayoutDashboard,
+  MessageCircle,
   Package,
+  // Missing until now, so the Search entry fell through to the cog below and
+  // the menu offered two settings icons — one of which was search.
+  Search,
   Sparkles,
   MessagesSquare,
   PlugZap,

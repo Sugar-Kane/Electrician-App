@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/dashboard-shell";
+import { StartAtTop } from "@/components/start-at-top";
 import { todayInZone } from "@/lib/calendar";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import { attentionItems, openBookingRequests, unassignedToday } from "@/lib/dashboard-focus";
@@ -34,5 +35,10 @@ export default async function Page() {
     unassignedToday: unassignedToday(jobs, today),
   });
 
-  return <DashboardShell snapshot={snapshot} jobs={jobs} attention={attention} />;
+  return (
+    <>
+      <StartAtTop />
+      <DashboardShell snapshot={snapshot} jobs={jobs} attention={attention} />
+    </>
+  );
 }
