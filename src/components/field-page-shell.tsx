@@ -20,6 +20,8 @@ export function FieldPageShell({
   backHref = "/",
   action,
   compact = false,
+  bar,
+  fill = false,
   children,
 }: {
   title: string;
@@ -37,8 +39,51 @@ export function FieldPageShell({
    * pushing the one button that matters below the fold.
    */
   compact?: boolean;
+  /**
+   * The page's own top bar, standing in for the title block and — on a phone —
+   * for the contents of the app's sticky bar too.
+   *
+   * For a screen that is one thing rather than a page about it. A conversation
+   * with Adam should say "Adam" once, at the top, next to the way back; the
+   * default header would say it again underneath in a bordered panel.
+   */
+  bar?: React.ReactNode;
+  /**
+   * Give the page the viewport's height instead of the content's, and let a
+   * child own the scrolling.
+   *
+   * Everything else here scrolls as one long column, which is right for a page
+   * you read top to bottom. A conversation is not that: the name and the way
+   * back have to stay put while the messages move under them, and the box you
+   * type into has to stay under your thumb. That needs a frame with a real
+   * height, which is what this is. `dvh` rather than `vh` because a phone
+   * browser's address bar makes `vh` taller than the screen.
+   */
+  fill?: boolean;
   children: React.ReactNode;
 }) {
+  if (fill) {
+    return (
+      <main className="flex h-[100dvh] flex-col overflow-hidden bg-canvas text-ink">
+        <MobileAppChrome title={title} backHref={backHref} bar={bar} bottomNav={false} />
+        <div className="mx-auto grid w-full min-h-0 max-w-[1760px] flex-1 gap-2 p-2 sm:p-3 lg:grid-cols-[248px_minmax(0,1fr)]">
+          <AppSidebar />
+          <div
+            id="main-content"
+            tabIndex={-1}
+            className="flex min-h-0 min-w-0 flex-col lg:px-4 lg:py-2"
+          >
+            {/* The bar again, for a desktop that has no sticky phone chrome. */}
+            {bar ? (
+              <div className="mb-2 hidden shrink-0 items-center gap-2 lg:flex">{bar}</div>
+            ) : null}
+            {children}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     // The bottom padding clears the floating nav: 12px off the bottom, at
     // least 64px tall, with a create button standing 28px proud of its top
