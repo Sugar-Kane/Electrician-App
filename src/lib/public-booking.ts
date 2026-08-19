@@ -107,6 +107,38 @@ export async function attachCheckoutToBooking(
   return !error && data === true;
 }
 
+export type BookingPaymentIntent = {
+  organization_id: string;
+  organization_slug: string;
+  business_name: string;
+  status: string;
+  fee_cents: number;
+  email: string | null;
+  diagnostic_minutes: number;
+  priority: string;
+  already_paid: boolean;
+};
+
+/**
+ * What a payment page may know about a booking it holds the token for.
+ *
+ * Deliberately thin. The page is reached from a link in a text message by
+ * somebody with no account, so the token is the whole of the authorisation and
+ * the answer carries nothing that would help a guesser learn about another
+ * booking.
+ */
+export async function getBookingPaymentIntent(
+  bookingToken: string,
+): Promise<BookingPaymentIntent | null> {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("get_booking_payment_intent", {
+    p_booking_token: bookingToken,
+  });
+
+  if (error) return null;
+  return ((data as BookingPaymentIntent[] | null)?.[0] ?? null);
+}
+
 export async function confirmPublicBookingPayment(input: {
   bookingToken: string;
   checkoutSessionId: string;

@@ -7,11 +7,12 @@ import {
   evaluateSafety,
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
-import { attachCheckoutToBooking, getPublicBookingPage } from "@/lib/public-booking";
+import { startBookingCheckout } from "@/lib/booking-checkout";
+import { getPublicBookingPage } from "@/lib/public-booking";
+import { getStripe } from "@/lib/stripe";
 import { checkServiceArea } from "@/lib/service-area";
 import { smsConsentRecord } from "@/lib/sms-consent";
 import { createPublicClient, getMessagingBusinessName } from "@/lib/supabase/public";
-import { getStripe } from "@/lib/stripe";
 
 export type BookingActionState = {
   error: string;
@@ -229,62 +230,30 @@ export async function startPublicBooking(
       });
   }
 
-  const stripe = getStripe();
   const requestOrigin = getRequestOrigin(await headers());
-  if (!stripe || !requestOrigin) {
+  if (!requestOrigin) {
     return { error: "Secure checkout could not be started. Please try again." };
   }
 
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode: "payment",
-        payment_method_types: ["card"],
-        customer_email: email,
-        expires_at: Math.floor(Date.now() / 1_000) + 30 * 60,
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: "usd",
-              unit_amount: intake.fee_cents,
-              product_data: {
-                name:
-                  priority === "emergency"
-                    ? "Emergency electrical diagnostic"
-                    : "Onsite electrical diagnostic",
-                description: `${bookingPage.diagnostic_minutes} minutes onsite. Diagnostic fee is credited toward approved repair work.`,
-              },
-            },
-          },
-        ],
-        metadata: {
-          booking_token: intake.booking_token,
-          booking_intake_id: intake.intake_id,
-          organization_id: bookingPage.organization_id,
-          organization_slug: bookingPage.slug,
-        },
-        payment_intent_data: {
-          metadata: {
-            booking_intake_id: intake.intake_id,
-            organization_id: bookingPage.organization_id,
-          },
-        },
-        success_url: `${requestOrigin}/book/${encodeURIComponent(bookingPage.slug)}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${requestOrigin}/book/${encodeURIComponent(bookingPage.slug)}?checkout=canceled`,
-      },
-      {
-        idempotencyKey: `booking-checkout-${intake.booking_token}`,
-      },
-    );
+  // The same checkout the texted pay link starts. One place decides what is
+  // charged, what the customer is told they are paying for, and which booking
+  // the money lands against.
+  const checkout = await startBookingCheckout({
+    bookingToken: intake.booking_token,
+    feeCents: intake.fee_cents,
+    email,
+    organizationId: bookingPage.organization_id,
+    slug: bookingPage.slug,
+    emergency: priority === "emergency",
+    diagnosticMinutes: bookingPage.diagnostic_minutes,
+    origin: requestOrigin,
+    intakeId: intake.intake_id,
+  });
 
-    if (!session.url || !(await attachCheckoutToBooking(intake.booking_token, session.id))) {
-      await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
-      return { error: "The appointment hold could not be completed. Choose the time again." };
-    }
-
-    return { error: "", checkoutUrl: session.url };
-  } catch {
+  if ("error" in checkout) {
+    console.error("booking: checkout could not be started", checkout.error);
     return { error: "Secure checkout could not be started. Please try again." };
   }
+
+  return { error: "", checkoutUrl: checkout.url };
 }

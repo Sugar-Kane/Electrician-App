@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { holdSpoken } from "@/lib/booking-hold";
 import { readInboundText } from "@/lib/claude";
 import {
   findOrCreateCustomerByPhone,
   loadIntakeContext,
   organizationForPhoneNumber,
   recordBookingRequest,
+  slotLabel,
 } from "@/lib/intake-shared";
 import { buildIntakeSystemPrompt, decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
       .eq("call_sid", callSid)
       .maybeSingle();
 
-    const { context } = await loadIntakeContext({
+    const { context, timeZone } = await loadIntakeContext({
       database,
       organizationId,
       isFirstReply: false,
@@ -226,7 +228,7 @@ export async function POST(request: Request) {
     });
 
     const customerId = existingCall.customer_id ? String(existingCall.customer_id) : "";
-    let recorded: { requestId?: string } = {};
+    let recorded: { requestId?: string; payUrl?: string; feeCents?: number } = {};
     if (customerId) {
       recorded = await recordBookingRequest({
         database,
@@ -238,13 +240,27 @@ export async function POST(request: Request) {
         callerText: speech,
         model: decision ? "claude-opus-5" : null,
         decision,
+        // Frozen against the booking, the same as the text path. Without it the
+        // fee was said down the phone and recorded nowhere, and nothing could
+        // be held for payment.
+        depositCents: action.kind === "book" ? context.diagnosticFeeCents : undefined,
       });
     }
+
+    /*
+     * A caller cannot be read a URL. If the time is being held, the words say
+     * what is about to arrive and why, and the link goes by text — which is
+     * what `sendBookingConfirmations` is already sending them.
+     */
+    const say =
+      recorded.payUrl && recorded.feeCents && action.kind === "book"
+        ? `I have ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString())} held for you. ${holdSpoken({ feeCents: recorded.feeCents })}`
+        : voiceStep.say;
 
     await database
       .from("voice_calls")
       .update({
-        turns: [...turns, { role: "assistant", text: voiceStep.say }],
+        turns: [...turns, { role: "assistant", text: say }],
         failed_turns: action.kind === "ask" ? failedTurns + 1 : 0,
         status:
           voiceStep.kind === "transfer"
@@ -260,7 +276,7 @@ export async function POST(request: Request) {
     if (voiceStep.kind === "transfer") {
       return twiml(
         transferTwiml({
-          say: voiceStep.say,
+          say,
           to: escalationNumber,
           callerId: to,
           actionUrl: `${callbackOrigin}/api/twilio/voice?step=after-dial`,
@@ -268,11 +284,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (voiceStep.kind === "hangup") return twiml(hangupTwiml(voiceStep.say));
+    if (voiceStep.kind === "hangup") return twiml(hangupTwiml(say));
 
     return twiml(
       listenTwiml({
-        say: voiceStep.say,
+        say,
         actionUrl: `${callbackOrigin}/api/twilio/voice`,
       }),
     );

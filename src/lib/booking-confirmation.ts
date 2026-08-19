@@ -66,11 +66,13 @@ export function customerConfirmationSms(facts: BookingFacts): string {
  * wrong, in that order. No link — this one is for someone who already has the
  * app.
  */
-export function ownerBookingSms(facts: BookingFacts): string {
+export function ownerBookingSms(facts: BookingFacts, held = false): string {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
   return clip(
     [
-      `New booking: ${facts.slotLabel}.`,
+      // A held time is not a booking yet, and telling the owner it is means he
+      // plans a day around an appointment that may never be paid for.
+      held ? `Held (unpaid): ${facts.slotLabel}.` : `New booking: ${facts.slotLabel}.`,
       facts.contactName ? ` ${facts.contactName}.` : "",
       address ? ` ${address}.` : "",
       facts.description ? ` "${clip(facts.description, 120)}"` : "",
