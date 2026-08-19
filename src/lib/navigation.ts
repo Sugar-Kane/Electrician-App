@@ -97,6 +97,18 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: "Search",
         description: "Find a customer, job or invoice",
       },
+      /*
+       * The assistant was reachable only from a sheet behind the centre button,
+       * so it was in the app and not in the menu — and moving it under the thumb
+       * made that a contradiction the bottom-bar test catches: every permanent
+       * tab has to be somewhere a person can find it a second way.
+       */
+      {
+        label: "Chat",
+        href: "/assistant",
+        icon: "MessageCircle",
+        description: "Ask about jobs, invoices, stock and code",
+      },
     ],
   },
   {
@@ -195,7 +207,7 @@ export function activeNavHref(
  * Everything else lives behind More. Kept here rather than in the component so
  * the bottom bar and the "am I somewhere in the menu" test cannot drift apart.
  */
-export const BOTTOM_NAV_HREFS = ["/", "/schedule", "/messages"] as const;
+export const BOTTOM_NAV_HREFS = ["/", "/schedule", "/assistant", "/messages"] as const;
 
 /**
  * Whether the current page is one of the permanent four.

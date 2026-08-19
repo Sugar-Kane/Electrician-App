@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, LoaderCircle, SendHorizontal, Sparkles, X } from "lucide-react";
 
-import { parseChatMarkdown } from "@/lib/chat-markdown";
+import { ChatMarkdown } from "@/components/ui/chat-markdown";
 
 import { chatAction, type ChatState } from "@/app/assistant/agent-actions";
 
@@ -119,7 +119,7 @@ export function AssistantChat() {
                   : "border border-line bg-surface text-ink"
               }`}
             >
-              <Rendered text={turn.text} />
+              <ChatMarkdown text={turn.text} />
             </div>
           </div>
         ))}
@@ -263,36 +263,3 @@ function ConfirmButton() {
   );
 }
 
-/**
- * A reply, with its markdown rendered rather than shown.
- *
- * The model writes bold and bullets; the bubble used to print the asterisks.
- * Everything is rendered as text nodes — nothing here builds HTML from what a
- * model produced.
- */
-function Rendered({ text }: { text: string }) {
-  return (
-    <>
-      {parseChatMarkdown(text).map((line, lineIndex) => (
-        <p key={lineIndex} className={line.bullet ? "flex gap-2" : ""}>
-          {line.bullet ? <span aria-hidden>·</span> : null}
-          <span>
-            {line.segments.map((segment, index) =>
-              segment.bold ? (
-                <strong key={index} className="font-semibold">
-                  {segment.text}
-                </strong>
-              ) : segment.code ? (
-                <code key={index} className="rounded bg-white/10 px-1 text-[0.9em]">
-                  {segment.text}
-                </code>
-              ) : (
-                <span key={index}>{segment.text}</span>
-              ),
-            )}
-          </span>
-        </p>
-      ))}
-    </>
-  );
-}

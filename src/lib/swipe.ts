@@ -17,11 +17,22 @@ export const SWIPE_THRESHOLD = 56;
 
 export type SwipeIntent = "open" | "close" | "none";
 
-export function swipeIntent(
+/** Which way a drag went, once it is deliberate enough to count. */
+export type SwipeSide = "left" | "right" | "none";
+
+/**
+ * The gesture itself, without an opinion about what it means.
+ *
+ * A row with one action reads leftward as "reveal" and rightward as "put it
+ * back". A row with two reads them as two different actions. Both need the same
+ * arithmetic, and this is it — `swipeIntent` is now a naming of this rather
+ * than a second copy of the rule.
+ */
+export function swipeSide(
   from: SwipePoint | null,
   to: SwipePoint | null,
   threshold = SWIPE_THRESHOLD,
-): SwipeIntent {
+): SwipeSide {
   if (!from || !to) return "none";
 
   // Positive is leftward, which is the direction that reveals the button — the
@@ -34,7 +45,16 @@ export function swipeIntent(
   // a long list peels open every row it passes.
   if (Math.abs(sideways) <= vertical) return "none";
 
-  if (sideways >= threshold) return "open";
-  if (sideways <= -threshold) return "close";
+  if (sideways >= threshold) return "left";
+  if (sideways <= -threshold) return "right";
   return "none";
+}
+
+export function swipeIntent(
+  from: SwipePoint | null,
+  to: SwipePoint | null,
+  threshold = SWIPE_THRESHOLD,
+): SwipeIntent {
+  const side = swipeSide(from, to, threshold);
+  return side === "left" ? "open" : side === "right" ? "close" : "none";
 }

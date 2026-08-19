@@ -6,6 +6,7 @@ import { ChevronRight, Zap } from "lucide-react";
 
 import { NavIcon } from "@/components/ui/nav-icon";
 import { NAV_SECTIONS, activeNavHref, type NavItem } from "@/lib/navigation";
+import { scrollToTop } from "@/lib/scroll-top";
 
 /**
  * The left menu.
@@ -30,6 +31,10 @@ export function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      // Clicking the entry you are already on has nowhere to navigate to, so
+      // the page stays wherever it was scrolled to. Going back to the top is
+      // what the click meant.
+      onClick={() => (active ? scrollToTop() : undefined)}
       aria-current={active ? "page" : undefined}
       className={`group flex items-center gap-3 rounded-chip px-3 py-2.5 text-sm transition ${
         active

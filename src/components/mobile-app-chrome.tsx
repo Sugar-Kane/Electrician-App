@@ -4,14 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { CreateSheet } from "@/components/create-sheet";
 import {
   ArrowLeft,
   CalendarDays,
   Home,
+  MessageCircle,
   MessagesSquare,
   MoreHorizontal,
-  Plus,
   Search,
   X,
   Zap,
@@ -20,6 +19,7 @@ import {
 import { AccountMenu } from "@/components/account-menu";
 import { NavIcon } from "@/components/ui/nav-icon";
 import { NAV_SECTIONS, activeNavHref, isBeyondBottomNav } from "@/lib/navigation";
+import { scrollToTop } from "@/lib/scroll-top";
 
 /**
  * The phone's chrome: a top bar, a bottom bar, and the full menu.
@@ -37,16 +37,20 @@ import { NAV_SECTIONS, activeNavHref, isBeyondBottomNav } from "@/lib/navigation
  */
 
 /**
- * The four things under a thumb, plus create.
+ * The four things under a thumb, plus the assistant.
  *
  * "Schedule" is a software word for a screen an electrician thinks of as their
- * jobs. The centre is creation rather than a destination — see CreateSheet for
- * why it is no longer the assistant. More is a menu, not a link.
+ * jobs. More is a menu, not a link.
+ *
+ * The centre used to open a sheet offering "New job" and "Ask Volteira" — two
+ * rows, one of which duplicated the Job button already on the jobs screen, and
+ * both of which cost a second tap. It is the assistant now, and it opens on the
+ * first tap. New job stays where work is created, which is Jobs.
  */
 const BOTTOM_ITEMS = [
   { label: "Home", href: "/", icon: Home },
   { label: "Jobs", href: "/schedule", icon: CalendarDays },
-  { label: "New", href: "", icon: Plus, action: "create" as const },
+  { label: "Chat", href: "/assistant", icon: MessageCircle, centre: true },
   { label: "Messages", href: "/messages", icon: MessagesSquare },
   { label: "More", href: "", icon: MoreHorizontal, action: "menu" as const },
 ];
@@ -66,9 +70,18 @@ function Brand() {
 
 export function MobileAppChrome({ title, backHref }: { title?: string; backHref?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const pathname = usePathname();
   const active = activeNavHref(pathname);
+
+  /*
+   * Tapping the tab you are already on does nothing at all — the router has
+   * nowhere to go, so a screen scrolled halfway down stays halfway down. On
+   * Home that is the difference between "today at a glance" and whatever
+   * happened to be under your thumb.
+   */
+  function toTopIfHere(href: string) {
+    if (href === pathname) scrollToTop();
+  }
 
   // Somewhere that came from the menu rather than the bottom bar. Lighting
   // More there beats a bottom bar with nothing lit, which reads as "you are
@@ -121,8 +134,8 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
         className="fixed inset-x-3 bottom-3 z-50 flex min-h-[64px] items-end justify-around rounded-control border border-line bg-sunken/96 px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur lg:hidden"
         aria-label="Mobile navigation"
       >
-        {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action }) => {
-          const create = action === "create";
+        {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action, centre }) => {
+          const create = centre === true;
           const menu = action === "menu";
 
           const current = menu
@@ -148,19 +161,18 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
             </>
           );
 
-          // Both the centre and More open sheets rather than navigating, so
-          // they are buttons. A link to "" would quietly take somebody to the
-          // dashboard, which is what More did in a different way before.
+          // More opens a sheet rather than navigating, so it is a button. A
+          // link to "" would quietly take somebody to the dashboard, which is
+          // what More did in a different way before.
           if (action) {
-            const open = create ? createOpen : menuOpen;
             return (
               <button
                 key={label}
                 type="button"
-                onClick={() => (create ? setCreateOpen(true) : setMenuOpen(true))}
+                onClick={() => setMenuOpen(true)}
                 aria-haspopup="dialog"
-                aria-expanded={open}
-                aria-label={create ? "Create" : "Open main menu"}
+                aria-expanded={menuOpen}
+                aria-label="Open main menu"
                 className={shell}
               >
                 {inner}
@@ -172,7 +184,9 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
             <Link
               key={label}
               href={href}
+              onClick={() => toTopIfHere(href)}
               aria-current={current ? "page" : undefined}
+              aria-label={create ? "Open the assistant" : undefined}
               className={shell}
             >
               {inner}
@@ -180,8 +194,6 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
           );
         })}
       </nav>
-
-      <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {menuOpen ? (
         <div
@@ -222,7 +234,10 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
                       <Link
                         key={item.href}
                         href={item.href}
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          toTopIfHere(item.href);
+                        }}
                         aria-current={item.href === active ? "page" : undefined}
                         className={`flex min-h-14 items-center gap-3 rounded-control border px-3 py-2 active:bg-white/10 ${
                           item.href === active

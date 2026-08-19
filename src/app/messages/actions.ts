@@ -163,7 +163,7 @@ export async function startConversation(formData: FormData): Promise<void> {
 
   const { data: existing } = await context.database
     .from("conversations")
-    .select("id")
+    .select("id, deleted_at")
     .eq("organization_id", context.organizationId)
     .eq("customer_id", customerId)
     .is("archived_at", null)
@@ -171,6 +171,20 @@ export async function startConversation(formData: FormData): Promise<void> {
     .maybeSingle();
 
   let conversationId = existing?.id ? String(existing.id) : "";
+
+  /*
+   * Writing to a customer whose thread was cleared out of the inbox brings the
+   * thread back rather than starting a second one beside it. The alternative is
+   * a message that lands somewhere invisible, or two threads for one customer
+   * and half the history in each.
+   */
+  if (conversationId && existing?.deleted_at) {
+    await context.database
+      .from("conversations")
+      .update({ deleted_at: null, deleted_by: null })
+      .eq("organization_id", context.organizationId)
+      .eq("id", conversationId);
+  }
 
   if (!conversationId) {
     const { data: created } = await context.database
@@ -190,4 +204,87 @@ export async function startConversation(formData: FormData): Promise<void> {
 
   revalidatePath("/messages");
   redirect(`/messages/${conversationId}`);
+}
+
+export type ConversationVisibilityState = { error: string };
+
+/**
+ * Take a conversation out of the inbox, or put it back.
+ *
+ * Four verbs, one mechanism: a timestamp on the conversation row. Nothing here
+ * deletes anything. The messages, their attachments, the customer, the service
+ * inquiry and the job all stay exactly as they were, and the job keeps showing
+ * its thread whatever the inbox is doing — which is the whole point of writing
+ * a timestamp rather than issuing a delete.
+ *
+ * Archived means done with; deleted means out of my inbox. Both are reversible
+ * and both are visible to an admin under the Messages tabs.
+ */
+async function setVisibility(
+  conversationId: string,
+  patch: Record<string, unknown>,
+): Promise<ConversationVisibilityState> {
+  const id = conversationId.trim();
+  if (!id) return { error: "That conversation could not be found." };
+
+  const context = await getMessagingContext();
+  if (!context) return { error: "You are not signed in." };
+
+  const { error } = await context.database
+    .from("conversations")
+    .update(patch)
+    .eq("organization_id", context.organizationId)
+    .eq("id", id);
+
+  if (error) {
+    console.error("messages: could not change conversation visibility", error);
+    return { error: "That could not be changed. Try again." };
+  }
+
+  revalidatePath("/messages");
+  revalidatePath(`/messages/${id}`);
+  return { error: "" };
+}
+
+export async function archiveConversation(
+  _previous: ConversationVisibilityState,
+  formData: FormData,
+): Promise<ConversationVisibilityState> {
+  return setVisibility(String(formData.get("conversationId") ?? ""), {
+    archived_at: new Date().toISOString(),
+  });
+}
+
+export async function unarchiveConversation(
+  _previous: ConversationVisibilityState,
+  formData: FormData,
+): Promise<ConversationVisibilityState> {
+  return setVisibility(String(formData.get("conversationId") ?? ""), { archived_at: null });
+}
+
+export async function deleteConversation(
+  _previous: ConversationVisibilityState,
+  formData: FormData,
+): Promise<ConversationVisibilityState> {
+  const context = await getMessagingContext();
+  if (!context) return { error: "You are not signed in." };
+
+  const { data: auth } = await context.database.auth.getUser();
+
+  return setVisibility(String(formData.get("conversationId") ?? ""), {
+    deleted_at: new Date().toISOString(),
+    // Recorded so an admin reading a deleted thread can see whose decision it
+    // was, which is the difference between an audit trail and a disappearance.
+    deleted_by: auth.user?.id ?? null,
+  });
+}
+
+export async function restoreConversation(
+  _previous: ConversationVisibilityState,
+  formData: FormData,
+): Promise<ConversationVisibilityState> {
+  return setVisibility(String(formData.get("conversationId") ?? ""), {
+    deleted_at: null,
+    deleted_by: null,
+  });
 }
