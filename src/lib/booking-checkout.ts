@@ -19,13 +19,24 @@ import { getStripe } from "@/lib/stripe";
 
 export type CheckoutResult = { url: string } | { error: string };
 
-/** The origin to build return URLs from, preferring what the request actually used. */
+/**
+ * The origin to send somebody back to.
+ *
+ * The host the request actually arrived on beats the configured one, and that
+ * order is the whole point. A customer booking on their electrician's own
+ * domain must come back to it rather than to whatever this deployment calls
+ * itself, and a preview deployment must keep a tester inside the preview
+ * instead of bouncing them into production halfway through a checkout.
+ *
+ * `NEXT_PUBLIC_APP_URL` is the fallback for the places with no request to read:
+ * a text message composed from a webhook has no browser and no host header.
+ */
 export function originFromHeaders(requestHeaders: Headers): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL;
   const origin = requestHeaders.get("origin");
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const candidate = origin || configured || (host ? `${protocol}://${host}` : "");
+  const candidate = origin || (host ? `${protocol}://${host}` : "") || configured || "";
 
   try {
     const url = new URL(candidate);

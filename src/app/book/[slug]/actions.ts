@@ -7,7 +7,7 @@ import {
   evaluateSafety,
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
-import { startBookingCheckout } from "@/lib/booking-checkout";
+import { originFromHeaders, startBookingCheckout } from "@/lib/booking-checkout";
 import { getPublicBookingPage } from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
 import { checkServiceArea } from "@/lib/service-area";
@@ -49,21 +49,9 @@ function parseSafetyAnswers(raw: string): SafetyAnswerMap {
   }
 }
 
-function getRequestOrigin(requestHeaders: Headers) {
-  const configured = process.env.NEXT_PUBLIC_APP_URL;
-  const origin = requestHeaders.get("origin");
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const candidate = origin || configured || (host ? `${protocol}://${host}` : "");
-
-  try {
-    const url = new URL(candidate);
-    if (!['http:', 'https:'].includes(url.protocol)) return null;
-    return url.origin;
-  } catch {
-    return null;
-  }
-}
+// One implementation, shared with the texted pay link, so a customer on a
+// tenant's own booking domain is returned to it from either route.
+const getRequestOrigin = (requestHeaders: Headers) => originFromHeaders(requestHeaders) || null;
 
 export async function startPublicBooking(
   slug: string,
