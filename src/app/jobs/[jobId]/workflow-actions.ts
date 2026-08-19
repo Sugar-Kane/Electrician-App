@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
 import { sendJobEventMessage } from "@/lib/automatic-messages";
 import {
   canAdvance,
@@ -233,6 +234,21 @@ export async function advanceJob(
       }
     }
   }
+
+  /*
+   * Written down before anything is told to anybody.
+   *
+   * Every step of the visit is a line on the customer's history, which until
+   * now went from "booked" straight to whatever the invoice said. `recordActivity`
+   * passes only the job; the trigger on the table finds the customer from it.
+   */
+  await recordActivity(job.supabase, {
+    organizationId: job.organizationId,
+    eventType: `job.${requested}`,
+    label: `Job ${requested.replace(/_/g, " ")}`,
+    jobId: job.id,
+    metadata: source === "geofence" ? { note: "recorded automatically" } : {},
+  });
 
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/schedule");

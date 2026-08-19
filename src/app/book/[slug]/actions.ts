@@ -208,6 +208,27 @@ export async function startPublicBooking(
     };
   }
 
+  /*
+   * The agreement, written down before the money is asked for.
+   *
+   * The box has always been there and has always been required; what was never
+   * recorded was that it was ticked, for this amount, at this moment. The
+   * consent column it fed is about being contacted, which is a different
+   * agreement about a different thing — and on the day somebody disputes a $100
+   * charge, "they must have ticked it, the button was disabled otherwise" is
+   * not a record.
+   *
+   * Best effort on purpose: it is a note about the booking, and a booking that
+   * is otherwise fine must not fail because the note did not save.
+   */
+  if (acceptedPolicy) {
+    await supabase
+      .rpc("accept_booking_fee", { p_booking_token: intake.booking_token, p_via: "web" })
+      .then(({ error: acceptError }) => {
+        if (acceptError) console.error("booking: could not record the fee agreement", acceptError);
+      });
+  }
+
   const stripe = getStripe();
   const requestOrigin = getRequestOrigin(await headers());
   if (!stripe || !requestOrigin) {

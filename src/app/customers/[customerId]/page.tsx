@@ -9,8 +9,10 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { todayInZone } from "@/lib/calendar";
 import { getCustomerProfile } from "@/lib/customer-profile";
 
 /**
@@ -169,6 +171,23 @@ export default async function CustomerPage({
             ))}
           </ul>
         )}
+      </section>
+
+      {/*
+        Last, because it is the long one and because everything above it is what
+        somebody opens this page to act on. It answers the different question —
+        what has already happened — and that question is asked after the others.
+      */}
+      <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <h2 className="text-sm font-semibold">History</h2>
+        <div className="mt-3">
+          <ActivityTimeline
+            rows={profile.history}
+            timeZone={profile.timeZone}
+            today={todayInZone(profile.timeZone)}
+            emptyText="Nothing recorded for them yet."
+          />
+        </div>
       </section>
     </FieldPageShell>
   );

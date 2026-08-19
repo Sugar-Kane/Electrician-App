@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { ActivityRow } from "@/lib/activity-timeline";
 import { currentContext } from "@/lib/request-context";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -27,6 +28,10 @@ export type CustomerProfile = {
   openRequests: { id: string; summary: string; status: string }[];
   /** Their thread, whatever the inbox has been told to show. */
   conversationId: string | null;
+  /** The business's timezone, which is the one the history is grouped by. */
+  timeZone: string;
+  /** What has happened to them, newest first, ready for `buildTimeline`. */
+  history: ActivityRow[];
 };
 
 const OPEN_REQUEST_STATUSES = ["new", "needs_review", "awaiting_payment", "safety_escalated"];
@@ -77,8 +82,13 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
 
   if (!customer) return null;
 
-  const [{ data: properties }, { data: jobs }, { data: requests }, { data: conversation }] =
-    await Promise.all([
+  const [
+    { data: properties },
+    { data: jobs },
+    { data: requests },
+    { data: conversation },
+    { data: history },
+  ] = await Promise.all([
       supabase
         .from("properties")
         .select("id, address_line_1, address_line_2, city, state, postal_code, access_notes")
@@ -111,6 +121,16 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle(),
+      // Everything that has happened to this person, whichever part of the app
+      // it happened in. Capped: a history is for reading, and nobody reads the
+      // hundredth entry.
+      supabase
+        .from("activity_events")
+        .select("id, event_type, label, created_at, metadata, job_id")
+        .eq("organization_id", context.organizationId)
+        .eq("customer_id", id)
+        .order("created_at", { ascending: false })
+        .limit(60),
     ]);
 
   const addressOf = (row: Record<string, unknown>) =>
@@ -163,5 +183,14 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
       status: REQUEST_LABELS[text(row.status)] ?? text(row.status),
     })),
     conversationId: conversation?.id ? String(conversation.id) : null,
+    timeZone: context.timeZone,
+    history: ((history ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: text(row.id),
+      eventType: text(row.event_type),
+      label: text(row.label),
+      createdAt: text(row.created_at),
+      metadata: (row.metadata ?? {}) as Record<string, unknown>,
+      jobId: row.job_id ? text(row.job_id) : null,
+    })),
   };
 }

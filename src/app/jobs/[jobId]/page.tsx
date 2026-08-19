@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Ban, ChevronDown, ChevronRight, MapPin, ShieldAlert } from "lucide-react";
 
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
@@ -13,7 +14,8 @@ import { JobWorkflow } from "@/components/job-workflow";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getJob, getJobContracts, getJobControls } from "@/lib/job-data";
+import { todayInZone } from "@/lib/calendar";
+import { getJob, getJobContracts, getJobControls, getJobHistory } from "@/lib/job-data";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
 import { getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
@@ -45,7 +47,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to advance.
-  const [controls, workflow, contracts, { lines, totals }, stock, photos, messaging] =
+  const [controls, workflow, contracts, { lines, totals }, stock, photos, messaging, history] =
     await Promise.all([
       getJobControls(jobId),
       getJobWorkflow(jobId),
@@ -54,6 +56,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       getStockOptions(),
       getJobPhotos(jobId),
       getMessagingContext(),
+      getJobHistory(jobId),
     ]);
 
   const conversations = messaging ? await getJobConversation(messaging, jobId) : [];
@@ -341,6 +344,24 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           ) : null}
         </div>
       </details>
+
+      {/*
+        What has happened on this job, recorded as it happened. Below the
+        details, because the details are what somebody standing at the door
+        needs and this is what somebody asked "when did we tell them" needs.
+      */}
+      {history.rows.length > 0 ? (
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <h2 className="text-sm font-semibold">History</h2>
+          <div className="mt-3">
+            <ActivityTimeline
+              rows={history.rows}
+              timeZone={history.timeZone}
+              today={todayInZone(history.timeZone)}
+            />
+          </div>
+        </section>
+      ) : null}
 
       {/*
         Room under the last card for the action bar, which is fixed above the

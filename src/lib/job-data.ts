@@ -5,6 +5,7 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
+import type { ActivityRow } from "@/lib/activity-timeline";
 import { hasCoordinates } from "@/lib/coordinates";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
@@ -740,6 +741,53 @@ export async function getCrewWeek(
     jobs,
     timeZone: context.timeZone,
     source: "supabase",
+  };
+}
+
+/**
+ * What has happened on one job, for the history at the bottom of its page.
+ *
+ * Keyed on the job number, because that is what the URL carries and what the
+ * page already has. Returns the timezone alongside, so the caller never has to
+ * guess which day an evening's work belongs to.
+ */
+export async function getJobHistory(
+  jobNumber: string,
+): Promise<{ rows: ActivityRow[]; timeZone: string }> {
+  const context = await resolveContext();
+  const numeric = Number(jobNumber);
+  if (!context || !Number.isFinite(numeric)) {
+    return { rows: [], timeZone: DEFAULT_TIMEZONE };
+  }
+
+  const { data: job } = await context.database
+    .from("jobs")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  if (!job?.id) return { rows: [], timeZone: context.timeZone };
+
+  const { data } = await context.database
+    .from("activity_events")
+    .select("id, event_type, label, created_at, metadata")
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", String(job.id))
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  return {
+    // No `jobId` on these: every one of them is this job, and a list of links
+    // back to the page you are already on is not navigation.
+    rows: ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id ?? ""),
+      eventType: String(row.event_type ?? ""),
+      label: String(row.label ?? ""),
+      createdAt: String(row.created_at ?? ""),
+      metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    })),
+    timeZone: context.timeZone,
   };
 }
 
