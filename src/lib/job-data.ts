@@ -6,9 +6,10 @@ import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
+import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
 import { currentContext } from "@/lib/request-context";
-import { isoToZonedWallClock } from "@/lib/schedule-labels";
+import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import {
   pilotInvoices,
@@ -576,6 +577,169 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
     businessHours: parseBusinessHours(settings?.business_hours),
     businessDateHours,
     timeZone: context.timeZone,
+  };
+}
+
+/**
+ * The crew's availability across a run of dates, for the calendar that shows
+ * everybody at once.
+ *
+ * A sibling of `getTechnicianWorkloads` rather than a caller of it, because that
+ * reader is anchored to today on purpose: it drops one-off days before today
+ * and time off that has already ended, which keeps the Electricians page short
+ * and would make a calendar you can page backwards quietly wrong about the week
+ * it is showing. This one takes the window it is asked about.
+ *
+ * Only `hard` and `private` time off is fetched. `flexible` does not stop the
+ * booking page offering a slot, so drawing it as unavailable here would put the
+ * calendar and the booking page into disagreement — which is the one thing this
+ * screen must never do.
+ */
+export async function getCrewWeek(
+  from: string,
+  to: string,
+): Promise<{
+  people: CrewMember[];
+  business: CrewBusiness;
+  jobs: PilotJob[];
+  timeZone: string;
+  source: Source;
+}> {
+  const context = await resolveContext();
+  if (!context) {
+    const { jobs } = await getJobs();
+    return {
+      people: [],
+      // Not `[]`: an empty list would draw a business that is shut forever.
+      business: { hours: defaultBusinessHours(), dated: [], closures: [] },
+      jobs,
+      timeZone: DEFAULT_TIMEZONE,
+      source: "demo",
+    };
+  }
+
+  // Time off is stored as instants, so the window has to be one too — midnight
+  // to midnight where the business is, not where the server is.
+  const windowStart = zonedWallClockToIso(`${from}T00:00`, context.timeZone);
+  const windowEnd = zonedWallClockToIso(`${shiftDays(to, 1)}T00:00`, context.timeZone);
+
+  const [{ data: crew }, { jobs }, { data: hourRows }, { data: dateHourRows }, { data: blackoutRows }, { data: settings }] =
+    await Promise.all([
+      context.database
+        .from("technicians")
+        .select("id, display_name, is_active")
+        .eq("organization_id", context.organizationId)
+        .order("display_name"),
+      getJobs(),
+      context.database
+        .from("technician_hours")
+        .select("technician_id, weekday, starts_at, ends_at")
+        .eq("organization_id", context.organizationId),
+      context.database
+        .from("technician_date_hours")
+        .select("technician_id, on_date, starts_at, ends_at")
+        .eq("organization_id", context.organizationId)
+        .gte("on_date", from)
+        .lte("on_date", to),
+      context.database
+        .from("blackout_periods")
+        .select("technician_id, starts_at, ends_at, reason, block_type")
+        .eq("organization_id", context.organizationId)
+        .in("block_type", ["hard", "private"])
+        // Overlapping the window, which is the same comparison the booking
+        // function makes: it starts before the window ends and ends after it
+        // began. A date-prefix match would miss a holiday that started last week.
+        .lt("starts_at", windowEnd)
+        .gt("ends_at", windowStart),
+      context.database
+        .from("service_settings")
+        .select("business_hours")
+        .eq("organization_id", context.organizationId)
+        .maybeSingle(),
+    ]);
+
+  const hoursByTechnician = new Map<string, DayHours[]>();
+  for (const row of (hourRows ?? []) as Record<string, unknown>[]) {
+    const key = String(row.technician_id ?? "");
+    const list = hoursByTechnician.get(key) ?? [];
+    list.push({
+      weekday: Number(row.weekday ?? 0),
+      start: String(row.starts_at ?? "").slice(0, 5),
+      end: String(row.ends_at ?? "").slice(0, 5),
+    });
+    hoursByTechnician.set(key, list);
+  }
+
+  const datedByTechnician = new Map<string, DateHours[]>();
+  const businessDated: DateHours[] = [];
+
+  for (const row of (dateHourRows ?? []) as Record<string, unknown>[]) {
+    const entry: DateHours = {
+      date: String(row.on_date ?? "").slice(0, 10),
+      start: String(row.starts_at ?? "").slice(0, 5),
+      end: String(row.ends_at ?? "").slice(0, 5),
+    };
+    if (!entry.date) continue;
+
+    // A null technician is the business, the same split the roster reader makes.
+    if (typeof row.technician_id !== "string" || row.technician_id === "") {
+      businessDated.push(entry);
+      continue;
+    }
+
+    const list = datedByTechnician.get(row.technician_id) ?? [];
+    list.push(entry);
+    datedByTechnician.set(row.technician_id, list);
+  }
+
+  const timeOffByTechnician = new Map<string, CrewTimeOff[]>();
+  const closures: CrewTimeOff[] = [];
+
+  for (const row of (blackoutRows ?? []) as Record<string, unknown>[]) {
+    const startsAt = String(row.starts_at ?? "");
+    const endsAt = String(row.ends_at ?? "");
+    if (!startsAt || !endsAt) continue;
+
+    const reason = typeof row.reason === "string" && row.reason ? row.reason : "";
+    const label = reason || blackoutLabel(startsAt, endsAt, context.timeZone);
+    const entry: CrewTimeOff = { startsAt, endsAt, label };
+
+    if (typeof row.technician_id !== "string" || row.technician_id === "") {
+      closures.push(entry);
+      continue;
+    }
+
+    const list = timeOffByTechnician.get(row.technician_id) ?? [];
+    list.push(entry);
+    timeOffByTechnician.set(row.technician_id, list);
+  }
+
+  const people: CrewMember[] = (crew ?? []).map((row) => {
+    const record = row as Record<string, unknown>;
+    const id = String(record.id ?? "");
+    const name = typeof record.display_name === "string" ? record.display_name : "";
+
+    return {
+      id,
+      name,
+      initials: initialsOf(name),
+      isActive: record.is_active !== false,
+      hours: (hoursByTechnician.get(id) ?? []).sort((a, b) => a.weekday - b.weekday),
+      dateHours: datedByTechnician.get(id) ?? [],
+      timeOff: timeOffByTechnician.get(id) ?? [],
+    };
+  });
+
+  return {
+    people,
+    business: {
+      hours: parseBusinessHours(settings?.business_hours),
+      dated: businessDated,
+      closures,
+    },
+    jobs,
+    timeZone: context.timeZone,
+    source: "supabase",
   };
 }
 

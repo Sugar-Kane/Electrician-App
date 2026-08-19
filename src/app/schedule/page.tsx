@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
+import { CrewWeekView } from "@/components/crew-week-view";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { DayView, MonthView, WeekView } from "@/components/schedule-views";
+import { crewWeek } from "@/lib/crew-week";
 import {
   formatDayLabel,
   fullWeekOf,
@@ -15,7 +17,7 @@ import {
   workWeekLabel,
   workWeekOf,
 } from "@/lib/calendar";
-import { getJobs } from "@/lib/job-data";
+import { getCrewWeek, getJobs } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 
 // The schedule is a view of "now", so it must never be cached into showing a
@@ -26,6 +28,10 @@ const VIEWS = [
   { value: "day", label: "Day" },
   { value: "week", label: "Week" },
   { value: "month", label: "Month" },
+  // The same week, read as who is working rather than what is booked. A tab
+  // rather than a menu entry, because the menu lists destinations and this is a
+  // view of one — the rule `navigation.test.ts` enforces.
+  { value: "crew", label: "Crew" },
 ] as const;
 
 type View = (typeof VIEWS)[number]["value"];
@@ -48,11 +54,17 @@ export default async function SchedulePage({
   const selectedDate = isIsoDate(requested) ? requested : today;
   const view = asView(query.view ?? "");
 
-  const { jobs: allJobs } = await getJobs();
-
   const weekStrip = workWeekOf(selectedDate, today);
   const week = fullWeekOf(selectedDate, today);
   const monthCells = monthGridOf(selectedDate, today);
+
+  // The crew tab needs the roster as well as the jobs, and its reader returns
+  // both — so it is one fetch either way rather than two on that tab.
+  const crew =
+    view === "crew"
+      ? await getCrewWeek(week[0]?.date ?? selectedDate, week[week.length - 1]?.date ?? selectedDate)
+      : null;
+  const allJobs = crew ? crew.jobs : (await getJobs()).jobs;
 
   // Each view pages by its own unit. A month view whose arrows moved a week at
   // a time would take four taps to do the thing the arrow appears to do.
@@ -64,7 +76,7 @@ export default async function SchedulePage({
   const heading =
     view === "month"
       ? monthLabel(selectedDate)
-      : view === "week"
+      : view === "week" || view === "crew"
         ? workWeekLabel(week)
         : formatDayLabel(selectedDate);
 
@@ -176,6 +188,17 @@ export default async function SchedulePage({
           />
         ) : view === "week" ? (
           <WeekView days={week} jobs={allJobs} today={today} />
+        ) : view === "crew" && crew ? (
+          <CrewWeekView
+            days={week}
+            crew={crewWeek(
+              week.map((day) => day.date),
+              crew.people,
+              crew.business,
+              crew.timeZone,
+            )}
+            jobs={allJobs}
+          />
         ) : (
           <MonthView cells={monthCells} jobs={allJobs} selectedDate={selectedDate} />
         )}
