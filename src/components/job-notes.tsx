@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Mic, MicOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { saveTechnicianNotes } from "@/app/jobs/[jobId]/line-actions";
+import { DictateButton } from "@/components/dictate-button";
 
 /**
  * What the technician writes down, on site.
@@ -25,69 +25,17 @@ import { saveTechnicianNotes } from "@/app/jobs/[jobId]/line-actions";
 /** Long enough not to save mid-word, short enough to beat a distraction. */
 const QUIET_MS = 1000;
 
-/** The vendor-prefixed constructor, without asserting it exists. */
-type SpeechRecognitionLike = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-};
-
-function recognitionConstructor(): (new () => SpeechRecognitionLike) | undefined {
-  if (typeof window === "undefined") return undefined;
-
-  const holder = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
-
-  return holder.SpeechRecognition ?? holder.webkitSpeechRecognition;
-}
-
-function speechRecognition(): SpeechRecognitionLike | null {
-  const Constructor = recognitionConstructor();
-  return Constructor ? new Constructor() : null;
-}
-
-/**
- * Whether this browser can dictate, read the way a browser capability should be.
- *
- * The server has no `window`, so the first paint must say "no" on both sides or
- * hydration mismatches. `useSyncExternalStore` with a server snapshot of false
- * is exactly that, and unlike a `useEffect` that calls `setState` it does not
- * cost a second render on every browser that does support it.
- *
- * Nothing to subscribe to: whether the API exists cannot change while the page
- * is open.
- */
-const subscribeToNothing = () => () => {};
-const dictationOnClient = () => recognitionConstructor() !== undefined;
-const dictationOnServer = () => false;
-
 type SaveState = "clean" | "saving" | "saved" | "failed";
 
 export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: string }) {
   const [value, setValue] = useState(notes);
   const [saveState, setSaveState] = useState<SaveState>("clean");
   const [error, setError] = useState("");
-  const [listening, setListening] = useState(false);
 
   // What the server is known to hold. Compared against before every save so a
   // blur straight after an autosave does not post the same text twice.
   const saved = useRef(notes);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const dictationAvailable = useSyncExternalStore(
-    subscribeToNothing,
-    dictationOnClient,
-    dictationOnServer,
-  );
-
-  const recognition = useRef<SpeechRecognitionLike | null>(null);
 
   const save = useCallback(
     async (text: string) => {
@@ -127,58 +75,11 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
     void save(value);
   }
 
-  // Stop the microphone if this unmounts mid-sentence. A recogniser left
-  // running holds the mic indicator on after the page has gone.
   useEffect(() => {
     return () => {
-      recognition.current?.stop();
-      recognition.current = null;
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);
-
-  function toggleDictation() {
-    if (listening) {
-      recognition.current?.stop();
-      return;
-    }
-
-    const engine = speechRecognition();
-    if (!engine) return;
-
-    engine.continuous = true;
-    engine.interimResults = false;
-    engine.lang = "en-US";
-
-    engine.onresult = (event) => {
-      let heard = "";
-      for (let index = 0; index < event.results.length; index += 1) {
-        heard += event.results[index]?.[0]?.transcript ?? "";
-      }
-      const spoken = heard.trim();
-      if (!spoken) return;
-
-      // Appended to whatever is already typed rather than replacing it. Losing
-      // a paragraph because somebody tapped the mic to add a sentence is the
-      // sort of thing that stops a feature being used twice.
-      setValue((current) => {
-        const next = current.trim() ? `${current.trim()} ${spoken}` : spoken;
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => void save(next), QUIET_MS);
-        return next;
-      });
-      setSaveState("clean");
-    };
-
-    // Both paths clear the flag: a denied microphone permission fires onerror
-    // and never onend, and a button stuck on "listening" cannot be pressed again.
-    engine.onerror = () => setListening(false);
-    engine.onend = () => setListening(false);
-
-    recognition.current = engine;
-    engine.start();
-    setListening(true);
-  }
 
   return (
     <section>
@@ -215,19 +116,14 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
         </p>
       ) : null}
 
-      {dictationAvailable ? (
-        <button
-          type="button"
-          onClick={toggleDictation}
-          aria-pressed={listening}
-          className={`tap-target mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-control border px-4 text-sm font-semibold ${
-            listening ? "border-brand bg-brand/10 text-brand" : "border-line"
-          }`}
-        >
-          {listening ? <MicOff className="h-4 w-4" aria-hidden /> : <Mic className="h-4 w-4" aria-hidden />}
-          {listening ? "Stop" : "Dictate"}
-        </button>
-      ) : null}
+      {/*
+        Dictated words go through `change`, the same path typing takes, so
+        speaking a note and walking away persists it exactly as typing one and
+        walking away does.
+      */}
+      <div className="mt-2 flex flex-wrap items-center">
+        <DictateButton value={value} onText={change} variant="labelled" />
+      </div>
     </section>
   );
 }

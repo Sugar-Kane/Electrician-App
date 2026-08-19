@@ -20,6 +20,7 @@ import {
 } from "@/app/messages/actions";
 import type { ConversationThread } from "@/lib/messaging";
 import { Banner } from "@/components/ui/banner";
+import { DictateButton } from "@/components/dictate-button";
 
 const initialState: SendMessageState = { error: "" };
 
@@ -147,8 +148,15 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
   });
 
   return (
-    <div className="flex min-h-[60vh] flex-col rounded-panel border border-line bg-surface">
-      <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+    /*
+     * A frame that fills its parent rather than growing with its contents. The
+     * parent gives it a real height (`fill` on the page shell), so the list
+     * below scrolls inside this box instead of scrolling the whole page — which
+     * is what carried the customer's name and the composer off-screen every
+     * time somebody read back through a thread.
+     */
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-panel border border-line bg-surface">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 sm:p-5">
         {thread.messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-ink-faint">
             No messages yet. Anything you send starts the thread.
@@ -192,7 +200,12 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-line p-3 sm:p-4">
+      {/*
+        The tab bar is hidden on this screen, so the composer is what sits at
+        the bottom of the phone — and it has to clear the home indicator itself
+        rather than inheriting clearance from a nav that is no longer there.
+      */}
+      <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
         {thread.canSend ? (
           <>
             {thread.quietHours.currentlyQuiet ? (
@@ -228,6 +241,14 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
                 }}
                 placeholder="Message…"
                 className="max-h-40 min-h-12 flex-1 resize-y rounded-control border border-line bg-raised px-4 py-3 text-base leading-6 text-white outline-none placeholder:text-ink-faint focus:border-brand/70"
+              />
+              {/*
+                Speaking a reply beats thumb-typing one on a ladder, and the
+                button hides itself on a browser that cannot hear.
+              */}
+              <DictateButton
+                value={body}
+                onText={(next) => setBody(next.slice(0, 1600))}
               />
               <SendButton disabled={body.trim().length === 0} />
             </form>

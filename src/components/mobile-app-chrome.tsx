@@ -68,7 +68,29 @@ function Brand() {
   );
 }
 
-export function MobileAppChrome({ title, backHref }: { title?: string; backHref?: string }) {
+export function MobileAppChrome({
+  title,
+  backHref,
+  bar,
+  bottomNav = true,
+}: {
+  title?: string;
+  backHref?: string;
+  /**
+   * Replaces what the top bar contains, keeping the bar itself.
+   *
+   * For a screen that *is* one thing rather than a page about it — a
+   * conversation, where the person's name belongs where the page title would
+   * otherwise go. Without this the name appears twice, once in this bar and
+   * again in the header below it.
+   */
+  bar?: React.ReactNode;
+  /**
+   * The floating tab bar. Off for a screen with its own bottom control: a
+   * message composer under a floating nav is a send button behind a nav button.
+   */
+  bottomNav?: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const active = activeNavHref(pathname);
@@ -98,102 +120,116 @@ export function MobileAppChrome({ title, backHref }: { title?: string; backHref?
 
   return (
     <>
-      <header className="sticky top-0 z-40 -mx-2 mb-3 flex min-h-14 items-center justify-between border-b border-line bg-canvas/95 px-3 py-1.5 backdrop-blur lg:hidden">
-        {backHref ? (
-          <Link
-            href={backHref}
-            className="tap-target inline-flex min-w-0 items-center gap-2 text-ink"
-            aria-label={`Back to ${backHref === "/" ? "dashboard" : "previous page"}`}
-          >
-            <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden />
-            <span className="truncate text-sm font-semibold">{title}</span>
-          </Link>
-        ) : (
-          <Brand />
+      <header
+        // The negative margin cancels the padding the scrolling shell puts on
+        // its main element, so the bar reaches both edges. A `bar` screen has no
+        // such padding to cancel — keeping it there pushed the back chevron 8px
+        // off the left of the phone.
+        className={`sticky top-0 z-40 flex min-h-14 items-center justify-between border-b border-line bg-canvas/95 px-3 py-1.5 backdrop-blur lg:hidden ${
+          bar ? "" : "-mx-2 mb-3"
+        }`}
+      >
+        {bar ?? (
+          <>
+            {backHref ? (
+              <Link
+                href={backHref}
+                className="tap-target inline-flex min-w-0 items-center gap-2 text-ink"
+                aria-label={`Back to ${backHref === "/" ? "dashboard" : "previous page"}`}
+              >
+                <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden />
+                <span className="truncate text-sm font-semibold">{title}</span>
+              </Link>
+            ) : (
+              <Brand />
+            )}
+            <div className="flex items-center gap-1.5">
+              {/*
+                A link to the real search page, not an overlay. The overlay that
+                used to open here searched `pilotJobs` — the demo fixtures — so
+                an electrician tapping it saw four invented customers and none
+                of their own work, while /search queried the database properly.
+                One search, and it is the one that returns real jobs.
+              */}
+              <Link
+                href="/search"
+                className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
+                aria-label="Search jobs and customers"
+              >
+                <Search className="h-5 w-5" aria-hidden />
+              </Link>
+              <AccountMenu />
+            </div>
+          </>
         )}
-        <div className="flex items-center gap-1.5">
-          {/*
-            A link to the real search page, not an overlay. The overlay that
-            used to open here searched `pilotJobs` — the demo fixtures — so an
-            electrician tapping it saw four invented customers and none of
-            their own work, while /search queried the database properly. One
-            search, and it is the one that returns real jobs.
-          */}
-          <Link
-            href="/search"
-            className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
-            aria-label="Search jobs and customers"
-          >
-            <Search className="h-5 w-5" aria-hidden />
-          </Link>
-          <AccountMenu />
-        </div>
       </header>
 
-      <nav
-        className="fixed inset-x-3 bottom-3 z-50 flex min-h-[64px] items-end justify-around rounded-control border border-line bg-sunken/96 px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur lg:hidden"
-        aria-label="Mobile navigation"
-      >
-        {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action, centre }) => {
-          const create = centre === true;
-          const menu = action === "menu";
+      {bottomNav ? (
+        <nav
+          className="fixed inset-x-3 bottom-3 z-50 flex min-h-[64px] items-end justify-around rounded-control border border-line bg-sunken/96 px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur lg:hidden"
+          aria-label="Mobile navigation"
+        >
+          {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action, centre }) => {
+            const create = centre === true;
+            const menu = action === "menu";
 
-          const current = menu
-            ? beyond
-            : !action && activeNavHref(href) === active && active !== null;
+            const current = menu
+              ? beyond
+              : !action && activeNavHref(href) === active && active !== null;
 
-          const shell = `tap-target flex min-w-[54px] flex-col items-center justify-center gap-0.5 rounded-chip text-[10px] ${
-            current ? "text-brand" : "text-ink-muted"
-          }`;
+            const shell = `tap-target flex min-w-[54px] flex-col items-center justify-center gap-0.5 rounded-chip text-[10px] ${
+              current ? "text-brand" : "text-ink-muted"
+            }`;
 
-          const inner = (
-            <>
-              <span
-                className={
-                  create
-                    ? "-mt-7 grid h-12 w-12 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-yellow-500/20"
-                    : "grid h-7 place-items-center"
-                }
-              >
-                <Icon className={create ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
-              </span>
-              <span>{label}</span>
-            </>
-          );
+            const inner = (
+              <>
+                <span
+                  className={
+                    create
+                      ? "-mt-7 grid h-12 w-12 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-yellow-500/20"
+                      : "grid h-7 place-items-center"
+                  }
+                >
+                  <Icon className={create ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
+                </span>
+                <span>{label}</span>
+              </>
+            );
 
-          // More opens a sheet rather than navigating, so it is a button. A
-          // link to "" would quietly take somebody to the dashboard, which is
-          // what More did in a different way before.
-          if (action) {
+            // More opens a sheet rather than navigating, so it is a button. A
+            // link to "" would quietly take somebody to the dashboard, which is
+            // what More did in a different way before.
+            if (action) {
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setMenuOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={menuOpen}
+                  aria-label="Open main menu"
+                  className={shell}
+                >
+                  {inner}
+                </button>
+              );
+            }
+
             return (
-              <button
+              <Link
                 key={label}
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                aria-haspopup="dialog"
-                aria-expanded={menuOpen}
-                aria-label="Open main menu"
+                href={href}
+                onClick={() => toTopIfHere(href)}
+                aria-current={current ? "page" : undefined}
+                aria-label={create ? "Open the assistant" : undefined}
                 className={shell}
               >
                 {inner}
-              </button>
+              </Link>
             );
-          }
-
-          return (
-            <Link
-              key={label}
-              href={href}
-              onClick={() => toTopIfHere(href)}
-              aria-current={current ? "page" : undefined}
-              aria-label={create ? "Open the assistant" : undefined}
-              className={shell}
-            >
-              {inner}
-            </Link>
-          );
-        })}
-      </nav>
+          })}
+        </nav>
+      ) : null}
 
       {menuOpen ? (
         <div
