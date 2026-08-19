@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import {
@@ -61,7 +62,7 @@ export async function sendInvoice(
     .select(
       `id, invoice_number, status, total_cents, balance_due_cents, due_at,
        stripe_hosted_invoice_url, organization_id,
-       jobs ( customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
+       jobs ( id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
     )
     .eq("id", invoiceId)
@@ -112,6 +113,23 @@ export async function sendInvoice(
   });
 
   const outcome = describeDelivery(attempts);
+
+  // Only when it actually went. An invoice that failed to send is not an
+  // invoice the customer has, and a history saying otherwise is worse than no
+  // history at all.
+  if (outcome.ok) {
+    await recordActivity(supabase, {
+      organizationId: text(row.organization_id),
+      eventType: "invoice.sent",
+      label: "Invoice sent",
+      jobId: text(job?.id) || null,
+      metadata: {
+        amount_cents: Number(row.total_cents) || 0,
+        via: channels.map((channel) => (channel === "sms" ? "text" : channel)).join(" and "),
+      },
+    });
+  }
+
   revalidatePath("/invoices");
 
   return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };

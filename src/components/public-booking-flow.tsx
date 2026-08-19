@@ -495,8 +495,15 @@ export function PublicBookingFlow({
                 onChange={(event) => setAcceptedPolicy(event.target.checked)}
                 className="mt-1 h-5 w-5 shrink-0 accent-brand"
               />
+              {/*
+                The amount is said here, in the sentence being agreed to, not
+                only in the panel above it. A tick against "I understand payment
+                confirms the visit" is not agreement to a number nobody wrote
+                into the agreement.
+              */}
               <span className="text-sm leading-6 text-ink-muted">
-                I understand payment confirms the diagnostic visit. Canceling or rescheduling inside {bookingPage.free_reschedule_hours} hours may retain {formatCurrency(bookingPage.cancellation_fee_cents)}.
+                I agree to the {formatCurrency(checkoutAmount)} diagnostic fee, and understand paying
+                it is what confirms the visit. Canceling or rescheduling inside {bookingPage.free_reschedule_hours} hours may retain {formatCurrency(bookingPage.cancellation_fee_cents)}.
                 I agree that {bookingPage.display_name} may contact me by phone or email about this request.
               </span>
             </label>

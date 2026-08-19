@@ -1,5 +1,6 @@
 import "server-only";
 
+import { recordActivity } from "@/lib/activity";
 import { calendarDate, nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -274,6 +275,30 @@ export async function recordBookingRequest(input: {
 
   const requestId = created?.id ? String(created.id) : undefined;
   const publicToken = created?.public_token ? String(created.public_token) : undefined;
+
+  /*
+   * The first line of this customer's history.
+   *
+   * Written here rather than left to the scheduling function below, because a
+   * callback never reaches that function and an inquiry that goes no further is
+   * still something that happened — the timeline is a record of the customer,
+   * not only of the customers who booked.
+   *
+   * Nothing is recorded about the fee here. The customer was told it, and being
+   * told is not agreeing; the prompts do not yet ask for a yes, so writing one
+   * down would be inventing consent.
+   */
+  if (requestId) {
+    await recordActivity(input.database, {
+      organizationId: input.organizationId,
+      eventType: action.kind === "book" ? "booking.requested" : "booking.callback_requested",
+      label: action.kind === "book" ? "Asked for an electrician" : "Asked for a callback",
+      customerId: input.customerId,
+      bookingRequestId: requestId,
+      metadata: { via: input.channel === "phone" ? "voice" : "sms" },
+    });
+  }
+
   if (action.kind !== "book" || !requestId) return { requestId, publicToken };
 
   const { data: scheduled } = await input.database.rpc("schedule_sms_booking_request", {
