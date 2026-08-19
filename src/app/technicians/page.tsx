@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { UserRoundPlus } from "lucide-react";
+import { CalendarRange, UserRoundPlus } from "lucide-react";
 
 import { AddSelfElectrician } from "@/components/add-self-electrician";
 import { BusinessAvailability } from "@/components/business-availability";
@@ -46,7 +46,19 @@ export default async function ElectriciansPage() {
           : `${working} of ${technicians.length} working · ${outToday} out on a job today.`
       }
     >
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        {/*
+          Hours are set here, one person at a time, and read back together over
+          there. Without this link the crew calendar is a tab nobody finds from
+          the screen that fills it.
+        */}
+        <Link
+          href="/schedule?view=crew"
+          className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+        >
+          <CalendarRange className="h-4 w-4" aria-hidden />
+          Everyone&apos;s week
+        </Link>
         <Link
           href="/settings/team"
           className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
