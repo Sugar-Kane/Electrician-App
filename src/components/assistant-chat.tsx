@@ -10,6 +10,7 @@ import {
   type Attachment,
 } from "@/components/assistant-attachments";
 import { ChatMarkdown } from "@/components/ui/chat-markdown";
+import { DictateButton } from "@/components/dictate-button";
 
 import { chatAction, type ChatState } from "@/app/assistant/agent-actions";
 
@@ -81,6 +82,9 @@ function Thinking({ pending }: { pending: boolean }) {
 export function AssistantChat() {
   const [state, action, pending] = useActionState(chatAction, initialState);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Held here rather than left to the DOM so dictation has something to append
+  // to. A microphone that reads a stale value overwrites what was typed.
+  const [question, setQuestion] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +114,11 @@ export function AssistantChat() {
    * Tapping a suggestion is asking the question, by exactly the path typing it
    * would take: put the words in the box, submit the box. Nothing about a tap
    * should reach the model differently from a keystroke.
+   *
+   * The box is React state now, so dictation has something to append to — but
+   * `requestSubmit` reads the DOM, and a `setState` has not landed there yet
+   * when this returns. So the element is set directly *and* state is told, and
+   * the two agree by the next render rather than the box snapping back.
    */
   function ask(question: string) {
     if (pending) return;
@@ -120,6 +129,7 @@ export function AssistantChat() {
     if (!field) return;
 
     field.value = question;
+    setQuestion(question);
     formRef.current?.requestSubmit();
   }
 
@@ -231,8 +241,13 @@ export function AssistantChat() {
               attachments={attachments}
               ready={ready}
               settling={settling}
+              question={question}
+              onQuestionChange={setQuestion}
               onAttachmentsChange={setAttachments}
-              onSent={() => setAttachments([])}
+              onSent={() => {
+                setAttachments([]);
+                setQuestion("");
+              }}
             />
           </>
         )}
@@ -249,6 +264,8 @@ function Form({
   attachments,
   ready,
   settling,
+  question,
+  onQuestionChange,
   onAttachmentsChange,
   onSent,
 }: {
@@ -259,6 +276,8 @@ function Form({
   attachments: Attachment[];
   ready: Attachment[];
   settling: boolean;
+  question: string;
+  onQuestionChange: (next: string) => void;
   onAttachmentsChange: (next: (current: Attachment[]) => Attachment[]) => void;
   onSent: () => void;
 }) {
@@ -299,8 +318,29 @@ function Form({
           type="text"
           maxLength={500}
           autoComplete="off"
-          placeholder="What is booked tomorrow?"
-          className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base outline-none placeholder:text-ink-faint focus:border-brand/70"
+          value={question}
+          onChange={(event) => onQuestionChange(event.target.value.slice(0, 500))}
+          /*
+           * Short enough never to clip.
+           *
+           * With a microphone in the row the box is 110px on the narrowest
+           * phone. "What is booked tomorrow?" became "What is b", which reads
+           * as broken, and the font cannot shrink to fit — anything under 16px
+           * makes iOS zoom the page on focus. It carries almost no load anyway:
+           * the suggestions directly above are full example questions, and this
+           * used to just repeat the first of them.
+           */
+          placeholder="Ask…"
+          className="min-h-12 w-full min-w-0 rounded-control border border-line bg-raised px-3 text-base outline-none placeholder:text-ink-faint focus:border-brand/70"
+        />
+        {/*
+          The same microphone the job notes and a customer text already use.
+          Asking out loud matters most here: the questions worth asking on a
+          ladder are the ones nobody stops to thumb-type.
+        */}
+        <DictateButton
+          value={question}
+          onText={(next) => onQuestionChange(next.slice(0, 500))}
         />
         {/*
           Held while a file is still going up. Sending now would ask about a
