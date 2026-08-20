@@ -22,6 +22,7 @@ export function FieldPageShell({
   compact = false,
   bar,
   fill = false,
+  bottomNav = true,
   children,
 }: {
   title: string;
@@ -60,23 +61,50 @@ export function FieldPageShell({
    * browser's address bar makes `vh` taller than the screen.
    */
   fill?: boolean;
+  /**
+   * The floating tab bar, on a `fill` page.
+   *
+   * A conversation with one customer is somewhere you arrive from a list and
+   * leave by the way you came, so it drops the tabs and gives the composer the
+   * bottom of the screen. The assistant is one of the tabs — taking them away
+   * there would strand somebody on the screen they just tapped into.
+   */
+  bottomNav?: boolean;
   children: React.ReactNode;
 }) {
   if (fill) {
     return (
       <main className="flex h-[100dvh] flex-col overflow-hidden bg-canvas text-ink">
-        <MobileAppChrome title={title} backHref={backHref} bar={bar} bottomNav={false} />
-        <div className="mx-auto grid w-full min-h-0 max-w-[1760px] flex-1 gap-2 p-2 sm:p-3 lg:grid-cols-[248px_minmax(0,1fr)]">
+        <MobileAppChrome title={title} backHref={backHref} bar={bar} bottomNav={bottomNav} />
+        <div
+          className={`mx-auto grid w-full min-h-0 max-w-[1760px] flex-1 gap-2 p-2 sm:p-3 lg:grid-cols-[248px_minmax(0,1fr)] ${
+            // Clears the floating nav where it is still there. The nav is
+            // hidden past `lg`, so the padding goes with it.
+            bottomNav ? "pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-3" : ""
+          }`}
+        >
           <AppSidebar />
           <div
             id="main-content"
             tabIndex={-1}
             className="flex min-h-0 min-w-0 flex-col lg:px-4 lg:py-2"
           >
-            {/* The bar again, for a desktop that has no sticky phone chrome. */}
+            {/*
+              Desktop has no sticky phone chrome, so whatever the phone put in
+              that bar has to appear here instead — either the page's own bar,
+              or a plain heading for a page that did not supply one. On a phone
+              both are already in the bar above, which is the whole point.
+            */}
             {bar ? (
               <div className="mb-2 hidden shrink-0 items-center gap-2 lg:flex">{bar}</div>
-            ) : null}
+            ) : (
+              <div className="mb-3 hidden shrink-0 lg:block">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+                  {eyebrow}
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight lg:text-3xl">{title}</h1>
+              </div>
+            )}
             {children}
           </div>
         </div>
