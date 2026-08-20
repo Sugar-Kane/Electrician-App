@@ -48,6 +48,21 @@ const MAX_ROUNDS = 4;
 const MAX_HISTORY = 12;
 const MAX_QUESTION = 800;
 
+/*
+ * Two budgets, because the round limit was never a time limit.
+ *
+ * Four rounds of model call and database lookup can outlast the function they
+ * run in. A killed function never returns an action, and an action that never
+ * returns leaves `useActionState` pending for good — the spinner on the phone
+ * span until somebody gave up, which reads as a button that does nothing.
+ *
+ * `TURN_BUDGET_MS` sits comfortably inside the page's `maxDuration` so the turn
+ * gives up on its own terms and can still say something. `ROUND_TIMEOUT_MS`
+ * stops any single request eating the lot.
+ */
+const TURN_BUDGET_MS = 45_000;
+const ROUND_TIMEOUT_MS = 20_000;
+
 type Block =
   | { type: "text"; text: string }
   | { type: "tool_use"; id: string; name: string; input: unknown }
@@ -152,8 +167,18 @@ async function sendChatMessage(
 
   let spoken = "";
   let proposal: Proposal | undefined;
+  let ranOut = false;
+  const deadline = Date.now() + TURN_BUDGET_MS;
 
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
+    // Checked before starting a round rather than after finishing one: the
+    // point is never to begin work there is no time to finish.
+    if (Date.now() >= deadline) {
+      ranOut = true;
+      console.warn("assistant turn ran out of time", { round, question: question.slice(0, 80) });
+      break;
+    }
+
     const reply = await runAssistantTurn({
       system: assistantToolPrompt(context.businessName),
       brief: context.brief,
@@ -163,6 +188,7 @@ async function sendChatMessage(
         description: tool.description,
         input_schema: tool.input_schema,
       })),
+      timeoutMs: Math.max(1_000, Math.min(ROUND_TIMEOUT_MS, deadline - Date.now())),
     });
 
     if (!reply) {
@@ -207,9 +233,20 @@ async function sendChatMessage(
 
   revalidatePath("/assistant");
 
+  /*
+   * Running out of time gets its own words.
+   *
+   * "I could not work that out" is what the model says about a question it
+   * understood and could not answer. A turn cut short did not fail at the
+   * question, it never got to finish — and telling somebody to ask again is
+   * useful, where telling them their question was unanswerable is not.
+   */
   const closing = proposal
     ? spoken || "Ready when you are — check it and tap to confirm."
-    : spoken || "I could not work that out.";
+    : spoken ||
+      (ranOut
+        ? "That one took longer than I have. Ask me again, or narrow it down a bit."
+        : "I could not work that out.");
 
   return {
     turns: [...asked, { role: "assistant", text: closing }],

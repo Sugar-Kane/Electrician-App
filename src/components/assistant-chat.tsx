@@ -95,6 +95,23 @@ export function AssistantChat() {
     if (list) list.scrollTop = list.scrollHeight;
   }, [state.turns.length, pending, state.proposal]);
 
+  /*
+   * Tapping a suggestion is asking the question, by exactly the path typing it
+   * would take: put the words in the box, submit the box. Nothing about a tap
+   * should reach the model differently from a keystroke.
+   */
+  function ask(question: string) {
+    if (pending) return;
+
+    const field = formRef.current?.elements.namedItem(
+      "question",
+    ) as HTMLInputElement | null;
+    if (!field) return;
+
+    field.value = question;
+    formRef.current?.requestSubmit();
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-panel border border-line bg-surface">
       <div
@@ -117,15 +134,9 @@ export function AssistantChat() {
                 <button
                   key={suggestion}
                   type="button"
-                  onClick={() => {
-                    const field = formRef.current?.elements.namedItem(
-                      "question",
-                    ) as HTMLInputElement | null;
-                    if (!field) return;
-                    field.value = suggestion;
-                    formRef.current?.requestSubmit();
-                  }}
-                  className="tap-target rounded-control border border-line px-3 py-2 text-left text-xs text-ink-muted hover:text-ink"
+                  onClick={() => ask(suggestion)}
+                  disabled={pending}
+                  className="tap-target rounded-control border border-line px-3 py-2 text-left text-xs text-ink-muted hover:text-ink disabled:opacity-50"
                 >
                   {suggestion}
                 </button>
@@ -161,6 +172,36 @@ export function AssistantChat() {
         short conversation and floating over them on a long one.
       */}
       <div className="shrink-0 border-t border-line p-3 sm:p-4">
+        {/*
+          The suggestions used to exist only on an empty chat, so the moment you
+          asked one thing there was nothing left to tap and the next question had
+          to be typed out in full. They live here too now, beside the box, for as
+          long as the conversation lasts.
+
+          A row that scrolls sideways rather than a grid: these are sentences,
+          and six of them stacked would push the answers off a phone. Hidden
+          while a proposal is waiting, because the only thing to decide then is
+          the proposal.
+        */}
+        {state.turns.length > 0 && !state.proposal ? (
+          <div
+            className="-mx-3 mb-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1 sm:-mx-4 sm:px-4"
+            aria-label="Suggested questions"
+          >
+            {SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => ask(suggestion)}
+                disabled={pending}
+                className="tap-target min-h-11 shrink-0 whitespace-nowrap rounded-chip border border-line px-3 text-xs text-ink-muted hover:text-ink disabled:opacity-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {state.proposal ? (
           <ProposalCard proposal={state.proposal} action={action} />
         ) : (
