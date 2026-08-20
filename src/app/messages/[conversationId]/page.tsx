@@ -32,6 +32,7 @@ export default async function ConversationPage({
       eyebrow="Conversation"
       backHref="/messages"
       fill
+      bottomNav={false}
       bar={
         <ConversationBar
           customerName={thread.customerName}

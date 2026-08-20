@@ -32,9 +32,16 @@ const SUGGESTIONS = [
   "What permit do I need for a service upgrade?",
 ];
 
-function SendButton() {
-  const { pending } = useFormStatus();
-
+/*
+ * Pending comes from `useActionState` rather than `useFormStatus`.
+ *
+ * `useFormStatus` only reports on a form above it in the tree, which forced the
+ * thinking line and the send button to live inside the same `<form>` — and so
+ * forced the question box to sit inside the scrolling list. Reading it from the
+ * action instead frees the two to sit where they belong: the answer-in-progress
+ * at the end of the thread, the button in the composer.
+ */
+function SendButton({ pending }: { pending: boolean }) {
   return (
     <button
       type="submit"
@@ -51,13 +58,15 @@ function SendButton() {
   );
 }
 
-function Thinking() {
-  const { pending } = useFormStatus();
+function Thinking({ pending }: { pending: boolean }) {
   if (!pending) return null;
 
   return (
     <div className="flex justify-start">
-      <p className="max-w-[85%] rounded-panel border border-line bg-surface px-4 py-3 text-sm text-ink-faint">
+      <p
+        className="max-w-[85%] rounded-panel border border-line bg-raised px-4 py-3 text-sm text-ink-faint"
+        aria-live="polite"
+      >
         Reading the schedule…
       </p>
     </div>
@@ -65,19 +74,37 @@ function Thinking() {
 }
 
 export function AssistantChat() {
-  const [state, action] = useActionState(chatAction, initialState);
+  const [state, action, pending] = useActionState(chatAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  /*
+   * Land at the newest answer, the way every chat window opens.
+   *
+   * The scroll container is set directly rather than through
+   * `scrollIntoView` on a trailing element: this list lives inside a frame
+   * with a real height, and `scrollIntoView` walks up scrolling every ancestor
+   * it finds, which on a phone drags the whole app around to satisfy a request
+   * about one box.
+   *
+   * Runs on mount too, not only when a turn arrives, so arriving at a chat that
+   * already has answers in it starts at the bottom.
+   */
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [state.turns.length]);
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [state.turns.length, pending, state.proposal]);
 
   return (
-    <div className="flex min-h-[60vh] flex-col gap-3">
-      <div className="flex-1 space-y-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-panel border border-line bg-surface">
+      <div
+        ref={listRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4"
+      >
         {state.turns.length === 0 ? (
-          <div className="rounded-panel border border-line bg-surface p-5">
+          // No border of its own any more: it sits inside the chat frame now,
+          // and a panel inside a panel is two boxes saying one thing.
+          <div className="px-1 py-2">
             <Sparkles className="h-5 w-5 text-brand" aria-hidden />
             <p className="mt-3 text-sm font-semibold">Ask about the business</p>
             <p className="mt-1 text-sm leading-6 text-ink-muted">
@@ -124,32 +151,36 @@ export function AssistantChat() {
           </div>
         ))}
 
+        <Thinking pending={pending} />
+      </div>
+
+      {/*
+        Outside the scroll area, so the question box is always where the thumb
+        expects it rather than at the end of however much has been said. It used
+        to be `sticky` inside the list, which put it below the answers on a
+        short conversation and floating over them on a long one.
+      */}
+      <div className="shrink-0 border-t border-line p-3 sm:p-4">
         {state.proposal ? (
           <ProposalCard proposal={state.proposal} action={action} />
         ) : (
-          <Form action={action} formRef={formRef} error={state.error} />
+          <Form action={action} formRef={formRef} error={state.error} pending={pending} />
         )}
-        <div ref={endRef} />
       </div>
     </div>
   );
 }
 
-/**
- * Split out so `useFormStatus` can see the pending state.
- *
- * The hook only reports on a form above it in the tree, so the thinking line
- * and the send button have to live inside the form element rather than beside
- * it.
- */
 function Form({
   action,
   formRef,
   error,
+  pending,
 }: {
   action: (formData: FormData) => void;
   formRef: React.RefObject<HTMLFormElement | null>;
   error: string;
+  pending: boolean;
 }) {
   return (
     <form
@@ -160,15 +191,13 @@ function Form({
       }}
       className="space-y-3"
     >
-      <Thinking />
-
       {error ? (
         <p className="rounded-control border border-critical/25 bg-critical-bg px-3 py-2 text-sm text-critical">
           {error}
         </p>
       ) : null}
 
-      <div className="sticky bottom-2 flex gap-2">
+      <div className="flex gap-2">
         <input
           name="question"
           type="text"
@@ -177,7 +206,7 @@ function Form({
           placeholder="What is booked tomorrow?"
           className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base outline-none placeholder:text-ink-faint focus:border-brand/70"
         />
-        <SendButton />
+        <SendButton pending={pending} />
       </div>
     </form>
   );
