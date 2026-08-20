@@ -75,7 +75,14 @@ export function FieldPageShell({
   if (fill) {
     return (
       <main className="flex h-[100dvh] flex-col overflow-hidden bg-canvas text-ink">
-        <MobileAppChrome title={title} backHref={backHref} bar={bar} bottomNav={bottomNav} />
+        <MobileAppChrome
+          title={title}
+          backHref={backHref}
+          bar={bar}
+          bottomNav={bottomNav}
+          // This main has no padding — the grid below it does.
+          flush
+        />
         <div
           className={`mx-auto grid w-full min-h-0 max-w-[1760px] flex-1 gap-2 p-2 sm:p-3 lg:grid-cols-[248px_minmax(0,1fr)] ${
             // Clears the floating nav where it is still there. The nav is

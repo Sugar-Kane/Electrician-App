@@ -73,6 +73,7 @@ export function MobileAppChrome({
   backHref,
   bar,
   bottomNav = true,
+  flush = false,
 }: {
   title?: string;
   backHref?: string;
@@ -90,6 +91,16 @@ export function MobileAppChrome({
    * message composer under a floating nav is a send button behind a nav button.
    */
   bottomNav?: boolean;
+  /**
+   * Whether the parent has no horizontal padding for this bar to cancel.
+   *
+   * The scrolling shell pads its main element, so the bar pulls itself back out
+   * to both edges with a negative margin. A full-height shell pads the content
+   * grid instead and leaves the main bare — there the same negative margin
+   * pushes the bar 8px off each side of the phone, clipping the account button
+   * against `overflow-hidden`.
+   */
+  flush?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -121,13 +132,14 @@ export function MobileAppChrome({
   return (
     <>
       <header
-        // The negative margin cancels the padding the scrolling shell puts on
-        // its main element, so the bar reaches both edges. A `bar` screen has no
-        // such padding to cancel — keeping it there pushed the back chevron 8px
-        // off the left of the phone.
+        // Two independent things: reaching both edges, and the gap underneath.
+        // The negative margin cancels padding the parent has — `flush` says
+        // there is none, and keeping it there pushed the bar 8px off each side
+        // of the phone. The gap is only wanted when a page's own content
+        // follows; a screen supplying its own `bar` butts straight up to it.
         className={`sticky top-0 z-40 flex min-h-14 items-center justify-between border-b border-line bg-canvas/95 px-3 py-1.5 backdrop-blur lg:hidden ${
-          bar ? "" : "-mx-2 mb-3"
-        }`}
+          flush ? "" : "-mx-2"
+        } ${bar ? "" : "mb-3"}`}
       >
         {bar ?? (
           <>
