@@ -196,23 +196,38 @@ export async function runAssistantTurn(input: {
   brief: string;
   turns: { role: "user" | "assistant"; content: unknown }[];
   tools: { name: string; description: string; input_schema: unknown }[];
+  /**
+   * How long this one round may take.
+   *
+   * Without it a request that never comes back holds the whole turn open until
+   * the platform kills the function, and a killed function never returns an
+   * action — so the chat spins with no way out. A round that gives up returns
+   * null, which the caller already knows how to say out loud.
+   */
+  timeoutMs?: number;
 }): Promise<AgentReply | null> {
   const anthropic = getClient();
   if (!anthropic) return null;
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-5",
-      max_tokens: 1200,
-      system: [
-        { type: "text" as const, text: input.system },
-        { type: "text" as const, text: `<business_snapshot>\n${input.brief}\n</business_snapshot>` },
-      ],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tools: input.tools as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: input.turns as any,
-    });
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 1200,
+        system: [
+          { type: "text" as const, text: input.system },
+          {
+            type: "text" as const,
+            text: `<business_snapshot>\n${input.brief}\n</business_snapshot>`,
+          },
+        ],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        tools: input.tools as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: input.turns as any,
+      },
+      input.timeoutMs ? { timeout: input.timeoutMs } : undefined,
+    );
 
     const text = response.content
       .filter((block) => block.type === "text")
@@ -232,7 +247,11 @@ export async function runAssistantTurn(input: {
       });
 
     return { text, calls };
-  } catch {
+  } catch (error) {
+    // Said out loud, because the caller turns null into one calm sentence for
+    // the person asking and there would otherwise be nothing anywhere saying
+    // whether it was a timeout, a bad key or an outage.
+    console.error("assistant turn failed", error);
     return null;
   }
 }

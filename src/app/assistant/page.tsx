@@ -9,6 +9,20 @@ import { FieldPageShell } from "@/components/field-page-shell";
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * Long enough for the assistant to actually finish.
+ *
+ * A question can take up to four rounds of model call and database lookup, and
+ * nothing anywhere set a limit — so the work ran under the platform's default
+ * cap, which is far shorter than that. The function was killed mid-answer, the
+ * action never returned, and the spinner on the phone span until somebody gave
+ * up. A tapped suggestion and a typed question failed the same way.
+ *
+ * Server Actions take this from the page segment rather than from the file they
+ * are defined in, which is why it lives here and not in `agent-actions.ts`.
+ */
+export const maxDuration = 60;
+
 export default function AssistantPage() {
   return (
     /*

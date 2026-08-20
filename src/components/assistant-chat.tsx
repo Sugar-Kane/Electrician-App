@@ -1,9 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, LoaderCircle, SendHorizontal, Sparkles, X } from "lucide-react";
 
+import {
+  AttachButton,
+  AttachmentChips,
+  type Attachment,
+} from "@/components/assistant-attachments";
 import { ChatMarkdown } from "@/components/ui/chat-markdown";
 
 import { chatAction, type ChatState } from "@/app/assistant/agent-actions";
@@ -41,11 +46,11 @@ const SUGGESTIONS = [
  * action instead frees the two to sit where they belong: the answer-in-progress
  * at the end of the thread, the button in the composer.
  */
-function SendButton({ pending }: { pending: boolean }) {
+function SendButton({ pending, waiting = false }: { pending: boolean; waiting?: boolean }) {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || waiting}
       aria-label="Ask"
       className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-control bg-brand text-on-brand disabled:opacity-60"
     >
@@ -75,8 +80,14 @@ function Thinking({ pending }: { pending: boolean }) {
 
 export function AssistantChat() {
   const [state, action, pending] = useActionState(chatAction, initialState);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Only the ones that made it to storage ride on the question; a chip still
+  // uploading or already failed carries nothing the server could look up.
+  const ready = attachments.filter((item) => item.state === "ready" && item.documentId);
+  const settling = attachments.some((item) => item.state === "uploading");
 
   /*
    * Land at the newest answer, the way every chat window opens.
@@ -94,6 +105,23 @@ export function AssistantChat() {
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
   }, [state.turns.length, pending, state.proposal]);
+
+  /*
+   * Tapping a suggestion is asking the question, by exactly the path typing it
+   * would take: put the words in the box, submit the box. Nothing about a tap
+   * should reach the model differently from a keystroke.
+   */
+  function ask(question: string) {
+    if (pending) return;
+
+    const field = formRef.current?.elements.namedItem(
+      "question",
+    ) as HTMLInputElement | null;
+    if (!field) return;
+
+    field.value = question;
+    formRef.current?.requestSubmit();
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-panel border border-line bg-surface">
@@ -117,15 +145,9 @@ export function AssistantChat() {
                 <button
                   key={suggestion}
                   type="button"
-                  onClick={() => {
-                    const field = formRef.current?.elements.namedItem(
-                      "question",
-                    ) as HTMLInputElement | null;
-                    if (!field) return;
-                    field.value = suggestion;
-                    formRef.current?.requestSubmit();
-                  }}
-                  className="tap-target rounded-control border border-line px-3 py-2 text-left text-xs text-ink-muted hover:text-ink"
+                  onClick={() => ask(suggestion)}
+                  disabled={pending}
+                  className="tap-target rounded-control border border-line px-3 py-2 text-left text-xs text-ink-muted hover:text-ink disabled:opacity-50"
                 >
                   {suggestion}
                 </button>
@@ -161,10 +183,58 @@ export function AssistantChat() {
         short conversation and floating over them on a long one.
       */}
       <div className="shrink-0 border-t border-line p-3 sm:p-4">
+        {/*
+          The suggestions used to exist only on an empty chat, so the moment you
+          asked one thing there was nothing left to tap and the next question had
+          to be typed out in full. They live here too now, beside the box, for as
+          long as the conversation lasts.
+
+          A row that scrolls sideways rather than a grid: these are sentences,
+          and six of them stacked would push the answers off a phone. Hidden
+          while a proposal is waiting, because the only thing to decide then is
+          the proposal.
+        */}
+        {state.turns.length > 0 && !state.proposal ? (
+          <div
+            className="-mx-3 mb-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1 sm:-mx-4 sm:px-4"
+            aria-label="Suggested questions"
+          >
+            {SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => ask(suggestion)}
+                disabled={pending}
+                className="tap-target min-h-11 shrink-0 whitespace-nowrap rounded-chip border border-line px-3 text-xs text-ink-muted hover:text-ink disabled:opacity-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {state.proposal ? (
           <ProposalCard proposal={state.proposal} action={action} />
         ) : (
-          <Form action={action} formRef={formRef} error={state.error} pending={pending} />
+          <>
+            <AttachmentChips
+              attachments={attachments}
+              onRemove={(key) =>
+                setAttachments((current) => current.filter((item) => item.key !== key))
+              }
+            />
+            <Form
+              action={action}
+              formRef={formRef}
+              error={state.error}
+              pending={pending}
+              attachments={attachments}
+              ready={ready}
+              settling={settling}
+              onAttachmentsChange={setAttachments}
+              onSent={() => setAttachments([])}
+            />
+          </>
         )}
       </div>
     </div>
@@ -176,11 +246,21 @@ function Form({
   formRef,
   error,
   pending,
+  attachments,
+  ready,
+  settling,
+  onAttachmentsChange,
+  onSent,
 }: {
   action: (formData: FormData) => void;
   formRef: React.RefObject<HTMLFormElement | null>;
   error: string;
   pending: boolean;
+  attachments: Attachment[];
+  ready: Attachment[];
+  settling: boolean;
+  onAttachmentsChange: (next: (current: Attachment[]) => Attachment[]) => void;
+  onSent: () => void;
 }) {
   return (
     <form
@@ -188,9 +268,20 @@ function Form({
       action={(formData) => {
         action(formData);
         formRef.current?.reset();
+        // The files belong to the question that just left. Clearing them here
+        // rather than on the answer means the next question starts empty even
+        // if this one fails.
+        onSent();
       }}
       className="space-y-3"
     >
+      {/*
+        The document ids ride in the form itself, so the existing FormData
+        contract carries them with no separate channel to keep in step.
+      */}
+      {ready.map((item) => (
+        <input key={item.key} type="hidden" name="attachment" value={item.documentId} />
+      ))}
       {error ? (
         <p className="rounded-control border border-critical/25 bg-critical-bg px-3 py-2 text-sm text-critical">
           {error}
@@ -198,6 +289,11 @@ function Form({
       ) : null}
 
       <div className="flex gap-2">
+        <AttachButton
+          attachments={attachments}
+          onChange={onAttachmentsChange}
+          disabled={pending}
+        />
         <input
           name="question"
           type="text"
@@ -206,7 +302,12 @@ function Form({
           placeholder="What is booked tomorrow?"
           className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base outline-none placeholder:text-ink-faint focus:border-brand/70"
         />
-        <SendButton pending={pending} />
+        {/*
+          Held while a file is still going up. Sending now would ask about a
+          photo the server cannot see yet, and the answer would be about
+          nothing.
+        */}
+        <SendButton pending={pending} waiting={settling} />
       </div>
     </form>
   );
