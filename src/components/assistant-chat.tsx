@@ -1,9 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, LoaderCircle, SendHorizontal, Sparkles, X } from "lucide-react";
 
+import {
+  AttachButton,
+  AttachmentChips,
+  type Attachment,
+} from "@/components/assistant-attachments";
 import { ChatMarkdown } from "@/components/ui/chat-markdown";
 
 import { chatAction, type ChatState } from "@/app/assistant/agent-actions";
@@ -41,11 +46,11 @@ const SUGGESTIONS = [
  * action instead frees the two to sit where they belong: the answer-in-progress
  * at the end of the thread, the button in the composer.
  */
-function SendButton({ pending }: { pending: boolean }) {
+function SendButton({ pending, waiting = false }: { pending: boolean; waiting?: boolean }) {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || waiting}
       aria-label="Ask"
       className="tap-target grid h-12 w-12 shrink-0 place-items-center rounded-control bg-brand text-on-brand disabled:opacity-60"
     >
@@ -75,8 +80,14 @@ function Thinking({ pending }: { pending: boolean }) {
 
 export function AssistantChat() {
   const [state, action, pending] = useActionState(chatAction, initialState);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Only the ones that made it to storage ride on the question; a chip still
+  // uploading or already failed carries nothing the server could look up.
+  const ready = attachments.filter((item) => item.state === "ready" && item.documentId);
+  const settling = attachments.some((item) => item.state === "uploading");
 
   /*
    * Land at the newest answer, the way every chat window opens.
@@ -205,7 +216,25 @@ export function AssistantChat() {
         {state.proposal ? (
           <ProposalCard proposal={state.proposal} action={action} />
         ) : (
-          <Form action={action} formRef={formRef} error={state.error} pending={pending} />
+          <>
+            <AttachmentChips
+              attachments={attachments}
+              onRemove={(key) =>
+                setAttachments((current) => current.filter((item) => item.key !== key))
+              }
+            />
+            <Form
+              action={action}
+              formRef={formRef}
+              error={state.error}
+              pending={pending}
+              attachments={attachments}
+              ready={ready}
+              settling={settling}
+              onAttachmentsChange={setAttachments}
+              onSent={() => setAttachments([])}
+            />
+          </>
         )}
       </div>
     </div>
@@ -217,11 +246,21 @@ function Form({
   formRef,
   error,
   pending,
+  attachments,
+  ready,
+  settling,
+  onAttachmentsChange,
+  onSent,
 }: {
   action: (formData: FormData) => void;
   formRef: React.RefObject<HTMLFormElement | null>;
   error: string;
   pending: boolean;
+  attachments: Attachment[];
+  ready: Attachment[];
+  settling: boolean;
+  onAttachmentsChange: (next: (current: Attachment[]) => Attachment[]) => void;
+  onSent: () => void;
 }) {
   return (
     <form
@@ -229,9 +268,20 @@ function Form({
       action={(formData) => {
         action(formData);
         formRef.current?.reset();
+        // The files belong to the question that just left. Clearing them here
+        // rather than on the answer means the next question starts empty even
+        // if this one fails.
+        onSent();
       }}
       className="space-y-3"
     >
+      {/*
+        The document ids ride in the form itself, so the existing FormData
+        contract carries them with no separate channel to keep in step.
+      */}
+      {ready.map((item) => (
+        <input key={item.key} type="hidden" name="attachment" value={item.documentId} />
+      ))}
       {error ? (
         <p className="rounded-control border border-critical/25 bg-critical-bg px-3 py-2 text-sm text-critical">
           {error}
@@ -239,6 +289,11 @@ function Form({
       ) : null}
 
       <div className="flex gap-2">
+        <AttachButton
+          attachments={attachments}
+          onChange={onAttachmentsChange}
+          disabled={pending}
+        />
         <input
           name="question"
           type="text"
@@ -247,7 +302,12 @@ function Form({
           placeholder="What is booked tomorrow?"
           className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-base outline-none placeholder:text-ink-faint focus:border-brand/70"
         />
-        <SendButton pending={pending} />
+        {/*
+          Held while a file is still going up. Sending now would ask about a
+          photo the server cannot see yet, and the answer would be about
+          nothing.
+        */}
+        <SendButton pending={pending} waiting={settling} />
       </div>
     </form>
   );

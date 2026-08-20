@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { prepareAttachments } from "@/lib/assistant-attachments";
 import { runReadOnlyTool } from "@/lib/assistant-handlers";
+import { storedOnlyNote } from "@/lib/attachment-kinds";
 import { getMemories, memoryBrief } from "@/lib/assistant-memory";
 import {
   ASSISTANT_TOOLS,
@@ -115,7 +117,10 @@ async function buildContext() {
       invoices: briefInvoices,
     }) + memoryBrief(memories);
 
-  return { businessName, brief };
+  // The client and the organization come back too: attachments need both, and
+  // building a second client to re-answer questions already answered here is
+  // two more round trips for nothing.
+  return { businessName, brief, supabase, organizationId: context.organizationId };
 }
 
 /**
@@ -145,9 +150,16 @@ async function sendChatMessage(
   formData: FormData,
 ): Promise<ChatState> {
   const question = String(formData.get("question") ?? "").trim().slice(0, MAX_QUESTION);
-  if (!question) return { ...previous, error: "" };
+  const documentIds = formData.getAll("attachment").map((value) => String(value));
 
-  const asked: ChatTurn[] = [...previous.turns, { role: "user", text: question }];
+  // A question with a photo and no words is a real question — "look at this" —
+  // so an empty box only ends the turn when nothing came with it.
+  if (!question && documentIds.length === 0) return { ...previous, error: "" };
+
+  const asked: ChatTurn[] = [
+    ...previous.turns,
+    { role: "user", text: question || "Have a look at this." },
+  ];
 
   if (!claudeIsConfigured()) {
     return {
@@ -164,6 +176,29 @@ async function sendChatMessage(
   const messages: { role: "user" | "assistant"; content: unknown }[] = asked
     .slice(-MAX_HISTORY)
     .map((turn) => ({ role: turn.role, content: turn.text }));
+
+  /*
+   * Anything attached rides on the question it was attached to.
+   *
+   * The blocks go before the text, which is what the API documentation asks
+   * for, and only on the newest turn: re-sending a photo with every follow-up
+   * would re-upload it on each round of the loop for no gain.
+   *
+   * `prepareAttachments` re-checks every id against this organization, because
+   * an id posted in a form is a claim rather than a fact.
+   */
+  const attached = await prepareAttachments({
+    database: context.supabase,
+    organizationId: context.organizationId,
+    documentIds,
+  });
+
+  if (attached.blocks.length > 0) {
+    messages[messages.length - 1] = {
+      role: "user",
+      content: [...attached.blocks, { type: "text", text: question || "Have a look at this." }],
+    };
+  }
 
   let spoken = "";
   let proposal: Proposal | undefined;
@@ -241,12 +276,24 @@ async function sendChatMessage(
    * question, it never got to finish — and telling somebody to ask again is
    * useful, where telling them their question was unanswerable is not.
    */
-  const closing = proposal
+  const said = proposal
     ? spoken || "Ready when you are — check it and tap to confirm."
     : spoken ||
       (ranOut
         ? "That one took longer than I have. Ask me again, or narrow it down a bit."
         : "I could not work that out.");
+
+  /*
+   * A file that was kept but not read gets said out loud.
+   *
+   * Appended here rather than mentioned in the prompt, because the model does
+   * not know which of the attachments reached it — from where it sits, a video
+   * that was filtered out simply never existed. Left to itself it would answer
+   * about the photo and never mention the video, and the person would
+   * reasonably believe it had watched one.
+   */
+  const note = storedOnlyNote(attached.storedOnly);
+  const closing = note ? `${said}\n\n${note}` : said;
 
   return {
     turns: [...asked, { role: "assistant", text: closing }],
