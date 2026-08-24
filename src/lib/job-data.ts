@@ -9,6 +9,7 @@ import type { ActivityRow } from "@/lib/activity-timeline";
 import { hasCoordinates } from "@/lib/coordinates";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
+import { jobCategoryLabel } from "@/lib/new-job-input";
 import { currentContext } from "@/lib/request-context";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -158,7 +159,10 @@ function mapJob(row: any, timeZone: string): PilotJob {
     email: customer.email ?? "",
     address: property.address_line_1 ?? "",
     city: property.city ?? "",
-    workType: row.category ?? "service",
+    // A label, not the column. The list holds `work_order` and, on jobs
+    // booked before the kinds of work changed, `panel_breaker` and the rest —
+    // and every screen that shows this shows it to a person.
+    workType: jobCategoryLabel(String(row.category ?? "")),
     summary: row.customer_description ?? row.ai_summary ?? "",
     status: JOB_STATUS[row.status] ?? "Pending",
     technician: technicianName,

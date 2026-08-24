@@ -101,7 +101,7 @@ export function JobControls({
           <input type="hidden" name="jobNumber" value={jobNumber} />
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Arrival window starts">
+            <Field label="Arrival window starts" group>
               <DateTimeField
                 name="start"
                 defaultValue={startLocal}
@@ -109,7 +109,7 @@ export function JobControls({
                 timeZone={timeZone}
               />
             </Field>
-            <Field label="Arrival window ends">
+            <Field label="Arrival window ends" group>
               <DateTimeField
                 name="end"
                 defaultValue={endLocal}

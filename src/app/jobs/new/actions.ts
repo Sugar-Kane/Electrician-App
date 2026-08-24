@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { invoiceTotals } from "@/lib/invoice-math";
-import { parseNewJob, splitName, type NewJobRaw } from "@/lib/new-job-input";
+import {
+  parseNewJob,
+  splitName,
+  workOrderTotalCents,
+  type NewJobRaw,
+} from "@/lib/new-job-input";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -24,7 +29,17 @@ import { createClient } from "@/lib/supabase/server";
  * scheduled time was malformed would make somebody retype the whole thing.
  */
 
-export type NewJobState = { error: string };
+/**
+ * What the form gets back.
+ *
+ * `values` is the whole submission, returned on every failure. Without it React
+ * resets an uncontrolled form when the action settles, so a mistyped price
+ * emptied the customer's name, phone, address and description as well — half a
+ * minute of typing gone over a stray full stop. The form feeds these straight
+ * back in, so a rejected save leaves the screen exactly as it was, with one
+ * sentence saying what to fix.
+ */
+export type NewJobState = { error: string; values?: NewJobRaw };
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -51,11 +66,17 @@ export async function createJob(
     startLocal: field(formData, "startLocal"),
     durationHours: field(formData, "durationHours"),
     cost: field(formData, "cost"),
+    mode: field(formData, "mode"),
+    workOrderLines: field(formData, "workOrderLines"),
   };
 
+  /** Everything typed, handed back so nothing is lost to a rejected save. */
+  const keep = (error: string): NewJobState => ({ error, values: raw });
+
   const parsed = parseNewJob(raw);
-  if (!parsed.ok) return { error: parsed.error };
+  if (!parsed.ok) return keep(parsed.error);
   const job = parsed.value;
+  const draft = job.mode === "draft";
 
   const supabase = asFlexibleClient(await createClient());
 
@@ -67,7 +88,7 @@ export async function createJob(
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) {
-    return { error: "You are not a member of a business, so there is nowhere to file this job." };
+    return keep("You are not a member of a business, so there is nowhere to file this job.");
   }
 
   const { data: organization } = await supabase
@@ -111,11 +132,18 @@ export async function createJob(
       .maybeSingle();
 
     if (error || !created) {
-      return { error: "That customer could not be saved. Nothing was created." };
+      console.error("new job: the customer could not be saved", error);
+      return keep("That customer could not be saved. Nothing was created.");
     }
     customerId = text(created.id);
   }
 
+  /*
+   * A draft may have half an address, and half an address is still worth
+   * keeping — a street with no ZIP is enough to find the house again on
+   * Tuesday. The columns are `not null` with no length check, so the parts that
+   * are missing are stored empty rather than as a refusal to save anything.
+   */
   let propertyId: string | null = null;
   if (job.address) {
     const { data: existingProperty } = await supabase
@@ -167,10 +195,13 @@ export async function createJob(
       property_id: propertyId,
       category: job.category,
       customer_description: job.description || null,
-      // Scheduled if it has a time, still a draft if it does not — a job with
-      // no time that claimed to be confirmed would sit in the schedule as a
-      // promise nobody made.
-      status: start ? "confirmed" : "draft",
+      /*
+       * A draft stays a draft even with a time on it, because the owner said
+       * so. Otherwise: scheduled if it has a time, a draft if it does not — a
+       * job with no time that claimed to be confirmed would sit in the schedule
+       * as a promise nobody made.
+       */
+      status: draft || !start ? "draft" : "confirmed",
       ...(start ? { scheduled_start: start, arrival_window_start: start } : {}),
       ...(end ? { scheduled_end: end, arrival_window_end: end } : {}),
     })
@@ -178,7 +209,8 @@ export async function createJob(
     .maybeSingle();
 
   if (jobError || !createdJob) {
-    return { error: "That job could not be saved. The customer was kept." };
+    console.error("new job: the job row could not be saved", jobError);
+    return keep("That job could not be saved. The customer was kept.");
   }
 
   // Every job now leaves a record of where it came from, so Reports can answer
@@ -206,10 +238,42 @@ export async function createJob(
     ...(end ? { arrival_window_end: end } : {}),
   });
 
-  if (job.costCents > 0) {
+  /*
+   * The work order's lines.
+   *
+   * Written after the job because each row needs its id. Not fatal if they
+   * fail: the job is the thing that was asked for, and a parts list can be
+   * retyped on the job page, where it also lives.
+   */
+  if (job.lines.length > 0) {
+    const { error: lineError } = await supabase.from("job_line_items").insert(
+      job.lines.map((line) => ({
+        organization_id: organizationId,
+        job_id: text(createdJob.id),
+        kind: line.kind,
+        description: line.description,
+        quantity: line.quantity,
+        unit: line.unit,
+        unit_price_cents: line.unitPriceCents,
+      })),
+    );
+
+    if (lineError) console.error("new job: the work order lines could not be saved", lineError);
+  }
+
+  /*
+   * A typed cost wins over the lines.
+   *
+   * Somebody who itemised the work and then typed a round number has quoted
+   * that round number, and an invoice that silently disagreed with the figure
+   * on screen would be the worst kind of surprise.
+   */
+  const subtotalCents = job.costCents > 0 ? job.costCents : workOrderTotalCents(job.lines);
+
+  if (subtotalCents > 0) {
     // A job created here has no paid diagnostic behind it — it is being
     // written down after the fact, and nothing has been collected yet.
-    const totals = invoiceTotals({ subtotalCents: job.costCents });
+    const totals = invoiceTotals({ subtotalCents });
 
     await supabase.from("invoices").insert({
       organization_id: organizationId,

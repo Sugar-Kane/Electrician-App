@@ -196,6 +196,19 @@ export function PopoverField({
           ref={panel}
           id={panelId}
           aria-label={panelLabel}
+          /*
+           * Nothing in here has a default click action worth keeping — the list
+           * rows and calendar cells all work through their own handlers — and
+           * cancelling it stops one specific, hard-to-spot fault.
+           *
+           * A `<label>` wrapping this field forwards clicks to the control it
+           * labels whenever the thing clicked is not itself interactive. A
+           * listbox row is an `<li>`, so choosing a time was being forwarded to
+           * whichever button the label had picked, and the field reopened. That
+           * forwarding is part of the click's default action, so this cancels
+           * it. `Field`'s `group` mode is the other half of the fix.
+           */
+          onClick={(event) => event.preventDefault()}
           className="mt-2 overflow-hidden rounded-control border border-line bg-sunken p-2 shadow-2xl shadow-black/40"
         >
           <PopoverContext.Provider value={panelApi}>{children}</PopoverContext.Provider>

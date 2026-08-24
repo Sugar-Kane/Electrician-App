@@ -175,6 +175,128 @@ export async function draftScope(input: {
   }
 }
 
+export type DraftedLine = {
+  kind: "labour" | "material";
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPriceCents: number;
+};
+
+const WORK_ORDER_TOOL = {
+  name: "propose_work_order",
+  description:
+    "Break a described job into the labour and materials it needs, with a quantity and a unit price for each.",
+  input_schema: {
+    type: "object",
+    properties: {
+      lines: {
+        type: "array",
+        maxItems: 20,
+        items: {
+          type: "object",
+          properties: {
+            kind: { type: "string", enum: ["labour", "material"] },
+            description: {
+              type: "string",
+              description: "What the line is, as it would read on an invoice.",
+            },
+            quantity: { type: "number", description: "Hours for labour, count for materials." },
+            unit: { type: "string", description: "hour, each, ft, box." },
+            unitPriceCents: {
+              type: "integer",
+              description: "Price for one unit, in cents. 0 when there is no sensible figure.",
+            },
+          },
+          required: ["kind", "description", "quantity", "unit", "unitPriceCents"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["lines"],
+    additionalProperties: false,
+  },
+} as const;
+
+/**
+ * A first draft of a work order, for the owner to correct.
+ *
+ * Deliberately a draft and nothing more. The lines land in an editable table
+ * with the prices in ordinary inputs, nothing is written until Save, and the
+ * screen says out loud that the figures are a starting point. A model that
+ * quietly set the price of somebody's work would be the worst feature in this
+ * app.
+ *
+ * Returns null rather than throwing: the button beside it goes back to saying
+ * "Ask for a draft" and the owner types the lines themselves, which is what
+ * they were going to do anyway.
+ */
+export async function draftWorkOrderLines(input: {
+  description: string;
+  /** "Panel or breaker", "EV charger" — whatever the customer said it was about. */
+  context?: string;
+}): Promise<DraftedLine[] | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const described = input.description.trim();
+  if (described.length < 10) return null;
+
+  try {
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 1200,
+        system: [
+          "You are helping a residential electrician in California itemise a job they have already agreed to do.",
+          "Break the work into the labour and the materials it plainly needs.",
+          "Prices are a starting point the electrician will correct, so use ordinary trade figures and never invent a precise-looking number you have no basis for — 0 is a better answer than a confident guess.",
+          "Do not include the diagnostic visit; this is the repair.",
+          "Keep it to the lines the described work actually needs. A short job is a short list.",
+        ].join("\n"),
+        tools: [WORK_ORDER_TOOL] as unknown as Anthropic.Tool[],
+        tool_choice: { type: "tool", name: WORK_ORDER_TOOL.name },
+        messages: [{ role: "user", content: described.slice(0, 4000) }],
+      },
+      { timeout: 30_000 },
+    );
+
+    const call = response.content.find((block) => block.type === "tool_use");
+    if (!call || call.type !== "tool_use") return null;
+
+    const proposed = (call.input as { lines?: unknown })?.lines;
+    if (!Array.isArray(proposed)) return null;
+
+    const lines: DraftedLine[] = [];
+
+    for (const entry of proposed) {
+      if (!entry || typeof entry !== "object") continue;
+      const row = entry as Record<string, unknown>;
+      const description = typeof row.description === "string" ? row.description.trim() : "";
+      if (!description) continue;
+
+      const quantity = Number(row.quantity);
+      const price = Number(row.unitPriceCents);
+      const kind = row.kind === "material" ? "material" : "labour";
+
+      lines.push({
+        kind,
+        description: description.slice(0, 300),
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+        unit:
+          (typeof row.unit === "string" ? row.unit.trim().slice(0, 24) : "") ||
+          (kind === "labour" ? "hour" : "each"),
+        unitPriceCents: Number.isFinite(price) && price > 0 ? Math.round(price) : 0,
+      });
+    }
+
+    return lines;
+  } catch (error) {
+    console.error("work order draft failed", error);
+    return null;
+  }
+}
+
 export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
 export type AgentReply = {
   text: string;

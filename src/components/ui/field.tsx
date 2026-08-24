@@ -15,18 +15,52 @@ export const inputClass =
 export function Field({
   label,
   hint,
+  group,
   children,
 }: {
   label: string;
   /** Sits under the control, where it is read after the thing it describes. */
   hint?: string;
+  /**
+   * Set when the caption covers more than one control, like a day and a time.
+   *
+   * A `<label>` with no `htmlFor` binds to the *first* labelable thing inside
+   * it, which for a compound field is wrong twice over. It names only half the
+   * control — and, worse, the browser then forwards clicks from anywhere else
+   * inside the label to that half. That is why choosing a time used to open the
+   * calendar: the time list's options are `<li>`s, not interactive content, so
+   * a tap on one was handed straight to the day button sitting above it.
+   *
+   * A labelled group names the whole thing and forwards nothing. Each control
+   * inside keeps its own name — `DateTimeField` already passes "— day" and
+   * "— time".
+   */
+  group?: boolean;
   children: ReactNode;
 }) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-ink">{label}</span>
+  const caption = <span className="text-sm font-medium text-ink">{label}</span>;
+  const body = (
+    <>
       <span className="mt-2 block">{children}</span>
       {hint ? <span className="mt-2 block text-xs leading-5 text-ink-faint">{hint}</span> : null}
+    </>
+  );
+
+  // `aria-label` rather than pointing at the caption, so this stays a plain
+  // function with no hooks and can keep being rendered on the server.
+  if (group) {
+    return (
+      <div role="group" aria-label={label} className="block">
+        {caption}
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <label className="block">
+      {caption}
+      {body}
     </label>
   );
 }

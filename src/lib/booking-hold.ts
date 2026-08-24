@@ -65,7 +65,7 @@ export function payLinkFor(origin: string, token: string): string {
   return `${base}/booking/${encodeURIComponent(token)}/pay`;
 }
 
-/** "$100" from 10000. Whole dollars, the way a fee is said out loud. */
+/** "$180" from 18000. Whole dollars, the way a fee is said out loud. */
 export function feeLabel(cents: number): string {
   const dollars = cents / 100;
   return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
