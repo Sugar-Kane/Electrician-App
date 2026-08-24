@@ -23,8 +23,11 @@ alter table public.service_settings
 alter table public.jobs
   alter column diagnostic_fee_cents set default 18000;
 
-alter table public.booking_requests
-  alter column diagnostic_fee_cents set default 18000;
+-- Not `booking_requests`. It descends from `sms_booking_requests`, which never
+-- had a fee column — the one in the 2026-08-04 migration belonged to
+-- `booking_intakes`, a different table that this one replaced. What it carries
+-- is `deposit_cents`, and that is written per booking from the settings above
+-- rather than defaulted.
 
 -- ---------------------------------------------------------------------------
 -- The settings every business is actually running on.
