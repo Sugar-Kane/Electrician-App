@@ -3,26 +3,34 @@ import assert from "node:assert/strict";
 
 import {
   isJobCategory,
+  jobCategoryLabel,
   JOB_CATEGORIES,
+  MAX_COST_CENTS,
   parseCostToCents,
   parseNewJob,
+  parseWorkOrderLines,
   splitName,
+  workOrderTotalCents,
   type NewJobRaw,
 } from "./new-job-input.ts";
 
 const raw = (over: Partial<NewJobRaw> = {}): NewJobRaw => ({
-  customerName: "Dana Harper",
-  phone: "209-626-9313",
+  customerName: "Jane Doe",
+  phone: "805-555-0142",
   email: "",
-  addressLine1: "994 Red Gum Lane",
+  addressLine1: "123 Main St",
   city: "Nipomo",
   state: "CA",
   postalCode: "93444",
-  category: "panel_breaker",
+  // A work order, so the two-hour diagnostic lock does not quietly override
+  // whatever duration a test is about.
+  category: "work_order",
   description: "Panel is buzzing.",
   startLocal: "2026-08-18T08:00",
   durationHours: "2",
   cost: "1280",
+  mode: "save",
+  workOrderLines: "",
   ...over,
 });
 
@@ -32,16 +40,16 @@ test("a whole job is read out of the form", () => {
   assert.equal(result.ok, true);
   if (!result.ok) return;
 
-  assert.equal(result.value.customerName, "Dana Harper");
+  assert.equal(result.value.customerName, "Jane Doe");
   // Stored as a carrier would take it, never as typed.
-  assert.equal(result.value.phone, "+12096269313");
+  assert.equal(result.value.phone, "+18055550142");
   assert.deepEqual(result.value.address, {
-    line1: "994 Red Gum Lane",
+    line1: "123 Main St",
     city: "Nipomo",
     state: "CA",
     postalCode: "93444",
   });
-  assert.equal(result.value.category, "panel_breaker");
+  assert.equal(result.value.category, "work_order");
   assert.equal(result.value.durationMinutes, 120);
   assert.equal(result.value.costCents, 128_000);
 });
@@ -61,7 +69,6 @@ test("no cost means no invoice, and a typo means no job", () => {
   assert.equal(parseCostToCents("   "), 0);
 
   assert.equal(parseCostToCents("twelve hundred"), null);
-  assert.equal(parseCostToCents("1280.999"), null);
   assert.equal(parseCostToCents("-500"), null);
   assert.equal(parseCostToCents("."), null);
   assert.equal(parseCostToCents("12,80,0.0.0"), null);
@@ -180,4 +187,137 @@ test("stray whitespace does not become part of the record", () => {
   if (!result.ok) return;
   assert.equal(result.value.customerName, "Dana Harper");
   assert.equal(result.value.address?.city, "Nipomo");
+});
+
+test("the figure that lost somebody a whole form is read fine", () => {
+  // A million dollars with the decimal point tapped before the cents were.
+  assert.equal(parseCostToCents("$1,000,000."), 100_000_000);
+  assert.equal(parseCostToCents("1,000,000"), 100_000_000);
+  assert.equal(parseCostToCents("1000000.00"), 100_000_000);
+  // Non-breaking and narrow spaces, which is what a phone keyboard and a
+  // spreadsheet paste actually produce.
+  assert.equal(parseCostToCents("$1 280"), 128_000);
+  assert.equal(parseCostToCents("1 280.50"), 128_050);
+});
+
+test("more decimals than money has are rounded, not refused", () => {
+  assert.equal(parseCostToCents("1280.999"), 128_100);
+  assert.equal(parseCostToCents("1280.994"), 128_099);
+});
+
+test("a cost bigger than the invoice columns is refused by name", () => {
+  assert.equal(parseCostToCents(String(MAX_COST_CENTS / 100)), MAX_COST_CENTS);
+  assert.equal(parseCostToCents("100000000"), null);
+
+  const result = parseNewJob(raw({ cost: "100000000" }));
+  assert.equal(result.ok, false);
+  // Not the generic "could not be read" — it was read, and it is too big.
+  assert.match(result.ok === false ? result.error : "", /larger than an invoice can hold/);
+});
+
+test("a diagnostic is two hours whatever the form posted", () => {
+  // The field is locked on screen. A locked field is a courtesy, not a control.
+  const result = parseNewJob(raw({ category: "diagnostic", durationHours: "0.5" }));
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ok === true ? result.value.durationMinutes : 0, 120);
+});
+
+test("a work order keeps the hours it was given", () => {
+  const result = parseNewJob(raw({ category: "work_order", durationHours: "6" }));
+  assert.equal(result.ok === true ? result.value.durationMinutes : 0, 360);
+});
+
+test("a draft saves what there is so far", () => {
+  // No way to reach them yet, and half an address. Both refuse a real save.
+  const half = { phone: "", email: "", postalCode: "" };
+
+  assert.equal(parseNewJob(raw({ ...half, mode: "save" })).ok, false);
+
+  const draft = parseNewJob(raw({ ...half, mode: "draft" }));
+  assert.equal(draft.ok, true);
+  if (!draft.ok) return;
+  assert.equal(draft.value.mode, "draft");
+  assert.deepEqual(draft.value.address, {
+    line1: "123 Main St",
+    city: "Nipomo",
+    state: "CA",
+    postalCode: "",
+  });
+});
+
+test("a draft still needs somebody to file it under", () => {
+  const result = parseNewJob(raw({ customerName: "", mode: "draft" }));
+  assert.equal(result.ok, false);
+  assert.match(result.ok === false ? result.error : "", /customer name/);
+});
+
+test("an unknown mode is read as a real save, not as a draft", () => {
+  // The mode arrives from a button in a form, so it is a claim like any other.
+  const result = parseNewJob(raw({ phone: "", email: "", mode: "whatever" }));
+  assert.equal(result.ok, false);
+});
+
+test("work order lines are read out of the field the form posts", () => {
+  const lines = parseWorkOrderLines(
+    JSON.stringify([
+      { kind: "labour", description: "Pull new circuit", quantity: 3.5, unitPriceCents: 12_000 },
+      { kind: "material", description: "20A breaker", quantity: 2, unit: "each", unitPriceCents: 4_200 },
+    ]),
+  );
+
+  assert.equal(lines.length, 2);
+  // Labour and parts default to the unit each is actually sold in.
+  assert.equal(lines[0]?.unit, "hour");
+  assert.equal(lines[1]?.unit, "each");
+  assert.equal(workOrderTotalCents(lines), 3.5 * 12_000 + 2 * 4_200);
+});
+
+test("a half-typed line is dropped rather than losing the other eight", () => {
+  const lines = parseWorkOrderLines(
+    JSON.stringify([
+      { kind: "labour", description: "Pull new circuit", quantity: 1, unitPriceCents: 12_000 },
+      { kind: "labour", description: "", quantity: 1, unitPriceCents: 0 },
+      { kind: "material", description: "Nothing of these", quantity: 0, unitPriceCents: 500 },
+      { kind: "material", description: "Free offcut", quantity: 2 },
+    ]),
+  );
+
+  assert.deepEqual(
+    lines.map((line) => line.description),
+    ["Pull new circuit", "Free offcut"],
+  );
+  // A part with no price is a part with no price, not a refusal.
+  assert.equal(lines[1]?.unitPriceCents, 0);
+});
+
+test("nothing usable in the lines field comes back as no lines", () => {
+  for (const raw of ["", "   ", "not json", "{}", "[]", '"a string"']) {
+    assert.deepEqual(parseWorkOrderLines(raw), []);
+  }
+});
+
+test("lines only come back for a work order", () => {
+  const posted = JSON.stringify([
+    { kind: "labour", description: "Pull new circuit", quantity: 1, unitPriceCents: 12_000 },
+  ]);
+
+  const order = parseNewJob(raw({ category: "work_order", workOrderLines: posted }));
+  assert.equal(order.ok === true ? order.value.lines.length : 0, 1);
+
+  // A diagnostic that somehow posted lines does not get them. The two hours are
+  // the product; an itemised diagnostic is a different thing with the same name.
+  const diagnostic = parseNewJob(raw({ category: "diagnostic", workOrderLines: posted }));
+  assert.deepEqual(diagnostic.ok === true ? diagnostic.value.lines : null, []);
+});
+
+test("every kind of work a job has ever had still reads as English", () => {
+  assert.equal(jobCategoryLabel("work_order"), "Work order");
+  assert.equal(jobCategoryLabel("diagnostic"), "Diagnostic");
+  // Booked before the list changed, or classified by the text assistant.
+  assert.equal(jobCategoryLabel("ev_charger"), "EV charger");
+  assert.equal(jobCategoryLabel("panel_breaker"), "Panel or breaker");
+  // Something nobody planned for still reads as words rather than as a column.
+  assert.equal(jobCategoryLabel("solar_tie_in"), "solar tie in");
+  assert.equal(jobCategoryLabel(""), "Service");
 });

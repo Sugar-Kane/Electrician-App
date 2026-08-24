@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CalendarCheck2, Clock3, MapPin, Phone, ReceiptText } from "lucide-react";
 
+import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -101,8 +102,10 @@ export default async function BookingConfirmationPage({
       maximumFractionDigits: 0,
     }).format(cents / 100);
 
-  const fee = money(booking.diagnostic_fee_cents ?? 10000);
-  const deposit = money(booking.deposit_cents ?? booking.diagnostic_fee_cents ?? 10000);
+  const fee = money(booking.diagnostic_fee_cents ?? DEFAULT_DIAGNOSTIC_FEE_CENTS);
+  const deposit = money(
+    booking.deposit_cents ?? booking.diagnostic_fee_cents ?? DEFAULT_DIAGNOSTIC_FEE_CENTS,
+  );
   const answers = Array.isArray(booking.intake_answers) ? booking.intake_answers : [];
 
   return (

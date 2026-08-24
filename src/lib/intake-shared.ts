@@ -2,6 +2,7 @@ import "server-only";
 
 import { recordActivity } from "@/lib/activity";
 import { decideHold, payLinkFor } from "@/lib/booking-hold";
+import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
 import { calendarDate, nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
 import { getStripe } from "@/lib/stripe";
@@ -110,7 +111,9 @@ export async function loadIntakeContext(input: {
           ? `$${(settings.diagnostic_fee_cents / 100).toFixed(0)}`
           : "quoted before we come out",
       diagnosticFeeCents:
-        typeof settings?.diagnostic_fee_cents === "number" ? settings.diagnostic_fee_cents : 10000,
+        typeof settings?.diagnostic_fee_cents === "number"
+          ? settings.diagnostic_fee_cents
+          : DEFAULT_DIAGNOSTIC_FEE_CENTS,
       serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of the shop`,
       nowLabel: nowLabel(nowIso, timeZone),
       isFirstReply: input.isFirstReply,

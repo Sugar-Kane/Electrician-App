@@ -281,7 +281,7 @@ export function OnboardingForm({
           <div>
             <h2 className="text-sm font-semibold text-white">Pilot rules ready to use</h2>
             <ul className="mt-3 grid gap-2 text-sm text-ink-muted sm:grid-cols-2">
-              {["$100 one-hour diagnostic", "$100 credited toward repair", "$150 after-hours visit", "$200 emergency visit", "$50 late cancellation", "Payment required to confirm"].map((item) => (
+              {["$180 two-hour diagnostic", "$180 credited toward repair", "$150 after-hours visit", "$200 emergency visit", "$50 late cancellation", "Payment required to confirm"].map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <Check className="h-4 w-4 shrink-0 text-positive" aria-hidden /> {item}
                 </li>

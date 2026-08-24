@@ -48,7 +48,7 @@ Direct charges fit this product better than destination charges because the cont
 
 Status: implemented in the repository; database deployment and end-to-end sandbox verification remain.
 
-- Stripe-hosted Checkout for $100 standard and $200 urgent diagnostics.
+- Stripe-hosted Checkout for $180 standard and $200 urgent diagnostics.
 - Thirty-minute appointment hold.
 - Server-side pricing and booking metadata.
 - Signed webhook processing.
