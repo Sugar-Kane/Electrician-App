@@ -12,7 +12,9 @@ import { hasCoordinates } from "@/lib/coordinates";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
 import { jobCategoryLabel } from "@/lib/new-job-input";
+import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { currentContext } from "@/lib/request-context";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import {
@@ -956,12 +958,24 @@ export async function getInventory(): Promise<
 
   const { data } = await context.database
     .from("inventory_items")
-    .select("id, name, sku, category, quantity_on_hand, reorder_point, unit, supplier, unit_cost_cents, location, notes, photo_url")
+    .select("id, name, sku, category, quantity_on_hand, reorder_point, unit, supplier, unit_cost_cents, location, notes, photo_url, photo_path")
     .eq("organization_id", context.organizationId)
     .is("archived_at", null)
     .order("name", { ascending: true });
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+  const rows = (data ?? []) as Record<string, unknown>[];
+
+  /*
+   * An uploaded photo is an object in a private bucket, so it needs signing
+   * before a browser can render it. Signed in one batch rather than one call
+   * per row: a van's stock list is thirty parts, and thirty round trips to sign
+   * thirty thumbnails is the page.
+   */
+  const photos = await signStockPhotos(
+    rows.map((row) => (typeof row.photo_path === "string" ? row.photo_path : "")),
+  );
+
+  return rows.map((row) => ({
     id: String(row.id),
     name: typeof row.name === "string" ? row.name : "",
     partNumber: typeof row.sku === "string" ? row.sku : "",
@@ -973,6 +987,155 @@ export async function getInventory(): Promise<
     unitCost: Number(row.unit_cost_cents ?? 0) > 0 ? Number(row.unit_cost_cents) / 100 : null,
     location: typeof row.location === "string" ? row.location : "",
     notes: typeof row.notes === "string" ? row.notes : "",
-    photoUrl: typeof row.photo_url === "string" ? row.photo_url : "",
+    /*
+     * An uploaded photo wins over a pasted link.
+     *
+     * `photo_url` is the old free-text box and holds a picture somewhere on the
+     * web; `photo_path` is a file the electrician took. When both exist the one
+     * they took is the one they meant.
+     */
+    photoUrl:
+      photos.get(typeof row.photo_path === "string" ? row.photo_path : "") ||
+      (typeof row.photo_url === "string" ? row.photo_url : ""),
   }));
+}
+
+export type StockMovementRow = {
+  id: string;
+  quantity: number;
+  reason: string;
+  unitCostCents: number;
+  note: string;
+  jobNumber: string;
+  whenLabel: string;
+};
+
+export type StockItemDetail = {
+  id: string;
+  name: string;
+  partNumber: string;
+  quantity: number;
+  unit: string;
+  supplier: string;
+  unitCost: number | null;
+  location: string;
+  notes: string;
+  photoUrl: string;
+  movements: StockMovementRow[];
+  /** Cents. What has left on jobs, at the price it left at. */
+  spentCents: number;
+};
+
+/**
+ * One part, with the history that explains its number.
+ *
+ * The history is the point. "Seventeen" on its own is a claim; "twenty came in
+ * on the 3rd, three went out on job 1045" is a number somebody can argue with,
+ * which is what makes a stock list worth keeping.
+ */
+export async function getInventoryItem(id: string): Promise<StockItemDetail | null> {
+  const context = await resolveContext();
+  if (!context) return null;
+
+  const { data } = await context.database
+    .from("inventory_items")
+    .select(
+      "id, name, sku, quantity_on_hand, unit, supplier, unit_cost_cents, location, notes, photo_url, photo_path",
+    )
+    .eq("id", id)
+    .eq("organization_id", context.organizationId)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  const row = (data ?? null) as Record<string, unknown> | null;
+  if (!row) return null;
+
+  const { data: history } = await context.database
+    .from("inventory_movements")
+    .select("id, quantity, reason, unit_cost_cents, note, created_at, jobs ( job_number )")
+    .eq("item_id", id)
+    .eq("organization_id", context.organizationId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const photos = await signStockPhotos([
+    typeof row.photo_path === "string" ? row.photo_path : "",
+  ]);
+
+  const movements = ((history ?? []) as Record<string, unknown>[]).map((entry) => {
+    const job = (entry.jobs ?? null) as { job_number?: unknown } | null;
+    return {
+      id: String(entry.id),
+      quantity: Number(entry.quantity ?? 0),
+      reason: typeof entry.reason === "string" ? entry.reason : "adjustment",
+      unitCostCents: Number(entry.unit_cost_cents ?? 0),
+      note: typeof entry.note === "string" ? entry.note : "",
+      jobNumber: job?.job_number ? String(job.job_number) : "",
+      whenLabel: inZone(
+        typeof entry.created_at === "string" ? entry.created_at : null,
+        context.timeZone,
+        { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
+      ),
+    };
+  });
+
+  return {
+    id: String(row.id),
+    name: typeof row.name === "string" ? row.name : "",
+    partNumber: typeof row.sku === "string" ? row.sku : "",
+    quantity: Number(row.quantity_on_hand ?? 0),
+    unit: typeof row.unit === "string" ? row.unit : "each",
+    supplier: typeof row.supplier === "string" ? row.supplier : "",
+    unitCost: Number(row.unit_cost_cents ?? 0) > 0 ? Number(row.unit_cost_cents) / 100 : null,
+    location: typeof row.location === "string" ? row.location : "",
+    notes: typeof row.notes === "string" ? row.notes : "",
+    photoUrl:
+      photos.get(typeof row.photo_path === "string" ? row.photo_path : "") ||
+      (typeof row.photo_url === "string" ? row.photo_url : ""),
+    movements,
+    spentCents: movements.reduce(
+      (sum, movement) =>
+        movement.quantity < 0 ? sum + Math.abs(movement.quantity) * movement.unitCostCents : sum,
+      0,
+    ),
+  };
+}
+
+/** Long enough to render a list, short enough not to be worth passing on. */
+const STOCK_PHOTO_SECONDS = 60 * 60;
+
+/**
+ * Signed links for a page full of stock photos, in one round trip.
+ *
+ * The bucket is private — an object path is not a URL anyone can open, which is
+ * the point. Signing them one at a time is thirty round trips for a van's worth
+ * of parts, so they go in a batch and anything that fails comes back missing
+ * rather than breaking the list.
+ */
+async function signStockPhotos(paths: string[]): Promise<Map<string, string>> {
+  const wanted = [...new Set(paths.filter(Boolean))];
+  const signed = new Map<string, string>();
+  if (wanted.length === 0) return signed;
+
+  try {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from(DOCUMENTS_BUCKET)
+      .createSignedUrls(wanted, STOCK_PHOTO_SECONDS);
+
+    if (error) {
+      console.error("stock photos: could not be signed", error);
+      return signed;
+    }
+
+    for (const entry of data ?? []) {
+      if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
+    }
+  } catch (error) {
+    // No service key configured, most likely. A list with no thumbnails is a
+    // list; a crashed page is not.
+    console.error("stock photos: storage is not reachable", error);
+  }
+
+  return signed;
 }

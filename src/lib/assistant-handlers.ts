@@ -5,7 +5,7 @@ import {
   findReferences,
 } from "@/lib/code-reference";
 import { forgetFact, getMemories, rememberFact } from "@/lib/assistant-memory";
-import { matchMaterials } from "@/lib/inventory-match";
+import { matchMaterials, normalizeName } from "@/lib/inventory-match";
 import { getInventory, getInvoices, getJobs } from "@/lib/job-data";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -111,6 +111,44 @@ export async function runReadOnlyTool(
       }
       const found = matched.stock;
       return `${found.name}: ${found.quantity} ${found.unit}${found.location ? `, ${found.location}` : ""}.`;
+    }
+
+    /*
+     * The list, not one row.
+     *
+     * `check_stock` answers "have I got one of these" and returns a single best
+     * match, which made "what breakers do I have" unanswerable — the assistant
+     * would name one and go quiet. This is the other question, and it is the
+     * one people actually ask standing in front of a van.
+     */
+    case "search_stock": {
+      const query = normalizeName(text(input.query));
+      const stock = await getInventory();
+
+      const matches = query
+        ? stock.filter(
+            (entry) =>
+              normalizeName(entry.name).includes(query) ||
+              normalizeName(entry.partNumber).includes(query) ||
+              normalizeName(entry.location).includes(query),
+          )
+        : stock;
+
+      if (matches.length === 0) {
+        return stock.length === 0
+          ? "There is nothing in the stock list yet."
+          : `Nothing in stock matches "${text(input.query)}".`;
+      }
+
+      return matches
+        .slice(0, MAX_ROWS)
+        .map(
+          (entry) =>
+            `${entry.name} | ${entry.quantity} ${entry.unit}${
+              entry.partNumber ? ` | ${entry.partNumber}` : ""
+            }${entry.location ? ` | ${entry.location}` : ""}`,
+        )
+        .join("\n");
     }
 
     case "list_invoices": {

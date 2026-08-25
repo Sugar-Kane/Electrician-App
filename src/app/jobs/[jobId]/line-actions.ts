@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { parsePriceCents, parseQuantity } from "@/lib/job-lines";
-import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -87,24 +87,96 @@ export async function addJobLine(
 
   const inventoryItemId = text(formData, "inventoryItemId");
 
-  const { error } = await context.supabase.from("job_line_items").insert({
-    organization_id: context.organizationId,
-    job_id: context.jobId,
-    kind,
-    description,
-    quantity,
-    unit: text(formData, "unit") || (kind === "labor" ? "hr" : "each"),
-    unit_price_cents: unitPriceCents,
-    // Only when it came from the stock list. A part typed by hand has no
-    // inventory row, and inventing a link would let a later change to that
-    // stock item rewrite what this job was charged.
-    inventory_item_id: inventoryItemId || null,
-  });
+  const { data: created, error } = await context.supabase
+    .from("job_line_items")
+    .insert({
+      organization_id: context.organizationId,
+      job_id: context.jobId,
+      kind,
+      description,
+      quantity,
+      unit: text(formData, "unit") || (kind === "labor" ? "hr" : "each"),
+      unit_price_cents: unitPriceCents,
+      // Only when it came from the stock list. A part typed by hand has no
+      // inventory row, and inventing a link would let a later change to that
+      // stock item rewrite what this job was charged.
+      inventory_item_id: inventoryItemId || null,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (error) return { error: "That line could not be saved." };
+  if (error || !created) return { error: "That line could not be saved." };
+
+  /*
+   * The part left the van when it was written down.
+   *
+   * Not at completion: the count has to be true for the rest of the day, or
+   * the next job's materials list says there are three breakers on the shelf
+   * that are already in somebody's wall. Nobody deducts by hand — that is the
+   * habit that makes a stock list stop being true within a fortnight.
+   *
+   * A line typed by hand has no `inventory_item_id` and moves nothing, which is
+   * right: it was bought for this job, not taken from stock.
+   *
+   * Deliberately not fatal. The line is what the electrician asked for, and
+   * losing it to a bookkeeping row would be a poor trade — but the failure is
+   * said out loud, because a count that quietly stops moving is worse than one
+   * that never moved.
+   */
+  if (inventoryItemId) {
+    const moved = await recordStockUse({
+      supabase: context.supabase,
+      organizationId: context.organizationId,
+      jobId: context.jobId,
+      lineId: String(created.id),
+      itemId: inventoryItemId,
+      quantity,
+    });
+    if (!moved) console.error("job line: stock was not deducted", { lineId: created.id });
+  }
 
   revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath("/inventory");
+  revalidatePath("/materials");
   return { error: "", notice: "Added." };
+}
+
+/**
+ * Taking the parts off the shelf.
+ *
+ * The cost is read off the item now and written onto the movement, because what
+ * a breaker cost the day it was fitted is the expense — not what the same
+ * breaker costs when somebody runs a report in April.
+ */
+async function recordStockUse(input: {
+  supabase: FlexibleSupabaseClient;
+  organizationId: string;
+  jobId: string;
+  lineId: string;
+  itemId: string;
+  quantity: number;
+}): Promise<boolean> {
+  const { data: item } = await input.supabase
+    .from("inventory_items")
+    .select("unit_cost_cents")
+    .eq("id", input.itemId)
+    .eq("organization_id", input.organizationId)
+    .maybeSingle();
+
+  // An item id that is not this organization's is not an item. Nothing moves.
+  if (!item) return false;
+
+  const { error } = await input.supabase.from("inventory_movements").insert({
+    organization_id: input.organizationId,
+    item_id: input.itemId,
+    quantity: -Math.abs(input.quantity),
+    reason: "used_on_job",
+    job_id: input.jobId,
+    job_line_item_id: input.lineId,
+    unit_cost_cents: Number(item.unit_cost_cents ?? 0),
+  });
+
+  return !error;
 }
 
 export async function removeJobLine(
@@ -118,6 +190,21 @@ export async function removeJobLine(
   const context = await findJob(jobNumber);
   if (!context) return { error: "That job could not be found." };
 
+  /*
+   * What this line took off the shelf, before the line goes.
+   *
+   * `job_line_item_id` is `on delete set null`, so the movement survives the
+   * line and would otherwise leave the stock permanently short by a part that
+   * was never used.
+   */
+  const { data: used } = await context.supabase
+    .from("inventory_movements")
+    .select("item_id, quantity, unit_cost_cents")
+    .eq("job_line_item_id", lineId)
+    .eq("organization_id", context.organizationId)
+    .eq("reason", "used_on_job")
+    .maybeSingle();
+
   // Scoped to the job as well as the id, so a stale form from another job
   // cannot delete a line by guessing a uuid.
   const { error } = await context.supabase
@@ -129,7 +216,29 @@ export async function removeJobLine(
 
   if (error) return { error: "That line could not be removed." };
 
+  /*
+   * Put the parts back, by writing the opposite movement.
+   *
+   * Not by deleting the original: a ledger is corrected by saying what happened
+   * next, and "three breakers came back" is what happened. The history then
+   * explains the count instead of quietly agreeing with it.
+   */
+  if (used?.item_id) {
+    const { error: returnError } = await context.supabase.from("inventory_movements").insert({
+      organization_id: context.organizationId,
+      item_id: used.item_id,
+      quantity: Math.abs(Number(used.quantity ?? 0)),
+      reason: "returned",
+      job_id: context.jobId,
+      unit_cost_cents: Number(used.unit_cost_cents ?? 0),
+      note: "The job line it was used on was removed.",
+    });
+    if (returnError) console.error("job line: stock was not returned", returnError);
+  }
+
   revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath("/inventory");
+  revalidatePath("/materials");
   return { error: "", notice: "Removed." };
 }
 

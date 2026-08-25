@@ -19,6 +19,9 @@ export type ToolName =
   | "search_jobs"
   | "search_customers"
   | "check_stock"
+  | "search_stock"
+  | "adjust_stock"
+  | "add_stock_item"
   | "list_invoices"
   | "list_technicians"
   | "lookup_code"
@@ -83,6 +86,72 @@ export const ASSISTANT_TOOLS: ToolSpec[] = [
       type: "object",
       properties: { part: str("The part, as the electrician would say it.") },
       required: ["part"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "search_stock",
+    description:
+      "List everything in stock matching a search, with how many are on hand and where they are. Use this rather than check_stock when the electrician is asking what they have, not whether they have one specific thing.",
+    confirm: false,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        query: str(
+          "Part of a name, a part number or a location. Pass an empty string to list everything.",
+        ),
+      },
+      // Every property required, like every other tool here: strict tool use
+      // wants it, and an argument the model may or may not send is an argument
+      // whose absence has to be guessed at.
+      required: ["query"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "adjust_stock",
+    description:
+      "Change how many of a part are on hand, saying why. Use it when stock arrives, is damaged, comes back, or is recounted. Never for a part used on a job — adding the part to the job takes it off the shelf on its own.",
+    confirm: true,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        part: str("The part, as the electrician would say it."),
+        quantity: {
+          type: "number",
+          description: "How many. Always positive; the reason decides the direction.",
+        },
+        reason: {
+          type: "string",
+          enum: ["received", "returned", "wastage", "stock_take"],
+          description:
+            "received: arrived from a supplier. returned: came back unused. wastage: damaged or lost. stock_take: this is the counted total, not a change.",
+        },
+        note: str("Where they went, who took them, what happened. Empty if not said."),
+      },
+      required: ["part", "quantity", "reason", "note"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "add_stock_item",
+    description:
+      "Add a part to the stock list that is not there yet, with what is on hand now. Check with search_stock first — a second row for a part already listed splits its count in half.",
+    confirm: true,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        name: str("What the part is called, as it would be said on the van."),
+        quantity: { type: "number", description: "How many are on hand now. 0 is fine." },
+        unit: str("each, ft, box. 'each' if not said."),
+        part_number: str("Manufacturer or supplier number. Empty if not said."),
+        unit_cost: str("What one costs, like 38 or 38.50. Empty if not said."),
+        location: str("Van shelf 2, shop bin C. Empty if not said."),
+      },
+      required: ["name", "quantity", "unit", "part_number", "unit_cost", "location"],
       additionalProperties: false,
     },
   },
@@ -319,6 +388,20 @@ export function describeProposal(
     }
     case "draft_contract":
       return `Draft a contract for job #${text(input.job_number) || "(unspecified)"} from your template.`;
+    case "adjust_stock": {
+      const part = text(input.part) || "(unspecified)";
+      const many = text(input.quantity) || "(no number)";
+      const why = text(input.reason);
+      if (why === "stock_take") return `Set the count of ${part} to ${many}.`;
+      if (why === "received") return `Add ${many} ${part} — arrived from a supplier.`;
+      if (why === "returned") return `Put ${many} ${part} back — came back unused.`;
+      return `Take ${many} ${part} out — damaged or lost.`;
+    }
+    case "add_stock_item": {
+      const name = text(input.name) || "(unnamed)";
+      const many = text(input.quantity) || "0";
+      return `Add ${name} to the stock list with ${many} on hand.`;
+    }
     default:
       return `Run ${name}.`;
   }
@@ -338,9 +421,11 @@ export function assistantToolPrompt(businessName: string): string {
     "",
     "Use tools rather than guessing. Searches, stock checks and code lookups run immediately.",
     "",
-    "Sending an invoice or a text, scheduling, invoicing and drafting a contract are proposals: they are shown to the person and do not happen until they tap to confirm.",
+    "Sending an invoice or a text, scheduling, invoicing, changing stock and drafting a contract are proposals: they are shown to the person and do not happen until they tap to confirm.",
     "",
     "Rules:",
+    "- You can change stock. adjust_stock records parts arriving, coming back, being damaged, or being recounted; add_stock_item puts a new part on the list. Both are proposals. Never tell somebody to go and do it by hand.",
+    "- Never adjust stock for a part used on a job. Adding the part to the job takes it off the shelf on its own.",
     "- Never say you have sent, booked, invoiced or drafted something you have only proposed. Say you have prepared it and it is waiting for them.",
     "- Never invent a job number, invoice number, customer, amount or date. Look it up.",
     "- For anything about code, licensing, permits or inspections, call lookup_code. Never answer those from memory.",

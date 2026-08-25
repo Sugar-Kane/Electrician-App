@@ -2,6 +2,7 @@ import "server-only";
 
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
+import { adjustmentTo, isMovementReason, signedQuantity } from "@/lib/inventory-movement";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { currentContext } from "@/lib/request-context";
@@ -205,6 +206,139 @@ export async function runConfirmedTool(
       return who
         ? `${who} is now on job #${jobNumber}. The customer has not been told.`
         : `Job #${jobNumber} has nobody assigned now.`;
+    }
+
+    /*
+     * Stock in or out, said out loud.
+     *
+     * The assistant could look stock up and nothing else, so "I used three of
+     * those" got the answer that it had no way to change anything and the
+     * electrician had to go and do it by hand — which is exactly the boring
+     * thing this is supposed to absorb.
+     *
+     * A movement, never a set. `stock_take` is the one that reads as a total,
+     * and it is turned into the difference here rather than trusted as one,
+     * because "I counted seventeen" and "add seventeen" are different sentences.
+     */
+    case "adjust_stock": {
+      const part = text(input.part);
+      const typed = Number(input.quantity);
+      const reason = text(input.reason);
+
+      if (!part) return "Nothing was changed — the part was not named.";
+      if (!Number.isFinite(typed)) return "Nothing was changed — that number could not be read.";
+      if (!isMovementReason(reason) || reason === "opening" || reason === "used_on_job") {
+        return "Nothing was changed — say whether they arrived, came back, were damaged, or were counted.";
+      }
+
+      const { data: found } = await supabase
+        .from("inventory_items")
+        .select("id, name, quantity_on_hand, unit, unit_cost_cents")
+        .eq("organization_id", organizationId)
+        .is("archived_at", null)
+        .ilike("name", `%${part}%`)
+        .limit(2);
+
+      const matches = (found ?? []) as Record<string, unknown>[];
+      if (matches.length === 0) {
+        return `Nothing in stock matches "${part}", so nothing was changed. Add it first if it is new.`;
+      }
+      if (matches.length > 1) {
+        const names = matches.map((row) => text(row.name)).join(" and ");
+        return `More than one part matches "${part}" — ${names}. Nothing was changed; say which one.`;
+      }
+
+      const item = matches[0]!;
+      const onHand = Number(item.quantity_on_hand ?? 0);
+
+      // A counted total becomes the difference that gets there.
+      const change =
+        reason === "stock_take"
+          ? adjustmentTo(Math.abs(typed), onHand)
+          : signedQuantity(reason, typed);
+
+      if (change === null || change === 0) {
+        return `${text(item.name)} already reads ${onHand} ${text(item.unit) || "each"}. Nothing was changed.`;
+      }
+
+      const { error } = await supabase.from("inventory_movements").insert({
+        organization_id: organizationId,
+        item_id: text(item.id),
+        quantity: change,
+        reason,
+        unit_cost_cents: Number(item.unit_cost_cents ?? 0),
+        note: text(input.note) || "Recorded through the assistant.",
+      });
+
+      if (error) {
+        console.error("assistant: stock movement failed", error);
+        return "That change could not be recorded, so nothing moved.";
+      }
+
+      const now = Math.round((onHand + change) * 100) / 100;
+      const unit = text(item.unit) || "each";
+      return `${text(item.name)} is now ${now} ${unit}, from ${onHand}.`;
+    }
+
+    case "add_stock_item": {
+      const name = text(input.name);
+      if (!name) return "Nothing was added — the part was not named.";
+
+      const quantity = Number(input.quantity);
+      if (!Number.isFinite(quantity) || quantity < 0) {
+        return "Nothing was added — that quantity could not be read.";
+      }
+
+      // A second row for a part already listed splits its count in half, and
+      // the materials list then matches whichever one it finds first.
+      const { data: clash } = await supabase
+        .from("inventory_items")
+        .select("name")
+        .eq("organization_id", organizationId)
+        .is("archived_at", null)
+        .ilike("name", name)
+        .maybeSingle();
+
+      if (clash) {
+        return `${text(clash.name)} is already in the stock list, so nothing was added. Adjust its count instead.`;
+      }
+
+      const unitCostCents = parseCostToCents(text(input.unit_cost)) ?? 0;
+      const unit = text(input.unit) || "each";
+
+      const { data: created, error } = await supabase
+        .from("inventory_items")
+        // The trigger owns the count; the opening movement below sets it.
+        .insert({
+          organization_id: organizationId,
+          name,
+          quantity_on_hand: 0,
+          unit,
+          sku: text(input.part_number) || null,
+          unit_cost_cents: unitCostCents,
+          location: text(input.location) || null,
+        })
+        .select("id")
+        .maybeSingle();
+
+      const itemId = text((created ?? {}).id);
+      if (error || !itemId) {
+        console.error("assistant: stock item could not be added", error);
+        return "That part could not be added to the stock list.";
+      }
+
+      if (quantity > 0) {
+        await supabase.from("inventory_movements").insert({
+          organization_id: organizationId,
+          item_id: itemId,
+          quantity,
+          reason: "opening",
+          unit_cost_cents: unitCostCents,
+          note: "Added through the assistant.",
+        });
+      }
+
+      return `${name} is in the stock list with ${quantity} ${unit} on hand.`;
     }
 
     case "set_invoice_amount": {

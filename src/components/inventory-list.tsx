@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle, MapPin, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
@@ -59,8 +60,44 @@ function ItemForm({
 }) {
   const [state, action] = useActionState(saveInventoryItem, initialState);
 
+  /*
+   * What happens after "Add to stock".
+   *
+   * The form used to sit there with a green notice on it, which reads as
+   * nothing having happened — so people tapped Add again and got a second copy
+   * of the same part. A saved item offers the two things somebody actually
+   * wants next: see it in the list, or add the next one.
+   */
+  const [acknowledged, setAcknowledged] = useState("");
+  const justAdded = Boolean(state.savedId) && state.savedId !== acknowledged;
+
+  if (justAdded) {
+    return (
+      <div className="rounded-control border border-line bg-raised p-4">
+        <FormMessage error="" notice={state.notice} />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onDone}
+            className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"
+          >
+            Back to the list
+          </button>
+          <button
+            type="button"
+            onClick={() => setAcknowledged(state.savedId ?? "")}
+            className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold text-ink"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Add another
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <form action={action} className="rounded-control border border-line bg-raised p-4">
+    <form key={acknowledged} action={action} className="rounded-control border border-line bg-raised p-4">
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -132,16 +169,6 @@ function ItemForm({
           <input
             name="supplier"
             defaultValue={item?.supplier ?? ""}
-            placeholder="Optional"
-            className={`${inputClass} mt-1`}
-          />
-        </label>
-
-        <label className="block sm:col-span-2">
-          <span className="text-xs font-medium text-ink-muted">Photo link</span>
-          <input
-            name="photoUrl"
-            defaultValue={item?.photoUrl ?? ""}
             placeholder="Optional"
             className={`${inputClass} mt-1`}
           />
@@ -248,6 +275,11 @@ export function InventoryList({ items }: { items: InventoryRow[] }) {
               <ItemForm item={item} onDone={() => setEditing(null)} />
             ) : (
               <div className="flex items-center gap-3 p-3">
+                <Link
+                  href={`/inventory/${item.id}`}
+                  prefetch
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
                 {item.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -274,6 +306,7 @@ export function InventoryList({ items }: { items: InventoryRow[] }) {
                     </p>
                   ) : null}
                 </div>
+                </Link>
 
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button
