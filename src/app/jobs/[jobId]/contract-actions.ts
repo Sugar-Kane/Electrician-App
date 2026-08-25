@@ -147,6 +147,11 @@ export async function generateContract(
       organization_id: organizationId,
       job_id: text(row.id),
       body: filled.body,
+      // Kept alongside the filled body so the passage can be replaced later
+      // without touching the terms around it. Empty when the model was not
+      // reachable, which leaves {{scope}} standing in the body — visible, and
+      // correctly refused by an edit rather than spliced into the wrong place.
+      scope: scope ?? "",
       unfilled: filled.unfilled,
       status: "draft",
     })

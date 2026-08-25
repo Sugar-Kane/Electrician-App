@@ -55,7 +55,7 @@ export async function generateContractPdf(input: {
   const { data } = await input.database
     .from("contracts")
     .select(
-      `id, body, unfilled, created_at,
+      `id, body, scope, unfilled, created_at,
        jobs (
          id, job_number, scheduled_start,
          customers ( first_name, last_name, company_name, phone, email ),
@@ -119,6 +119,19 @@ export async function generateContractPdf(input: {
     }),
     contractId: input.contractId,
     documentType: "contract",
+    /*
+     * What this version was rendered from.
+     *
+     * The body is the whole document, so restoring a version can put the exact
+     * text back; the scope rides along because it is what an edit replaces, and
+     * restoring the body without it would leave the two disagreeing about which
+     * passage the scope is.
+     */
+    sourceSnapshot: {
+      body: str(contract.body),
+      scope: str(contract.scope),
+      unfilled: Array.isArray(contract.unfilled) ? contract.unfilled : [],
+    },
     displayName: jobNumber ? `Contract for job #${jobNumber}` : "Contract",
     fileName: contractFileName(jobNumber ? `job-${jobNumber}` : "", business.name),
     uploadedBy: input.uploadedBy,

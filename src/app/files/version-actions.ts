@@ -38,7 +38,7 @@ export async function restoreDocumentVersion(
 
   const { data } = await supabase
     .from("documents")
-    .select("id, invoice_id, contract_id, version_number, archived_at")
+    .select("id, invoice_id, contract_id, version_number, archived_at, source_snapshot")
     .eq("id", versionId)
     .eq("organization_id", organizationId)
     .maybeSingle();
@@ -97,13 +97,74 @@ export async function restoreDocumentVersion(
     return { error: "That version could not be restored. Nothing was changed." };
   }
 
+  /*
+   * The record goes back with the file.
+   *
+   * Swapping the flags alone restores the picture and leaves the source holding
+   * whatever it was last edited to — so the next regeneration would quietly
+   * reintroduce the change somebody had just undone. The snapshot is what makes
+   * this an undo rather than a screenshot.
+   *
+   * Done after the swap on purpose. The swap is the part with a rollback; if
+   * writing the source back fails, the version on file is still the one asked
+   * for, and the notice says the text was not moved.
+   */
+  const restoredSource = await putSourceBack(supabase, organizationId, owner, row.source_snapshot);
+
   revalidatePath("/files", "layout");
   revalidatePath("/invoices");
 
-  return {
-    error: "",
-    notice: `Version ${Number(row.version_number ?? 1)} is the one on file now.`,
-  };
+  const version = Number(row.version_number ?? 1);
+  return { error: "", notice: `Version ${version} is the one on file now. ${restoredSource}`.trim() };
+}
+
+type Owner = { column: string; id: string };
+
+/**
+ * Write a version's source back onto the record it came from.
+ *
+ * Returns the sentence to append to the notice, because what happened here is
+ * the part a person actually needs told. A version made before snapshots
+ * existed cannot restore anything, and saying so is the whole point — an undo
+ * that silently did half its job is worse than one that admits it.
+ */
+async function putSourceBack(
+  supabase: ReturnType<typeof asFlexibleClient>,
+  organizationId: string,
+  owner: Owner,
+  snapshot: unknown,
+): Promise<string> {
+  if (!snapshot || typeof snapshot !== "object") {
+    return "It was made before edits were tracked, so the wording behind it was left as it is.";
+  }
+
+  const source = snapshot as Record<string, unknown>;
+
+  // Only contracts carry text that an edit rewrites. An invoice's snapshot is
+  // kept for the record, but its figures live on the invoice and its lines on
+  // the job, and rewriting those from here would reach past this document into
+  // the job's own history.
+  if (owner.column !== "contract_id") return "";
+
+  const body = typeof source.body === "string" ? source.body : "";
+  if (!body) return "";
+
+  const { error } = await supabase
+    .from("contracts")
+    .update({
+      body,
+      scope: typeof source.scope === "string" ? source.scope : null,
+      unfilled: Array.isArray(source.unfilled) ? source.unfilled : [],
+    })
+    .eq("id", owner.id)
+    .eq("organization_id", organizationId);
+
+  if (error) {
+    console.error("files: could not put the contract text back", error);
+    return "The file is back, but its wording could not be restored — check it before sending.";
+  }
+
+  return "Its wording is back too.";
 }
 
 /**
