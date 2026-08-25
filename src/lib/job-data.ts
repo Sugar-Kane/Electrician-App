@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
@@ -196,7 +198,18 @@ const JOB_SELECT = `
   booking_requests ( communication_channel )
 `;
 
-export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {
+/**
+ * Every job the business still has, memoised for the request.
+ *
+ * One page render calls this more than once — Home reads it directly and again
+ * through the metrics, and `/route` reads it beside the map — and each call was
+ * its own trip to the database for the same rows. `cache()` collapses them to
+ * one, and re-fetches on the next request rather than serving anything stale.
+ */
+export const getJobs = cache(async function getJobs(): Promise<{
+  jobs: PilotJob[];
+  source: Source;
+}> {
   const context = await resolveContext();
   if (!context) return { jobs: rebaseDemoJobs(pilotJobs, DEFAULT_TIMEZONE), source: "demo" };
 
@@ -213,7 +226,7 @@ export async function getJobs(): Promise<{ jobs: PilotJob[]; source: Source }> {
   // records were real.
   if (error) return { jobs: [], source: "supabase" };
   return { jobs: (data ?? []).map((row) => mapJob(row, context.timeZone)), source: "supabase" };
-}
+});
 
 export async function getJob(id: string): Promise<{ job: PilotJob | null; source: Source }> {
   const context = await resolveContext();

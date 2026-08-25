@@ -12,6 +12,7 @@ import {
   revenueDetail,
   techniciansDetail,
 } from "@/lib/dashboard-metrics";
+import { currentContext, currentUser } from "@/lib/request-context";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -184,18 +185,25 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
   try {
     const supabase = await createClient();
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData.user) return demoSnapshot;
 
-    const { data: membership } = await supabase
-      .from("organization_members")
-      .select("organization_id, organizations(name,slug,timezone)")
-      .eq("user_id", authData.user.id)
-      .limit(1)
-      .maybeSingle();
+    /*
+     * Both of these are memoised for the length of the request, so the home
+     * page verifies the session once rather than three times. `getUser()` is
+     * not a local token decode — it is a round trip to the auth server — and
+     * this module, `booking-requests` and `request-context` were each making
+     * their own before anything was fetched.
+     *
+     * Two calls rather than one because they mean different things: no user is
+     * a visitor, and a user with no business is somebody part-way through
+     * signing up.
+     */
+    const user = await currentUser();
+    if (!user) return demoSnapshot;
 
-    if (!membership) return { ...demoSnapshot, requiresOnboarding: true };
-    const organizationId = membership.organization_id;
+    const context = await currentContext();
+    if (!context) return { ...demoSnapshot, requiresOnboarding: true };
+
+    const organizationId = context.organizationId;
     const accountDatabase = asFlexibleClient(supabase);
 
     // "Today" is the business's day, not the server's. Production runs in UTC,
@@ -204,13 +212,12 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     // this evening's jobs entirely. Built from the business's calendar date so
     // it also survives the 23- and 25-hour days that daylight saving creates,
     // and the zones that have no daylight saving at all.
-    const organizationRow = membership.organizations as unknown as { timezone?: string } | null;
-    const zone = organizationRow?.timezone || DEFAULT_TIMEZONE;
+    const zone = context.timeZone || DEFAULT_TIMEZONE;
     const today = todayInZone(zone);
     const dayStart = new Date(zonedWallClockToIso(`${today}T00:00`, zone));
     const dayEnd = new Date(zonedWallClockToIso(`${shiftDays(today, 1)}T00:00`, zone));
 
-    const [jobs, invoices, estimates, technicians, inventory, activity, profile] =
+    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business] =
       await Promise.all([
         supabase
           .from("jobs")
@@ -253,8 +260,11 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         accountDatabase
           .from("user_profiles")
           .select("display_name")
-          .eq("user_id", authData.user.id)
+          .eq("user_id", user.id)
           .maybeSingle(),
+        // Its own read now that the membership join is gone, and in the same
+        // batch as everything else — so it costs a column rather than a wait.
+        supabase.from("organizations").select("name,slug").eq("id", organizationId).maybeSingle(),
       ]);
 
     // "Today's revenue" summed every paid invoice the business had ever
@@ -329,7 +339,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       maximumFractionDigits: 0,
     });
 
-    const organization = membership.organizations as unknown as {
+    const organization = business.data as unknown as {
       name?: string;
       slug?: string;
       timezone?: string;
@@ -351,23 +361,23 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       ownerName:
         (typeof profile.data?.display_name === "string" ? profile.data.display_name : null) ??
         technicians.data?.find(
-          (technician) => technician.user_id === authData.user.id,
+          (technician) => technician.user_id === user.id,
         )?.display_name ??
         demoSnapshot.ownerName,
       ownerNames: [
         typeof profile.data?.display_name === "string" ? profile.data.display_name : "",
-        technicians.data?.find((technician) => technician.user_id === authData.user.id)
+        technicians.data?.find((technician) => technician.user_id === user.id)
           ?.display_name ?? "",
         // Typed by a person at their identity provider, so worth more than a
         // column something filled in automatically.
-        typeof authData.user.user_metadata?.full_name === "string"
-          ? authData.user.user_metadata.full_name
+        typeof user.user_metadata?.full_name === "string"
+          ? user.user_metadata.full_name
           : "",
-        typeof authData.user.user_metadata?.name === "string"
-          ? authData.user.user_metadata.name
+        typeof user.user_metadata?.name === "string"
+          ? user.user_metadata.name
           : "",
       ].filter(Boolean),
-      ownerEmail: authData.user.email ?? "",
+      ownerEmail: user.email ?? "",
       metrics: [
         {
           label: "Today's revenue",

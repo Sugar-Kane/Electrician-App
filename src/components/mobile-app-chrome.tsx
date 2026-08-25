@@ -231,6 +231,11 @@ export function MobileAppChrome({
               <Link
                 key={label}
                 href={href}
+                // The whole route, not the loading state. Every page here is
+                // `force-dynamic`, and the default prefetch stops at the
+                // nearest loading boundary — which is the skeleton, so the
+                // wait for the data was still the whole wait.
+                prefetch
                 onClick={() => toTopIfHere(href)}
                 aria-current={current ? "page" : undefined}
                 aria-label={create ? "Open the assistant" : undefined}
@@ -282,6 +287,7 @@ export function MobileAppChrome({
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch
                         onClick={() => {
                           setMenuOpen(false);
                           toTopIfHere(item.href);

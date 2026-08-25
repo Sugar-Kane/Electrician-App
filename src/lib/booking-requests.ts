@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { currentContext, currentUser } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
@@ -62,26 +63,25 @@ function formatWhen(iso: string, timeZone: string, withTime = true): string {
 }
 
 export async function getBookingRequests(): Promise<BookingRequestQueue> {
+  /*
+   * Both memoised for the length of the request. This module used to verify the
+   * session and look up the membership itself, and so did the dashboard, and so
+   * did `request-context` — three round trips to the auth server before the
+   * home page fetched a single row.
+   *
+   * Two calls rather than one because signed out and signed in with no business
+   * are different answers on this screen.
+   */
+  const user = await currentUser();
+  if (!user) return { requiresLogin: true, timezone: DEFAULT_TIMEZONE, requests: [] };
+
+  const context = await currentContext();
+  if (!context) return { requiresLogin: false, timezone: DEFAULT_TIMEZONE, requests: [] };
+
   const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) return { requiresLogin: true, timezone: DEFAULT_TIMEZONE, requests: [] };
-
   const database = asFlexibleClient(supabase);
-  const { data: membership } = await database
-    .from("organization_members")
-    .select("organization_id, organizations(timezone)")
-    .eq("user_id", authData.user.id)
-    .limit(1)
-    .maybeSingle();
-
-  const row = membership as unknown as {
-    organization_id?: string;
-    organizations?: { timezone?: string } | null;
-  } | null;
-  const organizationId = text(row?.organization_id);
-  if (!organizationId) return { requiresLogin: false, timezone: DEFAULT_TIMEZONE, requests: [] };
-
-  const timezone = text(row?.organizations?.timezone) || DEFAULT_TIMEZONE;
+  const organizationId = context.organizationId;
+  const timezone = context.timeZone || DEFAULT_TIMEZONE;
 
   const { data } = await database
     .from("booking_requests")

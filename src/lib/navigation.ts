@@ -140,26 +140,51 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+];
+
+/**
+ * What lives behind the avatar, top right.
+ *
+ * Settings and Your account used to be a "Setup" section at the bottom of the
+ * menu, which put them in the same list as the work — Schedule, Invoices,
+ * Stock. They are not work. They are the two things somebody goes looking for
+ * *about themselves and their business*, and every other app on the phone puts
+ * those behind the picture of your face in the corner.
+ *
+ * Same shape as a nav item, and rendered through the same icon resolver, so
+ * there is one description of a destination rather than two.
+ */
+export const ACCOUNT_MENU_ITEMS: NavItem[] = [
   {
-    title: "Setup",
-    items: [
-      {
-        label: "Settings",
-        href: "/settings",
-        icon: "Settings",
-        description: "How the business runs",
-      },
-      {
-        label: "Your account",
-        href: "/account",
-        icon: "UserRound",
-        description: "Your sign-in and plan",
-      },
-    ],
+    label: "Profile",
+    href: "/account?section=profile#profile",
+    icon: "UserRound",
+    description: "Name, photo, email",
+  },
+  {
+    label: "App preferences",
+    href: "/account?section=preferences#preferences",
+    icon: "Settings2",
+    description: "Notifications, maps, display",
+  },
+  {
+    label: "Settings",
+    href: "/settings",
+    icon: "Settings",
+    description: "How the business runs",
+  },
+  {
+    label: "Your account",
+    href: "/account",
+    icon: "CreditCard",
+    description: "Your sign-in and plan",
   },
 ];
 
 export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
+
+/** Everywhere a person can get to from the chrome, menu and avatar together. */
+export const ALL_DESTINATIONS: NavItem[] = [...ALL_NAV_ITEMS, ...ACCOUNT_MENU_ITEMS];
 
 /**
  * Which menu entry the page you are on belongs to.

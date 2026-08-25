@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import {
+  ACCOUNT_MENU_ITEMS,
+  ALL_DESTINATIONS,
   ALL_NAV_ITEMS,
   ALL_SETTINGS_LINKS,
   NAV_SECTIONS,
@@ -64,7 +66,7 @@ test("the page you are on is the entry that highlights", () => {
   assert.equal(activeNavHref("/"), "/");
   assert.equal(activeNavHref("/schedule"), "/schedule");
   assert.equal(activeNavHref("/invoices"), "/invoices");
-  assert.equal(activeNavHref("/settings"), "/settings");
+  assert.equal(activeNavHref("/materials"), "/materials");
 });
 
 test("the dashboard does not claim every page", () => {
@@ -76,9 +78,17 @@ test("the dashboard does not claim every page", () => {
 
 test("a subpage belongs to its parent", () => {
   assert.equal(activeNavHref("/messages/6f1c"), "/messages");
-  assert.equal(activeNavHref("/settings/team"), "/settings");
-  assert.equal(activeNavHref("/settings/notifications"), "/settings");
   assert.equal(activeNavHref("/materials/orders"), "/materials");
+  assert.equal(activeNavHref("/invoices/2201"), "/invoices");
+});
+
+test("the account pages highlight nothing in the left menu, because they left it", () => {
+  // Settings and Your account are behind the avatar now, not in the list of
+  // work. Lighting a menu entry for a page that is no longer in the menu would
+  // be pointing at something that is not there.
+  assert.equal(activeNavHref("/settings"), null);
+  assert.equal(activeNavHref("/settings/team"), null);
+  assert.equal(activeNavHref("/account"), null);
 });
 
 test("a record opened from a list belongs to that list", () => {
@@ -163,9 +173,6 @@ test("the four permanent tabs do not light More", () => {
 });
 
 test("a page reached through the menu lights More", () => {
-  // Settings used to be the bottom bar's fifth destination, so being on it lit
-  // a tab labelled "More" that was really a link. It is a menu page now.
-  assert.equal(isBeyondBottomNav("/settings"), true);
   assert.equal(isBeyondBottomNav("/invoices"), true);
   assert.equal(isBeyondBottomNav("/materials"), true);
   assert.equal(isBeyondBottomNav("/technicians"), true);
@@ -180,7 +187,9 @@ test("a job opened from the schedule keeps Jobs lit, not More", () => {
 
 test("a page in no menu section lights nothing at all", () => {
   // Better than lighting More by default: an unknown page is not "in the menu",
-  // and claiming it is would make the highlight meaningless.
+  // and claiming it is would make the highlight meaningless. Settings is in
+  // that category now — it is reached from the avatar, not from More.
+  assert.equal(isBeyondBottomNav("/settings"), false);
   assert.equal(isBeyondBottomNav("/login"), false);
   assert.equal(isBeyondBottomNav(""), false);
 });
@@ -202,4 +211,31 @@ test("no settings link points at a page that is not in the app", () => {
     assert.match(link.href, /^\//, link.label);
     assert.doesNotMatch(link.href, /#/, link.label);
   }
+});
+
+test("what left the menu is still somewhere a person can get to", () => {
+  // Settings and Your account moved out of the left menu and behind the
+  // avatar. Removing them from one list without adding them to the other is
+  // exactly how a page becomes reachable only by typing its URL.
+  const hrefs = ACCOUNT_MENU_ITEMS.map((item) => item.href);
+  assert.ok(hrefs.includes("/settings"), "Settings is nowhere");
+  assert.ok(hrefs.includes("/account"), "Your account is nowhere");
+
+  // And not in both places at once, which is two entry points to one page.
+  for (const item of ALL_NAV_ITEMS) {
+    assert.ok(item.href !== "/settings" && item.href !== "/account", item.label);
+  }
+});
+
+test("every account entry explains itself, like every menu entry", () => {
+  for (const item of ACCOUNT_MENU_ITEMS) {
+    assert.match(item.href, /^\//, item.label);
+    assert.ok(item.label.trim().length > 0);
+    assert.ok(item.description.trim().length > 0, item.label);
+    assert.ok(item.icon.trim().length > 0, item.label);
+  }
+
+  // One list of destinations, so a count that drifts is a destination that was
+  // added to one place and forgotten in the other.
+  assert.equal(ALL_DESTINATIONS.length, ALL_NAV_ITEMS.length + ACCOUNT_MENU_ITEMS.length);
 });
