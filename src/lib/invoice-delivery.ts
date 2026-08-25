@@ -16,14 +16,10 @@ import { sendSms } from "@/lib/twilio";
  * Getting an invoice to the person who owes the money.
  *
  * Same shape as `notifyJobChange`, and for the same reasons: best effort, never
- * throws, and every attempt is written down — including the ones that were
- * skipped for want of a phone number. "The customer says they never got a bill"
- * is a question this has to be able to answer a month later, and a send that
- * quietly did nothing is indistinguishable from one that was never made.
- *
- * Unlike a cancellation, this is initiated by a person who is watching. So the
- * attempts come back to the caller as well as going into the log, and the
- * screen says what happened rather than claiming success and hoping.
+ * throws, and every attempt is written down — including the ones that are turned
+ * away for want of a phone number. The public function validates channel names
+ * at runtime because MCP/API inputs begin as strings even when in-app callers
+ * have a narrower TypeScript union.
  */
 
 export type { DeliveryAttempt, DeliveryChannel };
@@ -35,15 +31,19 @@ export async function deliverInvoice(input: {
   facts: InvoiceFacts;
   customerPhone: string;
   customerEmail: string;
-  /** Which channels the sender asked for. Empty is a caller bug, not a no-op. */
-  channels: DeliveryChannel[];
+  /** Which channels the sender asked for. Unknown channel strings are ignored. */
+  channels: string[];
 }): Promise<DeliveryAttempt[]> {
   const database = getSupabaseAdmin();
   const attempts: DeliveryAttempt[] = [];
   const note = (attempt: Omit<DeliveryAttempt, "at">) =>
     attempts.push({ ...attempt, at: new Date().toISOString() });
 
-  const wants = new Set(input.channels);
+  const wants = new Set<DeliveryChannel>(
+    input.channels.filter(
+      (channel): channel is DeliveryChannel => channel === "sms" || channel === "email",
+    ),
+  );
 
   if (wants.has("sms")) {
     const { data: settings } = await database
@@ -123,15 +123,12 @@ export async function deliverInvoice(input: {
       .from("invoices")
       .update({
         deliveries: [...previous, ...attempts],
-        // Only a real delivery moves this. A failed send must not make the list
-        // show "sent" for an invoice the customer never received.
         ...(succeeded ? { last_sent_at: new Date().toISOString() } : {}),
       })
       .eq("id", input.invoiceId);
   } catch {
-    // Deliberately silent. The messages are already gone; losing the record of
-    // them is bad, but throwing here would report a failure that did not happen
-    // and invite somebody to send the invoice a second time.
+    // The message may already be gone. Do not report a send failure merely
+    // because the delivery audit trail could not be appended.
   }
 
   return attempts;
