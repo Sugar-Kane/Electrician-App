@@ -202,6 +202,87 @@ function readWeek(formData: FormData): { days: DayHours[] } | { error: string } 
  * that happened to match — and a half-applied week is a person the booking page
  * thinks works Sunday.
  */
+/**
+ * Working the same hours as the business.
+ *
+ * A one-person business sets its opening hours and then has to set them again
+ * as its own hours, and from then on has two copies of one truth to keep in
+ * step. This is the toggle for that, and it is honest rather than a copy: an
+ * electrician with no `technician_hours` rows is *already* defined as available
+ * whenever the business is open, which is what the booking slot function has
+ * always done.
+ *
+ * So switching it on deletes their rows rather than duplicating the business
+ * week into them. Switching it off writes today's business week as a starting
+ * point, because an empty week to fill in from scratch is not what "let me
+ * differ a bit" means.
+ */
+export async function matchBusinessHours(
+  _previous: ElectricianState,
+  formData: FormData,
+): Promise<ElectricianState> {
+  const technicianId = String(formData.get("technicianId") ?? "").trim();
+  const share = String(formData.get("share") ?? "") === "on";
+
+  const context = await ownerContext();
+  if (!context) return { error: "You are not signed in." };
+  if (!context.canManage) return { error: "Only an owner can set hours." };
+  if (!(await ownedTechnician(context, technicianId))) {
+    return { error: "That person is not on your crew." };
+  }
+
+  const { error: cleared } = await context.supabase
+    .from("technician_hours")
+    .delete()
+    .eq("organization_id", context.organizationId)
+    .eq("technician_id", technicianId);
+
+  if (cleared) {
+    console.error("electricians: could not clear hours", cleared);
+    return { error: "That could not be saved. Try again." };
+  }
+
+  if (share) {
+    revalidatePath("/technicians");
+    return { error: "", notice: "Working whenever the business is open." };
+  }
+
+  const { data: settings } = await context.supabase
+    .from("service_settings")
+    .select("business_hours")
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+
+  const week = parseBusinessHours(settings?.business_hours);
+  if (week.length === 0) {
+    // No business hours to copy is not an error — it leaves them on the
+    // fallback, which is the same thing the toggle they just turned off meant.
+    revalidatePath("/technicians");
+    return {
+      error: "",
+      notice: "The business has no opening hours set yet, so these stay open.",
+    };
+  }
+
+  const { error } = await context.supabase.from("technician_hours").insert(
+    week.map((day) => ({
+      organization_id: context.organizationId,
+      technician_id: technicianId,
+      weekday: day.weekday,
+      starts_at: day.start,
+      ends_at: day.end,
+    })),
+  );
+
+  if (error) {
+    console.error("electricians: could not seed hours from the business", error);
+    return { error: "That could not be saved. Try again." };
+  }
+
+  revalidatePath("/technicians");
+  return { error: "", notice: `Started from the business week: ${describeWeek(week)}.` };
+}
+
 export async function saveElectricianHours(
   _previous: ElectricianState,
   formData: FormData,

@@ -45,17 +45,47 @@ export const metadata: Metadata = {
  * A flat 10px per level now, and the rail carries the hierarchy rather than
  * the whitespace. Four levels cost 40px instead of 120.
  */
-function FolderBranch({ node, depth = 0 }: { node: DocumentFolderNode; depth?: number }) {
+function FolderBranch({
+  node,
+  depth = 0,
+  openable,
+}: {
+  node: DocumentFolderNode;
+  depth?: number;
+  /**
+   * False for the demo tree, which is a blueprint rather than rows.
+   *
+   * Its ids are made-up strings like `blueprint-root`, so linking them would
+   * send a signed-out visitor to a folder that cannot exist — measured, and it
+   * 404s. The shape of the filing is still worth showing; it just does not open.
+   */
+  openable: boolean;
+}) {
   const hasChildren = node.children.length > 0;
+  /*
+   * The name is a link now.
+   *
+   * The tree has drawn folders since it was built and none of them went
+   * anywhere — there was no route into a folder, so every document the app
+   * filed was reachable only from the screen that made it. The chevron still
+   * expands the branch in place; the name opens the folder.
+   */
   const content = (
     <div className="flex min-h-12 items-center gap-2.5 rounded-control px-2 py-2 text-left hover:bg-white/[0.035] sm:gap-3 sm:px-3">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-chip bg-white/5 text-brand sm:h-9 sm:w-9">
         {hasChildren ? <FolderOpen className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden /> : <Folder className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{node.name}</span>
-        {node.type === "job" ? <span className="block truncate text-[10px] text-ink-faint">Standard job documentation</span> : null}
-      </span>
+      {openable ? (
+        <Link href={`/files/${node.id}`} prefetch className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold hover:text-brand">{node.name}</span>
+          {node.type === "job" ? <span className="block truncate text-[10px] text-ink-faint">Standard job documentation</span> : null}
+        </Link>
+      ) : (
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">{node.name}</span>
+          {node.type === "job" ? <span className="block truncate text-[10px] text-ink-faint">Standard job documentation</span> : null}
+        </span>
+      )}
       {hasChildren ? <ChevronRight className="h-4 w-4 shrink-0 rotate-90 text-ink-faint" aria-hidden /> : null}
     </div>
   );
@@ -68,7 +98,7 @@ function FolderBranch({ node, depth = 0 }: { node: DocumentFolderNode; depth?: n
       {/* The rail is the indent. Beyond four levels it stops growing, because
           a fifth step of whitespace costs more than it explains. */}
       <div className={`border-l border-white/8 ${depth < 4 ? "pl-2.5" : ""}`}>
-        {node.children.map((child) => <FolderBranch key={child.id} node={child} depth={depth + 1} />)}
+        {node.children.map((child) => <FolderBranch key={child.id} node={child} depth={depth + 1} openable={openable} />)}
       </div>
     </details>
   );
@@ -151,7 +181,9 @@ export default async function FilesPage({
           </div>
 
           <div className="mt-5 rounded-panel border border-white/8 bg-[#071823] p-2">
-            {workspace.folders.map((folder) => <FolderBranch key={folder.id} node={folder} />)}
+            {workspace.folders.map((folder) => (
+              <FolderBranch key={folder.id} node={folder} openable={workspace.source !== "demo"} />
+            ))}
           </div>
 
           {workspace.source === "demo" ? (

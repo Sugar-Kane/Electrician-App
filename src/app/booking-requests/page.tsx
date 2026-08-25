@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   CalendarPlus,
   Check,
+  ChevronDown,
   MessagesSquare,
   PhoneCall,
   ShieldAlert,
@@ -13,6 +14,7 @@ import {
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getBookingRequests, type BookingRequest } from "@/lib/booking-requests";
+import { isOpenRequest } from "@/lib/booking-queue";
 import { dismissBookingRequest, scheduleBookingRequest } from "@/app/booking-requests/actions";
 import { Banner } from "@/components/ui/banner";
 
@@ -41,9 +43,6 @@ const SOURCE_LABELS: Record<string, string> = {
   owner: "Entered by you",
 };
 
-/** Waiting on the business. The two words mean the same thing from different sources. */
-const OPEN_STATUSES = new Set(["new", "needs_review"]);
-
 /** What happened to it, for the ones that are done. */
 const HANDLED_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
@@ -57,7 +56,7 @@ const HANDLED_LABELS: Record<string, string> = {
 
 function RequestCard({ request }: { request: BookingRequest }) {
   const intent = intentStyles[request.intent];
-  const handled = !OPEN_STATUSES.has(request.status);
+  const handled = !isOpenRequest(request.status);
 
   return (
     <article
@@ -162,8 +161,7 @@ export default async function BookingRequestsPage({
   const [queue, query] = await Promise.all([getBookingRequests(), searchParams]);
   if (queue.requiresLogin) redirect("/login?next=/booking-requests");
 
-  const open = queue.requests.filter((request) => OPEN_STATUSES.has(request.status));
-  const handled = queue.requests.filter((request) => !OPEN_STATUSES.has(request.status));
+  const { open, handled, agedOut } = queue;
 
   return (
     <FieldPageShell
@@ -200,7 +198,7 @@ export default async function BookingRequestsPage({
           <Check className="mx-auto h-6 w-6 text-positive" aria-hidden />
           <p className="mt-2 text-sm font-semibold">Nothing waiting on you</p>
           <p className="mt-1 text-sm text-ink-muted">
-            Everything below has already been answered.
+            The rest have already been answered. They are folded away below.
           </p>
         </div>
       ) : null}
@@ -216,15 +214,38 @@ export default async function BookingRequestsPage({
         </section>
       ) : null}
 
+      {/*
+        Folded away, and closed to start with.
+        
+        This list used to sit open underneath the queue and keep everything
+        forever, so within a fortnight the page was mostly history — and the
+        requests actually needing an answer were the small part at the top.
+        A `<details>` rather than a button and some state: it works before any
+        JavaScript arrives, which on a van's signal is most of the time.
+      */}
       {handled.length > 0 ? (
-        <section className="mt-6 space-y-3" aria-labelledby="handled-requests">
-          <h2 id="handled-requests" className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
-            Already handled
-          </h2>
-          {handled.map((request) => (
-            <RequestCard key={request.id} request={request} />
-          ))}
-        </section>
+        <details className="mt-6 rounded-panel border border-line bg-surface">
+          <summary className="tap-target flex cursor-pointer list-none items-center justify-between gap-2 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
+            <span>Already handled ({handled.length})</span>
+            <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+          </summary>
+          <div className="space-y-3 p-3 pt-0">
+            {handled.map((request) => (
+              <RequestCard key={request.id} request={request} />
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      {/*
+        Said out loud rather than left as a silent gap. A page that quietly
+        drops rows is a page somebody stops trusting.
+      */}
+      {agedOut > 0 ? (
+        <p className="mt-3 px-1 text-center text-xs text-ink-faint">
+          {agedOut} older {agedOut === 1 ? "request has" : "requests have"} dropped off after a
+          week. Anything still waiting on you stays here however old it is.
+        </p>
       ) : null}
     </FieldPageShell>
   );
