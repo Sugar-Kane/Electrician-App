@@ -2,6 +2,7 @@ import "server-only";
 
 import { consentIsActive, evaluateQuietHours } from "@/lib/messaging-rules";
 import { decideAutomaticSend, type TemplateTrigger } from "@/lib/message-templates";
+import { readLanguage } from "@/lib/customer-language";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
 
@@ -49,7 +50,7 @@ export async function sendJobEventMessage(input: {
 
     const [
       { data: consentRow },
-      { data: templateRow },
+      { data: templateRows },
       { data: settingsRow },
       { data: serviceRow },
       { data: orgRow },
@@ -64,11 +65,15 @@ export async function sendJobEventMessage(input: {
           .maybeSingle(),
         database
           .from("message_templates")
-          .select("body, is_active")
+          // Every language for this trigger, chosen between below once the
+          // customer's own is known. Deliberately not `.maybeSingle()`: there
+          // is a row per language now, and asking for one back from a filter
+          // that matches two is an ambiguous lookup that fails the send
+          // outright rather than picking wrongly.
+          .select("body, is_active, language")
           .eq("organization_id", organizationId)
           .eq("trigger_event", input.trigger)
-          .eq("channel", "sms")
-          .maybeSingle(),
+          .eq("channel", "sms"),
         database
           .from("messaging_settings")
           .select("messaging_service_sid, quiet_hours_start, quiet_hours_end")
@@ -106,12 +111,27 @@ export async function sendJobEventMessage(input: {
 
     const { data: customerRow } = await database
       .from("customers")
-      .select("first_name, phone")
+      .select("first_name, phone, preferred_language")
       .eq("id", customerId)
       .maybeSingle();
 
     const phone = text(customerRow?.phone);
     if (!phone) return { sent: false, reason: "Customer has no phone number." };
+
+    /*
+     * The customer's language, or English if nobody wrote that one.
+     *
+     * The fallback is the point: a business that has not translated a trigger
+     * still sends something. A Spanish speaker reading one English reminder is
+     * a worse experience than an English one; no message at all is a missed
+     * appointment.
+     */
+    const language = readLanguage(customerRow?.preferred_language);
+    const rows = (templateRows ?? []) as Record<string, unknown>[];
+    const templateRow =
+      rows.find((row) => text(row.language) === language) ??
+      rows.find((row) => text(row.language) === "en") ??
+      null;
 
     const technician = (job.technicians ?? {}) as Record<string, unknown>;
     const decision = decideAutomaticSend({
