@@ -22,6 +22,7 @@ export type ToolName =
   | "search_stock"
   | "adjust_stock"
   | "add_stock_item"
+  | "look_up_price"
   | "list_invoices"
   | "list_technicians"
   | "lookup_code"
@@ -152,6 +153,24 @@ export const ASSISTANT_TOOLS: ToolSpec[] = [
         location: str("Van shelf 2, shop bin C. Empty if not said."),
       },
       required: ["name", "quantity", "unit", "part_number", "unit_cost", "location"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "look_up_price",
+    description:
+      "Look up what a part currently sells for, by searching the public web. Use it when somebody asks what something costs and it is not already in their stock list — check_stock and search_stock answer what they paid, this answers what the next one costs. The figure is a public list price with no trade discount in it, and must be described that way.",
+    confirm: false,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        // Only the part, deliberately. The query is assembled on the server
+        // from this one field, so what leaves the building is the name of a
+        // thing rather than whatever text happened to be in the conversation.
+        part: str("The part alone, as it would appear in a supplier's catalogue."),
+      },
+      required: ["part"],
       additionalProperties: false,
     },
   },
@@ -426,6 +445,9 @@ export function assistantToolPrompt(businessName: string): string {
     "Rules:",
     "- You can change stock. adjust_stock records parts arriving, coming back, being damaged, or being recounted; add_stock_item puts a new part on the list. Both are proposals. Never tell somebody to go and do it by hand.",
     "- Never adjust stock for a part used on a job. Adding the part to the job takes it off the shelf on its own.",
+    "- A photographed receipt belongs in Stock → Scan a receipt, which reads every line at once and puts them on the shelf together. Say so rather than adding the lines one at a time.",
+    "- look_up_price returns a public list price. Say that it is one. It has no trade discount in it, it is not what this business pays, and it must never be repeated to a customer as their price or written into stock without them tapping to confirm.",
+    "- Never put a customer's name, address or phone number into a price lookup. It searches the public web.",
     "- Never say you have sent, booked, invoiced or drafted something you have only proposed. Say you have prepared it and it is waiting for them.",
     "- Never invent a job number, invoice number, customer, amount or date. Look it up.",
     "- For anything about code, licensing, permits or inspections, call lookup_code. Never answer those from memory.",

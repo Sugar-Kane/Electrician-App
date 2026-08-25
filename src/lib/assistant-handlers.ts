@@ -5,6 +5,7 @@ import {
   findReferences,
 } from "@/lib/code-reference";
 import { forgetFact, getMemories, rememberFact } from "@/lib/assistant-memory";
+import { lookUpListPrice } from "@/lib/claude";
 import { matchMaterials, normalizeName } from "@/lib/inventory-match";
 import { getInventory, getInvoices, getJobs } from "@/lib/job-data";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -149,6 +150,56 @@ export async function runReadOnlyTool(
             }${entry.location ? ` | ${entry.location}` : ""}`,
         )
         .join("\n");
+    }
+
+    /*
+     * What the next one costs, as opposed to what the last one cost.
+     *
+     * The two stock tools above answer from the ledger, which is a record of
+     * prices already paid. This is the question that comes before an estimate,
+     * and the assistant had no way to reach it at all.
+     *
+     * Located to the business: a price in Santa Maria is not a price in Boston,
+     * and both availability and sales tax move by state.
+     */
+    case "look_up_price": {
+      const part = text(input.part);
+      if (!part) return "Name the part to price.";
+
+      const context = await currentContext();
+      if (!context) return "Not signed in to a business.";
+
+      const supabase = asFlexibleClient(await createClient());
+      const { data: organization } = await supabase
+        .from("organizations")
+        .select("base_city, base_state, timezone")
+        .eq("id", context.organizationId)
+        .maybeSingle();
+
+      const found = await lookUpListPrice({
+        part,
+        city: text(organization?.base_city),
+        state: text(organization?.base_state),
+        timeZone: text(organization?.timezone),
+      });
+
+      if (!found) {
+        return "That price could not be looked up just now. Say so rather than guessing at a figure.";
+      }
+
+      /*
+       * A search that did not run is not an answer.
+       *
+       * Left to itself the model will fill the gap from memory, and a
+       * remembered price looks exactly like a real one to somebody about to
+       * quote a job. So the failure is reported instead of the text.
+       */
+      if (!found.searched) {
+        return "The web search did not return anything for that part. Tell them the lookup failed — do not give a figure from memory.";
+      }
+
+      const where = found.sources.length > 0 ? `\n\nSeen at: ${found.sources.join(", ")}` : "";
+      return `${found.answer}${where}\n\n(This is a public list price with no trade discount in it. Say so.)`;
     }
 
     case "list_invoices": {

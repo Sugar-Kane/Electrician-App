@@ -297,6 +297,272 @@ export async function draftWorkOrderLines(input: {
   }
 }
 
+const RECEIPT_TOOL = {
+  name: "record_receipt",
+  description: "Everything printed on this supplier receipt, line by line.",
+  input_schema: {
+    type: "object",
+    properties: {
+      supplier: {
+        type: "string",
+        description: "The shop's name as printed. Empty string if it cannot be read.",
+      },
+      purchased_on: {
+        type: "string",
+        description: "The date printed on it, as YYYY-MM-DD. Empty string if it cannot be read.",
+      },
+      total_cents: {
+        type: "integer",
+        description:
+          "The final total printed on the receipt, in cents, tax included. 0 if it cannot be read.",
+      },
+      lines: {
+        type: "array",
+        maxItems: 40,
+        description: "One entry per item bought. Subtotal, tax and total lines are not items.",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "The item as printed on the receipt." },
+            quantity: { type: "number", description: "How many were bought. 1 if not printed." },
+            unit: { type: "string", description: "each, ft, box, roll. 'each' if not printed." },
+            unit_cost_cents: {
+              type: "integer",
+              description:
+                "What ONE costs, in cents, before tax. 0 when the line shows only a total you cannot divide confidently.",
+            },
+            part_number: {
+              type: "string",
+              description: "The SKU or model printed beside it. Empty string if there is none.",
+            },
+          },
+          required: ["name", "quantity", "unit", "unit_cost_cents", "part_number"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["supplier", "purchased_on", "total_cents", "lines"],
+    additionalProperties: false,
+  },
+} as const;
+
+/** What comes back from a receipt, before any of it is believed. */
+export type ReadReceipt = {
+  supplier: string;
+  purchasedOn: string;
+  totalCents: number;
+  lines: unknown[];
+};
+
+/**
+ * Read a photographed receipt.
+ *
+ * Extraction and nothing else: the shape of the answer is forced, and what it
+ * says lands in an editable review table rather than in the stock list. That
+ * ordering is the whole design. A thermal receipt photographed on a van seat is
+ * about the hardest thing there is to read, and a scanner that wrote its
+ * reading straight into inventory would put a wrong count on the shelf with
+ * nothing anywhere to say where it came from.
+ *
+ * Returns null rather than throwing, like everything else in this file. The
+ * caller turns null into "that could not be read — type it in instead", which
+ * is exactly what somebody would have been doing anyway.
+ */
+export async function readReceipt(input: {
+  block: { type: string; source: unknown };
+}): Promise<ReadReceipt | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  try {
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 2000,
+        system: [
+          "You are reading a supplier receipt for an electrical contracting business, so its parts can be added to a stock list.",
+          "Report only what is printed. Never infer a price, a quantity or a part number that is not on the paper — 0 and an empty string are correct answers and a plausible-looking invention is not.",
+          "Prices are per unit and before tax. When a line shows only an extended total for several of something, divide it only if the quantity is printed clearly; otherwise report 0.",
+          "Subtotal, tax, total, deposits, bag charges and delivery are not items. Leave them out of the lines and put the final total in total_cents.",
+          "Expand abbreviations only where they are unambiguous trade shorthand. If a line is illegible, leave it out rather than guessing at it.",
+        ].join("\n"),
+        tools: [RECEIPT_TOOL] as unknown as Anthropic.Tool[],
+        tool_choice: { type: "tool", name: RECEIPT_TOOL.name },
+        messages: [
+          {
+            role: "user",
+            content: [
+              // The image first, which is what the API documentation asks for.
+              input.block as unknown as Anthropic.ContentBlockParam,
+              { type: "text", text: "Read this receipt." },
+            ],
+          },
+        ],
+      },
+      { timeout: 60_000 },
+    );
+
+    const call = response.content.find((block) => block.type === "tool_use");
+    if (!call || call.type !== "tool_use") return null;
+
+    const read = (call.input ?? {}) as Record<string, unknown>;
+    const total = Number(read.total_cents);
+
+    return {
+      supplier: typeof read.supplier === "string" ? read.supplier.trim().slice(0, 120) : "",
+      purchasedOn: typeof read.purchased_on === "string" ? read.purchased_on.trim().slice(0, 10) : "",
+      totalCents: Number.isFinite(total) && total > 0 ? Math.round(total) : 0,
+      lines: Array.isArray(read.lines) ? read.lines : [],
+    };
+  } catch (error) {
+    console.error("receipt read failed", error);
+    return null;
+  }
+}
+
+export type PriceLookup = {
+  /** What was found, in the model's words. */
+  answer: string;
+  /** The domains it came from, so a figure can be traced rather than trusted. */
+  sources: string[];
+  /**
+   * Whether a search actually ran and returned results.
+   *
+   * False is the important case. If the search fails the model will happily
+   * answer from memory, and a remembered price handed to an electrician about
+   * to quote a job is worse than no answer — it looks identical to a real one.
+   * The caller refuses to pass it on.
+   */
+  searched: boolean;
+};
+
+/*
+ * The search tool, and the reason for this exact version.
+ *
+ * `web_search_20260209` is the variant with dynamic filtering, for Opus 4.6 and
+ * later. `web_search_20250305` is the older basic one; the SDK's type union
+ * lists it first and it is the easy thing to reach for by mistake.
+ *
+ * Deliberately no `code_execution` beside it — this version runs code under the
+ * hood, and declaring a second execution environment confuses the model.
+ */
+const PRICE_SEARCH_TOOL = {
+  type: "web_search_20260209",
+  name: "web_search",
+  // Three is enough to check a couple of suppliers and stop. Without a cap a
+  // single question can run up a search bill on somebody's behalf.
+  max_uses: 3,
+} as const;
+
+/**
+ * What a part costs, from the public web.
+ *
+ * The question that comes just before every estimate — "what does a 200A panel
+ * run these days" — and the one thing the assistant could not answer. It knew
+ * what was on the van and what it had been bought for, and nothing about what
+ * the next one would cost.
+ *
+ * What comes back is a **public list price**, and the caller is careful to say
+ * so. It is not this business's price: it has no trade discount in it, no
+ * markup, and no idea what this electrician's supply house charges them. A
+ * figure presented as anything firmer would end up in a quote.
+ *
+ * Located to the business, because a price in Santa Maria is not a price in
+ * Boston, and because sales tax and availability both move by state.
+ */
+export async function lookUpListPrice(input: {
+  part: string;
+  city: string;
+  state: string;
+  timeZone: string;
+}): Promise<PriceLookup | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const part = input.part.trim().slice(0, 200);
+  if (!part) return null;
+
+  try {
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 1200,
+        system: [
+          "You are pricing electrical parts for a residential electrical contractor in the United States.",
+          "Search for what the part currently sells for at ordinary suppliers, and report a figure or a range with the date it was seen.",
+          "This is a public list price. Say so. It carries no trade discount and is not what this business pays.",
+          "If the searches do not turn up a price for the part asked about, say that plainly. Never fall back on a remembered figure — a made-up price ends up in somebody's quote.",
+          "Two or three sentences. The person reading is holding a phone.",
+        ].join("\n"),
+        /*
+         * Typed against the SDK rather than cast through `any`.
+         *
+         * This request cannot be exercised without a key, so the compiler
+         * checking the tool declaration is the only proof available that the
+         * shape is right — and a misdeclared server tool fails at runtime in
+         * production, where nobody is watching.
+         */
+        tools: [
+          {
+            ...PRICE_SEARCH_TOOL,
+            user_location: {
+              type: "approximate",
+              country: "US",
+              ...(input.city ? { city: input.city } : {}),
+              ...(input.state ? { region: input.state } : {}),
+              ...(input.timeZone ? { timezone: input.timeZone } : {}),
+            },
+          } satisfies Anthropic.WebSearchTool20260209,
+        ],
+        messages: [{ role: "user", content: `What does this cost: ${part}` }],
+      },
+      { timeout: 45_000 },
+    );
+
+    const sources = new Set<string>();
+    let searched = false;
+
+    for (const block of response.content) {
+      if (block.type !== "web_search_tool_result") continue;
+
+      /*
+       * A failed search does not throw.
+       *
+       * It comes back as a perfectly ordinary 200 whose `content` is a single
+       * error object rather than the usual array — `{ error_code:
+       * "max_uses_exceeded" }` and friends. Indexing it blind reads properties
+       * off an error and calls the lookup a success.
+       */
+      const content = (block as { content?: unknown }).content;
+      if (!Array.isArray(content)) continue;
+
+      searched = true;
+      for (const result of content) {
+        const url = (result as { url?: unknown })?.url;
+        if (typeof url !== "string") continue;
+        try {
+          sources.add(new URL(url).hostname.replace(/^www\./, ""));
+        } catch {
+          // A result without a parseable URL still counts as a search that
+          // ran; it just cannot be credited to a domain.
+        }
+      }
+    }
+
+    const answer = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("\n")
+      .trim();
+
+    if (!answer) return null;
+    return { answer, sources: [...sources].slice(0, 5), searched };
+  } catch (error) {
+    console.error("price lookup failed", error);
+    return null;
+  }
+}
+
 export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
 export type AgentReply = {
   text: string;

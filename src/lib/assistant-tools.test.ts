@@ -164,3 +164,32 @@ test("an empty technician name reads as unassigning, not as a missing field", ()
     "Take the assigned technician off job #5.",
   );
 });
+
+test("a price lookup carries a part and nothing else", () => {
+  // The one tool whose input leaves the building. The query is assembled on
+  // the server from this single field, so a second free-text property would be
+  // a way for a customer's name or address to reach a search engine.
+  const tool = findTool("look_up_price");
+
+  assert.ok(tool);
+  assert.deepEqual(Object.keys(tool.input_schema.properties), ["part"]);
+  assert.deepEqual(tool.input_schema.required, ["part"]);
+  assert.equal(tool.input_schema.additionalProperties, false);
+});
+
+test("looking a price up is a read, and reads do not need a tap", () => {
+  // Nothing is written by it. The figure lands in the conversation, and it
+  // takes add_stock_item or adjust_stock — both of which do confirm — before
+  // any of it reaches the stock list.
+  assert.equal(requiresConfirmation("look_up_price"), false);
+  assert.equal(findTool("look_up_price")?.outbound, false);
+});
+
+test("the prompt says out loud what kind of price it is", () => {
+  // A list price repeated to a customer as the business's price is the failure
+  // this feature could most easily cause.
+  const prompt = assistantToolPrompt("Pacific Plains Electric");
+
+  assert.match(prompt, /public list price/);
+  assert.match(prompt, /never put a customer's name, address or phone number/i);
+});

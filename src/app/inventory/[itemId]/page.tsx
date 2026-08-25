@@ -147,6 +147,18 @@ export default async function StockItemPage({
                     <span className="block truncate text-[11px] text-ink-faint">
                       {movement.whenLabel}
                       {movement.note ? ` · ${movement.note}` : ""}
+                      {/*
+                        The paper behind the purchase, one tap away. A material
+                        spend is a number until each line in it can be shown.
+                      */}
+                      {movement.receiptHref ? (
+                        <>
+                          {" · "}
+                          <Link href={movement.receiptHref} className="text-brand hover:underline">
+                            Receipt
+                          </Link>
+                        </>
+                      ) : null}
                     </span>
                   </span>
 
