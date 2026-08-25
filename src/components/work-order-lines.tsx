@@ -28,7 +28,7 @@ import { parseCostToCents, MAX_WORK_ORDER_LINES } from "@/lib/new-job-input";
 type Line = {
   /** Local only. Rows need a stable key while they are being edited. */
   key: string;
-  kind: "labour" | "material";
+  kind: "labor" | "material";
   description: string;
   /** Kept as typed, so a half-typed "1." is not rewritten under the cursor. */
   quantity: string;
@@ -37,7 +37,7 @@ type Line = {
 };
 
 const KINDS = [
-  { value: "labour", label: "Labour" },
+  { value: "labor", label: "Labour" },
   { value: "material", label: "Material" },
 ] as const;
 
@@ -47,13 +47,13 @@ function nextKey(): string {
   return `line-${counter}`;
 }
 
-function blankLine(kind: Line["kind"] = "labour"): Line {
+function blankLine(kind: Line["kind"] = "labor"): Line {
   return {
     key: nextKey(),
     kind,
     description: "",
     quantity: "1",
-    unit: kind === "labour" ? "hour" : "each",
+    unit: kind === "labor" ? "hour" : "each",
     price: "",
   };
 }
@@ -194,7 +194,7 @@ export function WorkOrderLines({
                     value={line.kind}
                     onChange={(next) =>
                       edit(line.key, {
-                        kind: next === "material" ? "material" : "labour",
+                        kind: next === "material" ? "material" : "labor",
                         // The unit follows the kind unless it has been changed.
                         unit:
                           line.unit === "hour" || line.unit === "each"
@@ -277,7 +277,7 @@ function restore(value: string): Line[] {
 
     return parsed.slice(0, MAX_WORK_ORDER_LINES).map((entry) => {
       const row = (entry ?? {}) as Record<string, unknown>;
-      const kind = row.kind === "material" ? "material" : "labour";
+      const kind = row.kind === "material" ? "material" : "labor";
       const price = Number(row.unitPriceCents);
 
       return {
@@ -285,7 +285,7 @@ function restore(value: string): Line[] {
         kind,
         description: typeof row.description === "string" ? row.description : "",
         quantity: String(Number(row.quantity) || 1),
-        unit: typeof row.unit === "string" && row.unit ? row.unit : kind === "labour" ? "hour" : "each",
+        unit: typeof row.unit === "string" && row.unit ? row.unit : kind === "labor" ? "hour" : "each",
         price: centsToInput(Number.isFinite(price) ? price : 0),
       };
     });

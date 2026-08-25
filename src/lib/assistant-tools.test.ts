@@ -23,15 +23,50 @@ test("everything that reaches a customer needs a tap", () => {
 });
 
 test("everything that changes a record needs a tap too", () => {
-  for (const name of ["schedule_job", "set_invoice_amount", "draft_contract"] as const) {
+  for (const name of [
+    "schedule_job",
+    "set_invoice_amount",
+    "draft_contract",
+    // Stock is a record like any other. A misheard "three" that quietly takes
+    // thirty off the shelf is a van that arrives at the next job empty.
+    "adjust_stock",
+    "add_stock_item",
+  ] as const) {
     assert.equal(requiresConfirmation(name), true, name);
   }
+});
+
+test("a stock change says what it will do before it does it", () => {
+  // Read off the confirmation card, so the sentence has to be the action.
+  assert.match(
+    describeProposal("adjust_stock", { part: "20A breaker", quantity: "6", reason: "received" }),
+    /Add 6 20A breaker/,
+  );
+  assert.match(
+    describeProposal("adjust_stock", { part: "20A breaker", quantity: "17", reason: "stock_take" }),
+    /Set the count of 20A breaker to 17/,
+  );
+  assert.match(
+    describeProposal("adjust_stock", { part: "wire nuts", quantity: "2", reason: "wastage" }),
+    /Take 2 wire nuts out/,
+  );
+  assert.match(
+    describeProposal("add_stock_item", { name: "AFCI breaker", quantity: "4" }),
+    /Add AFCI breaker to the stock list with 4 on hand/,
+  );
 });
 
 test("reading runs immediately", () => {
   // A search that returns the wrong customer costs a second look, not a
   // customer relationship.
-  for (const name of ["search_jobs", "search_customers", "check_stock", "list_invoices", "lookup_code"] as const) {
+  for (const name of [
+    "search_jobs",
+    "search_customers",
+    "check_stock",
+    "search_stock",
+    "list_invoices",
+    "lookup_code",
+  ] as const) {
     assert.equal(requiresConfirmation(name), false, name);
   }
 });

@@ -90,9 +90,18 @@ export function isSaveMode(value: string): value is SaveMode {
   return value === "save" || value === "draft";
 }
 
-/** A line on a work order: an hour of somebody's time, or a part. */
+/**
+ * A line on a work order: an hour of somebody's time, or a part.
+ *
+ * `labor`, American spelling, because that is the value
+ * `job_line_items_kind_check` actually accepts in the deployed database — the
+ * `labour` in the 2026-08-12 migration file has never been what is running, and
+ * every line this form wrote was refused by the constraint until this was
+ * corrected. The prose either side keeps its own spelling; only the stored
+ * value is fixed.
+ */
 export type WorkOrderLine = {
-  kind: "labour" | "material";
+  kind: "labor" | "material";
   description: string;
   quantity: number;
   unit: string;
@@ -286,7 +295,7 @@ export function parseWorkOrderLines(raw: string): WorkOrderLine[] {
     );
     if (!description) continue;
 
-    const kind = row.kind === "material" ? "material" : "labour";
+    const kind = row.kind === "material" ? "material" : "labor";
 
     const quantity = Number(row.quantity);
     // Quantity has a `> 0` check in the database, so a zero here would come
@@ -295,7 +304,7 @@ export function parseWorkOrderLines(raw: string): WorkOrderLine[] {
 
     const unit =
       clean(typeof row.unit === "string" ? row.unit : "").slice(0, MAX_LINE_UNIT) ||
-      (kind === "labour" ? "hour" : "each");
+      (kind === "labor" ? "hour" : "each");
 
     const price = Number(row.unitPriceCents);
     const unitPriceCents =

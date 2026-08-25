@@ -176,7 +176,7 @@ export async function draftScope(input: {
 }
 
 export type DraftedLine = {
-  kind: "labour" | "material";
+  kind: "labor" | "material";
   description: string;
   quantity: number;
   unit: string;
@@ -196,7 +196,7 @@ const WORK_ORDER_TOOL = {
         items: {
           type: "object",
           properties: {
-            kind: { type: "string", enum: ["labour", "material"] },
+            kind: { type: "string", enum: ["labor", "material"] },
             description: {
               type: "string",
               description: "What the line is, as it would read on an invoice.",
@@ -277,7 +277,7 @@ export async function draftWorkOrderLines(input: {
 
       const quantity = Number(row.quantity);
       const price = Number(row.unitPriceCents);
-      const kind = row.kind === "material" ? "material" : "labour";
+      const kind = row.kind === "material" ? "material" : "labor";
 
       lines.push({
         kind,
@@ -285,7 +285,7 @@ export async function draftWorkOrderLines(input: {
         quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
         unit:
           (typeof row.unit === "string" ? row.unit.trim().slice(0, 24) : "") ||
-          (kind === "labour" ? "hour" : "each"),
+          (kind === "labor" ? "hour" : "each"),
         unitPriceCents: Number.isFinite(price) && price > 0 ? Math.round(price) : 0,
       });
     }

@@ -261,7 +261,7 @@ test("an unknown mode is read as a real save, not as a draft", () => {
 test("work order lines are read out of the field the form posts", () => {
   const lines = parseWorkOrderLines(
     JSON.stringify([
-      { kind: "labour", description: "Pull new circuit", quantity: 3.5, unitPriceCents: 12_000 },
+      { kind: "labor", description: "Pull new circuit", quantity: 3.5, unitPriceCents: 12_000 },
       { kind: "material", description: "20A breaker", quantity: 2, unit: "each", unitPriceCents: 4_200 },
     ]),
   );
@@ -276,8 +276,8 @@ test("work order lines are read out of the field the form posts", () => {
 test("a half-typed line is dropped rather than losing the other eight", () => {
   const lines = parseWorkOrderLines(
     JSON.stringify([
-      { kind: "labour", description: "Pull new circuit", quantity: 1, unitPriceCents: 12_000 },
-      { kind: "labour", description: "", quantity: 1, unitPriceCents: 0 },
+      { kind: "labor", description: "Pull new circuit", quantity: 1, unitPriceCents: 12_000 },
+      { kind: "labor", description: "", quantity: 1, unitPriceCents: 0 },
       { kind: "material", description: "Nothing of these", quantity: 0, unitPriceCents: 500 },
       { kind: "material", description: "Free offcut", quantity: 2 },
     ]),
@@ -299,7 +299,7 @@ test("nothing usable in the lines field comes back as no lines", () => {
 
 test("lines only come back for a work order", () => {
   const posted = JSON.stringify([
-    { kind: "labour", description: "Pull new circuit", quantity: 1, unitPriceCents: 12_000 },
+    { kind: "labor", description: "Pull new circuit", quantity: 1, unitPriceCents: 12_000 },
   ]);
 
   const order = parseNewJob(raw({ category: "work_order", workOrderLines: posted }));
