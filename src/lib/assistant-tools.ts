@@ -33,7 +33,9 @@ export type ToolName =
   | "schedule_job"
   | "assign_technician"
   | "set_invoice_amount"
-  | "draft_contract";
+  | "draft_contract"
+  | "edit_contract_scope"
+  | "edit_invoice_lines";
 
 export type ToolSpec = {
   name: ToolName;
@@ -341,6 +343,72 @@ export const ASSISTANT_TOOLS: ToolSpec[] = [
       additionalProperties: false,
     },
   },
+
+  /*
+   * Changing a document the app produced.
+   *
+   * Both rewrite a record and let the PDF be rebuilt from it, which is the only
+   * sense in which a generated document is editable — the file is a picture of
+   * the record, not a thing to be typed into.
+   *
+   * The contract tool can reach the scope of work and nothing else, and that is
+   * a property of its shape rather than of its description: there is no
+   * argument here that could name the payment terms or the warranty.
+   */
+  {
+    name: "edit_contract_scope",
+    description:
+      "Rewrite the scope of work on a job's contract — what the job covers, what is and is not included. Only the scope: the payment terms, warranty and conditions cannot be changed this way. Proposes only, and the change is shown before and after.",
+    confirm: true,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        job_number: str("The job whose contract this is."),
+        scope: str(
+          "The replacement scope of work, complete and in full. It replaces the existing passage rather than being added to it.",
+        ),
+      },
+      required: ["job_number", "scope"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "edit_invoice_lines",
+    description:
+      "Replace the lines on a draft invoice — descriptions, quantities, units and prices. The totals are worked out from the lines, never set directly. Only works while the invoice is still a draft nobody has been sent.",
+    confirm: true,
+    outbound: false,
+    input_schema: {
+      type: "object",
+      properties: {
+        invoice_number: str("The invoice, e.g. INV-10024."),
+        lines: {
+          type: "array",
+          maxItems: 40,
+          description:
+            "Every line the invoice should have afterwards, not just the changed ones. The list replaces what is there.",
+          items: {
+            type: "object",
+            properties: {
+              kind: { type: "string", enum: ["labor", "material"] },
+              description: str("What the line says on the invoice."),
+              quantity: { type: "number", description: "Hours for labour, count for materials." },
+              unit: str("hour, each, ft, box."),
+              unit_price_cents: {
+                type: "integer",
+                description: "Price for one unit, in cents.",
+              },
+            },
+            required: ["kind", "description", "quantity", "unit", "unit_price_cents"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["invoice_number", "lines"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 const BY_NAME = new Map<string, ToolSpec>(ASSISTANT_TOOLS.map((tool) => [tool.name, tool]));
@@ -369,6 +437,13 @@ export type Proposal = {
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** Cents as money, for a figure somebody checks before tapping. */
+function dollars(cents: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    (Number.isFinite(cents) ? cents : 0) / 100,
+  );
 }
 
 /**
@@ -421,6 +496,51 @@ export function describeProposal(
       const many = text(input.quantity) || "0";
       return `Add ${name} to the stock list with ${many} on hand.`;
     }
+
+    /*
+     * These two quote the change itself rather than describing it.
+     *
+     * "Rewrite the scope of work" is not something anybody can approve — the
+     * whole question is what it will say afterwards. The confirmation card is
+     * the last point at which a person can see that, so it is where the words
+     * go.
+     */
+    case "edit_contract_scope": {
+      const job = text(input.job_number) || "(unspecified)";
+      const scope = text(input.scope);
+      return `Rewrite the scope of work on job #${job}'s contract to:\n\n“${scope}”\n\nThe payment terms, warranty and conditions are not touched.`;
+    }
+
+    case "edit_invoice_lines": {
+      const number = text(input.invoice_number) || "(unspecified)";
+      const lines = Array.isArray(input.lines) ? input.lines : [];
+
+      const rows = lines
+        .map((entry) => {
+          const row = (entry ?? {}) as Record<string, unknown>;
+          const quantity = Number(row.quantity);
+          const price = Number(row.unit_price_cents);
+          const amount =
+            Number.isFinite(quantity) && Number.isFinite(price)
+              ? ` — ${dollars(Math.round(quantity * price))}`
+              : "";
+          return `• ${text(row.description) || "(no description)"} ×${
+            Number.isFinite(quantity) ? quantity : "?"
+          } ${text(row.unit)}${amount}`;
+        })
+        .join("\n");
+
+      const total = lines.reduce((sum, entry) => {
+        const row = (entry ?? {}) as Record<string, unknown>;
+        const quantity = Number(row.quantity);
+        const price = Number(row.unit_price_cents);
+        return Number.isFinite(quantity) && Number.isFinite(price)
+          ? sum + Math.round(quantity * price)
+          : sum;
+      }, 0);
+
+      return `Replace the lines on ${number} with:\n\n${rows}\n\nThat is ${dollars(total)} before any credit and tax, which are recalculated from it.`;
+    }
     default:
       return `Run ${name}.`;
   }
@@ -448,6 +568,8 @@ export function assistantToolPrompt(businessName: string): string {
     "- A photographed receipt belongs in Stock → Scan a receipt, which reads every line at once and puts them on the shelf together. Say so rather than adding the lines one at a time.",
     "- look_up_price returns a public list price. Say that it is one. It has no trade discount in it, it is not what this business pays, and it must never be repeated to a customer as their price or written into stock without them tapping to confirm.",
     "- Never put a customer's name, address or phone number into a price lookup. It searches the public web.",
+    "- You can change a document the app made, by changing what it is a picture of. edit_contract_scope rewrites what a job's contract says the work covers; edit_invoice_lines replaces the lines on a draft invoice and the totals follow from them. Both are proposals, and the PDF is rebuilt afterwards with the old version kept.",
+    "- You cannot change a contract's payment terms, warranty or conditions, and you cannot change an invoice that has been sent or paid. If asked, say so and suggest the real remedy: a replacement contract, or a corrected invoice.",
     "- Never say you have sent, booked, invoiced or drafted something you have only proposed. Say you have prepared it and it is waiting for them.",
     "- Never invent a job number, invoice number, customer, amount or date. Look it up.",
     "- For anything about code, licensing, permits or inspections, call lookup_code. Never answer those from memory.",
