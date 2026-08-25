@@ -140,7 +140,14 @@ export function CrewWeekView({
             <header className="flex items-center justify-between gap-2">
               <Link
                 href={`/schedule?date=${day.date}`}
-                className="tap-target inline-flex min-h-11 items-center text-sm font-semibold hover:text-brand"
+                /*
+                 * A minimum width as well as a height. This was 44px tall and
+                 * as wide as its words, so "Fri 4" came out 35px across — the
+                 * first nine days of every month were a target too small to
+                 * hit, and the current week hid it because two-digit dates are
+                 * wider.
+                 */
+                className="tap-target inline-flex min-h-11 min-w-11 items-center text-sm font-semibold hover:text-brand"
               >
                 {day.weekday} {day.day}
               </Link>

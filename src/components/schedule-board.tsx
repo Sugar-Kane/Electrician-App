@@ -56,6 +56,29 @@ export function ScheduleBoard({
   const [view, setView] = useState<ScheduleView>(initialView);
   const [date, setDate] = useState(initialDate);
 
+  /*
+   * Following a real navigation instead of ignoring it.
+   *
+   * `useState` takes its argument as a *starting* value, and the crew tab and
+   * the crew arrows are `Link`s to this same route with different search
+   * params. React keeps the component instance across that, so the server sent
+   * a new week and a new view and this carried on drawing the old ones: the
+   * Crew tab changed the URL and left the day strip on screen, and paging the
+   * crew week moved the address bar while the heading stayed on the week
+   * before.
+   *
+   * So the props are compared against the ones this was last rendered with, and
+   * a difference means somebody navigated. Assigned during render rather than
+   * in an effect — the state is wrong for this render, not for the next one,
+   * and React re-runs the render before committing anything to the screen.
+   */
+  const [seen, setSeen] = useState({ view: initialView, date: initialDate });
+  if (seen.view !== initialView || seen.date !== initialDate) {
+    setSeen({ view: initialView, date: initialDate });
+    setView(initialView);
+    setDate(initialDate);
+  }
+
   const week = fullWeekOf(date, today);
   const monthCells = monthGridOf(date, today);
 
