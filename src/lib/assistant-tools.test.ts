@@ -193,3 +193,54 @@ test("the prompt says out loud what kind of price it is", () => {
   assert.match(prompt, /public list price/);
   assert.match(prompt, /never put a customer's name, address or phone number/i);
 });
+
+test("editing a document needs a tap", () => {
+  assert.equal(requiresConfirmation("edit_contract_scope"), true);
+  assert.equal(requiresConfirmation("edit_invoice_lines"), true);
+});
+
+test("the contract editor cannot name anything but the scope", () => {
+  // The safety here is structural, not a matter of the description being
+  // persuasive. There is no argument on this tool that could reach the payment
+  // terms or the warranty.
+  const tool = findTool("edit_contract_scope");
+
+  assert.ok(tool);
+  assert.deepEqual(Object.keys(tool.input_schema.properties).sort(), ["job_number", "scope"]);
+  assert.equal(tool.input_schema.additionalProperties, false);
+});
+
+test("the confirmation quotes the new wording rather than describing it", () => {
+  // "Rewrite the scope of work" is not something anybody can approve — the
+  // whole question is what it will say afterwards.
+  const summary = describeProposal("edit_contract_scope", {
+    job_number: "12",
+    scope: "Replace the main panel and add a whole-home surge protector.",
+  });
+
+  assert.match(summary, /whole-home surge protector/);
+  assert.match(summary, /job #12/);
+  assert.match(summary, /not touched/);
+});
+
+test("the invoice confirmation shows every line and what they come to", () => {
+  const summary = describeProposal("edit_invoice_lines", {
+    invoice_number: "INV-10024",
+    lines: [
+      { kind: "labor", description: "Panel replacement", quantity: 6, unit: "hour", unit_price_cents: 12_500 },
+      { kind: "material", description: "200A panel", quantity: 1, unit: "each", unit_price_cents: 48_000 },
+    ],
+  });
+
+  assert.match(summary, /Panel replacement/);
+  assert.match(summary, /200A panel/);
+  // 6 x $125 + $480 = $1,230.00
+  assert.match(summary, /\$1,230\.00/);
+});
+
+test("the prompt says which half of a contract is off limits", () => {
+  const prompt = assistantToolPrompt("Pacific Plains Electric");
+
+  assert.match(prompt, /cannot change a contract's payment terms, warranty or conditions/);
+  assert.match(prompt, /cannot change an invoice that has been sent or paid/);
+});

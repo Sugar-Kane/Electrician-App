@@ -1,7 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Download, FileText, History, Image as ImageIcon, LoaderCircle, X } from "lucide-react";
+import {
+  Download,
+  FileText,
+  History,
+  Image as ImageIcon,
+  LoaderCircle,
+  Pencil,
+  X,
+} from "lucide-react";
 
 import {
   listDocumentVersions,
@@ -34,6 +42,43 @@ function sizeLabel(bytes: number): string {
 
 function kindLabel(documentType: string): string {
   return documentType.replace(/_/g, " ");
+}
+
+/**
+ * What can be changed about this document, and where.
+ *
+ * A generated document is a picture of a record, so it is not edited here — it
+ * is rebuilt when the record changes. Saying that plainly is the point: an
+ * invoice PDF with no obvious way to correct a typo reads as a dead end, and
+ * the dead end is why somebody re-raises the whole invoice instead.
+ *
+ * A file uploaded from outside the app genuinely cannot be edited, and that is
+ * said outright rather than left to be discovered.
+ */
+function WhatCanChange({ documentType }: { documentType: string }) {
+  const line =
+    documentType === "contract" ? (
+      <>
+        Ask the assistant to change what this job covers and a new version is filed here, with
+        this one kept. The payment terms, warranty and conditions are not something it can
+        change.
+      </>
+    ) : documentType === "invoice" ? (
+      <>
+        The figures come from the job&rsquo;s line items. Ask the assistant to change them while
+        this is still a draft — once it has been sent or paid it stays as it is, and a
+        correction is a new invoice.
+      </>
+    ) : (
+      <>This one was uploaded rather than made here, so it cannot be edited — only replaced.</>
+    );
+
+  return (
+    <p className="mt-3 flex items-start gap-2 rounded-control border border-line bg-raised p-3 text-[11px] leading-4 text-ink-muted">
+      <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" aria-hidden />
+      <span className="min-w-0">{line}</span>
+    </p>
+  );
 }
 
 export function FolderFiles({
@@ -121,6 +166,7 @@ export function FolderFiles({
             )}
           </div>
 
+          <WhatCanChange documentType={open.documentType} />
           <DocumentHistory documentId={open.id} />
         </section>
       ) : null}

@@ -2,6 +2,14 @@ import "server-only";
 
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
+import {
+  canEditContract,
+  canEditInvoice,
+  MAX_INVOICE_LINES,
+  readInvoiceLine,
+  recomputeInvoice,
+  spliceScope,
+} from "@/lib/document-edit";
 import { adjustmentTo, isMovementReason, signedQuantity } from "@/lib/inventory-movement";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { parseCostToCents } from "@/lib/new-job-input";
@@ -388,6 +396,178 @@ export async function runConfirmedTool(
       const result = await generateContract({ error: "" }, form);
       if (result.error) return result.error;
       return `${result.notice ?? "Draft contract created."} Open job #${jobNumber} to read it — it has not been sent.`;
+    }
+
+    /*
+     * Editing what a document is a picture of.
+     *
+     * Both re-read the record here rather than trusting anything carried on the
+     * proposal, and both check the lock again. The proposal was built when the
+     * person was shown it; an invoice can be sent between reading a card and
+     * tapping it, and the tap must not send a change to a customer who is
+     * already holding a different copy.
+     */
+    case "edit_contract_scope": {
+      const jobNumber = Number(text(input.job_number));
+      const nextScope = text(input.scope);
+      if (!Number.isFinite(jobNumber)) return "That job could not be read, so nothing was changed.";
+      if (!nextScope) return "There was no new scope to write, so nothing was changed.";
+
+      const { data: found } = await supabase
+        .from("contracts")
+        .select("id, body, scope, status, jobs!inner ( job_number )")
+        .eq("organization_id", organizationId)
+        .eq("jobs.job_number", jobNumber)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const contract = (found ?? null) as Record<string, unknown> | null;
+      if (!contract) return `Job #${jobNumber} has no contract to edit. Draft one first.`;
+
+      const allowed = canEditContract({ status: text(contract.status) || "draft" });
+      if (!allowed.ok) return allowed.because;
+
+      const currentScope = text(contract.scope);
+      if (!currentScope) {
+        return "That contract was drafted before scope edits were possible, so there is no recorded passage to replace. Draft a fresh contract for this job instead.";
+      }
+
+      const body = spliceScope(text(contract.body), currentScope, nextScope);
+      if (!body) {
+        // The recorded scope is not in the body verbatim, appears twice, or the
+        // body is empty. Splicing anyway would land the new text somewhere
+        // unknown, and the unknown place is the terms.
+        return "That contract's wording no longer matches what was recorded, so the scope could not be replaced safely. Nothing was changed.";
+      }
+
+      const { error } = await supabase
+        .from("contracts")
+        .update({ body, scope: nextScope, updated_at: new Date().toISOString() })
+        .eq("id", text(contract.id))
+        .eq("organization_id", organizationId);
+
+      if (error) {
+        console.error("assistant: contract scope could not be saved", error);
+        return "That contract could not be changed.";
+      }
+
+      const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+      const rebuilt = await generateContractPdf({
+        database: supabase,
+        organizationId,
+        contractId: text(contract.id),
+        timeZone: context.timeZone,
+        uploadedBy: context.userId ?? "",
+      });
+
+      // The wording is the work; a PDF that failed to render can be rebuilt.
+      // Saying so beats implying the edit did not happen.
+      return rebuilt.error
+        ? `The scope on job #${jobNumber}'s contract is updated, but the PDF could not be rebuilt. Open the job to regenerate it.`
+        : `The scope on job #${jobNumber}'s contract is updated and a new version is on file. The previous one is still there if you want it back.`;
+    }
+
+    case "edit_invoice_lines": {
+      const number = text(input.invoice_number).replace(/^INV-/i, "");
+      const proposed = Array.isArray(input.lines) ? input.lines : [];
+
+      const lines = proposed
+        .slice(0, MAX_INVOICE_LINES)
+        .map((entry) => readInvoiceLine(entry))
+        .filter((line): line is NonNullable<typeof line> => line !== null);
+
+      if (lines.length === 0) {
+        return "There were no lines to put on that invoice, so nothing was changed.";
+      }
+
+      const { data: found } = await supabase
+        .from("invoices")
+        .select(
+          "id, job_id, status, last_sent_at, paid_at, diagnostic_credit_cents, tax_cents",
+        )
+        .eq("organization_id", organizationId)
+        .eq("invoice_number", Number(number))
+        .maybeSingle();
+
+      const invoice = (found ?? null) as Record<string, unknown> | null;
+      if (!invoice) return `Invoice ${text(input.invoice_number)} could not be found.`;
+
+      const allowed = canEditInvoice({
+        status: text(invoice.status),
+        lastSentAt: text(invoice.last_sent_at) || null,
+        paidAt: text(invoice.paid_at) || null,
+      });
+      if (!allowed.ok) return allowed.because;
+
+      const jobId = text(invoice.job_id);
+      if (!jobId) return "That invoice is not attached to a job, so its lines cannot be edited.";
+
+      const totals = recomputeInvoice(lines, {
+        diagnosticCreditCents: Number(invoice.diagnostic_credit_cents ?? 0),
+        taxCents: Number(invoice.tax_cents ?? 0),
+      });
+
+      // The list replaces what is there, so the old rows go first. Scoped to
+      // the job and the organization both, because one of those is a uuid that
+      // arrived in a payload.
+      const { error: cleared } = await supabase
+        .from("job_line_items")
+        .delete()
+        .eq("organization_id", organizationId)
+        .eq("job_id", jobId);
+
+      if (cleared) {
+        console.error("assistant: invoice lines could not be cleared", cleared);
+        return "That invoice could not be changed. Nothing was altered.";
+      }
+
+      const { error: written } = await supabase.from("job_line_items").insert(
+        lines.map((line) => ({
+          organization_id: organizationId,
+          job_id: jobId,
+          kind: line.kind,
+          description: line.description,
+          quantity: line.quantity,
+          unit: line.unit,
+          unit_price_cents: line.unitPriceCents,
+        })),
+      );
+
+      if (written) {
+        console.error("assistant: invoice lines could not be written", written);
+        return "Those lines could not be saved. Open the job and check them.";
+      }
+
+      const { error: totalled } = await supabase
+        .from("invoices")
+        .update({
+          subtotal_cents: totals.subtotalCents,
+          diagnostic_credit_cents: totals.diagnosticCreditCents,
+          tax_cents: totals.taxCents,
+          total_cents: totals.totalCents,
+          balance_due_cents: totals.totalCents,
+          stripe_application_fee_cents: totals.applicationFeeCents,
+        })
+        .eq("id", text(invoice.id))
+        .eq("organization_id", organizationId);
+
+      if (totalled) {
+        console.error("assistant: invoice totals could not be updated", totalled);
+        return "The lines were saved but the totals could not be updated. Open the invoice before sending it.";
+      }
+
+      const { generateInvoicePdf } = await import("@/lib/pdf/invoice-data");
+      const rebuilt = await generateInvoicePdf({
+        database: supabase,
+        organizationId,
+        invoiceId: text(invoice.id),
+        timeZone: context.timeZone,
+        uploadedBy: context.userId ?? "",
+      });
+
+      const said = `INV-${number} now has ${lines.length} ${lines.length === 1 ? "line" : "lines"} and comes to ${formatMoney(totals.totalCents / 100)}. It has not been sent.`;
+      return rebuilt.error ? `${said} The PDF could not be rebuilt — open it to regenerate.` : said;
     }
 
     default:
