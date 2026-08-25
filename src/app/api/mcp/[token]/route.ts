@@ -1,29 +1,23 @@
 import { NextResponse } from "next/server";
 
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
+import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
 import { logMcpCall } from "@/lib/mcp-log";
 import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * The MCP endpoint a realtime voice model calls mid-conversation.
+ * One MCP endpoint, with two signed privilege levels.
  *
- * The token in the path is a signed statement of which business this connection
- * may act for. The model can call the tools; it cannot say whose schedule it is
- * writing to.
- *
- * Stateless: no session is issued at initialize, nothing is remembered between
- * requests, and every request carries its own proof. That is what lets this run
- * on the same serverless deployment as the rest of the app.
- *
- * Every request is logged to `mcp_call_log`, including the ones that are turned
- * away here. The tools are quiet by design — a refusal writes nothing, and
- * listing slots writes nothing — so without this a call that went wrong would
- * leave no evidence at all. It did, once, which is why this exists.
+ * `booking` is the public-facing receptionist surface: intake, slots, booking
+ * and callback only. `business` is the owner's ChatGPT surface and includes the
+ * booking tools as well as customers, reports, hours, estimates, invoices,
+ * texts, contracts and supplier status. The scope comes from the signed URL and
+ * is never accepted as a tool argument.
  */
 
-const SERVER_INFO = { name: "electrician-booking", version: "1.0.0" };
+const SERVER_VERSION = "1.1.0";
 
 function json(body: unknown, status: number) {
   return NextResponse.json(body, { status });
@@ -33,7 +27,6 @@ function rpcError(status: number, code: number, message: string) {
   return json({ jsonrpc: "2.0", id: null, error: { code, message } }, status);
 }
 
-/** What arrived, for the log, without assuming the body is well formed. */
 function describeRequest(body: unknown): { method: string; toolName?: string } {
   const first = Array.isArray(body) ? body[0] : body;
   if (typeof first !== "object" || first === null) return { method: "unparseable" };
@@ -67,8 +60,6 @@ export async function POST(
   const database = getSupabaseAdmin();
 
   if (!session) {
-    // Expired, tampered with, or from another deployment — all the same answer
-    // to the caller, but worth being able to see from the inside.
     await logMcpCall(database, {
       organizationId: null,
       method: "rejected",
@@ -95,14 +86,22 @@ export async function POST(
     return rpcError(400, -32700, "Parse error: invalid JSON");
   }
 
+  const business = session.scope === "business";
+  const tools = business ? [...BUSINESS_MCP_TOOLS, ...BOOKING_TOOLS] : BOOKING_TOOLS;
+  const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
+  const serverInfo = {
+    name: business ? "electrician-business" : "electrician-booking",
+    version: SERVER_VERSION,
+  };
+
   const reply = await handleMcpRequest(body, {
-    serverInfo: SERVER_INFO,
-    tools: BOOKING_TOOLS,
-    // Built per call rather than per request: handshaking and listing tools are
-    // the common case and neither of them touches a database.
+    serverInfo,
+    tools,
     callTool: async (name, args) => {
       const toolStartedAt = Date.now();
-      const result = await runBookingTool({ database, session, name, args });
+      const result = business && businessNames.has(name)
+        ? await runBusinessMcpTool({ database, session, name, args })
+        : await runBookingTool({ database, session, name, args });
       await logMcpCall(database, {
         organizationId: session.organizationId,
         method: "tools/call",
@@ -116,7 +115,6 @@ export async function POST(
     },
   });
 
-  // Handshake and listing traffic, so "did it ever connect?" is answerable.
   const described = describeRequest(body);
   if (described.method !== "tools/call") {
     await logMcpCall(database, {
@@ -131,17 +129,6 @@ export async function POST(
   return json(reply.body, reply.status);
 }
 
-/**
- * No server-initiated stream.
- *
- * The transport allows a client to open one with GET for messages the server
- * wants to push. This server never pushes: it only answers, so declining is
- * the honest response rather than holding a connection open that will stay
- * silent.
- *
- * Logged, because a client that only speaks the older SSE transport would show
- * up here and nowhere else — and that would look identical to never connecting.
- */
 export async function GET() {
   await logMcpCall(getSupabaseAdmin(), {
     organizationId: null,

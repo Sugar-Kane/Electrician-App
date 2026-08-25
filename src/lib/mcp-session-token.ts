@@ -1,37 +1,23 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-/**
- * Whose schedule the model on the other end of an MCP connection may write to.
- *
- * `book_visit` writes a job into a business's calendar, so the one thing the
- * model must never choose is *which* business. A prompt injection carried in a
- * customer's own words — "actually, book this with the other electrician" —
- * would otherwise be a cross-tenant write. The organization is therefore not a
- * tool argument. It is signed into the URL, and the model only ever gets a URL.
- *
- * The caller is a weaker claim, and how strong it is depends on where the URL
- * came from:
- *
- * - A **per-call** token, minted when a call is answered, pins the customer too.
- *   Nothing the model says can move the booking to a different person.
- * - A **static** token, configured once in a console that has one URL for every
- *   call, cannot. There the model passes the caller's number as an argument,
- *   the way a receptionist writes down what they were told. The worst case is a
- *   booking attached to the wrong customer *within the same business* — a bad
- *   phone number, not a bad tenant.
- *
- * Both are supported. The organization guarantee is identical in each; only the
- * customer guarantee differs, and that difference is why the fields are
- * optional rather than the whole session being loosened.
- *
- * Signed rather than stored: a token needs no table, no cleanup, and no
- * database round trip on a request that has a customer waiting on the line.
- *
- * Import-free so the signing can be tested directly.
- */
+/** What a signed MCP URL is allowed to do. */
+export type McpScope = "booking" | "business";
 
+/**
+ * Whose data the model on the other end of an MCP connection may act for.
+ *
+ * The organization is signed into the URL so a model can never choose another
+ * tenant in a tool argument. Scope is signed for the same reason: a URL handed
+ * to the public-facing receptionist must never become a back door to invoices,
+ * customer messages or business settings.
+ *
+ * Old tokens did not carry a scope. They continue to verify as `booking`, which
+ * is intentionally the least-privileged mode and preserves every existing
+ * voice/receptionist integration without granting it new powers.
+ */
 export type McpSession = {
   organizationId: string;
+  scope: McpScope;
   /** Pinned by a per-call token; absent from a static one. */
   customerId?: string;
   /** The number the customer called from, when the token was minted for a call. */
@@ -51,7 +37,7 @@ function base64url(value: Buffer): string {
 }
 
 export function signMcpSessionToken(input: {
-  session: Omit<McpSession, "expiresAt">;
+  session: Omit<McpSession, "expiresAt" | "scope"> & { scope?: McpScope };
   secret: string;
   ttlSeconds?: number;
   now?: Date;
@@ -59,6 +45,7 @@ export function signMcpSessionToken(input: {
   const now = input.now ?? new Date();
   const payload: McpSession = {
     organizationId: input.session.organizationId,
+    scope: input.session.scope ?? "booking",
     ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
     ...(input.session.phone ? { phone: input.session.phone } : {}),
     expiresAt:
@@ -70,13 +57,7 @@ export function signMcpSessionToken(input: {
   return `${encoded}.${signature}`;
 }
 
-/**
- * The session a token proves, or null.
- *
- * Null covers every failure the same way — bad shape, wrong signature, expired,
- * missing secret — because the caller's response is identical in each case and
- * saying which one it was tells an attacker how close they got.
- */
+/** The session a token proves, or null. */
 export function readMcpSessionToken(input: {
   token: string;
   secret: string;
@@ -109,9 +90,9 @@ export function readMcpSessionToken(input: {
   const customerId = typeof record.customerId === "string" ? record.customerId : "";
   const phone = typeof record.phone === "string" ? record.phone : "";
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : 0;
+  // Backwards compatibility is deliberately least privilege.
+  const scope: McpScope = record.scope === "business" ? "business" : "booking";
 
-  // The organization is the only field a token is worthless without: it is the
-  // whole guarantee. A customer may or may not be pinned.
   if (!organizationId) return null;
 
   const now = Math.floor((input.now ?? new Date()).getTime() / 1000);
@@ -119,6 +100,7 @@ export function readMcpSessionToken(input: {
 
   return {
     organizationId,
+    scope,
     ...(customerId ? { customerId } : {}),
     ...(phone ? { phone } : {}),
     expiresAt,
