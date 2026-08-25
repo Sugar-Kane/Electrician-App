@@ -11,9 +11,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
  * One MCP endpoint, with two signed privilege levels.
  *
  * `booking` is the public-facing receptionist surface: intake, slots, booking
- * and callback only. `business` is the owner's ChatGPT surface: customers,
- * reports, hours, estimates, invoices, texts, contracts and supplier status.
- * The scope comes from the signed URL and is never accepted as a tool argument.
+ * and callback only. `business` is the owner's ChatGPT surface and includes the
+ * booking tools as well as customers, reports, hours, estimates, invoices,
+ * texts, contracts and supplier status. The scope comes from the signed URL and
+ * is never accepted as a tool argument.
  */
 
 const SERVER_VERSION = "1.1.0";
@@ -86,7 +87,8 @@ export async function POST(
   }
 
   const business = session.scope === "business";
-  const tools = business ? BUSINESS_MCP_TOOLS : BOOKING_TOOLS;
+  const tools = business ? [...BUSINESS_MCP_TOOLS, ...BOOKING_TOOLS] : BOOKING_TOOLS;
+  const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
   const serverInfo = {
     name: business ? "electrician-business" : "electrician-booking",
     version: SERVER_VERSION,
@@ -97,7 +99,7 @@ export async function POST(
     tools,
     callTool: async (name, args) => {
       const toolStartedAt = Date.now();
-      const result = business
+      const result = business && businessNames.has(name)
         ? await runBusinessMcpTool({ database, session, name, args })
         : await runBookingTool({ database, session, name, args });
       await logMcpCall(database, {
