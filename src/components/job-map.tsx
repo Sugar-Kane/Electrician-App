@@ -236,8 +236,13 @@ export function JobMap({
   useEffect(() => {
     if (!apiKey) return;
     let cancelled = false;
-    setStatus((current) => (current === "ready" ? current : "loading"));
 
+    /*
+     * Going back to the spinner belongs to whatever asked for the retry, not
+     * here. Both callers below do it, which is one line in each and a render
+     * saved undoing itself — and the reset now happens with the action that
+     * caused it rather than one render later.
+     */
     loadMaps(apiKey)
       .then(() => {
         if (cancelled || !container.current) return;
@@ -277,7 +282,10 @@ export function JobMap({
         if (autoRetries.current < AUTO_RETRIES) {
           const wait = RETRY_DELAYS_MS[autoRetries.current] ?? 4_000;
           autoRetries.current += 1;
-          retryTimer.current = setTimeout(() => setAttempt((n) => n + 1), wait);
+          retryTimer.current = setTimeout(() => {
+            setStatus(backToLoading);
+            setAttempt((n) => n + 1);
+          }, wait);
           return;
         }
 
@@ -421,6 +429,7 @@ export function JobMap({
               type="button"
               onClick={() => {
                 autoRetries.current = 0;
+                setStatus(backToLoading);
                 setAttempt((current) => current + 1);
               }}
               aria-label={
@@ -447,6 +456,20 @@ export function JobMap({
  * so these cannot be theme tokens — they are the same values as --color-surface
  * and --color-canvas and have to be changed alongside them.
  */
+/**
+ * Back to the spinner for another attempt.
+ *
+ * Guarded exactly as it was when it lived in the effect: a map already drawn
+ * must not flicker back to a spinner because a retry was queued behind it.
+ *
+ * `refused` is deliberately not preserved. Pressing Refresh on a rejected key
+ * is a real attempt and has to look like one — the auto-retry never reaches
+ * here while refused, because it gives up before scheduling.
+ */
+function backToLoading(current: "loading" | "ready" | "failed" | "refused") {
+  return current === "ready" ? current : "loading";
+}
+
 const DARK_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#0b1b27" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#0b1b27" }] },
