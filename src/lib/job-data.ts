@@ -1139,3 +1139,59 @@ async function signStockPhotos(paths: string[]): Promise<Map<string, string>> {
 
   return signed;
 }
+
+export type SupplyStopRow = {
+  id: string;
+  name: string;
+  kind: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  notes: string;
+  isDefault: boolean;
+  coordinates: { lat: number; lng: number } | null;
+};
+
+/**
+ * The places this business stops on the way.
+ *
+ * Empty is a real answer and the honest one: a business that has not said where
+ * it buys things has not said, and offering it a Lowe's in Santa Maria because
+ * that is what the pilot used is how somebody ends up routed forty miles the
+ * wrong way.
+ */
+export async function getSupplyStops(): Promise<SupplyStopRow[]> {
+  const context = await resolveContext();
+  if (!context) return [];
+
+  const { data } = await context.database
+    .from("supply_stops")
+    .select(
+      "id, name, kind, address_line_1, city, state, postal_code, notes, is_default, latitude, longitude",
+    )
+    .eq("organization_id", context.organizationId)
+    .is("archived_at", null)
+    // The default first, then alphabetical: the one you usually use should be
+    // the one your thumb lands on.
+    .order("is_default", { ascending: false })
+    .order("name", { ascending: true });
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    name: typeof row.name === "string" ? row.name : "",
+    kind: typeof row.kind === "string" ? row.kind : "supplier",
+    address: typeof row.address_line_1 === "string" ? row.address_line_1 : "",
+    city: typeof row.city === "string" ? row.city : "",
+    state: typeof row.state === "string" ? row.state : "",
+    postalCode: typeof row.postal_code === "string" ? row.postal_code : "",
+    notes: typeof row.notes === "string" ? row.notes : "",
+    isDefault: row.is_default === true,
+    coordinates: hasCoordinates({
+      lat: row.latitude === null || row.latitude === undefined ? null : Number(row.latitude),
+      lng: row.longitude === null || row.longitude === undefined ? null : Number(row.longitude),
+    })
+      ? { lat: Number(row.latitude), lng: Number(row.longitude) }
+      : null,
+  }));
+}
