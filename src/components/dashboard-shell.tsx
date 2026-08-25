@@ -363,7 +363,7 @@ export function DashboardShell({
     <main id="dashboard" className="min-h-screen bg-canvas p-2 pb-[calc(7rem+env(safe-area-inset-bottom))] text-ink sm:p-3 lg:pb-3">
       <MobileAppChrome />
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
-        <AppSidebar businessName={snapshot.businessName} ownerName={snapshot.ownerName} />
+        <AppSidebar />
         <div className="min-w-0 lg:px-4 lg:py-2" id="main-content" tabIndex={-1}>
           <Header
             ownerNames={snapshot.ownerNames}

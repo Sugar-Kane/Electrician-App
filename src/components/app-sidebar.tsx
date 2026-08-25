@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 import { NavIcon } from "@/components/ui/nav-icon";
 import { NAV_SECTIONS, activeNavHref, type NavItem } from "@/lib/navigation";
@@ -31,6 +31,19 @@ export function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      /*
+       * The whole route, not just the loading state.
+       *
+       * Every page in this app is `force-dynamic`, and prefetch's default for a
+       * dynamic route stops at the nearest `loading.tsx` — so the skeleton
+       * arrived early and the two-second wait for the data was still the whole
+       * two seconds. `prefetch` fetches the page itself, in the background,
+       * while the menu sits on screen.
+       *
+       * Only in production. The dev server does not prefetch at all, so this
+       * cannot be measured with `npm run dev`.
+       */
+      prefetch
       // Clicking the entry you are already on has nowhere to navigate to, so
       // the page stays wherever it was scrolled to. Going back to the top is
       // what the click meant.
@@ -48,25 +61,41 @@ export function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function AppSidebar({
-  businessName,
-  ownerName,
-}: {
-  businessName?: string;
-  ownerName?: string;
-}) {
+/**
+ * Takes no props any more.
+ *
+ * It used to be handed the business and owner names for a card at the bottom
+ * that linked to /account — the left menu's own copy of what now lives behind
+ * the avatar in the top right. Two ways in to the same page, one of them the
+ * only thing in the rail that was not a destination.
+ */
+export function AppSidebar() {
   const pathname = usePathname();
   const active = activeNavHref(pathname);
 
-  const initials = (ownerName ?? "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-
   return (
-    <aside className="hidden min-h-[calc(100vh-16px)] flex-col rounded-panel border border-line bg-sunken px-3 py-5 shadow-2xl shadow-black/20 lg:flex">
+    /*
+     * Pinned, not scrolled.
+     *
+     * It used to be `min-h-[calc(100vh-16px)]` with no upper bound, which is
+     * why its own `overflow-y-auto` never engaged: an element that is free to
+     * grow never overflows. So the whole rail travelled up the screen with the
+     * page, and getting back to the menu meant scrolling a long invoice list
+     * back to the top first.
+     *
+     * `sticky` rather than `fixed` because the rail is a grid column — fixed
+     * would take it out of flow and the content would slide underneath it.
+     *
+     * `self-start` is the part that actually makes sticky work here. A grid
+     * item stretches to the height of its row by default, so the rail was
+     * exactly as tall as the page and had nowhere to stick within; measured, it
+     * still travelled the full scroll distance. Aligned to the start it is its
+     * own height again, and the row is the thing that scrolls past it.
+     *
+     * The other half of it was `overflow-x: hidden` on `html` — see the note in
+     * `globals.css`. Between them, `sticky` had been inert app-wide.
+     */
+    <aside className="sticky top-3 hidden h-[calc(100vh-24px)] flex-col self-start overflow-hidden rounded-panel border border-line bg-sunken px-3 py-5 shadow-2xl shadow-black/20 lg:flex">
       <div className="px-3 pb-6">
         <Brand />
         <p className="mt-1 pl-[42px] text-[8px] font-semibold tracking-[0.12em] text-ink-faint">
@@ -88,25 +117,6 @@ export function AppSidebar({
           </div>
         ))}
       </nav>
-
-      <Link
-        href="/account"
-        className="tap-row mt-6 rounded-control border border-line bg-raised p-3"
-        aria-label="Open account settings"
-      >
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-brand text-sm font-bold text-on-brand">
-            {initials || "U"}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{ownerName ?? "Account"}</p>
-            <p className="truncate text-[11px] text-ink-muted">
-              {businessName ?? "Profile and preferences"}
-            </p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-ink-faint" aria-hidden />
-        </div>
-      </Link>
     </aside>
   );
 }

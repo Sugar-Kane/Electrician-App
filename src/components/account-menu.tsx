@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LogOut, Settings2, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
 import { signOut } from "@/app/account/actions";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
+import { NavIcon } from "@/components/ui/nav-icon";
+import { ACCOUNT_MENU_ITEMS } from "@/lib/navigation";
 
 /**
  * The account menu.
@@ -14,9 +16,15 @@ import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
  * only dropdown in the app — so there was nothing for other menus to match. All
  * of that now lives in `Menu`, and this is just the contents.
  *
- * What belongs here is the person: their profile, their preferences, signing
- * out. Anything about the *business* belongs in Settings, which is why the
- * business timezone and Square are no longer in this list.
+ * What belongs here is the person and the shape of their business: profile,
+ * preferences, Settings, the plan, signing out. Settings and Your account used
+ * to be a "Setup" section at the bottom of the left menu, in the same list as
+ * Schedule and Invoices — which is a list of work, and neither of those is
+ * work. Behind the picture of your face is where every other app on the phone
+ * puts them, and it is where people look first.
+ *
+ * The list itself lives in `navigation.ts` beside the menu, so there is one
+ * description of a destination rather than two.
  */
 
 type AccountSummary = {
@@ -52,21 +60,6 @@ function loadAccountSummary() {
     .catch(() => null);
   return accountSummaryRequest;
 }
-
-const ACCOUNT_LINKS = [
-  {
-    label: "Profile",
-    description: "Name, photo, email",
-    href: "/account?section=profile#profile",
-    icon: UserRound,
-  },
-  {
-    label: "App preferences",
-    description: "Notifications, maps, display",
-    href: "/account?section=preferences#preferences",
-    icon: Settings2,
-  },
-];
 
 function label(value: string) {
   return value
@@ -132,12 +125,9 @@ export function AccountMenu() {
       </div>
 
       <div className="mt-2 space-y-1">
-        {ACCOUNT_LINKS.map(({ label: itemLabel, description, href, icon: Icon }) => (
-          <Link key={href} href={href} role="menuitem">
-            <MenuItem
-              icon={<Icon className="h-[18px] w-[18px]" aria-hidden />}
-              description={description}
-            >
+        {ACCOUNT_MENU_ITEMS.map(({ label: itemLabel, description, href, icon }) => (
+          <Link key={href} href={href} role="menuitem" prefetch>
+            <MenuItem icon={<NavIcon name={icon} />} description={description}>
               {itemLabel}
             </MenuItem>
           </Link>

@@ -21,6 +21,7 @@ import {
   Route,
   ScrollText,
   Settings,
+  Settings2,
   UserRound,
   UsersRound,
   type LucideIcon,
@@ -56,6 +57,7 @@ const ICONS: Record<string, LucideIcon> = {
   Route,
   ScrollText,
   Settings,
+  Settings2,
   UserRound,
   UsersRound,
 };

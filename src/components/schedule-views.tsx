@@ -28,10 +28,20 @@ export function WeekView({
   days,
   jobs,
   today,
+  onPickDay,
 }: {
   days: CalendarDay[];
   jobs: PilotJob[];
   today: string;
+  /**
+   * Opening a day.
+   *
+   * A callback rather than a link, because the board already holds every job
+   * and switching to the day is a re-render rather than a page. The link it
+   * replaced also dropped `&view=`, so it silently changed the view as well as
+   * the date.
+   */
+  onPickDay: (date: string) => void;
 }) {
   return (
     <div className="grid gap-2 lg:grid-cols-7">
@@ -47,12 +57,13 @@ export function WeekView({
             }`}
           >
             <header className="flex items-baseline justify-between gap-2">
-              <Link
-                href={`/schedule?date=${day.date}`}
+              <button
+                type="button"
+                onClick={() => onPickDay(day.date)}
                 className="text-sm font-semibold hover:text-brand"
               >
                 {day.weekday} {day.day}
-              </Link>
+              </button>
               <span className="text-[10px] text-ink-faint">
                 {active.length || "No"} {active.length === 1 ? "job" : "jobs"}
               </span>
@@ -101,10 +112,13 @@ export function MonthView({
   cells,
   jobs,
   selectedDate,
+  onPickDay,
 }: {
   cells: MonthCell[];
   jobs: PilotJob[];
   selectedDate: string;
+  /** Same as the week view: a re-render, not a navigation. */
+  onPickDay: (date: string) => void;
 }) {
   return (
     <div className="rounded-panel border border-line bg-surface p-3 sm:p-4">
@@ -122,9 +136,10 @@ export function MonthView({
           const selected = cell.date === selectedDate;
 
           return (
-            <Link
+            <button
               key={cell.date}
-              href={`/schedule?date=${cell.date}`}
+              type="button"
+              onClick={() => onPickDay(cell.date)}
               aria-current={selected ? "date" : undefined}
               className={`flex min-h-[76px] flex-col rounded-chip border p-1 transition sm:min-h-[68px] sm:p-1.5 ${
                 selected
@@ -156,7 +171,7 @@ export function MonthView({
                   ) : null}
                 </span>
               ) : null}
-            </Link>
+            </button>
           );
         })}
       </div>

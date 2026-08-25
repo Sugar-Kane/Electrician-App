@@ -1,7 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
-import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { currentContext } from "@/lib/request-context";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
 /**
@@ -13,25 +12,16 @@ import { DEFAULT_TIMEZONE } from "@/lib/timezones";
  * clock, which in production is UTC.
  *
  * Falls back to the default for signed-out visitors and demo views.
+ *
+ * This used to be a third hand-rolled copy of "verify the session, then look up
+ * the membership" — on /schedule that meant a whole extra round trip to the
+ * auth server before the page could work out what day it was. `currentContext`
+ * already has the answer and is memoised for the length of the request.
  */
 export async function getOrganizationTimezone(): Promise<string> {
   try {
-    const supabase = await createClient();
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData.user) return DEFAULT_TIMEZONE;
-
-    const { data: membership } = await asFlexibleClient(supabase)
-      .from("organization_members")
-      .select("organizations(timezone)")
-      .eq("user_id", authData.user.id)
-      .limit(1)
-      .maybeSingle();
-
-    const row = membership as unknown as { organizations?: { timezone?: unknown } | null } | null;
-    const organization = row?.organizations ?? null;
-    return typeof organization?.timezone === "string" && organization.timezone
-      ? organization.timezone
-      : DEFAULT_TIMEZONE;
+    const context = await currentContext();
+    return context?.timeZone || DEFAULT_TIMEZONE;
   } catch {
     return DEFAULT_TIMEZONE;
   }

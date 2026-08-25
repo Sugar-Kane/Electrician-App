@@ -218,7 +218,22 @@ select:focus-visible,
  */
 html,
 body {
+  /*
+   * `clip`, not `hidden`, and the difference matters more than it looks.
+   *
+   * `overflow-x: hidden` forces the other axis to compute as `auto`, which
+   * makes the element a scroll container — and `position: sticky` inside a
+   * scroll container sticks to *that*, not to the window. With it on `html`,
+   * nothing anywhere in the app could stick: the left rail was given
+   * `sticky top-2` and measured travelling the full 363px of a scroll.
+   *
+   * `clip` cuts the overflow off without creating a scroll container, so the
+   * horizontal spill this rule exists to stop is still stopped and sticky
+   * works. `hidden` stays first as the fallback for anything too old to know
+   * `clip`.
+   */
   overflow-x: hidden;
+  overflow-x: clip;
   /* Stops iOS inflating text in landscape, which reflows a laid-out page. */
   -webkit-text-size-adjust: 100%;
 }
