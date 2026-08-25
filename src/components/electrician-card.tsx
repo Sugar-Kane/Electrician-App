@@ -20,6 +20,7 @@ import {
 import { BlackoutManager } from "@/components/blackout-manager";
 import { HoursCalendar } from "@/components/hours-calendar";
 import type { DateHours } from "@/lib/date-hours";
+import { SharedHoursToggle } from "@/components/shared-hours-toggle";
 import { describeWeek, type DayHours } from "@/lib/electrician-hours";
 import type { TechnicianWorkload } from "@/lib/job-data";
 
@@ -219,17 +220,27 @@ export function ElectricianCard({
           </div>
 
           {sheet === "hours" ? (
-            <HoursCalendar
-              action={saveElectricianHours}
-              subject="electrician"
-              technicianId={electrician.id}
-              hours={electrician.hours}
-              dateHours={electrician.dateHours}
-              blackouts={electrician.blackouts}
-              businessHours={businessHours}
-              businessDateHours={businessDateHours}
-              timeZone={timeZone}
-            />
+            <>
+              {/*
+                Above the calendar, because it decides whether the calendar
+                below is theirs at all.
+              */}
+              <SharedHoursToggle
+                technicianId={electrician.id}
+                shared={electrician.hours.length === 0}
+              />
+              <HoursCalendar
+                action={saveElectricianHours}
+                subject="electrician"
+                technicianId={electrician.id}
+                hours={electrician.hours}
+                dateHours={electrician.dateHours}
+                blackouts={electrician.blackouts}
+                businessHours={businessHours}
+                businessDateHours={businessDateHours}
+                timeZone={timeZone}
+              />
+            </>
           ) : null}
           {sheet === "time-off" ? (
             <div className="mt-3">

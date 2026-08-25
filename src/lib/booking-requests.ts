@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { splitQueue } from "@/lib/booking-queue";
 import { currentContext, currentUser } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -38,12 +39,30 @@ export type BookingRequest = {
   safetyFlags: string[];
   arrivalWindow: string;
   receivedLabel: string;
+  /**
+   * The raw instant, alongside the formatted one.
+   *
+   * The label is written in the business's timezone for a person to read; the
+   * week rule that ages handled requests out needs something to subtract from.
+   */
+  receivedAt: string;
   conversationId: string | null;
   jobId: string | null;
 };
 
 export type BookingRequestQueue = {
   requiresLogin: boolean;
+  /**
+   * The queue, already split.
+   *
+   * Split here rather than in the page because it needs the clock, and reading
+   * the clock while a component renders is a thing React forbids — a render
+   * that runs twice would sort the same rows two different ways.
+   */
+  open: BookingRequest[];
+  handled: BookingRequest[];
+  /** Handled and older than a week: counted, not listed. */
+  agedOut: number;
   timezone: string;
   requests: BookingRequest[];
 };
@@ -73,10 +92,10 @@ export async function getBookingRequests(): Promise<BookingRequestQueue> {
    * are different answers on this screen.
    */
   const user = await currentUser();
-  if (!user) return { requiresLogin: true, timezone: DEFAULT_TIMEZONE, requests: [] };
+  if (!user) return { requiresLogin: true, timezone: DEFAULT_TIMEZONE, requests: [], open: [], handled: [], agedOut: 0 };
 
   const context = await currentContext();
-  if (!context) return { requiresLogin: false, timezone: DEFAULT_TIMEZONE, requests: [] };
+  if (!context) return { requiresLogin: false, timezone: DEFAULT_TIMEZONE, requests: [], open: [], handled: [], agedOut: 0 };
 
   const supabase = await createClient();
   const database = asFlexibleClient(supabase);
@@ -112,10 +131,15 @@ export async function getBookingRequests(): Promise<BookingRequestQueue> {
         ? `${formatWhen(start, timezone)}${end ? `–${new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", minute: "2-digit" }).format(new Date(end))}` : ""}`
         : "",
       receivedLabel: formatWhen(text(row.created_at), timezone),
+      receivedAt: text(row.created_at),
       conversationId: text(row.conversation_id) || null,
       jobId: text(row.created_job_id) || null,
     };
   });
 
-  return { requiresLogin: false, timezone, requests };
+  // Split here, where reading the clock is allowed. The page renders what it
+  // is handed.
+  const { open, handled, agedOut } = splitQueue(requests, Date.now());
+
+  return { requiresLogin: false, timezone, requests, open, handled, agedOut };
 }

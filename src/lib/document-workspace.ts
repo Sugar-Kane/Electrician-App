@@ -2,6 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
+import { currentContext } from "@/lib/request-context";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 export type DocumentFolderNode = {
@@ -354,4 +358,249 @@ export function buildStandardDocumentName(input: {
     .filter(Boolean)
     .join("_")
     .concat(`.${extension}`);
+}
+
+export type FolderFile = {
+  id: string;
+  name: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  documentType: string;
+  version: number;
+  whenLabel: string;
+  /** Signed for an hour, or empty when storage could not be reached. */
+  url: string;
+  /** True when the browser can show it inline rather than only download it. */
+  previewable: boolean;
+  jobNumber: string;
+};
+
+export type FolderContents = {
+  /** Root first, this folder last. Empty when the folder is not the caller's. */
+  trail: { id: string; name: string }[];
+  folders: DocumentFolderNode[];
+  files: FolderFile[];
+};
+
+/** Long enough to read a document, short enough not to be worth passing on. */
+const FILE_URL_SECONDS = 60 * 60;
+
+function readableInline(mimeType: string): boolean {
+  return (
+    mimeType === "application/pdf" ||
+    mimeType.startsWith("image/") ||
+    mimeType.startsWith("text/")
+  );
+}
+
+/**
+ * What is actually in a folder.
+ *
+ * The files page has drawn a folder tree since it was built and has never
+ * listed a single file — `documents` was not queried there at all, and there
+ * was no route into a folder to query it from. So every invoice PDF, permit and
+ * job photo the app has ever filed was reachable only by the screen that made
+ * it.
+ *
+ * Signed in one batch: a job folder holds a dozen documents, and a dozen round
+ * trips to sign a dozen links is the page.
+ */
+export async function getFolderContents(folderId: string): Promise<FolderContents> {
+  const empty: FolderContents = { trail: [], folders: [], files: [] };
+
+  const context = await currentContext();
+  if (!context) return empty;
+
+  const supabase = asFlexibleClient(await createClient());
+  const organizationId = context.organizationId;
+
+  const { data: folderRows } = await supabase
+    .from("document_folders")
+    .select("id, folder_key, display_name, folder_type, parent_folder_id, sort_order")
+    .eq("organization_id", organizationId);
+
+  const rows = (folderRows ?? []) as Record<string, unknown>[];
+  const byId = new Map(rows.map((row) => [String(row.id), row]));
+  if (!byId.has(folderId)) return empty;
+
+  // Root first. Walking up and reversing, with a hard stop, because a folder
+  // whose parent chain loops would otherwise hang the page rather than fail.
+  const trail: { id: string; name: string }[] = [];
+  let cursor: string | null = folderId;
+  const seen = new Set<string>();
+  while (cursor && !seen.has(cursor)) {
+    seen.add(cursor);
+    const row: Record<string, unknown> | undefined = byId.get(cursor);
+    if (!row) break;
+    trail.unshift({ id: String(row.id), name: String(row.display_name ?? "Folder") });
+    cursor = typeof row.parent_folder_id === "string" ? row.parent_folder_id : null;
+  }
+
+  const folders: DocumentFolderNode[] = rows
+    .filter((row) => row.parent_folder_id === folderId)
+    .sort(
+      (a, b) =>
+        Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0) ||
+        String(a.display_name).localeCompare(String(b.display_name)),
+    )
+    .map((row) => ({
+      id: String(row.id),
+      folderKey: String(row.folder_key ?? ""),
+      name: String(row.display_name ?? "Folder"),
+      type: (String(row.folder_type ?? "custom") as DocumentFolderNode["type"]) ?? "custom",
+      children: [],
+    }));
+
+  const { data: documentRows } = await supabase
+    .from("documents")
+    .select(
+      "id, display_name, file_name, mime_type, size_bytes, document_type, version_number, created_at, storage_path, jobs ( job_number )",
+    )
+    .eq("organization_id", organizationId)
+    .eq("folder_id", folderId)
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const documents = (documentRows ?? []) as Record<string, unknown>[];
+  const signed = new Map<string, string>();
+
+  if (documents.length > 0) {
+    try {
+      const admin = getSupabaseAdmin();
+      const paths = documents
+        .map((row) => (typeof row.storage_path === "string" ? row.storage_path : ""))
+        .filter(Boolean);
+
+      const { data, error } = await admin.storage
+        .from(DOCUMENTS_BUCKET)
+        .createSignedUrls(paths, FILE_URL_SECONDS);
+
+      if (error) console.error("files: links could not be signed", error);
+      for (const entry of data ?? []) {
+        if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
+      }
+    } catch (error) {
+      // A list with names and no links is still a list of what exists.
+      console.error("files: storage is not reachable", error);
+    }
+  }
+
+  const files: FolderFile[] = documents.map((row) => {
+    const mimeType = typeof row.mime_type === "string" ? row.mime_type : "";
+    const job = (row.jobs ?? null) as { job_number?: unknown } | null;
+
+    return {
+      id: String(row.id),
+      name: String(row.display_name ?? row.file_name ?? "Document"),
+      fileName: String(row.file_name ?? ""),
+      mimeType,
+      sizeBytes: Number(row.size_bytes ?? 0),
+      documentType: typeof row.document_type === "string" ? row.document_type : "other",
+      version: Number(row.version_number ?? 1),
+      whenLabel: formatFiledAt(
+        typeof row.created_at === "string" ? row.created_at : "",
+        context.timeZone,
+      ),
+      url: signed.get(typeof row.storage_path === "string" ? row.storage_path : "") ?? "",
+      previewable: readableInline(mimeType),
+      jobNumber: job?.job_number ? String(job.job_number) : "",
+    };
+  });
+
+  return { trail, folders, files };
+}
+
+function formatFiledAt(iso: string, timeZone: string): string {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(iso));
+}
+
+export type DocumentVersion = {
+  id: string;
+  version: number;
+  whenLabel: string;
+  sizeBytes: number;
+  /** True for the one currently on file. */
+  current: boolean;
+};
+
+/**
+ * Every version of a document the app generates.
+ *
+ * `version_number` has been incremented on every regeneration since August and
+ * the superseded rows archived rather than deleted — object and all — so the
+ * history has existed all along and has been reachable from nowhere. An invoice
+ * regenerated after a correction simply replaced itself, and the figure it used
+ * to say was gone as far as anybody could tell.
+ *
+ * Versions hang off the record, not off the document row: an invoice's second
+ * PDF is a different `documents` row with the same `invoice_id`. So the lookup
+ * starts from whatever this document belongs to, and a document that belongs to
+ * nothing — an uploaded file — has exactly one version, itself.
+ */
+export async function getDocumentVersions(documentId: string): Promise<DocumentVersion[]> {
+  const context = await currentContext();
+  if (!context) return [];
+
+  const supabase = asFlexibleClient(await createClient());
+
+  const { data } = await supabase
+    .from("documents")
+    .select("id, invoice_id, contract_id, version_number, created_at, size_bytes, archived_at")
+    .eq("id", documentId)
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+
+  const row = (data ?? null) as Record<string, unknown> | null;
+  if (!row) return [];
+
+  const owner =
+    typeof row.invoice_id === "string" && row.invoice_id
+      ? { column: "invoice_id", id: row.invoice_id }
+      : typeof row.contract_id === "string" && row.contract_id
+        ? { column: "contract_id", id: row.contract_id }
+        : null;
+
+  // An uploaded file has no record behind it and no earlier version to go back
+  // to. One version, itself, said plainly rather than as an empty list.
+  if (!owner) {
+    return [
+      {
+        id: String(row.id),
+        version: Number(row.version_number ?? 1),
+        whenLabel: formatFiledAt(
+          typeof row.created_at === "string" ? row.created_at : "",
+          context.timeZone,
+        ),
+        sizeBytes: Number(row.size_bytes ?? 0),
+        current: row.archived_at === null,
+      },
+    ];
+  }
+
+  const { data: siblings } = await supabase
+    .from("documents")
+    .select("id, version_number, created_at, size_bytes, archived_at")
+    .eq("organization_id", context.organizationId)
+    .eq(owner.column, owner.id)
+    .order("version_number", { ascending: false })
+    .limit(50);
+
+  return ((siblings ?? []) as Record<string, unknown>[]).map((version) => ({
+    id: String(version.id),
+    version: Number(version.version_number ?? 1),
+    whenLabel: formatFiledAt(
+      typeof version.created_at === "string" ? version.created_at : "",
+      context.timeZone,
+    ),
+    sizeBytes: Number(version.size_bytes ?? 0),
+    current: version.archived_at === null,
+  }));
 }
