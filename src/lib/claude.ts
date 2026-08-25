@@ -297,6 +297,129 @@ export async function draftWorkOrderLines(input: {
   }
 }
 
+const RECEIPT_TOOL = {
+  name: "record_receipt",
+  description: "Everything printed on this supplier receipt, line by line.",
+  input_schema: {
+    type: "object",
+    properties: {
+      supplier: {
+        type: "string",
+        description: "The shop's name as printed. Empty string if it cannot be read.",
+      },
+      purchased_on: {
+        type: "string",
+        description: "The date printed on it, as YYYY-MM-DD. Empty string if it cannot be read.",
+      },
+      total_cents: {
+        type: "integer",
+        description:
+          "The final total printed on the receipt, in cents, tax included. 0 if it cannot be read.",
+      },
+      lines: {
+        type: "array",
+        maxItems: 40,
+        description: "One entry per item bought. Subtotal, tax and total lines are not items.",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "The item as printed on the receipt." },
+            quantity: { type: "number", description: "How many were bought. 1 if not printed." },
+            unit: { type: "string", description: "each, ft, box, roll. 'each' if not printed." },
+            unit_cost_cents: {
+              type: "integer",
+              description:
+                "What ONE costs, in cents, before tax. 0 when the line shows only a total you cannot divide confidently.",
+            },
+            part_number: {
+              type: "string",
+              description: "The SKU or model printed beside it. Empty string if there is none.",
+            },
+          },
+          required: ["name", "quantity", "unit", "unit_cost_cents", "part_number"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["supplier", "purchased_on", "total_cents", "lines"],
+    additionalProperties: false,
+  },
+} as const;
+
+/** What comes back from a receipt, before any of it is believed. */
+export type ReadReceipt = {
+  supplier: string;
+  purchasedOn: string;
+  totalCents: number;
+  lines: unknown[];
+};
+
+/**
+ * Read a photographed receipt.
+ *
+ * Extraction and nothing else: the shape of the answer is forced, and what it
+ * says lands in an editable review table rather than in the stock list. That
+ * ordering is the whole design. A thermal receipt photographed on a van seat is
+ * about the hardest thing there is to read, and a scanner that wrote its
+ * reading straight into inventory would put a wrong count on the shelf with
+ * nothing anywhere to say where it came from.
+ *
+ * Returns null rather than throwing, like everything else in this file. The
+ * caller turns null into "that could not be read — type it in instead", which
+ * is exactly what somebody would have been doing anyway.
+ */
+export async function readReceipt(input: {
+  block: { type: string; source: unknown };
+}): Promise<ReadReceipt | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  try {
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-opus-5",
+        max_tokens: 2000,
+        system: [
+          "You are reading a supplier receipt for an electrical contracting business, so its parts can be added to a stock list.",
+          "Report only what is printed. Never infer a price, a quantity or a part number that is not on the paper — 0 and an empty string are correct answers and a plausible-looking invention is not.",
+          "Prices are per unit and before tax. When a line shows only an extended total for several of something, divide it only if the quantity is printed clearly; otherwise report 0.",
+          "Subtotal, tax, total, deposits, bag charges and delivery are not items. Leave them out of the lines and put the final total in total_cents.",
+          "Expand abbreviations only where they are unambiguous trade shorthand. If a line is illegible, leave it out rather than guessing at it.",
+        ].join("\n"),
+        tools: [RECEIPT_TOOL] as unknown as Anthropic.Tool[],
+        tool_choice: { type: "tool", name: RECEIPT_TOOL.name },
+        messages: [
+          {
+            role: "user",
+            content: [
+              // The image first, which is what the API documentation asks for.
+              input.block as unknown as Anthropic.ContentBlockParam,
+              { type: "text", text: "Read this receipt." },
+            ],
+          },
+        ],
+      },
+      { timeout: 60_000 },
+    );
+
+    const call = response.content.find((block) => block.type === "tool_use");
+    if (!call || call.type !== "tool_use") return null;
+
+    const read = (call.input ?? {}) as Record<string, unknown>;
+    const total = Number(read.total_cents);
+
+    return {
+      supplier: typeof read.supplier === "string" ? read.supplier.trim().slice(0, 120) : "",
+      purchasedOn: typeof read.purchased_on === "string" ? read.purchased_on.trim().slice(0, 10) : "",
+      totalCents: Number.isFinite(total) && total > 0 ? Math.round(total) : 0,
+      lines: Array.isArray(read.lines) ? read.lines : [],
+    };
+  } catch (error) {
+    console.error("receipt read failed", error);
+    return null;
+  }
+}
+
 export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
 export type AgentReply = {
   text: string;

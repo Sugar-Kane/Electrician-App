@@ -20,10 +20,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function FolderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ folderId: string }>;
+  searchParams: Promise<{ open?: string }>;
 }) {
   const { folderId } = await params;
+  const { open } = await searchParams;
   const { trail, folders, files } = await getFolderContents(folderId);
 
   // An empty trail means the folder is not this business's, or does not exist.
@@ -82,7 +85,16 @@ export default async function FolderPage({
         </ul>
       ) : null}
 
-      <FolderFiles files={files} hasFolders={folders.length > 0} />
+      {/*
+        `?open=` is a request, not an instruction: the id only opens a file
+        already listed here, and this folder's listing is scoped to the
+        business. A stranger's uuid selects nothing.
+      */}
+      <FolderFiles
+        files={files}
+        hasFolders={folders.length > 0}
+        initialOpenId={typeof open === "string" ? open : ""}
+      />
     </FieldPageShell>
   );
 }

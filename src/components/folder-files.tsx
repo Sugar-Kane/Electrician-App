@@ -39,11 +39,20 @@ function kindLabel(documentType: string): string {
 export function FolderFiles({
   files,
   hasFolders,
+  /**
+   * A file to open on arrival.
+   *
+   * So a link can point at one document rather than at the folder holding it —
+   * a purchase on a stock item's history opening the receipt behind it, which
+   * is otherwise a folder, a scroll and a guess at which of nine photos it was.
+   */
+  initialOpenId = "",
 }: {
   files: FolderFile[];
   hasFolders: boolean;
+  initialOpenId?: string;
 }) {
-  const [openId, setOpenId] = useState("");
+  const [openId, setOpenId] = useState(initialOpenId);
   const open = files.find((file) => file.id === openId) ?? null;
 
   if (files.length === 0) {

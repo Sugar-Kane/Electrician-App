@@ -1007,6 +1007,8 @@ export type StockMovementRow = {
   unitCostCents: number;
   note: string;
   jobNumber: string;
+  /** Where to open the receipt this came in on, or "" when it did not. */
+  receiptHref: string;
   whenLabel: string;
 };
 
@@ -1052,7 +1054,9 @@ export async function getInventoryItem(id: string): Promise<StockItemDetail | nu
 
   const { data: history } = await context.database
     .from("inventory_movements")
-    .select("id, quantity, reason, unit_cost_cents, note, created_at, jobs ( job_number )")
+    .select(
+      "id, quantity, reason, unit_cost_cents, note, created_at, jobs ( job_number ), documents ( id, folder_id )",
+    )
     .eq("item_id", id)
     .eq("organization_id", context.organizationId)
     .order("created_at", { ascending: false })
@@ -1064,6 +1068,13 @@ export async function getInventoryItem(id: string): Promise<StockItemDetail | nu
 
   const movements = ((history ?? []) as Record<string, unknown>[]).map((entry) => {
     const job = (entry.jobs ?? null) as { job_number?: unknown } | null;
+    // The scanned receipt this arrived on, when it arrived on one. Both halves
+    // are needed to link to it: files open inside the folder that holds them.
+    const receipt = (entry.documents ?? null) as {
+      id?: unknown;
+      folder_id?: unknown;
+    } | null;
+
     return {
       id: String(entry.id),
       quantity: Number(entry.quantity ?? 0),
@@ -1071,6 +1082,10 @@ export async function getInventoryItem(id: string): Promise<StockItemDetail | nu
       unitCostCents: Number(entry.unit_cost_cents ?? 0),
       note: typeof entry.note === "string" ? entry.note : "",
       jobNumber: job?.job_number ? String(job.job_number) : "",
+      receiptHref:
+        typeof receipt?.id === "string" && typeof receipt?.folder_id === "string"
+          ? `/files/${receipt.folder_id}?open=${receipt.id}`
+          : "",
       whenLabel: inZone(
         typeof entry.created_at === "string" ? entry.created_at : null,
         context.timeZone,

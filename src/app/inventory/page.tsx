@@ -1,8 +1,17 @@
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InventoryList, type InventoryRow } from "@/components/inventory-list";
+import { ReceiptScan } from "@/components/receipt-scan";
 import { getInventory } from "@/lib/job-data";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Reading a receipt is a vision call over a photograph, which is slower than
+ * anything else on this page by an order of magnitude. The default fifteen
+ * seconds kills it mid-read, and a killed function returns nothing — so the
+ * spinner would sit there with no way out.
+ */
+export const maxDuration = 90;
 
 /**
  * What the business already owns.
@@ -21,7 +30,15 @@ export default async function InventoryPage() {
       description="What is on the van and on the shelf. Job material lists check against this."
       backHref="/materials"
     >
-      <InventoryList items={items} />
+      <div className="space-y-3">
+        {/*
+         * Above the list rather than inside it. Scanning a receipt is how stock
+         * arrives, and it should not be a thing to go looking for behind a
+         * search box that is about what is already there.
+         */}
+        <ReceiptScan />
+        <InventoryList items={items} />
+      </div>
     </FieldPageShell>
   );
 }
