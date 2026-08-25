@@ -3,21 +3,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 /** What a signed MCP URL is allowed to do. */
 export type McpScope = "booking" | "business";
 
-/**
- * Whose data the model on the other end of an MCP connection may act for.
- *
- * The organization is signed into the URL so a model can never choose another
- * tenant in a tool argument. Scope is signed for the same reason: a URL handed
- * to the public-facing receptionist must never become a back door to invoices,
- * customer messages or business settings.
- *
- * Old tokens did not carry a scope. They continue to verify as `booking`, which
- * is intentionally the least-privileged mode and preserves every existing
- * voice/receptionist integration without granting it new powers.
- */
 export type McpSession = {
   organizationId: string;
   scope: McpScope;
+  /** Required for newly minted business tokens so one connection can be revoked. */
+  credentialId?: string;
   /** Pinned by a per-call token; absent from a static one. */
   customerId?: string;
   /** The number the customer called from, when the token was minted for a call. */
@@ -26,10 +16,7 @@ export type McpSession = {
   expiresAt: number;
 };
 
-/** Long enough for a phone call, short enough that a leaked URL goes stale. */
 export const DEFAULT_SESSION_TTL_SECONDS = 60 * 60;
-
-/** A console-configured URL outlives any one call, so it is dated in months. */
 export const STATIC_SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
 
 function base64url(value: Buffer): string {
@@ -46,6 +33,7 @@ export function signMcpSessionToken(input: {
   const payload: McpSession = {
     organizationId: input.session.organizationId,
     scope: input.session.scope ?? "booking",
+    ...(input.session.credentialId ? { credentialId: input.session.credentialId } : {}),
     ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
     ...(input.session.phone ? { phone: input.session.phone } : {}),
     expiresAt:
@@ -57,7 +45,6 @@ export function signMcpSessionToken(input: {
   return `${encoded}.${signature}`;
 }
 
-/** The session a token proves, or null. */
 export function readMcpSessionToken(input: {
   token: string;
   secret: string;
@@ -87,10 +74,10 @@ export function readMcpSessionToken(input: {
   const record = payload as Record<string, unknown>;
 
   const organizationId = typeof record.organizationId === "string" ? record.organizationId : "";
+  const credentialId = typeof record.credentialId === "string" ? record.credentialId : "";
   const customerId = typeof record.customerId === "string" ? record.customerId : "";
   const phone = typeof record.phone === "string" ? record.phone : "";
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : 0;
-  // Backwards compatibility is deliberately least privilege.
   const scope: McpScope = record.scope === "business" ? "business" : "booking";
 
   if (!organizationId) return null;
@@ -101,6 +88,7 @@ export function readMcpSessionToken(input: {
   return {
     organizationId,
     scope,
+    ...(credentialId ? { credentialId } : {}),
     ...(customerId ? { customerId } : {}),
     ...(phone ? { phone } : {}),
     expiresAt,
