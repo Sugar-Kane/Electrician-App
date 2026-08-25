@@ -161,6 +161,30 @@ export async function generateInvoicePdf(input: {
     }),
     invoiceId: input.invoiceId,
     documentType: "invoice",
+    /*
+     * What this version was rendered from — the raw line rows and the figures
+     * on the invoice, not the formatted labels above.
+     *
+     * Labels are for reading; these are what a restore has to be able to write
+     * back. "$1,280.00" cannot be put into a cents column without being parsed
+     * again, and a second parse is a second answer waiting to disagree.
+     */
+    sourceSnapshot: {
+      lines: ((lineRows ?? []) as Record<string, unknown>[]).map((row) => ({
+        kind: str(row.kind),
+        description: str(row.description),
+        quantity: num(row.quantity),
+        unit: str(row.unit),
+        unit_price_cents: num(row.unit_price_cents),
+      })),
+      totals: {
+        subtotal_cents: num(invoice.subtotal_cents),
+        diagnostic_credit_cents: creditCents,
+        tax_cents: taxCents,
+        total_cents: totalCents,
+        balance_due_cents: balanceCents,
+      },
+    },
     displayName: `Invoice ${invoiceNumber}`,
     fileName: invoiceFileName(invoiceNumber, business.name),
     uploadedBy: input.uploadedBy,

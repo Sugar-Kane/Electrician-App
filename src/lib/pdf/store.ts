@@ -82,6 +82,15 @@ export async function storeGeneratedPdf(input: {
   fileName: string;
   element: ReactElement<DocumentProps>;
   uploadedBy: string;
+  /**
+   * The record this was rendered from.
+   *
+   * Kept with the version so restoring the version can restore the record.
+   * Without it a restore puts the file back and leaves the source holding the
+   * edit, and the next regeneration quietly reintroduces what somebody thought
+   * they had undone.
+   */
+  sourceSnapshot?: Record<string, unknown>;
 }): Promise<GeneratedDocument | { error: string }> {
   let admin: ReturnType<typeof getSupabaseAdmin>;
   try {
@@ -151,6 +160,9 @@ export async function storeGeneratedPdf(input: {
     checksum_sha256: createHash("sha256").update(pdf).digest("hex"),
     version_number: versionNumber,
     uploaded_by: input.uploadedBy,
+    // Null rather than absent when there is none, so a version that predates
+    // snapshots is distinguishable from one whose source was not passed.
+    source_snapshot: input.sourceSnapshot ?? null,
   };
 
   const { data: created, error } = await input.database
