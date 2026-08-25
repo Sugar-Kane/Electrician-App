@@ -2,7 +2,12 @@ import Link from "next/link";
 import { Check, ChevronRight, ExternalLink, KeyRound, LockKeyhole, PlugZap, Store, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { currentContext } from "@/lib/request-context";
 import { getSupplierIntegrations } from "@/lib/supplier-integrations";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { createClient } from "@/lib/supabase/server";
+import { ChatGptConnectionCard } from "./chatgpt-connection-card";
+import { revokeChatGptConnection } from "./chatgpt-actions";
 
 const envLabels: Record<string, string> = {
   LOWES_PRODUCT_DISCOVERY_API_URL: "Product Discovery API URL",
@@ -12,13 +17,39 @@ const envLabels: Record<string, string> = {
   HOME_DEPOT_IMPACT_PID: "Impact partner website ID (PID)",
 };
 
-export default function SupplierIntegrationsPage() {
+function dateLabel(value: unknown) {
+  if (typeof value !== "string" || !value) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+}
+
+export default async function IntegrationsPage() {
   const suppliers = getSupplierIntegrations();
+  const context = await currentContext();
+  const canManage = context?.role === "owner";
+  let connections: { id: string; createdAt: string; expiresAt: string; lastUsedAt: string }[] = [];
+
+  if (context && canManage) {
+    const supabase = asFlexibleClient(await createClient());
+    const { data } = await supabase
+      .from("mcp_business_credentials")
+      .select("id, created_at, expires_at, last_used_at")
+      .eq("organization_id", context.organizationId)
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false });
+    connections = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id ?? ""),
+      createdAt: dateLabel(row.created_at),
+      expiresAt: dateLabel(row.expires_at),
+      lastUsedAt: dateLabel(row.last_used_at),
+    }));
+  }
 
   return (
-    <FieldPageShell
-      backHref="/settings" title="Supplier integrations" eyebrow="Product discovery" description="Connect approved retailer programs without exposing credentials to technicians or customer browsers.">
+    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT and approved supplier programs without exposing business credentials to technicians or customer browsers.">
       <div className="grid gap-4 lg:grid-cols-2">
+        <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
+
         {suppliers.map((supplier) => {
           const ready = supplier.stage === "configuration_ready";
           return (
@@ -40,7 +71,7 @@ export default function SupplierIntegrationsPage() {
       </div>
 
       <section className="mt-4 rounded-panel border border-positive/20 bg-positive-bg p-5 sm:p-6">
-        <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-positive" aria-hidden /><div><h2 className="font-semibold">Add credentials securely</h2><p className="mt-2 text-sm leading-6 text-ink-muted">When either application is approved, add the supplied values to the Electrician App’s Vercel environment variables. Do not paste client secrets into chat or put them in a public variable. Volteira reads them only on the server.</p></div></div>
+        <div className="flex items-start gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-positive" aria-hidden /><div><h2 className="font-semibold">Credentials stay server-side</h2><p className="mt-2 text-sm leading-6 text-ink-muted">ChatGPT gets a revocable, business-scoped MCP URL. Supplier client secrets remain in Vercel environment variables and are never sent to browsers or included in ChatGPT tool results.</p></div></div>
       </section>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
