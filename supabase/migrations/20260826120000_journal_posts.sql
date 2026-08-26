@@ -230,3 +230,65 @@ $$;
 
 grant execute on function public.list_public_journal_posts(text, integer) to anon, authenticated;
 grant execute on function public.get_public_journal_post(text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Two lookups the public pages need and nothing else does.
+-- ---------------------------------------------------------------------------
+
+-- The hostname a business has verified, for an anonymous page to build a
+-- canonical from.
+--
+-- Only a verified row counts. An unverified one is a name somebody typed into a
+-- settings box, and pointing a canonical at a hostname that does not resolve
+-- takes the post out of the index altogether, which is worse than serving it on
+-- ours.
+create or replace function public.get_verified_host_for_slug(p_slug text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select d.hostname
+  from public.organization_domains d
+  join public.organizations o on o.id = d.organization_id
+  where o.slug = p_slug
+    and o.archived_at is null
+    and d.verified_at is not null
+  order by d.verified_at asc
+  limit 1;
+$$;
+
+-- Every business with something published, for the app's own sitemap.
+--
+-- Returns the slug and the newest publish time so the index entry can carry a
+-- lastmod without a second query per business.
+create or replace function public.list_journal_organizations()
+returns table (slug text, hostname text, post_count bigint, newest timestamptz)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select o.slug,
+         coalesce(
+           (select d.hostname
+              from public.organization_domains d
+             where d.organization_id = o.id
+               and d.verified_at is not null
+             order by d.verified_at asc
+             limit 1),
+           ''
+         ) as hostname,
+         count(p.id) as post_count,
+         max(p.published_at) as newest
+  from public.organizations o
+  join public.journal_posts p
+    on p.organization_id = o.id and p.status = 'published'
+  where o.archived_at is null
+  group by o.id, o.slug
+  order by o.slug;
+$$;
+
+grant execute on function public.get_verified_host_for_slug(text) to anon, authenticated;
+grant execute on function public.list_journal_organizations() to anon, authenticated;

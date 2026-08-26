@@ -315,6 +315,16 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         description: "What gets texted, and when",
       },
       {
+        // Beside the automatic messages rather than out on its own: both are
+        // things this app puts out on the business's behalf without anybody
+        // pressing send, and somebody wondering what is published in their name
+        // should find them in one place.
+        label: "Work journal",
+        href: "/settings/journal",
+        icon: "Newspaper",
+        description: "Finished jobs, written up as public pages",
+      },
+      {
         label: "Legal pages",
         href: "/settings/legal",
         icon: "ScrollText",

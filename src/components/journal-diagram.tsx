@@ -44,6 +44,7 @@ function Caption({
   width = 18,
   size = 11,
   fill = MUTED,
+  anchorY = "top",
 }: {
   x: number;
   y: number;
@@ -53,6 +54,22 @@ function Caption({
   width?: number;
   size?: number;
   fill?: string;
+  /**
+   * Which end of the wrapped block `y` refers to.
+   *
+   * SVG text grows downwards from its baseline, so a label that wraps ends up
+   * lower than it was placed, and how much lower depends on words nobody
+   * controls: the model supplies these. Both non-default modes exist because a
+   * two-line label broke something at 390px that a one-line label did not.
+   *
+   * - `top` (the default) starts the first line at `y`.
+   * - `middle` centres the block, for a label inside a shape. The load bar read
+   *   "What the dryer is / pulling" with "pulling" hanging below the bar.
+   * - `bottom` puts the *last* line at `y` and stacks earlier ones above it, for
+   *   a label that must clear something underneath. "What the breaker / allows"
+   *   landed its second line on the rating line it was labelling.
+   */
+  anchorY?: "top" | "middle" | "bottom";
 }) {
   const words = children.split(" ");
   const lines: string[] = [];
@@ -69,8 +86,11 @@ function Caption({
   }
   if (line) lines.push(line);
 
+  const spread = (lines.length - 1) * (size + 2);
+  const top = anchorY === "middle" ? y - spread / 2 : anchorY === "bottom" ? y - spread : y;
+
   return (
-    <text x={x} y={y} textAnchor={anchor} fontSize={size} fill={fill}>
+    <text x={x} y={top} textAnchor={anchor} fontSize={size} fill={fill}>
       {lines.map((entry, index) => (
         <tspan key={entry + index} x={x} dy={index === 0 ? 0 : size + 2}>
           {entry}
@@ -277,12 +297,14 @@ function LoadVsRating({ labels }: { labels: string[] }) {
       {/* Where the breaker gives up. Drawn last, so the bar cannot bury it. */}
       <path d="M246 52 L246 126" stroke="currentColor" strokeWidth={2.5} />
 
-      <Caption x={124} y={102} width={22} size={12} fill="var(--color-on-brand)">
+      {/* Centred on the bar's midline, so a label that wraps grows both ways
+          inside it rather than hanging off the bottom edge. */}
+      <Caption x={124} y={97} width={20} size={11} anchorY="middle" fill="var(--color-on-brand)">
         {drawing ?? ""}
       </Caption>
       {/* Each threshold's words sit at its own line, on opposite sides of the
           bar, so neither label has to be traced back to a stray tick. */}
-      <Caption x={246} y={40} width={17}>{rating ?? ""}</Caption>
+      <Caption x={246} y={44} width={17} anchorY="bottom">{rating ?? ""}</Caption>
       <Caption x={204} y={168} width={16} fill={GOOD}>{safe ?? ""}</Caption>
     </>
   );

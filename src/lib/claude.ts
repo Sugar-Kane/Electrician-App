@@ -732,6 +732,131 @@ export async function writeJournalPost(input: {
   }
 }
 
+const EDIT_TOOL = {
+  name: "rewrite_post",
+  description: "Return the post with the requested change made, and nothing else changed.",
+  input_schema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "Unchanged unless the change asks for it." },
+      dek: { type: "string" },
+      body: { type: "string" },
+      lesson: { type: "string" },
+    },
+    required: ["title", "dek", "body", "lesson"],
+    additionalProperties: false,
+  },
+} as const;
+
+/**
+ * Change a published post, on the owner's instruction.
+ *
+ * The whole post goes out and the whole post comes back, rather than a splice.
+ * That is the opposite of `spliceScope`, and for a reason: a contract has terms
+ * a model must not be able to reach, so the edit is a substring replacement
+ * that fails closed. A journal post is entirely the model's own prose with
+ * nothing legally load-bearing in it, and asking for a fragment back produces
+ * paragraphs that no longer join up with the ones around them.
+ *
+ * What keeps it honest is the caller: the returned text goes through the same
+ * `houseStyle` the original was checked against, so an edit cannot reintroduce
+ * an em dash, a tell, a customer's name, or an outcome claim on a lesson post.
+ * The previous version is kept either way.
+ */
+export async function editJournalPost(input: {
+  system: string;
+  post: { title: string; dek: string; body: string; lesson: string };
+  instruction: string;
+  check: (draft: DraftedPost) => { post: DraftedPost; problems: string };
+}): Promise<DraftedPost | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const instruction = input.instruction.trim().slice(0, 1000);
+  if (!instruction) return null;
+
+  const asText = [
+    `TITLE: ${input.post.title}`,
+    `DEK: ${input.post.dek}`,
+    "",
+    "BODY:",
+    input.post.body,
+    "",
+    "LESSON:",
+    input.post.lesson,
+  ].join("\n");
+
+  const turns: Anthropic.MessageParam[] = [
+    {
+      role: "user",
+      content: [
+        "Here is a post that is already published:",
+        "",
+        asText,
+        "",
+        `The change asked for: ${instruction}`,
+        "",
+        "Make that change and leave everything else alone. Return all four fields, including the ones you did not touch.",
+      ].join("\n"),
+    },
+  ];
+
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await anthropic.messages.create(
+        {
+          model: "claude-opus-5",
+          max_tokens: 3000,
+          system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
+          tools: [EDIT_TOOL] as unknown as Anthropic.Tool[],
+          tool_choice: { type: "tool", name: EDIT_TOOL.name },
+          messages: turns,
+        },
+        { timeout: 90_000 },
+      );
+
+      const call = response.content.find((block) => block.type === "tool_use");
+      if (!call || call.type !== "tool_use") return null;
+
+      const raw = (call.input ?? {}) as Record<string, unknown>;
+      const read = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string).trim() : "");
+
+      const { post, problems } = input.check({
+        title: read("title"),
+        dek: read("dek"),
+        body: read("body"),
+        lesson: read("lesson"),
+        // An edit never changes the drawing. The owner asked about the words.
+        diagram: "",
+        diagramLabels: [],
+        diagramCaption: "",
+      });
+
+      if (!problems) return post;
+      if (attempt === 1) {
+        console.error("journal edit rejected twice", problems);
+        return null;
+      }
+
+      turns.push(
+        { role: "assistant", content: response.content },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: call.id, content: "Not saved. Fix these and return it again:" },
+            { type: "text", text: problems },
+          ],
+        } as Anthropic.MessageParam,
+      );
+    }
+
+    return null;
+  } catch (error) {
+    console.error("journal edit failed", error);
+    return null;
+  }
+}
+
 export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
 export type AgentReply = {
   text: string;
