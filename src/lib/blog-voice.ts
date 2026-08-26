@@ -296,12 +296,66 @@ const BRITISH: Record<string, string> = {
   travellers: "travelers", cancelled: "canceled", cancelling: "canceling",
   enquire: "inquire", enquiry: "inquiry", enquiries: "inquiries",
   practise: "practice", practised: "practiced", practising: "practicing",
+
+  // Doubled consonants Britain keeps and America drops. `labelled` is the one
+  // that turns up here constantly, because breakers get labeled.
+  labelled: "labeled", labelling: "labeling", modelling: "modeling",
+  fuelled: "fueled", signalling: "signaling", skilful: "skillful",
+  fulfil: "fulfill", instalment: "installment", enrol: "enroll",
+
+  // Ordinary words that read as British on sight.
+  whilst: "while", amongst: "among", towards: "toward",
+  afterwards: "afterward", learnt: "learned", spelt: "spelled",
+  spoilt: "spoiled", programme: "program", programmes: "programs",
+  cosy: "cozy", speciality: "specialty", orientated: "oriented",
+  manoeuvre: "maneuver", rubbish: "trash",
+  cheque: "check", cheques: "checks", defence: "defense",
+  tyre: "tire", tyres: "tires", kerb: "curb", kerbs: "curbs",
+  sulphur: "sulfur", draught: "draft", draughts: "drafts",
+  anticlockwise: "counterclockwise", spanner: "wrench", spanners: "wrenches",
+  lorry: "truck", lorries: "trucks", petrol: "gas",
+
+  /*
+   * The trade words, which matter more than the spelling.
+   *
+   * A homeowner reading this is standing in front of the thing being
+   * described. "RCD" and "consumer unit" are not quaint here, they are words
+   * that do not name anything in their house.
+   *
+   * Only the unambiguous ones. `torch` is a flashlight in Britain and a
+   * propane torch in an American van, `flex` is a cord in Britain and a verb
+   * here, `socket` is British for an outlet and American for what a bulb
+   * screws into, and `cooker` is British for a range and American for the slow
+   * one. Every one of those would be wrong often enough to matter, so they are
+   * taught in the prompt and left alone here.
+   */
+  hob: "cooktop", hobs: "cooktops",
+  rcd: "GFCI", rcds: "GFCIs", mcb: "breaker", mcbs: "breakers",
+  afdd: "AFCI", afdds: "AFCIs",
 };
 
 const BRITISH_PATTERN = new RegExp(`\\b(${Object.keys(BRITISH).join("|")})\\b`, "gi");
 
-/** The replacement, wearing however the original was capitalised. */
-function matchCase(original: string, replacement: string): string {
+/**
+ * Entries whose capitals mean "acronym" rather than "start of a sentence".
+ *
+ * The distinction cannot be read off the text. "COLOUR" is a shouted ordinary
+ * word and should come back "COLOR"; "MCBs" is capitalised because MCB is an
+ * initialism, and inheriting that turned a sentence into "both Breakers were
+ * warm". Which one an entry is, is a fact about the table, so the table says.
+ */
+const ACRONYMS = new Set(["rcd", "rcds", "mcb", "mcbs", "afdd", "afdds"]);
+
+/**
+ * The replacement, wearing however the original was capitalized.
+ *
+ * An acronym's replacement is returned as the table wrote it: `GFCI` stays
+ * shouted because that is its spelling, and `breaker` stays lowercase because
+ * that is its spelling. The cost is a lowercase word where an initialism began
+ * a sentence, which is a smaller wrong than a capitalized noun mid-sentence.
+ */
+function matchCase(original: string, replacement: string, acronym: boolean): string {
+  if (acronym) return replacement;
   if (original === original.toUpperCase()) return replacement.toUpperCase();
   if (original[0] === original[0]?.toUpperCase()) {
     return replacement[0]!.toUpperCase() + replacement.slice(1);
@@ -311,8 +365,9 @@ function matchCase(original: string, replacement: string): string {
 
 export function americanize(value: string): string {
   return (value ?? "").replace(BRITISH_PATTERN, (match) => {
-    const replacement = BRITISH[match.toLowerCase()];
-    return replacement ? matchCase(match, replacement) : match;
+    const key = match.toLowerCase();
+    const replacement = BRITISH[key];
+    return replacement ? matchCase(match, replacement, ACRONYMS.has(key)) : match;
   });
 }
 

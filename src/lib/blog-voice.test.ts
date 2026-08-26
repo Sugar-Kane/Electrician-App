@@ -366,3 +366,35 @@ test("houseStyle repairs spelling the same pass it repairs dashes", () => {
   assert.equal(hasDash(text), false);
   assert.equal(problems.some((problem) => problem.kind === "tell"), false);
 });
+
+test("British trade words become the ones in the reader's house", () => {
+  /*
+   * These matter more than the spelling. Somebody reading this is standing in
+   * front of the thing being described, and "RCD" or "consumer unit" does not
+   * name anything in a California house.
+   */
+  assert.equal(americanize("the RCD tripped"), "the GFCI tripped");
+  assert.equal(americanize("both MCBs were warm"), "both breakers were warm");
+  assert.equal(americanize("check the hob"), "check the cooktop");
+  assert.equal(americanize("turn it anticlockwise"), "turn it counterclockwise");
+  assert.equal(americanize("a labelled panel"), "a labeled panel");
+  assert.equal(americanize("whilst it runs"), "while it runs");
+  assert.equal(americanize("towards the panel"), "toward the panel");
+});
+
+test("the ambiguous trade words are deliberately left alone", () => {
+  /*
+   * Every one of these is British in one sense and ordinary American in
+   * another, so the table cannot decide. They are taught in the prompt
+   * instead. This test exists so nobody "completes" the table later and
+   * quietly breaks a sentence about a propane torch.
+   */
+  const traps = [
+    "we used a torch on the joint",     // propane torch, not a flashlight
+    "flex the conduit to clear it",     // a verb here
+    "the bulb socket was scorched",     // what a bulb screws into
+    "a slow cooker on that circuit",    // not a British range
+  ];
+
+  for (const sentence of traps) assert.equal(americanize(sentence), sentence);
+});
