@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { JournalArticle } from "@/components/journal-article";
+import { JournalStructuredData } from "@/components/journal-structured-data";
 import { getPublicJournalPost, verifiedHostFor } from "@/lib/journal-data";
 import { canonicalPostUrl, journalIndexPath } from "@/lib/journal-urls";
 
@@ -69,7 +70,7 @@ export default async function JournalPostRoute({
 
   return (
     <>
-      <StructuredData
+      <JournalStructuredData
         post={post}
         url={canonicalPostUrl({
           appUrl: process.env.NEXT_PUBLIC_APP_URL,
@@ -84,61 +85,5 @@ export default async function JournalPostRoute({
         bookHref={`/book/${org}`}
       />
     </>
-  );
-}
-
-/**
- * What a search engine is told this page is.
- *
- * `areaServed` is the part that earns local results, and it is the reason to
- * bother: a post about tripping breakers is one of thousands, and a post about
- * tripping breakers by an electrician who works in this town is the one a
- * person in this town should be shown.
- *
- * Serialised with `JSON.stringify`, which escapes anything in the model's prose
- * that would otherwise close the script tag early.
- */
-function StructuredData({
-  post,
-  url,
-}: {
-  post: Awaited<ReturnType<typeof getPublicJournalPost>>;
-  url: string;
-}) {
-  if (!post) return null;
-
-  const data = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    ...(post.dek ? { description: post.dek } : {}),
-    ...(url ? { mainEntityOfPage: url, url } : {}),
-    ...(post.publishedAt ? { datePublished: post.publishedAt } : {}),
-    ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
-    author: { "@type": "Organization", name: post.businessName },
-    publisher: {
-      "@type": "Organization",
-      name: post.businessName,
-      ...(post.baseCity
-        ? {
-            address: {
-              "@type": "PostalAddress",
-              addressLocality: post.baseCity,
-              addressRegion: post.baseState,
-              addressCountry: "US",
-            },
-          }
-        : {}),
-    },
-    ...(post.town
-      ? { areaServed: { "@type": "City", name: post.town, ...(post.state ? { addressRegion: post.state } : {}) } }
-      : {}),
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
   );
 }

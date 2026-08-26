@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { slugForRequestHost } from "@/app/book/by-host/page";
 import { JournalArticle } from "@/components/journal-article";
+import { JournalStructuredData } from "@/components/journal-structured-data";
 import { getPublicJournalPost, verifiedHostFor } from "@/lib/journal-data";
 import { canonicalPostUrl, journalIndexPath } from "@/lib/journal-urls";
 
@@ -65,11 +66,33 @@ export default async function TenantJournalPost({
   const [{ slug }, org] = await Promise.all([params, slugForRequestHost()]);
   if (!org) notFound();
 
-  const post = await getPublicJournalPost(org, slug);
+  const [post, host] = await Promise.all([
+    getPublicJournalPost(org, slug),
+    verifiedHostFor(org),
+  ]);
   if (!post) notFound();
 
-  // Relative, so every link stays on the hostname the reader came in on.
+  /*
+   * The structured data belongs here most of all.
+   *
+   * It was on the copy served from the product's own domain and missing from
+   * this one, which is backwards: this is the address the canonical points at
+   * once a business verifies a hostname, so it is the page a search engine is
+   * being told to index.
+   */
   return (
-    <JournalArticle post={post} indexHref={journalIndexPath(org, true)} bookHref="/" />
+    <>
+      <JournalStructuredData
+        post={post}
+        url={canonicalPostUrl({
+          appUrl: process.env.NEXT_PUBLIC_APP_URL,
+          tenantHost: host,
+          orgSlug: org,
+          postSlug: slug,
+        })}
+      />
+      {/* Relative, so every link stays on the hostname the reader came in on. */}
+      <JournalArticle post={post} indexHref={journalIndexPath(org, true)} bookHref="/" />
+    </>
   );
 }

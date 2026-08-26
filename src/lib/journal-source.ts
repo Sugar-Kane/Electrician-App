@@ -165,7 +165,10 @@ export function deidentify(value: string, forbidden: string[]): string {
     const trimmed = term.trim();
     if (trimmed.length < 3) continue;
     const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    text = text.replace(new RegExp(`\\b${escaped}\\b`, "gi"), "");
+    // Plural and possessive too: "the Hendersons" and "Henderson's" both name
+    // the household that "Henderson" alone does, and a bare `\b` on the end
+    // matches neither.
+    text = text.replace(new RegExp(`\\b${escaped}(?:['\u2019]s|es|s)?\\b`, "gi"), "");
   }
 
   /*
@@ -231,8 +234,17 @@ export function readJournalSource(job: {
   // there is simply nothing written down about what was done.
   const work = readsAsTestData(rawNotes) ? "" : deidentify(rawNotes, forbidden);
 
+  /*
+   * De-identified like everything else, which the first version of this was
+   * not.
+   *
+   * A line item is typed by hand and people write what is in front of them:
+   * "rewire for the Hendersons", "panel swap at 412 Tefft". Passing those
+   * through raw handed the model the exact name the rest of this module exists
+   * to keep away from it.
+   */
   const parts = (Array.isArray(job.parts) ? job.parts : [])
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .map((entry) => (typeof entry === "string" ? deidentify(entry, forbidden) : ""))
     .filter(Boolean)
     .slice(0, 20);
 

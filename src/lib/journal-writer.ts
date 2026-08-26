@@ -1,6 +1,6 @@
 import "server-only";
 
-import { houseStyle, retryNote } from "@/lib/blog-voice";
+import { checkPost, retryNote } from "@/lib/blog-voice";
 import { writeJournalPost, type DraftedPost } from "@/lib/claude";
 import { diagramLabels, isDiagramKey } from "@/lib/journal-diagrams";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
@@ -26,10 +26,34 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-/** A post can be written once. A second attempt is a bug, not a refresh. */
+/**
+ * Whether this job already has a real post.
+ *
+ * A `declined` row is not one. It records that the job was looked at and
+ * produced nothing, and the owner's list says so along with what to do about
+ * it: write down what you did and it can be written up. That instruction was a
+ * lie while this counted a decline as a post, because the retry it invites was
+ * refused before it started.
+ *
+ * So a decline is a note, not a claim on the job, and `clearDecline` below
+ * takes it out of the way when somebody tries again.
+ */
 async function alreadyWritten(database: Database, jobId: string): Promise<boolean> {
-  const { data } = await database.from("journal_posts").select("id").eq("job_id", jobId).maybeSingle();
+  const { data } = await database
+    .from("journal_posts")
+    .select("id")
+    .eq("job_id", jobId)
+    .neq("status", "declined")
+    .maybeSingle();
   return Boolean(data);
+}
+
+/**
+ * Remove the previous refusal, so the unique constraint on `job_id` lets this
+ * attempt insert.
+ */
+async function clearDecline(database: Database, jobId: string): Promise<void> {
+  await database.from("journal_posts").delete().eq("job_id", jobId).eq("status", "declined");
 }
 
 /**
@@ -176,27 +200,25 @@ export async function writePostForJob(input: {
       brief: describeSource(source),
       kind: source.kind,
       forbidden: source.forbidden,
-      // The house style, applied to the body and the lesson together: a tell in
-      // the lesson is as visible as one in the body, and a customer's name in
-      // either is the same problem.
+      /*
+       * The house style over all four fields, not just the two people read
+       * most.
+       *
+       * This checked only `body` and `lesson` at first and ran the title and
+       * the dek through for dash repair alone, discarding their problems. A
+       * name in the title would have published, and the title is also the URL,
+       * the browser tab, the OpenGraph card and the structured data.
+       */
       check: (draft: DraftedPost) => {
-        const checked = houseStyle({
-          text: `${draft.body}\n\n${draft.lesson}`,
+        const { post, problems } = checkPost({
+          post: draft,
           kind: source.kind,
           forbidden: source.forbidden,
         });
 
         return {
-          post: {
-            ...draft,
-            // Repaired individually so the two fields stay separate, using the
-            // same repair the combined check was run against.
-            title: houseStyle({ text: draft.title, kind: source.kind }).text.trim(),
-            dek: houseStyle({ text: draft.dek, kind: source.kind }).text.trim(),
-            body: houseStyle({ text: draft.body, kind: source.kind }).text.trim(),
-            lesson: houseStyle({ text: draft.lesson, kind: source.kind }).text.trim(),
-          },
-          problems: checked.problems.length > 0 ? retryNote(checked.problems) : "",
+          post: { ...draft, ...post },
+          problems: problems.length > 0 ? retryNote(problems) : "",
         };
       },
     });
@@ -204,6 +226,7 @@ export async function writePostForJob(input: {
     if (!drafted) return { wrote: false, reason: "The writer could not be reached." };
 
     if (!drafted.ok) {
+      await clearDecline(database, input.jobId);
       // Recorded rather than dropped, so the owner's list can say this job was
       // looked at and why it produced nothing.
       await database.from("journal_posts").insert({
@@ -225,6 +248,9 @@ export async function writePostForJob(input: {
     const diagram = isDiagramKey(post.diagram) ? post.diagram : "";
 
     const slug = await freeSlug(database, organizationId, post.title);
+
+    // A previous refusal holds the job_id this insert needs.
+    await clearDecline(database, input.jobId);
 
     const { error } = await database.from("journal_posts").insert({
       organization_id: organizationId,

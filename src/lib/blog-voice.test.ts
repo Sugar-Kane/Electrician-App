@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   findTells,
+  checkPost,
   hasDash,
   houseStyle,
   MAX_WORDS,
@@ -244,4 +245,75 @@ test("explaining what is usually wrong is not claiming what was wrong", () => {
   });
 
   assert.deepEqual(explaining.problems, [], JSON.stringify(explaining.problems));
+});
+
+test("a name in the title is caught, not just one in the body", () => {
+  /*
+   * The gap a reviewer found. The first version checked `body` and `lesson`
+   * for identifiers and ran the title and dek through for dash repair alone,
+   * throwing their problems away. The title is also the URL, the browser tab,
+   * the OpenGraph card and the structured data, so it is the worst field to
+   * leak in and the one that was unchecked.
+   */
+  const leaked = checkPost({
+    post: {
+      title: "What we found at the Hendersons' place",
+      dek: "A dryer that kept tripping.",
+      body: `We got a call about a dryer. ${PADDING}`,
+      lesson: "Stop resetting it and get somebody to look.",
+    },
+    kind: "story",
+    forbidden: ["Henderson"],
+  });
+
+  assert.ok(
+    leaked.problems.some((problem) => problem.kind === "identity"),
+    JSON.stringify(leaked.problems),
+  );
+});
+
+test("a name in the dek is caught too", () => {
+  const leaked = checkPost({
+    post: {
+      title: "Why does my dryer trip the breaker?",
+      dek: "What we found on Tefft Street.",
+      body: `We got a call about a dryer. ${PADDING}`,
+      lesson: "Get somebody to look.",
+    },
+    kind: "story",
+    forbidden: ["Tefft"],
+  });
+
+  assert.ok(leaked.problems.some((problem) => problem.kind === "identity"));
+});
+
+test("every field is repaired, not only the ones that are checked", () => {
+  const repaired = checkPost({
+    post: {
+      title: "A breaker — and what it does",
+      dek: "It trips — every time.",
+      body: `We looked at it — twice. ${PADDING}`,
+      lesson: "Reset it once — no more.",
+    },
+    kind: "story",
+  });
+
+  for (const [field, value] of Object.entries(repaired.post)) {
+    assert.ok(!hasDash(value), `${field}: ${value}`);
+  }
+});
+
+test("a clean post passes the whole-post check", () => {
+  const fine = checkPost({
+    post: {
+      title: "Why does my dryer keep tripping the breaker?",
+      dek: "A breaker that trips is doing its job.",
+      body: `We got a call about a dryer that kept shutting off. ${PADDING}`,
+      lesson: "If it trips twice in a week, get somebody to look at it.",
+    },
+    kind: "lesson",
+    forbidden: ["Henderson", "Tefft"],
+  });
+
+  assert.deepEqual(fine.problems, [], JSON.stringify(fine.problems));
 });

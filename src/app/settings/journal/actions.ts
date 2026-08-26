@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { houseStyle, retryNote } from "@/lib/blog-voice";
+import { checkPost, retryNote } from "@/lib/blog-voice";
 import { editJournalPost, type DraftedPost } from "@/lib/claude";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
 import { writePostForJob } from "@/lib/journal-writer";
@@ -122,17 +122,13 @@ export async function askAssistantToEdit(
       lesson: String(post.lesson ?? ""),
     },
     instruction,
+    // All four fields, for the same reason the writer checks all four: an edit
+    // that moved a name into the title would otherwise sail through.
     check: (draft: DraftedPost) => {
-      const checked = houseStyle({ text: `${draft.body}\n\n${draft.lesson}`, kind });
+      const { post, problems } = checkPost({ post: draft, kind });
       return {
-        post: {
-          ...draft,
-          title: houseStyle({ text: draft.title, kind }).text.trim(),
-          dek: houseStyle({ text: draft.dek, kind }).text.trim(),
-          body: houseStyle({ text: draft.body, kind }).text.trim(),
-          lesson: houseStyle({ text: draft.lesson, kind }).text.trim(),
-        },
-        problems: checked.problems.length > 0 ? retryNote(checked.problems) : "",
+        post: { ...draft, ...post },
+        problems: problems.length > 0 ? retryNote(problems) : "",
       };
     },
   });

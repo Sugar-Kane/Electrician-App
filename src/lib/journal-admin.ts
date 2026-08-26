@@ -126,7 +126,14 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
       .is("archived_at", null)
       .order("completed_at", { ascending: false, nullsFirst: false })
       .limit(50),
-    supabase.from("journal_posts").select("job_id").eq("organization_id", context.organizationId),
+    supabase
+      .from("journal_posts")
+      .select("job_id")
+      .eq("organization_id", context.organizationId)
+      // A declined row is a note about why nothing was written, not a post. The
+      // job stays offered, because the whole point of showing the refusal is
+      // that the owner can act on it and try again.
+      .neq("status", "declined"),
   ]);
 
   const taken = new Set(

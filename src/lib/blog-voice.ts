@@ -270,7 +270,15 @@ export function houseStyle(input: {
     // one would reject every post containing the letter it happens to be.
     if (term.length < 3) continue;
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`\\b${escaped}\\b`, "i").test(text)) {
+    /*
+     * A trailing plural or possessive still identifies somebody.
+     *
+     * `\bHenderson\b` does not match "the Hendersons": the "s" is a word
+     * character, so there is no boundary after the name, and the whole check
+     * silently passes on the most natural way to write a family's name. Found
+     * by a test rather than by reading the regex.
+     */
+    if (new RegExp(`\\b${escaped}(?:['\u2019]s|es|s)?\\b`, "i").test(text)) {
       problems.push({
         kind: "identity",
         detail: `"${term}" identifies the customer and must not appear.`,
@@ -306,4 +314,43 @@ export function houseStyle(input: {
 /** The problems, worded as one instruction for a second attempt. */
 export function retryNote(problems: VoiceProblem[]): string {
   return problems.map((problem) => `- ${problem.detail}`).join("\n");
+}
+
+/** The four fields a post is made of, as they are written and as they publish. */
+export type PostFields = { title: string; dek: string; body: string; lesson: string };
+
+/**
+ * The house style over a whole post, not over the parts of it people read most.
+ *
+ * The first version checked `body` and `lesson` for identifiers and ran the
+ * title and the dek through only for dash repair, throwing their problems away.
+ * A name in the title would have published — and the title is also the URL, the
+ * browser tab, the OpenGraph card and the structured data, so it is the single
+ * worst field to leak in.
+ *
+ * Every field is repaired individually so they stay separate, and all four are
+ * checked together so a problem cannot hide in whichever one nobody looked at.
+ */
+export function checkPost(input: {
+  post: PostFields;
+  kind: "story" | "lesson";
+  forbidden?: string[];
+}): { post: PostFields; problems: VoiceProblem[] } {
+  const repair = (value: string) =>
+    houseStyle({ text: value, kind: input.kind }).text.trim();
+
+  const post: PostFields = {
+    title: repair(input.post.title),
+    dek: repair(input.post.dek),
+    body: repair(input.post.body),
+    lesson: repair(input.post.lesson),
+  };
+
+  const { problems } = houseStyle({
+    text: [post.title, post.dek, post.body, post.lesson].join("\n\n"),
+    kind: input.kind,
+    forbidden: input.forbidden,
+  });
+
+  return { post, problems };
 }

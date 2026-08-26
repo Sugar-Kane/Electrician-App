@@ -292,3 +292,13 @@ $$;
 
 grant execute on function public.get_verified_host_for_slug(text) to anon, authenticated;
 grant execute on function public.list_journal_organizations() to anon, authenticated;
+
+-- Undo consumes the revision it restores, so the delete has to be allowed.
+--
+-- Without this policy RLS silently matches no row: the first undo appears to
+-- work because the post is restored, and every undo after it selects the same
+-- revision again and can never reach an older one.
+drop policy if exists "Organization members can consume journal revisions" on public.journal_post_revisions;
+create policy "Organization members can consume journal revisions"
+  on public.journal_post_revisions for delete to authenticated
+  using ((select private.is_org_member(organization_id)));
