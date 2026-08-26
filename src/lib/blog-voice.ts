@@ -248,12 +248,80 @@ export function wordCount(value: string): number {
  * name in the first place. It cannot write a name it was never given, and this
  * catches the case where it was given one by accident.
  */
+/**
+ * British spellings and trade terms, repaired the way dashes are.
+ *
+ * The first post this feature published said "discolouration" on a California
+ * contractor's site. Nobody would reject a post over it, and nobody should
+ * publish it either, so it belongs with `stripDashes`: fixed silently rather
+ * than sent back.
+ *
+ * An explicit table rather than a rule. A blanket `-our` to `-or` rewrite eats
+ * "hour", "four", "your", "pour" and "flour", and the failure would be silent
+ * and in public.
+ *
+ * `earthed` and `earthing` are here for a different reason than the rest. They
+ * are not misspellings, they are the British word for what a US electrician
+ * calls grounding, and on a site whose readers are looking at their own panel
+ * the wrong term is worse than the wrong spelling. Bare "earth" is deliberately
+ * absent: it is an ordinary English word.
+ */
+const BRITISH: Record<string, string> = {
+  colour: "color", colours: "colors", coloured: "colored", colouring: "coloring",
+  colourless: "colorless", discolour: "discolor", discolours: "discolors",
+  discoloured: "discolored", discolouring: "discoloring",
+  discolouration: "discoloration", discolourations: "discolorations",
+  behaviour: "behavior", behaviours: "behaviors", behavioural: "behavioral",
+  odour: "odor", odours: "odors", odourless: "odorless",
+  vapour: "vapor", vapours: "vapors",
+  neighbour: "neighbor", neighbours: "neighbors", neighbouring: "neighboring",
+  neighbourhood: "neighborhood", neighbourhoods: "neighborhoods",
+  favour: "favor", favours: "favors", favoured: "favored",
+  favourite: "favorite", favourites: "favorites",
+  labour: "labor", labours: "labors", laboured: "labored",
+  metre: "meter", metres: "meters",
+  centre: "center", centres: "centers", centred: "centered",
+  fibre: "fiber", fibres: "fibers", litre: "liter", litres: "liters",
+  mould: "mold", moulds: "molds", moulded: "molded", mouldy: "moldy",
+  grey: "gray", licence: "license", licences: "licenses",
+  aluminium: "aluminum", earthed: "grounded", earthing: "grounding",
+  realise: "realize", realised: "realized", realises: "realizes",
+  realising: "realizing", recognise: "recognize", recognised: "recognized",
+  recognises: "recognizes", recognising: "recognizing",
+  organise: "organize", organised: "organized", organises: "organizes",
+  organising: "organizing", organisation: "organization",
+  organisations: "organizations", analyse: "analyze", analysed: "analyzed",
+  analyses: "analyzes", analysing: "analyzing",
+  travelled: "traveled", travelling: "traveling", traveller: "traveler",
+  travellers: "travelers", cancelled: "canceled", cancelling: "canceling",
+  enquire: "inquire", enquiry: "inquiry", enquiries: "inquiries",
+  practise: "practice", practised: "practiced", practising: "practicing",
+};
+
+const BRITISH_PATTERN = new RegExp(`\\b(${Object.keys(BRITISH).join("|")})\\b`, "gi");
+
+/** The replacement, wearing however the original was capitalised. */
+function matchCase(original: string, replacement: string): string {
+  if (original === original.toUpperCase()) return replacement.toUpperCase();
+  if (original[0] === original[0]?.toUpperCase()) {
+    return replacement[0]!.toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
+export function americanize(value: string): string {
+  return (value ?? "").replace(BRITISH_PATTERN, (match) => {
+    const replacement = BRITISH[match.toLowerCase()];
+    return replacement ? matchCase(match, replacement) : match;
+  });
+}
+
 export function houseStyle(input: {
   text: string;
   kind: "story" | "lesson";
   forbidden?: string[];
 }): { text: string; problems: VoiceProblem[] } {
-  const text = stripDashes(input.text ?? "");
+  const text = americanize(stripDashes(input.text ?? ""));
   const problems: VoiceProblem[] = [];
 
   const tells = findTells(text);

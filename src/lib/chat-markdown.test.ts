@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parseChatMarkdown, parseSegments } from "./chat-markdown.ts";
+import { headingOf, parseChatMarkdown, parseSegments } from "./chat-markdown.ts";
 
 test("bold is emphasis, not asterisks on the screen", () => {
   // What the screenshot showed: **#5** rendered with its asterisks visible.
@@ -58,4 +58,44 @@ test("markup inside a bullet still parses", () => {
   const [line] = parseChatMarkdown("- **#5** Adam");
   assert.equal(line!.bullet, true);
   assert.deepEqual(line!.segments, [{ text: "#5", bold: true }, { text: " Adam" }]);
+});
+
+/*
+ * Section headings, from the first post this actually published.
+ *
+ * The three strings below are the real headings out of the dryer post on
+ * volteira.com, which rendered as `<p><strong>` and left a 700 word article
+ * with no outline between its title and the takeaway block.
+ */
+const heading = (block: string) => headingOf(parseChatMarkdown(block));
+
+test("a lone bold line is a section heading", () => {
+  assert.equal(heading("**A breaker is a measuring device**"), "A breaker is a measuring device");
+  assert.equal(heading("**What we check, and why in that order**"), "What we check, and why in that order");
+  assert.equal(heading("**What you can look at tonight**"), "What you can look at tonight");
+});
+
+test("prose that merely contains bold is not a heading", () => {
+  // The paragraph this rule most has to leave alone: bold inside a sentence.
+  assert.equal(heading("The breaker's job is to watch **how much current** is flowing."), "");
+
+  // Bold, one line, but punctuated as a sentence rather than titled as a head.
+  assert.equal(heading("**It almost never is.**"), "");
+
+  // Two lines. A heading is one.
+  assert.equal(heading("**A breaker is a measuring device**\nand here is why"), "");
+
+  // A bulleted line, even a fully bold one.
+  assert.equal(heading("- **Check the vent duct**"), "");
+
+  // Long enough to be a sentence someone emphasised, not a section title.
+  assert.equal(
+    heading(
+      "**Every reset is you telling a safety device to ignore what it just measured, which is not a plan**",
+    ),
+    "",
+  );
+
+  assert.equal(heading(""), "");
+  assert.equal(heading("Plain text"), "");
 });

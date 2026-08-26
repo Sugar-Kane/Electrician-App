@@ -2,7 +2,7 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 
 import { JournalDiagram } from "@/components/journal-diagram";
-import { parseChatMarkdown } from "@/lib/chat-markdown";
+import { headingOf, parseChatMarkdown } from "@/lib/chat-markdown";
 import type { JournalPost } from "@/lib/journal-data";
 
 /**
@@ -20,7 +20,20 @@ import type { JournalPost } from "@/lib/journal-data";
  * a model produced from a customer's own words, to render three constructs.
  */
 
-function Prose({ text }: { text: string }) {
+function Prose({
+  text,
+  /**
+   * Whether a lone bold line becomes an `<h2>`.
+   *
+   * On for the body, off everywhere else. The takeaway block already sits
+   * under its own heading, so promoting a bold line inside it would nest a
+   * second `<h2>` under the first and describe a structure that is not there.
+   */
+  headings = false,
+}: {
+  text: string;
+  headings?: boolean;
+}) {
   // Blank lines are paragraph breaks, which is how the model was asked to write
   // and how somebody typing into a box separates thoughts.
   const paragraphs = text.split(/\n\s*\n/).filter((block) => block.trim().length > 0);
@@ -30,6 +43,27 @@ function Prose({ text }: { text: string }) {
       {paragraphs.map((block, index) => {
         const lines = parseChatMarkdown(block);
         const bulleted = lines.every((line) => line.bullet);
+        const heading = headings ? headingOf(lines) : "";
+
+        /*
+         * A section heading, rendered as one.
+         *
+         * The model writes these as a bold line of their own, which arrived
+         * here as `<p><strong>` and left the article with no outline between
+         * its `<h1>` and the takeaway block. A crawler reads the outline for
+         * structure and pulls snippets from it, so this is the difference
+         * between a long page and a legible one.
+         */
+        if (heading) {
+          return (
+            <h2
+              key={index}
+              className="mt-8 mb-3 text-lg font-bold leading-snug text-ink"
+            >
+              {heading}
+            </h2>
+          );
+        }
 
         if (bulleted) {
           return (
@@ -124,7 +158,7 @@ export function JournalArticle({
       </header>
 
       <div className="mt-6">
-        <Prose text={post.body} />
+        <Prose text={post.body} headings />
       </div>
 
       {post.diagram ? (

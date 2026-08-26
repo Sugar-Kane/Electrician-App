@@ -2,12 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  findTells,
-  checkPost,
-  hasDash,
-  houseStyle,
   MAX_WORDS,
   MIN_WORDS,
+  americanize,
+  checkPost,
+  findTells,
+  hasDash,
+  houseStyle,
   retryNote,
   stripDashes,
   wordCount,
@@ -316,4 +317,52 @@ test("a clean post passes the whole-post check", () => {
   });
 
   assert.deepEqual(fine.problems, [], JSON.stringify(fine.problems));
+});
+
+test("British spellings are repaired, not rejected", () => {
+  // The one that actually published, in the sentence it published in.
+  assert.equal(
+    americanize("whether there is any discolouration on it or the busbar behind it"),
+    "whether there is any discoloration on it or the busbar behind it",
+  );
+
+  assert.equal(americanize("the neighbour's meter"), "the neighbor's meter");
+  assert.equal(americanize("a 3 metre run of aluminium"), "a 3 meter run of aluminum");
+  assert.equal(americanize("grey mould in the centre"), "gray mold in the center");
+  assert.equal(americanize("we recognised the behaviour"), "we recognized the behavior");
+
+  // Not a spelling. The British word for grounding, which on a page a homeowner
+  // reads while looking at their own panel is worse than a misspelling.
+  assert.equal(americanize("the earthing conductor"), "the grounding conductor");
+  assert.equal(americanize("it was properly earthed"), "it was properly grounded");
+});
+
+test("ordinary words that merely look British are left alone", () => {
+  /*
+   * The reason this is a table and not an `-our` rule. Every word here would
+   * have been mangled in public by the obvious regex.
+   */
+  const safe = "Four of your hours, a pour of flour, a sour tour of the earth and our meter.";
+  assert.equal(americanize(safe), safe);
+
+  // "earth" on its own is an ordinary English word and stays one.
+  assert.equal(americanize("the earth around the rod"), "the earth around the rod");
+});
+
+test("a repaired spelling keeps the case it was written in", () => {
+  assert.equal(americanize("Discolouration around the outlet"), "Discoloration around the outlet");
+  assert.equal(americanize("COLOUR"), "COLOR");
+  assert.equal(americanize("colour"), "color");
+});
+
+test("houseStyle repairs spelling the same pass it repairs dashes", () => {
+  // Both repairs, one call, and neither reported as a problem to retry on.
+  const { text, problems } = houseStyle({
+    text: "We saw discolouration — the breaker was warm.",
+    kind: "lesson",
+  });
+
+  assert.ok(text.includes("discoloration"));
+  assert.equal(hasDash(text), false);
+  assert.equal(problems.some((problem) => problem.kind === "tell"), false);
 });

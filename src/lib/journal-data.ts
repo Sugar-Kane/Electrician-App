@@ -42,6 +42,9 @@ export type JournalPost = {
   businessSlug: string;
   baseCity: string;
   baseState: string;
+  /** For the LocalBusiness structured data, and empty when unset. */
+  businessPhone: string;
+  basePostalCode: string;
 };
 
 function text(value: unknown): string {
@@ -117,6 +120,8 @@ export async function getPublicJournalPost(
     businessSlug: text(row.business_slug),
     baseCity: text(row.base_city),
     baseState: text(row.base_state),
+    businessPhone: text(row.business_phone),
+    basePostalCode: text(row.base_postal_code),
   };
 }
 

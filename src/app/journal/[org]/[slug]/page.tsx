@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { JournalArticle } from "@/components/journal-article";
 import { JournalStructuredData } from "@/components/journal-structured-data";
 import { getPublicJournalPost, verifiedHostFor } from "@/lib/journal-data";
-import { canonicalPostUrl, journalIndexPath } from "@/lib/journal-urls";
+import { canonicalIndexUrl, canonicalPostUrl, journalIndexPath } from "@/lib/journal-urls";
 
 /**
  * One post, at its address on the product's own domain.
@@ -77,6 +77,11 @@ export default async function JournalPostRoute({
           tenantHost: host,
           orgSlug: org,
           postSlug: slug,
+        })}
+        indexUrl={canonicalIndexUrl({
+          appUrl: process.env.NEXT_PUBLIC_APP_URL,
+          tenantHost: host,
+          orgSlug: org,
         })}
       />
       <JournalArticle
