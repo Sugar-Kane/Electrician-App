@@ -24,12 +24,27 @@ export const RECEPTIONIST_NAME = "Maya";
 /** How many misunderstandings before a person takes over. */
 export const MAX_FAILED_TURNS = 2;
 
-export function buildGreeting(businessName: string): string {
-  return `Hi, this is ${RECEPTIONIST_NAME} with ${businessName}. ${RECORDING_NOTICE} How can I help you today?`;
-}
-
 function isSpanish(language: string): boolean {
   return language === "es";
+}
+
+/** The recording notice, which every caller hears before they say anything. */
+export const RECORDING_NOTICE_ES = "Esta llamada puede ser grabada o transcrita.";
+
+/**
+ * The opening line.
+ *
+ * Takes a language because the greeting happens before the caller has spoken,
+ * so the only thing that can inform it is what we already know about this
+ * number. A customer whose record says Spanish should not have to switch us
+ * over every time they call.
+ *
+ * Defaults to English, which is the right answer for a number nobody knows.
+ */
+export function buildGreeting(businessName: string, language: string = "en"): string {
+  return isSpanish(language)
+    ? `Hola, le habla ${RECEPTIONIST_NAME} de ${businessName}. ${RECORDING_NOTICE_ES} ¿En qué le puedo ayudar hoy?`
+    : `Hi, this is ${RECEPTIONIST_NAME} with ${businessName}. ${RECORDING_NOTICE} How can I help you today?`;
 }
 
 function slotSpoken(action: Extract<IntakeAction, { kind: "book" | "propose" }>): string {

@@ -228,3 +228,62 @@ test("the phone instructions rule out anything the caller cannot see", () => {
   assert.match(instructions, /one thing at a time/i);
   assert.match(instructions, /Speech recognition makes mistakes/i);
 });
+
+/*
+ * The bug a real call found: she answered Spanish in English.
+ *
+ * Fixed once by having the model report the language, and left half-fixed —
+ * the phone never read or wrote the customer's language, so `context.language`
+ * was English on every turn of every call. These cover what that cost.
+ */
+
+test("a caller whose record says Spanish is greeted in Spanish", () => {
+  // The greeting happens before anyone speaks, so the record is the only thing
+  // that can inform it.
+  const spanish = buildGreeting("Pacific Plains Electric", "es");
+  assert.match(spanish, /Hola, le habla Maya de Pacific Plains Electric\./);
+  assert.match(spanish, /¿En qué le puedo ayudar hoy\?/);
+
+  // A number nobody knows still opens in English, and so does an unsupported
+  // code — the default is a guess, not a preference.
+  assert.match(buildGreeting("Pacific Plains Electric"), /^Hi, this is Maya with/);
+  assert.match(buildGreeting("Pacific Plains Electric", "fr"), /^Hi, this is Maya with/);
+});
+
+test("a turn too short to judge keeps the language already established", () => {
+  /*
+   * The regression this whole fix exists for. "si" is not evidence of
+   * anything, so the model reports `und`; the answer has to come from what is
+   * remembered. With Spanish remembered she stays in Spanish.
+   */
+  const spanishContext: IntakeContext = {
+    ...context,
+    language: "es",
+    languageSource: "detected",
+  };
+
+  const action = decideIntakeAction({
+    decision: { name: "ask_for", input: { field: "address", language: "und" } },
+    customerText: "si",
+    context: spanishContext,
+  });
+
+  assert.equal(action.language, "es");
+  // Nothing changed, so nothing is written. The write is per change, not per turn.
+  assert.equal(action.languageChanged, false);
+});
+
+test("the owner's pin outranks anything heard on the call", () => {
+  // Someone pinned to English who says a Spanish sentence stays in English:
+  // the pin is a decision, not a guess, and a phone call does not undo it.
+  const pinned: IntakeContext = { ...context, language: "en", languageSource: "owner" };
+
+  const action = decideIntakeAction({
+    decision: { name: "ask_for", input: { field: "address", language: "es" } },
+    customerText: "Necesito un electricista",
+    context: pinned,
+  });
+
+  assert.equal(action.language, "en");
+  assert.equal(action.languageChanged, false);
+});

@@ -152,6 +152,69 @@ export async function loadIntakeContext(input: {
 }
 
 /**
+ * What a customer's record says about the language to use.
+ *
+ * The text path reads these two columns inline; the phone paths did not read
+ * them at all, so `loadIntakeContext` fell to its English defaults on every
+ * turn of every call. That is fine for one turn and wrong across a
+ * conversation: a caller who has been speaking Spanish says "sí", the model
+ * reports the turn as too short to judge, and with nothing remembered the
+ * fallback is English.
+ *
+ * Returns the defaults for a caller who is nobody yet, which is the same thing
+ * the phone paths did before and is correct: an unknown number has no language.
+ */
+export async function loadCustomerLanguage(
+  database: Database,
+  customerId: string,
+): Promise<{ language: LanguageCode; languageSource: LanguageSource }> {
+  if (!customerId) {
+    return { language: readLanguage(undefined), languageSource: readLanguageSource(undefined) };
+  }
+
+  const { data } = await database
+    .from("customers")
+    .select("preferred_language, language_source")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  return {
+    language: readLanguage(data?.preferred_language),
+    languageSource: readLanguageSource(data?.language_source),
+  };
+}
+
+/**
+ * Remember the language, when it turned out to be a new one.
+ *
+ * Lifted out of the text runner so the phone shares it rather than growing a
+ * second copy. The decision has already been made — `decideIntakeAction` ran
+ * the detection through `resolveLanguage`, which is where the owner's pin wins
+ * — so this writes what it was told and decides nothing itself.
+ *
+ * `languageChanged` is false for almost every turn, which is the point: the
+ * language usually has not changed, and a write per inbound turn is a write per
+ * inbound turn.
+ *
+ * The `language_source = 'detected'` filter is belt and braces against a race:
+ * the owner could have pinned this customer between the read at the top of the
+ * turn and this write, and their choice is not something a caller undoes.
+ */
+export async function recordDetectedLanguage(
+  database: Database,
+  customerId: string,
+  action: IntakeAction,
+) {
+  if (!customerId || !action.languageChanged) return;
+
+  await database
+    .from("customers")
+    .update({ preferred_language: action.language, language_source: "detected" })
+    .eq("id", customerId)
+    .eq("language_source", "detected");
+}
+
+/**
  * Find the business a caller reached, by the number they dialled.
  *
  * Matched on the last ten digits, because the number Twilio delivers is E.164
