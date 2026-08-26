@@ -5,7 +5,7 @@ import { slugForRequestHost } from "@/app/book/by-host/page";
 import { JournalArticle } from "@/components/journal-article";
 import { JournalStructuredData } from "@/components/journal-structured-data";
 import { getPublicJournalPost, verifiedHostFor } from "@/lib/journal-data";
-import { canonicalPostUrl, journalIndexPath } from "@/lib/journal-urls";
+import { canonicalIndexUrl, canonicalPostUrl, journalIndexPath } from "@/lib/journal-urls";
 
 /**
  * One post on the electrician's own domain, which is the address that should
@@ -89,6 +89,11 @@ export default async function TenantJournalPost({
           tenantHost: host,
           orgSlug: org,
           postSlug: slug,
+        })}
+        indexUrl={canonicalIndexUrl({
+          appUrl: process.env.NEXT_PUBLIC_APP_URL,
+          tenantHost: host,
+          orgSlug: org,
         })}
       />
       {/* Relative, so every link stays on the hostname the reader came in on. */}

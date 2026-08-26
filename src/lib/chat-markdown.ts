@@ -49,3 +49,29 @@ export function parseChatMarkdown(value: string): Line[] {
     return { segments: parseSegments(text), bullet };
   });
 }
+
+/**
+ * The heading text of a paragraph that is one, and "" for everything else.
+ *
+ * A model writes its section headings as `**Like this**` alone on a line, and
+ * rendering that as a paragraph containing a run of bold text is literally
+ * correct and structurally wrong: a 700 word article came out with one `<h1>`,
+ * one `<h2>` for the takeaway block, and no outline whatsoever in between.
+ * Headings are what a crawler reads for structure and what a search snippet
+ * gets pulled from, so a heading has to be a heading.
+ *
+ * Deliberately narrow, because a bolded sentence inside prose is not a section
+ * heading: one line, every run bold, short, not a bullet, and not closed with a
+ * full stop the way a sentence is.
+ */
+export function headingOf(lines: Line[], limit = 80): string {
+  if (lines.length !== 1) return "";
+
+  const [line] = lines;
+  if (line.bullet || line.segments.length === 0) return "";
+  if (!line.segments.every((segment) => segment.bold)) return "";
+
+  const text = line.segments.map((segment) => segment.text).join("").trim();
+  if (!text || text.length > limit || text.endsWith(".")) return "";
+  return text;
+}
