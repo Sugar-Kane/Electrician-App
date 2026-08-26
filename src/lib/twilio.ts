@@ -25,6 +25,83 @@ export function isTwilioConfigured() {
   return credentials() !== null;
 }
 
+export function matchesTwilioAccountSid(accountSid: string) {
+  return credentials()?.accountSid === accountSid;
+}
+
+function twilioAuthorization(auth: TwilioCredentials) {
+  return `Basic ${Buffer.from(`${auth.accountSid}:${auth.authToken}`).toString("base64")}`;
+}
+
+export type TwilioCallDetails = {
+  sid: string;
+  from: string;
+  to: string;
+  status: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationSeconds: number | null;
+};
+
+function asIsoDate(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+/** Read the authoritative phone numbers and timing for a signed CallSid. */
+export async function fetchTwilioCall(callSid: string): Promise<TwilioCallDetails | null> {
+  const auth = credentials();
+  if (!auth) return null;
+
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls/${callSid}.json`,
+      { headers: { Authorization: twilioAuthorization(auth) }, cache: "no-store" },
+    );
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as Record<string, unknown>;
+    const duration =
+      typeof payload.duration === "string" && /^\d+$/.test(payload.duration)
+        ? Number(payload.duration)
+        : null;
+
+    return {
+      sid: typeof payload.sid === "string" ? payload.sid : "",
+      from: typeof payload.from === "string" ? payload.from : "",
+      to: typeof payload.to === "string" ? payload.to : "",
+      status: typeof payload.status === "string" ? payload.status : "completed",
+      startedAt: asIsoDate(payload.start_time),
+      endedAt: asIsoDate(payload.end_time),
+      durationSeconds: Number.isSafeInteger(duration) ? duration : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch recording bytes without ever putting Twilio credentials in a browser. */
+export async function fetchTwilioRecordingMedia(input: {
+  recordingSid: string;
+  range?: string | null;
+}): Promise<Response | null> {
+  const auth = credentials();
+  if (!auth) return null;
+
+  const headers: Record<string, string> = { Authorization: twilioAuthorization(auth) };
+  if (input.range) headers.Range = input.range;
+
+  try {
+    return await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Recordings/${input.recordingSid}.mp3`,
+      { headers, cache: "no-store" },
+    );
+  } catch {
+    return null;
+  }
+}
+
 export type TwilioSendResult =
   | { ok: true; providerMessageId: string; status: string }
   | { ok: false; errorCode: string; errorDetail: string };
@@ -64,7 +141,7 @@ export async function sendSms(input: {
       {
         method: "POST",
         headers: {
-          Authorization: `Basic ${Buffer.from(`${auth.accountSid}:${auth.authToken}`).toString("base64")}`,
+          Authorization: twilioAuthorization(auth),
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: form,
