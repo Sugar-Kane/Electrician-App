@@ -6,6 +6,7 @@ import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
+import { JobCallRecord } from "@/components/job-call-record";
 import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
@@ -16,6 +17,7 @@ import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
 import { getJob, getJobContracts, getJobControls, getJobHistory } from "@/lib/job-data";
+import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
 import { getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
@@ -76,7 +78,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       getJobHistory(jobId),
     ]);
 
-  const conversations = messaging ? await getJobConversation(messaging, jobId) : [];
+  const [conversations, callRecord] = messaging
+    ? await Promise.all([getJobConversation(messaging, jobId), getJobIntake(messaging, jobId)])
+    : [[], null];
 
   const fullAddress = `${job.address}, ${job.city}`;
   const hasAddress = fullAddress.trim() !== ",";
@@ -180,21 +184,71 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       )}
 
       {job.summary || job.serviceNotes || job.accessNotes ? (
-        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <h2 className="text-sm font-semibold">What the customer said</h2>
-          {job.summary ? (
-            <p className="mt-2 text-sm leading-6 text-ink-muted">{job.summary}</p>
-          ) : null}
-          {job.serviceNotes ? (
-            <p className="mt-3 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
-              {job.serviceNotes}
-            </p>
-          ) : null}
-          {job.accessNotes ? (
-            <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
-              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
-              {job.accessNotes}
-            </p>
+        /*
+         * The summary, and the intake behind it one tap away.
+         *
+         * Five questions were asked before this job existed — how much of the
+         * house is out, whether a breaker was tried, whether anybody will be
+         * home — and every one of them was landing in a booking request nobody
+         * opens. They are the answers that decide what goes in the van, so they
+         * belong on the line they explain.
+         *
+         * A `<details>` rather than a button and some state, for the reason the
+         * booking-requests page gives: it works before any JavaScript arrives,
+         * which on a van's signal is most of the time. The summary stays
+         * readable closed, so nothing that was on this card has moved.
+         */
+        <section className="mt-3 rounded-panel border border-line bg-surface">
+          {callRecord ? (
+            <details className="group">
+              <summary className="tap-target flex cursor-pointer list-none items-start justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">What the customer said</span>
+                  {job.summary ? (
+                    <span className="mt-2 block text-sm leading-6 text-ink-muted">
+                      {job.summary}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-brand">
+                  <span className="group-open:hidden">Read it</span>
+                  <span className="hidden group-open:inline">Close</span>
+                  <ChevronDown
+                    className="h-4 w-4 shrink-0 transition group-open:rotate-180"
+                    aria-hidden
+                  />
+                </span>
+              </summary>
+
+              <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+                <JobCallRecord record={callRecord} timeZone={messaging?.timezone ?? "UTC"} />
+              </div>
+            </details>
+          ) : (
+            // Nothing to open — a job typed in by hand has no call behind it,
+            // and a disclosure onto an empty box is worse than none.
+            <div className="p-4 sm:p-5">
+              <h2 className="text-sm font-semibold">What the customer said</h2>
+              {job.summary ? (
+                <p className="mt-2 text-sm leading-6 text-ink-muted">{job.summary}</p>
+              ) : null}
+            </div>
+          )}
+
+          {job.serviceNotes || job.accessNotes ? (
+            <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+              {job.serviceNotes ? (
+                <p className="rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
+                  {job.serviceNotes}
+                </p>
+              ) : null}
+              {job.accessNotes ? (
+                <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
+                  {job.accessNotes}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </section>
       ) : null}
