@@ -5,6 +5,7 @@ import { writeJournalPost, type DraftedPost } from "@/lib/claude";
 import { diagramLabels, isDiagramKey } from "@/lib/journal-diagrams";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
 import {
+  completionTime,
   describeSource,
   postSlug,
   readJournalSource,
@@ -121,21 +122,40 @@ export async function writePostForJob(input: {
       return { wrote: false, reason: "This job already has a post." };
     }
 
-    const { data: job } = await database
+    /*
+     * `updated_at`, not `completed_at`. The latter is not a column on `jobs`,
+     * and naming it here does not yield null, it fails the whole select — so
+     * the job read as missing and every completed job silently produced
+     * nothing. `completionTime` below gets the real timestamp off the progress
+     * rows.
+     */
+    const { data: job, error: jobError } = await database
       .from("jobs")
       .select(
-        "id, organization_id, customer_id, property_id, category, customer_description, ai_summary, technician_notes, completed_at",
+        "id, organization_id, customer_id, property_id, category, customer_description, ai_summary, technician_notes, updated_at",
       )
       .eq("id", input.jobId)
       .maybeSingle();
+
+    // Distinguished, because a broken query and a deleted job produced the
+    // same sentence and only one of them is the owner's problem.
+    if (jobError) {
+      console.error("journal job read failed", jobError);
+      return { wrote: false, reason: "That job could not be read." };
+    }
 
     if (!job) return { wrote: false, reason: "That job could not be found." };
 
     const organizationId = text(job.organization_id);
     const row = job as Record<string, unknown>;
 
-    const [{ data: organization }, { data: propertyRow }, { data: customer }, { data: lines }] =
-      await Promise.all([
+    const [
+      { data: organization },
+      { data: propertyRow },
+      { data: customer },
+      { data: lines },
+      { data: progress },
+    ] = await Promise.all([
         database
           .from("organizations")
           .select("name, base_city, base_state")
@@ -160,6 +180,12 @@ export async function writePostForJob(input: {
           .select("description")
           .eq("job_id", input.jobId)
           .limit(20),
+        // Where the completion timestamp actually lives, one row per
+        // technician. Read alongside the rest rather than after it.
+        database
+          .from("job_technician_progress")
+          .select("completed_at")
+          .eq("job_id", input.jobId),
       ]);
 
     const property = asRecord(propertyRow);
@@ -190,7 +216,13 @@ export async function writePostForJob(input: {
       categoryLabel: jobCategoryLabel(text(row.category)),
       town: text(property.city) || text(organization?.base_city),
       state: text(property.state) || text(organization?.base_state),
-      completedAt: text(row.completed_at) || new Date().toISOString(),
+      completedAt:
+        completionTime({
+          progress: ((progress ?? []) as Record<string, unknown>[]).map((entry) =>
+            text(entry.completed_at),
+          ),
+          updatedAt: text(row.updated_at),
+        }) || new Date().toISOString(),
       parts: ((lines ?? []) as Record<string, unknown>[]).map((line) => text(line.description)),
       identifiers: forbidden,
     });

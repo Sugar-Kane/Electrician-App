@@ -1,5 +1,6 @@
 import "server-only";
 
+import { completionTime } from "@/lib/journal-source";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -121,15 +122,24 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
 
   const supabase = asFlexibleClient(await createClient());
 
-  const [{ data: jobs, error: jobsError }, { data: written, error: writtenError }] =
-    await Promise.all([
+  const [
+    { data: jobs, error: jobsError },
+    { data: written, error: writtenError },
+    { data: progress, error: progressError },
+  ] = await Promise.all([
     supabase
       .from("jobs")
-      .select("id, job_number, customer_description, ai_summary, completed_at")
+      /*
+       * `updated_at`, because `completed_at` is not a column here — it lives on
+       * `job_technician_progress`. Naming it failed the select outright, so
+       * this list came back empty and the section never rendered: not "no jobs
+       * to write up" but "the query was rejected", which looks identical.
+       */
+      .select("id, job_number, customer_description, ai_summary, updated_at")
       .eq("organization_id", context.organizationId)
       .eq("status", "completed")
       .is("archived_at", null)
-      .order("completed_at", { ascending: false, nullsFirst: false })
+      .order("updated_at", { ascending: false, nullsFirst: false })
       /*
        * Fetched wide and cut narrow, because the cut has to happen after the
        * filter. Limiting to 50 here and then removing the ones that already
@@ -146,12 +156,27 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
       // job stays offered, because the whole point of showing the refusal is
       // that the owner can act on it and try again.
       .neq("status", "declined"),
+    // The real completion times, scoped by organization so this runs beside the
+    // other two rather than waiting on a list of job ids.
+    supabase
+      .from("job_technician_progress")
+      .select("job_id, completed_at")
+      .eq("organization_id", context.organizationId)
+      .not("completed_at", "is", null),
   ]);
 
   // Said out loud rather than shown as "no jobs". A failed read and a business
   // with nothing to write up look identical on screen and are not the same.
   if (jobsError) console.error("writable jobs read failed", jobsError);
   if (writtenError) console.error("written jobs read failed", writtenError);
+  if (progressError) console.error("job progress read failed", progressError);
+
+  const finishedAt = new Map<string, string[]>();
+  for (const entry of (progress ?? []) as Record<string, unknown>[]) {
+    const jobId = text(entry.job_id);
+    if (!jobId) continue;
+    finishedAt.set(jobId, [...(finishedAt.get(jobId) ?? []), text(entry.completed_at)]);
+  }
 
   const taken = new Set(
     ((written ?? []) as Record<string, unknown>[]).map((row) => text(row.job_id)),
@@ -164,6 +189,9 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
       id: text(row.id),
       jobNumber: row.job_number ? String(row.job_number) : "",
       description: text(row.customer_description) || text(row.ai_summary),
-      completedAt: text(row.completed_at),
+      completedAt: completionTime({
+        progress: finishedAt.get(text(row.id)) ?? [],
+        updatedAt: text(row.updated_at),
+      }),
     }));
 }
