@@ -35,7 +35,7 @@ test("every caller is told the call may be recorded, in the first thing said", (
   assert.match(instructions, /Open with exactly/);
 });
 
-test("Sofia introduces herself personally and asks how she can help today", () => {
+test("Maya introduces herself personally and asks how she can help today", () => {
   const instructions = buildRealtimeInstructions({
     ...CONTEXT,
     businessName: "Pacific Plains Electric",
@@ -43,7 +43,7 @@ test("Sofia introduces herself personally and asks how she can help today", () =
 
   assert.match(
     instructions,
-    /Hi, this is Sofia with Pacific Plains Electric\..*How can I help you today\?/,
+    /Hi, this is Maya with Pacific Plains Electric\..*How can I help you today\?/,
   );
 });
 

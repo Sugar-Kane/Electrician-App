@@ -19,7 +19,7 @@ import type { IntakeAction, IntakeContext } from "@/lib/sms-intake";
 export const RECORDING_NOTICE = "This call may be recorded or transcribed.";
 
 /** A stable human name makes the automated greeting feel like an introduction. */
-export const RECEPTIONIST_NAME = "Sofia";
+export const RECEPTIONIST_NAME = "Maya";
 
 /** How many misunderstandings before a person takes over. */
 export const MAX_FAILED_TURNS = 2;

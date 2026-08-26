@@ -58,7 +58,7 @@ test("every caller is told the call may be recorded, before they say anything", 
   );
   assert.equal(
     greeting,
-    `Hi, this is Sofia with Pacific Plains Electric. ${RECORDING_NOTICE} How can I help you today?`,
+    `Hi, this is Maya with Pacific Plains Electric. ${RECORDING_NOTICE} How can I help you today?`,
   );
 });
 
