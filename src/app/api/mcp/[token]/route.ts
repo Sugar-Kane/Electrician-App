@@ -10,6 +10,16 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SERVER_VERSION = "1.2.0";
 
+/*
+ * Room for the confirmations that `runBookingTool` schedules with `after`.
+ *
+ * `after` runs inside the route's budget, and this route set none — so the work
+ * that tells a customer their appointment exists was living on whatever the
+ * platform default happened to be. Stated here so the sends have somewhere to
+ * finish, and so the number is a decision rather than a default.
+ */
+export const maxDuration = 60;
+
 function json(body: unknown, status: number) {
   return NextResponse.json(body, { status });
 }

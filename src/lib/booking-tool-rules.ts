@@ -1,4 +1,5 @@
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
+import { toE164 } from "./phone-format.ts";
 import {
   INTAKE_QUESTIONS,
   MINIMUM_INTAKE_ANSWERS,
@@ -185,8 +186,41 @@ export function customerWords(args: Record<string, unknown>): string {
 }
 
 /** The number the model says the caller gave, if it was asked to pass one. */
+/**
+ * The number to reach the caller on, in the form a carrier accepts.
+ *
+ * Empty when what the model heard is not a number anybody could be reached on.
+ * This returned the raw string once, and a call where speech-to-text rendered a
+ * mobile as `613432210` — nine digits — booked a visit for somebody who then
+ * received nothing at all. Twilio refused every send with `21211`, and the
+ * customer's only record of the appointment was the memory of the phone call.
+ *
+ * `toE164` is the same function the settings form uses, so a number saved by
+ * the owner and a number heard by the receptionist are held to one standard.
+ */
 export function callerPhone(args: Record<string, unknown>): string {
-  return text(args.caller_phone);
+  return toE164(text(args.caller_phone));
+}
+
+/**
+ * Why this caller cannot be booked yet, when the number is the problem.
+ *
+ * Written for the model to act on rather than for a person to read: it is still
+ * on the phone with them, and asking again is free. Empty when there is nothing
+ * wrong.
+ */
+export function unreachableCaller(name: string, args: Record<string, unknown>): string {
+  const heard = text(args.caller_phone).trim();
+
+  if (!heard) {
+    return `NOT BOOKED. Ask the caller for the best phone number to reach them on, read it back to them to check, then call ${name} again with caller_phone set.`;
+  }
+
+  if (!toE164(heard)) {
+    return `NOT BOOKED. "${heard}" is not a phone number anybody can be reached on, so nothing would ever reach this caller. Ask them to say their number again one digit at a time, read it back to them, then call ${name} again.`;
+  }
+
+  return "";
 }
 
 /** An email address the caller offered. Optional everywhere it appears. */
