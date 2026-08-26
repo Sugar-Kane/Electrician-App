@@ -44,8 +44,8 @@ export function relativeDay(startIso: string, nowIso: string, timeZone: string):
   return "";
 }
 
-function timeOfDay(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+function timeOfDay(iso: string, timeZone: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone,
     hour: "numeric",
     minute: "2-digit",
@@ -53,29 +53,49 @@ function timeOfDay(iso: string, timeZone: string): string {
 }
 
 /**
+ * "Today" and "Tomorrow" are the two words `Intl` will not give us.
+ *
+ * Everything else in the label — the weekday, the month, the am/pm — comes out
+ * of the locale, so this is the whole translation. A locale nobody listed here
+ * falls back to English rather than losing the relative day, which is the part
+ * a customer actually reasons with.
+ */
+const RELATIVE_WORDS: Record<string, { today: string; tomorrow: string }> = {
+  "en-US": { today: "Today", tomorrow: "Tomorrow" },
+  "es-US": { today: "Hoy", tomorrow: "Mañana" },
+};
+
+/**
  * "Tomorrow (Mon, Aug 10), 10:00 AM-12:00 PM".
  *
  * The relative day leads, because it is the part a caller actually reasons
  * with; the date follows so nothing is ambiguous when they write it down.
+ *
+ * `locale` defaults to English, so the schedule screens the electrician reads
+ * are untouched. It is passed only where a customer is being written to in a
+ * language they chose: "podemos ir Tomorrow (Thu, Aug 27)" is three English
+ * words in the middle of a Spanish sentence, which reads as a machine.
  */
 export function slotLabel(
   start: string,
   end: string,
   timeZone: string,
   nowIso?: string,
+  locale = "en-US",
 ): string {
-  const day = new Intl.DateTimeFormat("en-US", {
+  const day = new Intl.DateTimeFormat(locale, {
     timeZone,
     weekday: "short",
     month: "short",
     day: "numeric",
   }).format(new Date(start));
 
-  const window = `${timeOfDay(start, timeZone)}-${timeOfDay(end, timeZone)}`;
+  const window = `${timeOfDay(start, timeZone, locale)}-${timeOfDay(end, timeZone, locale)}`;
   const relative = nowIso ? relativeDay(start, nowIso, timeZone) : "";
+  const words = RELATIVE_WORDS[locale] ?? RELATIVE_WORDS["en-US"]!;
 
-  if (relative === "today") return `Today (${day}), ${window}`;
-  if (relative === "tomorrow") return `Tomorrow (${day}), ${window}`;
+  if (relative === "today") return `${words.today} (${day}), ${window}`;
+  if (relative === "tomorrow") return `${words.tomorrow} (${day}), ${window}`;
   return `${day}, ${window}`;
 }
 

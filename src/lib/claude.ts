@@ -563,6 +563,350 @@ export async function lookUpListPrice(input: {
   }
 }
 
+/* ---------------------------------------------------------------- journals */
+
+/**
+ * How long one attempt at a post may take.
+ *
+ * Both journal calls retry once, so the budget that matters is twice this. The
+ * routes that call them allow 120 seconds, which leaves room for the database
+ * reads either side. Raising this without raising those `maxDuration` values
+ * puts the write back to being killed on the retry.
+ */
+const ATTEMPT_TIMEOUT_MS = 50_000;
+
+/**
+ * Room for the thinking as well as the post.
+ *
+ * On Opus 5 thinking is on by default and its tokens count against
+ * `max_tokens`, so a ceiling sized for the prose alone can be spent reasoning
+ * before a single `tool_use` block is emitted. The turn then ends with
+ * `stop_reason: "max_tokens"`, there is no tool call to read, and the whole
+ * draft is discarded — which is what 3000 was inviting.
+ *
+ * 16000 is the documented default for a non-streaming request. It is a ceiling
+ * rather than a target: a post is about 1100 tokens and costs nothing extra for
+ * the headroom above it.
+ */
+const JOURNAL_MAX_TOKENS = 16_000;
+
+/**
+ * Less thinking than the default, on purpose.
+ *
+ * Default effort is `high`, which is the right setting for a problem that has
+ * to be reasoned through. This is prose against a brief, with a deterministic
+ * checker behind it and a retry that names what was wrong — the quality comes
+ * from the check, not from the model deliberating longer. Medium keeps the
+ * latency inside the route's budget, which matters because this runs where
+ * nobody is watching a spinner.
+ */
+const JOURNAL_EFFORT = "medium" as const;
+
+const JOURNAL_TOOLS = [
+  {
+    name: "publish_post",
+    description: "Write the post. Use this when there is genuinely something for a homeowner to learn here.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description:
+            "The question a homeowner would type into a search box, worded as they would word it. Not a headline about the business.",
+        },
+        dek: { type: "string", description: "One sentence under the title. Under 160 characters." },
+        body: {
+          type: "string",
+          description:
+            "The post. Plain prose in short paragraphs separated by a blank line. **bold** and - bullets are the only formatting.",
+        },
+        lesson: {
+          type: "string",
+          description:
+            "Two or three sentences a reader can take away and use, written for somebody who is not an electrician.",
+        },
+        diagram: {
+          type: "string",
+          description: "The key of one diagram from the catalogue, or an empty string for none.",
+        },
+        diagram_labels: {
+          type: "array",
+          items: { type: "string" },
+          description: "One short label per slot, in the order the catalogue lists them. Four words each at most.",
+        },
+        diagram_caption: { type: "string", description: "One line under the diagram. Empty string for none." },
+      },
+      required: ["title", "dek", "body", "lesson", "diagram", "diagram_labels", "diagram_caption"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "decline",
+    description:
+      "Refuse to write a post. Use this when the job description is not a real electrical complaint, when there is nothing a reader could learn, or when writing anything true would mean guessing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reason: { type: "string", description: "One sentence, for the owner to read." },
+      },
+      required: ["reason"],
+      additionalProperties: false,
+    },
+  },
+] as const;
+
+export type DraftedPost = {
+  title: string;
+  dek: string;
+  body: string;
+  lesson: string;
+  diagram: string;
+  diagramLabels: string[];
+  diagramCaption: string;
+};
+
+export type JournalDraft =
+  | { ok: true; post: DraftedPost }
+  | { ok: false; reason: string };
+
+function readDraft(input: Record<string, unknown>): DraftedPost {
+  const read = (key: string) => (typeof input[key] === "string" ? (input[key] as string).trim() : "");
+  return {
+    title: read("title"),
+    dek: read("dek"),
+    body: read("body"),
+    lesson: read("lesson"),
+    diagram: read("diagram"),
+    diagramLabels: Array.isArray(input.diagram_labels) ? (input.diagram_labels as string[]) : [],
+    diagramCaption: read("diagram_caption"),
+  };
+}
+
+/**
+ * Write up a finished job as something a stranger can learn from.
+ *
+ * Refusing is a first-class answer, not a failure. Production holds a job whose
+ * description is an offensive one-liner and whose notes are a dictation test;
+ * `readJournalSource` catches that one before it reaches here, but the model is
+ * the second line and it needs a way to say no that is not an exception.
+ *
+ * Two attempts at most. `houseStyle` repairs the em dashes and reports what it
+ * cannot repair, and the second attempt is given that list by name — a model
+ * told "do not sound like an AI" produces the same draft again, and a model told
+ * "you used *delve into* and *a testament to*" does not.
+ *
+ * Returns null on any failure, like everything else in this file. No post is
+ * written, the job says so, and nobody is shown a stack trace.
+ */
+export async function writeJournalPost(input: {
+  system: string;
+  brief: string;
+  kind: "story" | "lesson";
+  forbidden: string[];
+  /** Applied to a draft; returns the repaired text and what is still wrong. */
+  check: (draft: DraftedPost) => { post: DraftedPost; problems: string };
+}): Promise<JournalDraft | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const turns: Anthropic.MessageParam[] = [{ role: "user", content: input.brief }];
+
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await anthropic.messages.create(
+        {
+          model: "claude-opus-5",
+          max_tokens: JOURNAL_MAX_TOKENS,
+          output_config: { effort: JOURNAL_EFFORT },
+          system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
+          tools: JOURNAL_TOOLS as unknown as Anthropic.Tool[],
+          tool_choice: { type: "any" },
+          messages: turns,
+        },
+        // Two attempts have to fit inside the calling route's `maxDuration`
+        // together, not one at a time: 90 seconds each would overrun a 120
+        // second budget on the retry and be killed with nothing written.
+        { timeout: ATTEMPT_TIMEOUT_MS },
+      );
+
+      if (response.stop_reason === "refusal") {
+        return { ok: false, reason: "There was nothing here that could be written up." };
+      }
+
+      const call = response.content.find((block) => block.type === "tool_use");
+      if (!call || call.type !== "tool_use") {
+        // Almost always `max_tokens`, and invisible without this: the turn
+        // succeeded, there is simply nothing in it to act on.
+        console.error("journal draft returned no tool call", response.stop_reason);
+        return null;
+      }
+
+      if (call.name === "decline") {
+        const reason = (call.input as { reason?: unknown })?.reason;
+        return {
+          ok: false,
+          reason: typeof reason === "string" && reason.trim() ? reason.trim().slice(0, 300) : "Not enough to write about.",
+        };
+      }
+
+      const { post, problems } = input.check(readDraft((call.input ?? {}) as Record<string, unknown>));
+      if (!problems) return { ok: true, post };
+
+      // Last attempt, and it still reads wrong. No post is better than one that
+      // announces itself as machine-written on the business's own domain.
+      if (attempt === 1) {
+        console.error("journal draft rejected twice", problems);
+        return { ok: false, reason: "The draft did not read well enough to publish." };
+      }
+
+      turns.push(
+        { role: "assistant", content: response.content },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: call.id, content: "Not published. Fix these and call publish_post again:" },
+            { type: "text", text: problems },
+          ],
+        } as Anthropic.MessageParam,
+      );
+    }
+
+    return null;
+  } catch (error) {
+    console.error("journal draft failed", error);
+    return null;
+  }
+}
+
+const EDIT_TOOL = {
+  name: "rewrite_post",
+  description: "Return the post with the requested change made, and nothing else changed.",
+  input_schema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "Unchanged unless the change asks for it." },
+      dek: { type: "string" },
+      body: { type: "string" },
+      lesson: { type: "string" },
+    },
+    required: ["title", "dek", "body", "lesson"],
+    additionalProperties: false,
+  },
+} as const;
+
+/**
+ * Change a published post, on the owner's instruction.
+ *
+ * The whole post goes out and the whole post comes back, rather than a splice.
+ * That is the opposite of `spliceScope`, and for a reason: a contract has terms
+ * a model must not be able to reach, so the edit is a substring replacement
+ * that fails closed. A journal post is entirely the model's own prose with
+ * nothing legally load-bearing in it, and asking for a fragment back produces
+ * paragraphs that no longer join up with the ones around them.
+ *
+ * What keeps it honest is the caller: the returned text goes through the same
+ * `houseStyle` the original was checked against, so an edit cannot reintroduce
+ * an em dash, a tell, a customer's name, or an outcome claim on a lesson post.
+ * The previous version is kept either way.
+ */
+export async function editJournalPost(input: {
+  system: string;
+  post: { title: string; dek: string; body: string; lesson: string };
+  instruction: string;
+  check: (draft: DraftedPost) => { post: DraftedPost; problems: string };
+}): Promise<DraftedPost | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const instruction = input.instruction.trim().slice(0, 1000);
+  if (!instruction) return null;
+
+  const asText = [
+    `TITLE: ${input.post.title}`,
+    `DEK: ${input.post.dek}`,
+    "",
+    "BODY:",
+    input.post.body,
+    "",
+    "LESSON:",
+    input.post.lesson,
+  ].join("\n");
+
+  const turns: Anthropic.MessageParam[] = [
+    {
+      role: "user",
+      content: [
+        "Here is a post that is already published:",
+        "",
+        asText,
+        "",
+        `The change asked for: ${instruction}`,
+        "",
+        "Make that change and leave everything else alone. Return all four fields, including the ones you did not touch.",
+      ].join("\n"),
+    },
+  ];
+
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await anthropic.messages.create(
+        {
+          model: "claude-opus-5",
+          max_tokens: JOURNAL_MAX_TOKENS,
+          output_config: { effort: JOURNAL_EFFORT },
+          system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
+          tools: [EDIT_TOOL] as unknown as Anthropic.Tool[],
+          tool_choice: { type: "tool", name: EDIT_TOOL.name },
+          messages: turns,
+        },
+        { timeout: ATTEMPT_TIMEOUT_MS },
+      );
+
+      const call = response.content.find((block) => block.type === "tool_use");
+      if (!call || call.type !== "tool_use") {
+        console.error("journal edit returned no tool call", response.stop_reason);
+        return null;
+      }
+
+      const raw = (call.input ?? {}) as Record<string, unknown>;
+      const read = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string).trim() : "");
+
+      const { post, problems } = input.check({
+        title: read("title"),
+        dek: read("dek"),
+        body: read("body"),
+        lesson: read("lesson"),
+        // An edit never changes the drawing. The owner asked about the words.
+        diagram: "",
+        diagramLabels: [],
+        diagramCaption: "",
+      });
+
+      if (!problems) return post;
+      if (attempt === 1) {
+        console.error("journal edit rejected twice", problems);
+        return null;
+      }
+
+      turns.push(
+        { role: "assistant", content: response.content },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: call.id, content: "Not saved. Fix these and return it again:" },
+            { type: "text", text: problems },
+          ],
+        } as Anthropic.MessageParam,
+      );
+    }
+
+    return null;
+  } catch (error) {
+    console.error("journal edit failed", error);
+    return null;
+  }
+}
+
 export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
 export type AgentReply = {
   text: string;

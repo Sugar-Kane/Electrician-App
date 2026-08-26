@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { CustomerLanguageControl } from "@/components/customer-language-control";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
@@ -101,6 +102,8 @@ export default async function CustomerPage({
             </div>
           ) : null}
         </dl>
+
+        <CustomerLanguageControl customerId={profile.id} language={profile.language} />
       </section>
 
       {profile.openRequests.length > 0 ? (

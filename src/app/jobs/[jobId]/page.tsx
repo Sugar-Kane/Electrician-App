@@ -37,6 +37,23 @@ import { showsWorkspace } from "@/lib/job-workflow";
  * do I finish. Everything else is one tap away and nothing else is on screen.
  */
 
+/*
+ * A ceiling, not a reservation, and it is here for one thing.
+ *
+ * Completing a job schedules the work-journal write with `after()`, which runs
+ * once the response has gone but is still billed to this segment's budget. On
+ * the platform default that budget is measured in seconds and a model call is
+ * measured in tens of them, so the function would be killed part-way through
+ * every write and no post would ever appear — silently, because the tap that
+ * started it already succeeded.
+ *
+ * 120 covers two attempts at 45 seconds plus the reads around them. Nothing
+ * else on this page runs long, and a ceiling costs nothing when it is not
+ * reached. Every other route here that talks to a model sets one for the same
+ * reason: the assistant 60, the receipt scanner 90.
+ */
+export const maxDuration = 120;
+
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
 }

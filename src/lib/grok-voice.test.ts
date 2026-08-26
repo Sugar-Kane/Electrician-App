@@ -24,6 +24,8 @@ const CONTEXT: IntakeContext = {
   serviceArea: "50 miles of the shop",
   nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
+  language: "en",
+  languageSource: "detected",
 };
 
 test("every caller is told the call may be recorded, in the first thing said", () => {

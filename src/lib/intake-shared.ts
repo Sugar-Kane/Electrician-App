@@ -2,7 +2,14 @@ import "server-only";
 
 import { recordActivity } from "@/lib/activity";
 import { decideHold, payLinkFor } from "@/lib/booking-hold";
+import {
+  readLanguage,
+  readLanguageSource,
+  type LanguageCode,
+  type LanguageSource,
+} from "@/lib/customer-language";
 import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
+import { localeFor } from "@/lib/intake-phrases";
 import { calendarDate, nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
 import { getStripe } from "@/lib/stripe";
@@ -41,6 +48,15 @@ export async function loadIntakeContext(input: {
   database: Database;
   organizationId: string;
   isFirstReply: boolean;
+  /**
+   * What this customer's record says, when the caller knows who they are.
+   *
+   * Passed in rather than looked up here because this function is shared with
+   * the phone path, where the caller may be nobody yet. Absent, both fall to
+   * the defaults, which is exactly what every customer read before this.
+   */
+  language?: LanguageCode;
+  languageSource?: LanguageSource;
 }): Promise<LoadedContext> {
   const { database, organizationId } = input;
 
@@ -87,6 +103,18 @@ export async function loadIntakeContext(input: {
         start: slot.slot_start,
         end: slot.slot_end,
         label: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso),
+        /*
+         * Both wordings, built here because this is where the timezone and the
+         * business's "now" are. Which one a customer reads is not known yet —
+         * the language is settled after the model has looked at their message —
+         * so the alternative is re-formatting a date in a module that has
+         * neither. Six slots and two locales is twelve `Intl` calls behind a
+         * database round trip.
+         */
+        labels: {
+          en: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso, localeFor("en")),
+          es: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso, localeFor("es")),
+        },
       }));
   }
 
@@ -117,6 +145,8 @@ export async function loadIntakeContext(input: {
       serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of the shop`,
       nowLabel: nowLabel(nowIso, timeZone),
       isFirstReply: input.isFirstReply,
+      language: readLanguage(input.language),
+      languageSource: readLanguageSource(input.languageSource),
     },
   };
 }

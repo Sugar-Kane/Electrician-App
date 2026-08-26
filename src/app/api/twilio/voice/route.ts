@@ -138,6 +138,10 @@ export async function POST(request: Request) {
             description: "Caller asked for a person; the transfer was not answered.",
             urgency: "urgent",
             reply: "",
+            // A dial status, not a conversation. Nothing was said here to
+            // detect a language from, so the customer's record is left alone.
+            language: context.language,
+            languageChanged: false,
           },
           callerText: "Caller asked for a person; the transfer was not answered.",
           model: null,

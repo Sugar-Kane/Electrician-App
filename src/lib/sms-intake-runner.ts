@@ -3,6 +3,8 @@ import "server-only";
 import { sendBookingConfirmations } from "@/lib/booking-notifications";
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
 import { HOLD_MINUTES, heldReply } from "@/lib/booking-hold";
+import { readLanguage, readLanguageSource } from "@/lib/customer-language";
+import { localeFor } from "@/lib/intake-phrases";
 import { loadIntakeContext, recordBookingRequest, slotLabel } from "@/lib/intake-shared";
 import {
   buildIntakeSystemPrompt,
@@ -45,18 +47,29 @@ export async function handleInboundText(input: {
   try {
     const database = getSupabaseAdmin();
 
-    const { data: history } = await database
-      .from("messages")
-      .select("direction, body, created_at")
-      .eq("conversation_id", input.conversationId)
-      .order("created_at", { ascending: false })
-      .limit(MAX_HISTORY_TURNS);
+    const [{ data: history }, { data: customer }] = await Promise.all([
+      database
+        .from("messages")
+        .select("direction, body, created_at")
+        .eq("conversation_id", input.conversationId)
+        .order("created_at", { ascending: false })
+        .limit(MAX_HISTORY_TURNS),
+      database
+        .from("customers")
+        .select("preferred_language, language_source")
+        .eq("id", input.customerId)
+        .maybeSingle(),
+    ]);
 
     const { context, messagingServiceSid, timeZone, owner } = await loadIntakeContext({
       database,
       organizationId: input.organizationId,
       // The opt-out rides the first thing this system ever says to them.
       isFirstReply: (history ?? []).every((row) => row.direction === "inbound"),
+      // What we believed before this message. `decideIntakeAction` applies the
+      // detection to it and hands back what to say and what to store.
+      language: readLanguage(customer?.preferred_language),
+      languageSource: readLanguageSource(customer?.language_source),
     });
 
     const turns: IntakeTurn[] = (history ?? [])
@@ -82,7 +95,10 @@ export async function handleInboundText(input: {
 
     const action = decideIntakeAction({ decision, customerText: input.body, context });
 
-    await recordExtractedName(database, input.customerId, action);
+    await Promise.all([
+      recordExtractedName(database, input.customerId, action),
+      recordDetectedLanguage(database, input.customerId, action),
+    ]);
 
     const recorded = await recordBookingRequest({
       database,
@@ -118,11 +134,18 @@ export async function handleInboundText(input: {
       action.kind === "book" && recorded.payUrl && recorded.feeCents
         ? heldReply({
             businessName: context.businessName,
-            slotLabel: slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString()),
+            slotLabel: slotLabel(
+              action.slot.start,
+              action.slot.end,
+              timeZone,
+              new Date().toISOString(),
+              localeFor(action.language),
+            ),
             feeCents: recorded.feeCents,
             payUrl: recorded.payUrl,
             holdMinutes: HOLD_MINUTES,
             businessPhone: context.businessPhone,
+            language: action.language,
           })
         : "";
 
@@ -177,6 +200,37 @@ export async function handleInboundText(input: {
   } catch {
     return { handled: false, reason: "Intake failed." };
   }
+}
+
+/**
+ * Remember the language, when it turned out to be a new one.
+ *
+ * The decision has already been made — `decideIntakeAction` ran the detection
+ * through `resolveLanguage`, which is where the owner's pin wins — so this
+ * writes what it was told and decides nothing itself. That is deliberate: a
+ * second copy of the rule here is a second copy to keep in step, and the two
+ * would disagree the first time either moved.
+ *
+ * `languageChanged` is false for almost every message, which is the point. The
+ * language usually has not changed, and a write per inbound text is a write per
+ * inbound text.
+ *
+ * The `language_source = 'detected'` filter is belt and braces against a race:
+ * the owner could have pinned this customer between the read at the top of the
+ * turn and this write, and their choice is not something a text message undoes.
+ */
+async function recordDetectedLanguage(
+  database: ReturnType<typeof getSupabaseAdmin>,
+  customerId: string,
+  action: IntakeAction,
+) {
+  if (!action.languageChanged) return;
+
+  await database
+    .from("customers")
+    .update({ preferred_language: action.language, language_source: "detected" })
+    .eq("id", customerId)
+    .eq("language_source", "detected");
 }
 
 /** Put a name on the lead as soon as the customer gives one. */
