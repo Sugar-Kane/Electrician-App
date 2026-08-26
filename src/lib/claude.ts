@@ -573,7 +573,34 @@ export async function lookUpListPrice(input: {
  * reads either side. Raising this without raising those `maxDuration` values
  * puts the write back to being killed on the retry.
  */
-const ATTEMPT_TIMEOUT_MS = 45_000;
+const ATTEMPT_TIMEOUT_MS = 50_000;
+
+/**
+ * Room for the thinking as well as the post.
+ *
+ * On Opus 5 thinking is on by default and its tokens count against
+ * `max_tokens`, so a ceiling sized for the prose alone can be spent reasoning
+ * before a single `tool_use` block is emitted. The turn then ends with
+ * `stop_reason: "max_tokens"`, there is no tool call to read, and the whole
+ * draft is discarded — which is what 3000 was inviting.
+ *
+ * 16000 is the documented default for a non-streaming request. It is a ceiling
+ * rather than a target: a post is about 1100 tokens and costs nothing extra for
+ * the headroom above it.
+ */
+const JOURNAL_MAX_TOKENS = 16_000;
+
+/**
+ * Less thinking than the default, on purpose.
+ *
+ * Default effort is `high`, which is the right setting for a problem that has
+ * to be reasoned through. This is prose against a brief, with a deterministic
+ * checker behind it and a retry that names what was wrong — the quality comes
+ * from the check, not from the model deliberating longer. Medium keeps the
+ * latency inside the route's budget, which matters because this runs where
+ * nobody is watching a spinner.
+ */
+const JOURNAL_EFFORT = "medium" as const;
 
 const JOURNAL_TOOLS = [
   {
@@ -689,7 +716,8 @@ export async function writeJournalPost(input: {
       const response = await anthropic.messages.create(
         {
           model: "claude-opus-5",
-          max_tokens: 3000,
+          max_tokens: JOURNAL_MAX_TOKENS,
+          output_config: { effort: JOURNAL_EFFORT },
           system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
           tools: JOURNAL_TOOLS as unknown as Anthropic.Tool[],
           tool_choice: { type: "any" },
@@ -706,7 +734,12 @@ export async function writeJournalPost(input: {
       }
 
       const call = response.content.find((block) => block.type === "tool_use");
-      if (!call || call.type !== "tool_use") return null;
+      if (!call || call.type !== "tool_use") {
+        // Almost always `max_tokens`, and invisible without this: the turn
+        // succeeded, there is simply nothing in it to act on.
+        console.error("journal draft returned no tool call", response.stop_reason);
+        return null;
+      }
 
       if (call.name === "decline") {
         const reason = (call.input as { reason?: unknown })?.reason;
@@ -819,7 +852,8 @@ export async function editJournalPost(input: {
       const response = await anthropic.messages.create(
         {
           model: "claude-opus-5",
-          max_tokens: 3000,
+          max_tokens: JOURNAL_MAX_TOKENS,
+          output_config: { effort: JOURNAL_EFFORT },
           system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
           tools: [EDIT_TOOL] as unknown as Anthropic.Tool[],
           tool_choice: { type: "tool", name: EDIT_TOOL.name },
@@ -829,7 +863,10 @@ export async function editJournalPost(input: {
       );
 
       const call = response.content.find((block) => block.type === "tool_use");
-      if (!call || call.type !== "tool_use") return null;
+      if (!call || call.type !== "tool_use") {
+        console.error("journal edit returned no tool call", response.stop_reason);
+        return null;
+      }
 
       const raw = (call.input ?? {}) as Record<string, unknown>;
       const read = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string).trim() : "");

@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 
 import { slugForRequestHost } from "@/app/book/by-host/page";
 import { JournalIndex } from "@/components/journal-article";
-import { listPublicJournal } from "@/lib/journal-data";
-import { journalPostPath } from "@/lib/journal-urls";
+import { listPublicJournal, verifiedHostFor } from "@/lib/journal-data";
+import { canonicalIndexUrl, journalPostPath } from "@/lib/journal-urls";
 import { getPublicBookingPage } from "@/lib/public-booking";
 
 /**
@@ -24,10 +24,36 @@ import { getPublicBookingPage } from "@/lib/public-booking";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: "Work journal",
-  robots: { index: true, follow: true },
-};
+/**
+ * The canonical, which static metadata could not carry.
+ *
+ * The post pages compute one and this exported an object with a title and a
+ * robots rule and nothing else, so the index existed at two addresses with
+ * neither claiming to be the real one. `generateMetadata` can resolve the host
+ * the request came in on, which is what the canonical depends on.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const slug = await slugForRequestHost();
+  if (!slug) return { title: "Work journal", robots: { index: false, follow: false } };
+
+  const [page, host] = await Promise.all([getPublicBookingPage(slug), verifiedHostFor(slug)]);
+  const canonical = canonicalIndexUrl({
+    appUrl: process.env.NEXT_PUBLIC_APP_URL,
+    tenantHost: host,
+    orgSlug: slug,
+  });
+
+  return {
+    title: page ? `Work journal | ${page.display_name}` : "Work journal",
+    ...(page
+      ? {
+          description: `Electrical problems around ${page.base_city}, ${page.base_state}, and what is usually behind them.`,
+        }
+      : {}),
+    ...(canonical ? { alternates: { canonical } } : {}),
+    robots: { index: true, follow: true },
+  };
+}
 
 export default async function TenantJournalIndex() {
   const slug = await slugForRequestHost();

@@ -91,7 +91,7 @@ export async function askAssistantToEdit(
 
   const { data: post } = await supabase
     .from("journal_posts")
-    .select("id, title, dek, body, lesson, kind, status")
+    .select("id, job_id, title, dek, body, lesson, kind, status")
     .eq("id", postId)
     .eq("organization_id", context.organizationId)
     .maybeSingle();
@@ -109,6 +109,20 @@ export async function askAssistantToEdit(
 
   const kind = post.kind === "story" ? "story" : "lesson";
 
+  /*
+   * The same words the writer was checked against, recovered from the job.
+   *
+   * Without this the edit path was weaker than the path that created the post:
+   * a rewrite could put a customer's name back into a page the original was
+   * refused for containing. The list is not stored on the post because it is
+   * derived from records that can change, so it is read fresh each time.
+   */
+  const forbidden = await forbiddenWordsFor(
+    supabase,
+    context.organizationId,
+    String(post.job_id ?? ""),
+  );
+
   const edited = await editJournalPost({
     system: journalSystemPrompt({
       businessName: String(organization?.name ?? "this business"),
@@ -125,7 +139,7 @@ export async function askAssistantToEdit(
     // All four fields, for the same reason the writer checks all four: an edit
     // that moved a name into the title would otherwise sail through.
     check: (draft: DraftedPost) => {
-      const { post, problems } = checkPost({ post: draft, kind });
+      const { post, problems } = checkPost({ post: draft, kind, forbidden });
       return {
         post: { ...draft, ...post },
         problems: problems.length > 0 ? retryNote(problems) : "",
@@ -139,8 +153,15 @@ export async function askAssistantToEdit(
     };
   }
 
-  // Kept before the update, so there is always something to go back to.
-  await supabase.from("journal_post_revisions").insert({
+  /*
+   * Kept before the update, and the write is checked.
+   *
+   * Discarding this error meant the update ran anyway: the previous version was
+   * gone, the notice below still said it had been kept, and `revisionCount`
+   * stayed at zero so the undo control never appeared. Three ways of telling
+   * somebody their work is recoverable when it is not.
+   */
+  const { error: kept } = await supabase.from("journal_post_revisions").insert({
     organization_id: context.organizationId,
     post_id: postId,
     title: String(post.title ?? ""),
@@ -149,6 +170,11 @@ export async function askAssistantToEdit(
     lesson: String(post.lesson ?? ""),
     instruction,
   });
+
+  if (kept) {
+    console.error("journal revision save failed", kept);
+    return { error: "That could not be saved. Try again." };
+  }
 
   const { error } = await supabase
     .from("journal_posts")
@@ -254,4 +280,61 @@ export async function writePostNow(
   return outcome.wrote
     ? { error: "", notice: "Written and published." }
     : { error: "", notice: `No post: ${outcome.reason}` };
+}
+
+/**
+ * The words that must not appear in this post, from the job it came from.
+ *
+ * The same list `journal-writer` builds when it first writes a post. Shared by
+ * shape rather than by import because the writer runs with the service role
+ * outside a request and this runs inside one, through the caller's session.
+ */
+async function forbiddenWordsFor(
+  supabase: ReturnType<typeof asFlexibleClient>,
+  organizationId: string,
+  jobId: string,
+): Promise<string[]> {
+  if (!UUID.test(jobId)) return [];
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("customer_id, property_id")
+    .eq("id", jobId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (!job) return [];
+
+  const [{ data: customer }, { data: property }] = await Promise.all([
+    job.customer_id
+      ? supabase
+          .from("customers")
+          .select("first_name, last_name, company_name")
+          .eq("id", String(job.customer_id))
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    job.property_id
+      ? supabase
+          .from("properties")
+          .select("address_line_1")
+          .eq("id", String(job.property_id))
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const read = (row: unknown, key: string) => {
+    const value = row && typeof row === "object" ? (row as Record<string, unknown>)[key] : "";
+    return typeof value === "string" ? value : "";
+  };
+
+  return [
+    read(customer, "first_name"),
+    read(customer, "last_name"),
+    read(customer, "company_name"),
+    ...read(property, "address_line_1").split(/\s+/),
+  ]
+    .map((entry) => entry.trim())
+    // Three characters, and never a bare house number: "412" would reject any
+    // post that mentioned a 412 of any kind.
+    .filter((entry) => entry.length >= 3 && !/^\d+$/.test(entry));
 }

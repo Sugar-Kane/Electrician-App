@@ -133,7 +133,7 @@ function PostRow({ post, publicHref }: { post: OwnerPost; publicHref: string }) 
               </button>
             </form>
 
-            {post.status === "published" ? (
+            {post.status === "published" && publicHref ? (
               <Link
                 href={`${publicHref}/${post.slug}`}
                 target="_blank"
@@ -249,7 +249,13 @@ export function JournalManager({
 }: {
   posts: OwnerPost[];
   writable: WritableJob[];
-  /** The journal's public index, for the per-post View links. */
+  /**
+   * The journal's public index, for the per-post View links.
+   *
+   * Empty when the organization row has no slug, and both links are hidden
+   * rather than rendered: `journalIndexPath("", false)` is `/journal/`, and the
+   * public route needs an org segment, so a View button would open a 404.
+   */
   publicHref: string;
 }) {
   return (
@@ -257,7 +263,7 @@ export function JournalManager({
       <section>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-ink">Posts</h2>
-          {posts.length > 0 ? (
+          {posts.length > 0 && publicHref ? (
             <Link
               href={publicHref}
               target="_blank"
