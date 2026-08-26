@@ -252,18 +252,6 @@ export async function findOrCreateCustomerByPhone(input: {
 }): Promise<string | null> {
   const digits = input.phone.replace(/\D/g, "").slice(-10);
 
-  const { data: customers } = await input.database
-    .from("customers")
-    .select("id, phone")
-    .eq("organization_id", input.organizationId)
-    .is("archived_at", null)
-    .limit(5000);
-
-  const existing = (customers ?? []).find(
-    (row) => text(row.phone).replace(/\D/g, "").slice(-10) === digits && digits.length === 10,
-  );
-  if (existing) return String(existing.id);
-
   // Named by what they told us if they told us anything, and otherwise by how
   // they got in touch — a caller who says "Dana Reyes" should not end up in the
   // customer list as "Text 9985".
@@ -271,21 +259,35 @@ export async function findOrCreateCustomerByPhone(input: {
   const given = (input.contactName ?? "").trim().split(/\s+/).filter(Boolean);
   const named = given.length > 0;
 
-  const { data: lead } = await input.database
-    .from("customers")
-    .insert({
-      organization_id: input.organizationId,
-      customer_type: "residential",
-      first_name: named ? given[0] : channel === "phone" ? "Caller" : "Text",
-      last_name: named ? given.slice(1).join(" ") || null : digits.slice(-4) || null,
-      phone: input.phone,
-      preferred_contact: channel === "phone" ? "phone" : "sms",
-      notes: input.note,
-    })
-    .select("id")
-    .single();
+  /*
+   * One statement, arbitrated by the database.
+   *
+   * This used to pull up to 5000 customer rows into the application, match them
+   * in JavaScript, and insert if nothing matched — a read followed by a write
+   * with nothing between them. Thirteen `book_visit` calls arriving at once all
+   * read the same empty result and all inserted, so one phone call produced
+   * thirteen customers, thirteen bookings and thirteen texts to the owner. No
+   * amount of checking here could have caught that; only a unique index can,
+   * and only the database can consult one.
+   *
+   * The RPC also removes the 5000-row scan, which was a real part of the five
+   * seconds each of those calls took.
+   */
+  const { data, error } = await input.database.rpc("find_or_create_customer_by_phone", {
+    p_organization_id: input.organizationId,
+    p_phone: input.phone,
+    p_first_name: named ? given[0] : channel === "phone" ? "Caller" : "Text",
+    p_last_name: named ? given.slice(1).join(" ") || null : digits.slice(-4) || null,
+    p_preferred_contact: channel === "phone" ? "phone" : "sms",
+    p_notes: input.note,
+  });
 
-  return lead ? String(lead.id) : null;
+  if (error) {
+    console.error("find_or_create_customer_by_phone failed", error);
+    return null;
+  }
+
+  return typeof data === "string" ? data : null;
 }
 
 export type RecordedRequest = {
@@ -300,6 +302,15 @@ export type RecordedRequest = {
   heldUntil?: string;
   /** What they owe to confirm it. */
   feeCents?: number;
+  /**
+   * This booking was already there, and this call did not make it.
+   *
+   * Set when the unique index refused a second live booking for the same
+   * customer at the same window. The appointment is real and the caller should
+   * be told it is booked — but nobody may be texted about it twice, which is
+   * the whole reason the guard exists.
+   */
+  alreadyExisted?: boolean;
 };
 
 /**
@@ -309,6 +320,55 @@ export type RecordedRequest = {
  * The booking half runs only for `book`, which the rules module returns solely
  * when the customer accepted a window the scheduler itself offered.
  */
+/**
+ * The live booking this customer already has at this window.
+ *
+ * Only reached when the unique index has just refused an insert, so there is
+ * one by definition. Rebuilt into the same shape a successful insert returns,
+ * including the payment link, so the words said back to the caller are the same
+ * whether they are hearing about the booking that was made or the one that
+ * already existed.
+ */
+async function liveBookingAt(input: {
+  database: Database;
+  organizationId: string;
+  customerId: string;
+  action: IntakeAction;
+}): Promise<RecordedRequest> {
+  const { action } = input;
+  if (action.kind !== "book") return {};
+
+  const { data } = await input.database
+    .from("booking_requests")
+    .select("id, public_token, status, created_job_id, expires_at, deposit_cents")
+    .eq("organization_id", input.organizationId)
+    .eq("customer_id", input.customerId)
+    .eq("arrival_window_start", action.slot.start)
+    .eq("arrival_window_end", action.slot.end)
+    .in("status", ["new", "needs_review", "awaiting_payment", "confirmed", "scheduled"])
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return {};
+
+  const row = data as Record<string, unknown>;
+  const publicToken = text(row.public_token) || undefined;
+  const held = text(row.status) === "awaiting_payment";
+
+  return {
+    requestId: text(row.id) || undefined,
+    publicToken,
+    jobId: text(row.created_job_id) || undefined,
+    payUrl:
+      held && publicToken
+        ? payLinkFor(process.env.NEXT_PUBLIC_APP_URL ?? "", publicToken) || undefined
+        : undefined,
+    heldUntil: held ? text(row.expires_at) || undefined : undefined,
+    feeCents: typeof row.deposit_cents === "number" ? row.deposit_cents : undefined,
+  };
+}
+
 export async function recordBookingRequest(input: {
   database: Database;
   organizationId: string;
@@ -342,7 +402,7 @@ export async function recordBookingRequest(input: {
     return {};
   }
 
-  const { data: created } = await input.database
+  const { data: created, error: insertError } = await input.database
     .from("booking_requests")
     .insert({
       organization_id: input.organizationId,
@@ -376,7 +436,27 @@ export async function recordBookingRequest(input: {
       deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
     })
     .select("id, public_token")
-    .single();
+    .maybeSingle();
+
+  /*
+   * The database refused a second live booking for this customer at this
+   * window, and it was right to.
+   *
+   * One phone call once produced thirteen of these in under a second, each with
+   * byte-identical arguments, because the client fanned the same tool call out
+   * across thirteen fresh sessions. Every one of them booked, and every one of
+   * them texted the owner. The appointment the caller agreed to already exists,
+   * so this returns it and says so, and the caller of this function sends
+   * nothing.
+   */
+  if (insertError?.code === "23505") {
+    return { ...(await liveBookingAt(input)), alreadyExisted: true };
+  }
+
+  if (insertError) {
+    console.error("booking request insert failed", insertError);
+    return {};
+  }
 
   const requestId = created?.id ? String(created.id) : undefined;
   const publicToken = created?.public_token ? String(created.public_token) : undefined;

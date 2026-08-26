@@ -14,6 +14,7 @@ import {
   intakeAnswers,
   intakeShortfall,
   slotList,
+  unreachableCaller,
 } from "./booking-tool-rules.ts";
 import { decideIntakeAction, type IntakeContext } from "./sms-intake.ts";
 
@@ -224,8 +225,38 @@ test("the caller's number is asked for, since one URL serves every call", () => 
     assert.ok(required.includes("caller_phone"), name);
   }
 
-  assert.equal(callerPhone({ caller_phone: " +1 805 555 0142 " }), "+1 805 555 0142");
+  // Normalised on the way in, so the number Twilio is handed and the number a
+  // customer lookup matches on are the same string.
+  assert.equal(callerPhone({ caller_phone: " +1 805 555 0142 " }), "+18055550142");
+  assert.equal(callerPhone({ caller_phone: "(805) 555-0142" }), "+18055550142");
   assert.equal(callerPhone({}), "");
+});
+
+test("a number nobody could be reached on is refused before anything is written", () => {
+  /*
+   * The real one. A Spanish-language call was transcribed with the caller's
+   * mobile as `613432210` — nine digits — and the visit was booked anyway. She
+   * got nothing: Twilio refused every send with 21211, and her only record of
+   * the appointment was having been on the phone.
+   *
+   * Refusing while the model is still talking to her is the recoverable
+   * failure. Booking is not.
+   */
+  assert.equal(callerPhone({ caller_phone: "613432210" }), "");
+
+  const refusal = unreachableCaller("book_visit", { caller_phone: "613432210" });
+  assert.match(refusal, /^NOT BOOKED\./);
+  assert.match(refusal, /613432210/);
+  // Told what to do about it, in the words the model needs to hear back.
+  assert.match(refusal, /one digit at a time/);
+  assert.match(refusal, /book_visit/);
+
+  // Named for the tool that asked, so a callback is not told to call book_visit.
+  assert.match(unreachableCaller("request_callback", {}), /request_callback/);
+
+  // A number that works is not a problem.
+  assert.equal(unreachableCaller("book_visit", { caller_phone: "(805) 555-0142" }), "");
+  assert.equal(unreachableCaller("book_visit", { caller_phone: "+18055550142" }), "");
 });
 
 test("the schema asks for little and the server enforces the rest", () => {

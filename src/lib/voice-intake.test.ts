@@ -263,7 +263,7 @@ test("a turn too short to judge keeps the language already established", () => {
   };
 
   const action = decideIntakeAction({
-    decision: { name: "ask_for", input: { field: "address", language: "und" } },
+    decision: { tool: "ask_for", input: { field: "address", language: "und" } },
     customerText: "si",
     context: spanishContext,
   });
@@ -279,7 +279,7 @@ test("the owner's pin outranks anything heard on the call", () => {
   const pinned: IntakeContext = { ...context, language: "en", languageSource: "owner" };
 
   const action = decideIntakeAction({
-    decision: { name: "ask_for", input: { field: "address", language: "es" } },
+    decision: { tool: "ask_for", input: { field: "address", language: "es" } },
     customerText: "Necesito un electricista",
     context: pinned,
   });

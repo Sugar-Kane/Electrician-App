@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+
 import {
   BOOKING_TOOLS,
   buildDecision,
@@ -12,6 +14,7 @@ import {
   intakeQuestionList,
   intakeShortfall,
   slotList,
+  unreachableCaller,
 } from "@/lib/booking-tool-rules";
 import { sendBookingConfirmations } from "@/lib/booking-notifications";
 import {
@@ -92,6 +95,20 @@ export async function runBookingTool(input: {
     if (shortfall) return { isError: true, text: shortfall };
   }
 
+  /*
+   * A visit nobody can be told about is worse than a refusal, and so is a
+   * callback to a number that does not exist.
+   *
+   * Only checked when the number is the only handle we have on this caller: a
+   * per-call URL already carries the customer, so a session-scoped booking is
+   * unaffected. Refused before anything is written, because the model is still
+   * on the phone with them and asking again costs nothing.
+   */
+  if (!input.session.customerId && (input.name === "book_visit" || input.name === "request_callback")) {
+    const unreachable = unreachableCaller(input.name, input.args);
+    if (unreachable) return { isError: true, text: unreachable };
+  }
+
   const decision = buildDecision(input.name, input.args);
   if (!decision) return { isError: true, text: `NOT BOOKED. Unknown tool: ${input.name}` };
 
@@ -132,11 +149,25 @@ export async function runBookingTool(input: {
     depositCents: context.diagnosticFeeCents,
   });
 
-  // Tell the customer and the owner. Awaited so a serverless invocation is not
-  // torn down mid-send, but every failure inside is swallowed: the appointment
-  // is already in the calendar and no delivery problem may unmake it.
-  if (action.kind === "book" && recorded.requestId && recorded.publicToken) {
-    await sendBookingConfirmations({
+  /*
+   * Tell the customer and the owner, after the model has its answer.
+   *
+   * This was awaited, on the reasoning that a serverless invocation must not be
+   * torn down mid-send. That is right, and `after` is how it is done: the work
+   * runs once the response is flushed and is bounded by the route's
+   * `maxDuration`, rather than holding the tool call open for the second or so
+   * that Twilio and Resend take. A five second `book_visit` is what a realtime
+   * client sits and waits through, and what it eventually gives up on.
+   *
+   * `alreadyExisted` is the other half. The booking was there before this call
+   * and somebody has already been told about it; sending again is precisely the
+   * thing that put thirteen texts on the owner's phone.
+   *
+   * Every failure inside is still swallowed. The appointment is in the calendar
+   * and no delivery problem may unmake it.
+   */
+  if (action.kind === "book" && recorded.requestId && recorded.publicToken && !recorded.alreadyExisted) {
+    const confirmations = {
       requestId: recorded.requestId,
       organizationId: input.session.organizationId,
       customerId,
@@ -155,7 +186,9 @@ export async function runBookingTool(input: {
       jobId: recorded.jobId,
       owner,
       held: Boolean(recorded.payUrl),
-    });
+    };
+
+    after(() => sendBookingConfirmations(confirmations));
   }
 
   return describeOutcome({
