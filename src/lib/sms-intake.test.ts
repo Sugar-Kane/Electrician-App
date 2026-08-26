@@ -14,7 +14,17 @@ const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
   businessName: "Pacific Plains Electric",
   businessPhone: "(805) 555-0100",
   offeredSlots: [
-    { start: "2026-08-11T15:00:00.000Z", end: "2026-08-11T17:00:00.000Z", label: "Tue Aug 11, 8:00-10:00 AM" },
+    {
+      start: "2026-08-11T15:00:00.000Z",
+      end: "2026-08-11T17:00:00.000Z",
+      label: "Tue Aug 11, 8:00-10:00 AM",
+      // Copied from what `slotLabel` really emits for these locales, so the
+      // fixture cannot be plausible and wrong at the same time.
+      labels: {
+        en: "Tue Aug 11, 8:00-10:00 AM",
+        es: "mar, 11 de ago, 8:00 a.m.-10:00 a.m.",
+      },
+    },
     { start: "2026-08-11T20:00:00.000Z", end: "2026-08-11T22:00:00.000Z", label: "Tue Aug 11, 1:00-3:00 PM" },
   ],
   diagnosticFee: "$149",
@@ -22,6 +32,8 @@ const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
   serviceArea: "the Central Coast",
   nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
+  language: "en",
+  languageSource: "detected",
   ...overrides,
 });
 
@@ -289,4 +301,139 @@ test("the prompt tells the model what it will be held to", () => {
   assert.match(prompt, /breaker panel/i);
   assert.match(prompt, /delivery_preference/);
   assert.match(prompt, /one question per message/i);
+});
+
+/*
+ * Language.
+ *
+ * The reply and the database write come out of the same decision, so these
+ * assert both together: what the customer reads, and what gets stored about
+ * them. Splitting them would let the two drift, which is the exact failure the
+ * shared `resolveLanguage` exists to prevent.
+ */
+
+const decideIn = (
+  tool: string,
+  input: Record<string, unknown>,
+  overrides: Partial<IntakeContext> = {},
+) =>
+  decideIntakeAction({
+    decision: { tool, input },
+    customerText: "no tengo luz en la cocina",
+    context: context(overrides),
+  });
+
+test("a Spanish text is answered in Spanish, and remembered", () => {
+  const action = decideIn("request_callback", {
+    contact_name: "Ana", description: "sin luz", urgency: "routine", language: "es",
+  });
+
+  assert.equal(action.language, "es");
+  assert.equal(action.languageChanged, true);
+  assert.match(action.reply, /entendido, Ana/);
+  // The English wording must be gone entirely, not merely joined by Spanish.
+  assert.doesNotMatch(action.reply, /call you back/i);
+});
+
+test("an owner's pin outranks the customer's own Spanish", () => {
+  // The whole point of the setting. An owner who corrects a bad guess and
+  // watches the next inbound text undo it stops trusting the control.
+  const action = decideIn(
+    "request_callback",
+    { contact_name: "Ana", description: "sin luz", urgency: "routine", language: "es" },
+    { language: "en", languageSource: "owner" },
+  );
+
+  assert.equal(action.language, "en");
+  assert.equal(action.languageChanged, false);
+  assert.match(action.reply, /call you back/i);
+});
+
+test("a message too neutral to read changes nothing", () => {
+  // "ok", a name, an address. Forced to choose between two languages the model
+  // would pick one, and picking wrong here flips a Spanish customer back to
+  // English on the word "ok".
+  const action = decideIn(
+    "ask_for",
+    { missing: ["address"], question: "¿Cuál es la dirección?", language: "und" },
+    { language: "es", languageSource: "detected" },
+  );
+
+  assert.equal(action.language, "es");
+  assert.equal(action.languageChanged, false);
+});
+
+test("a Spanish customer is offered the window worded in Spanish", () => {
+  // "podemos ir Tue Aug 11" is three English words inside a Spanish sentence,
+  // which is the tell that nobody read the message before it went out.
+  const action = decideIn(
+    "propose_visit",
+    {
+      contact_name: "Ana", description: "sin luz", address_line_1: "1 A St",
+      city: "Nipomo", postal_code: "93444",
+      slot_start: "2026-08-11T15:00:00.000Z", urgency: "routine", language: "es",
+    },
+    { language: "es", languageSource: "detected" },
+  );
+
+  assert.equal(action.kind, "propose");
+  assert.match(action.reply, /podemos ir mar, 11 de ago/);
+  assert.doesNotMatch(action.reply, /Tue Aug/);
+});
+
+test("the interview is conducted in the customer's language", () => {
+  const action = decideIn(
+    "confirm_visit",
+    {
+      contact_name: "Ana", description: "sin luz", address_line_1: "1 A St",
+      city: "Nipomo", postal_code: "93444",
+      slot_start: "2026-08-11T15:00:00.000Z", urgency: "routine",
+      answer_scope: "", answer_onset: "", answer_breaker: "",
+      answer_property: "", answer_access: "", delivery_preference: "",
+      language: "es",
+    },
+    { language: "es", languageSource: "detected" },
+  );
+
+  assert.equal(action.kind, "ask");
+  assert.match(action.reply, /afecta toda la casa/);
+});
+
+test("STOP survives translation, because the carrier owns that word", () => {
+  // Twilio error 21610 is the carrier's own opt-out list. "Responda PARE" reads
+  // like an opt-out and does not opt anybody out, which is a compliance failure
+  // dressed up as a translation.
+  const action = decideIn(
+    "request_callback",
+    { contact_name: "Ana", description: "sin luz", urgency: "routine", language: "es" },
+    { language: "es", languageSource: "detected", isFirstReply: true },
+  );
+
+  assert.match(action.reply, /Responda STOP/);
+});
+
+test("every tool can report a language, and must", () => {
+  // `strict: true` rejects a call missing a required argument, so a tool that
+  // lists `language` in properties and not in required is a tool the model may
+  // silently never fill in.
+  for (const tool of INTAKE_TOOLS) {
+    const schema = tool.input_schema as {
+      properties: Record<string, unknown>;
+      required: readonly string[];
+    };
+    assert.ok(schema.properties.language, `${tool.name} has no language argument`);
+    assert.ok(schema.required.includes("language"), `${tool.name} does not require it`);
+  }
+});
+
+test("the prompt tells the model when the language is not its call", () => {
+  // `ask_for` is the one reply the model writes; the rest are composed from the
+  // phrase set, which honours the pin. Left free, the model would answer in
+  // Spanish and the next composed reply would arrive in English.
+  const pinned = buildIntakeSystemPrompt(context({ language: "en", languageSource: "owner" }));
+  assert.match(pinned, /business has set this customer's language/i);
+
+  const guessed = buildIntakeSystemPrompt(context({ language: "es", languageSource: "detected" }));
+  assert.match(guessed, /language the customer's latest message is in/i);
+  assert.doesNotMatch(guessed, /business has set this customer's language/i);
 });

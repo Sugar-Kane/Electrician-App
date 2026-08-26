@@ -1,6 +1,11 @@
 import "server-only";
 
 import type { ActivityRow } from "@/lib/activity-timeline";
+import {
+  readLanguage,
+  readLanguageSource,
+  type LanguageState,
+} from "@/lib/customer-language";
 import { currentContext } from "@/lib/request-context";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -30,6 +35,8 @@ export type CustomerProfile = {
   conversationId: string | null;
   /** The business's timezone, which is the one the history is grouped by. */
   timeZone: string;
+  /** Which language they are written to in, and who decided. */
+  language: LanguageState;
   /** What has happened to them, newest first, ready for `buildTimeline`. */
   history: ActivityRow[];
 };
@@ -75,7 +82,9 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
 
   const { data: customer } = await supabase
     .from("customers")
-    .select("id, first_name, last_name, company_name, phone, email, preferred_contact")
+    .select(
+      "id, first_name, last_name, company_name, phone, email, preferred_contact, preferred_language, language_source",
+    )
     .eq("organization_id", context.organizationId)
     .eq("id", id)
     .maybeSingle();
@@ -184,6 +193,10 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
     })),
     conversationId: conversation?.id ? String(conversation.id) : null,
     timeZone: context.timeZone,
+    language: {
+      language: readLanguage(customer.preferred_language),
+      source: readLanguageSource(customer.language_source),
+    },
     history: ((history ?? []) as Record<string, unknown>[]).map((row) => ({
       id: text(row.id),
       eventType: text(row.event_type),

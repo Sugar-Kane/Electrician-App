@@ -237,3 +237,40 @@ test("an Arizona day is always 24 hours, including the weekends everyone else mo
     assert.equal((end.getTime() - start.getTime()) / 3_600_000, 24, from);
   }
 });
+
+test("a locale changes the wording and nothing else", () => {
+  const start = "2026-08-27T15:00:00.000Z";
+  const end = "2026-08-27T17:00:00.000Z";
+  const now = "2026-08-26T20:00:00.000Z";
+  const zone = "America/Los_Angeles";
+
+  // Every existing call site omits the locale, and every one of them is a
+  // screen the electrician reads. Defaulting is the whole reason this was safe
+  // to add rather than thread through forty places.
+  assert.equal(slotLabel(start, end, zone, now), slotLabel(start, end, zone, now, "en-US"));
+  assert.match(slotLabel(start, end, zone, now), /^Tomorrow \(Thu, Aug 27\)/);
+
+  // "Tomorrow" and "Thu" are the words that give away a machine when they land
+  // in the middle of a Spanish sentence.
+  const spanish = slotLabel(start, end, zone, now, "es-US");
+  assert.match(spanish, /^Mañana \(jue, 27 de ago\)/);
+  assert.doesNotMatch(spanish, /Tomorrow|Thu|AM/);
+
+  // Same instant either way. A translated label that moved the time would be
+  // the worst possible outcome here.
+  assert.match(slotLabel(start, end, zone, now), /8:00 AM-10:00 AM/);
+  assert.match(spanish, /8:00 a\.m\.-10:00 a\.m\./);
+});
+
+test("a locale nobody translated still says which day it is", () => {
+  // The relative day is the part a customer reasons with. Losing it to a
+  // missing translation would be worse than showing it in English.
+  const label = slotLabel(
+    "2026-08-27T15:00:00.000Z",
+    "2026-08-27T17:00:00.000Z",
+    "America/Los_Angeles",
+    "2026-08-26T20:00:00.000Z",
+    "pt-BR",
+  );
+  assert.match(label, /^Tomorrow \(/);
+});

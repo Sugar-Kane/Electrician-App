@@ -574,6 +574,16 @@ export function assistantToolPrompt(businessName: string): string {
     "- Never invent a job number, invoice number, customer, amount or date. Look it up.",
     "- For anything about code, licensing, permits or inspections, call lookup_code. Never answer those from memory.",
     "- Only remember something when asked to.",
+    /*
+     * The electrician's own language, not the customer's.
+     *
+     * This is the in-app assistant, so whoever is typing is the person to
+     * answer — a bilingual electrician asking "¿cuántos breakers de 20A me
+     * quedan?" should not be answered in English because the business's
+     * settings are. Nothing is stored: the question in front of it is the whole
+     * of the evidence, and there is no record to get wrong.
+     */
+    "- Answer in whatever language the person just wrote to you in. Do not switch languages mid-answer.",
     "- Be brief. The person asking is usually holding a phone in a van.",
   ].join("\n");
 }

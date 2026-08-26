@@ -32,6 +32,8 @@ const CONTEXT: IntakeContext = {
   serviceArea: "50 miles of the shop",
   nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
+  language: "en",
+  languageSource: "detected",
 };
 
 /** The whole chain a tool call goes through, minus the database. */

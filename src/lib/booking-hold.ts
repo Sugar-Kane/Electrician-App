@@ -11,9 +11,11 @@
  * directions: hold a booking the business cannot collect on and the appointment
  * evaporates; skip the hold and the electrician drives out unpaid.
  *
- * Import-free, so the decision can be tested without a database, a model or a
- * payment provider.
+ * Import-free apart from the wording, so the decision can be tested without a
+ * database, a model or a payment provider.
  */
+
+import { phrasesFor } from "./intake-phrases.ts";
 
 export type HoldDecision =
   /** Write the job now, the way it has always worked. */
@@ -83,12 +85,15 @@ export function holdSentence(input: {
   feeCents: number;
   payUrl: string;
   holdMinutes: number;
+  /** The customer's, settled by the intake. English when nobody said. */
+  language?: string;
 }): string {
   if (!input.payUrl || input.feeCents <= 0) return "";
 
-  return (
-    `To confirm this time, pay the ${feeLabel(input.feeCents)} diagnostic fee here: ${input.payUrl} — ` +
-    `we are holding it for ${input.holdMinutes} minutes.`
+  return phrasesFor(input.language ?? "en").holdSentence(
+    feeLabel(input.feeCents),
+    input.payUrl,
+    input.holdMinutes,
   );
 }
 
@@ -107,11 +112,17 @@ export function heldReply(input: {
   payUrl: string;
   holdMinutes: number;
   businessPhone: string;
+  language?: string;
 }): string {
   const ask = holdSentence(input);
   if (!ask) return "";
 
-  return `${input.businessName}: holding ${input.slotLabel} for you. ${ask} Questions? ${input.businessPhone}`;
+  const phrases = phrasesFor(input.language ?? "en");
+  return [
+    phrases.holding(input.businessName, input.slotLabel),
+    ask,
+    phrases.questionsAt(input.businessPhone),
+  ].join(" ");
 }
 
 /**

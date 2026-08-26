@@ -27,6 +27,8 @@ const context: IntakeContext = {
   serviceArea: "the Central Coast",
   nowLabel: "Sunday, August 9, 6:28 PM",
   isFirstReply: false,
+  language: "en",
+  languageSource: "detected",
 };
 
 const action = (tool: string, input: Record<string, unknown>, callerText = "no power in the kitchen") =>
