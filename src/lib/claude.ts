@@ -565,6 +565,16 @@ export async function lookUpListPrice(input: {
 
 /* ---------------------------------------------------------------- journals */
 
+/**
+ * How long one attempt at a post may take.
+ *
+ * Both journal calls retry once, so the budget that matters is twice this. The
+ * routes that call them allow 120 seconds, which leaves room for the database
+ * reads either side. Raising this without raising those `maxDuration` values
+ * puts the write back to being killed on the retry.
+ */
+const ATTEMPT_TIMEOUT_MS = 45_000;
+
 const JOURNAL_TOOLS = [
   {
     name: "publish_post",
@@ -685,7 +695,10 @@ export async function writeJournalPost(input: {
           tool_choice: { type: "any" },
           messages: turns,
         },
-        { timeout: 90_000 },
+        // Two attempts have to fit inside the calling route's `maxDuration`
+        // together, not one at a time: 90 seconds each would overrun a 120
+        // second budget on the retry and be killed with nothing written.
+        { timeout: ATTEMPT_TIMEOUT_MS },
       );
 
       if (response.stop_reason === "refusal") {
@@ -812,7 +825,7 @@ export async function editJournalPost(input: {
           tool_choice: { type: "tool", name: EDIT_TOOL.name },
           messages: turns,
         },
-        { timeout: 90_000 },
+        { timeout: ATTEMPT_TIMEOUT_MS },
       );
 
       const call = response.content.find((block) => block.type === "tool_use");
