@@ -104,6 +104,10 @@ export async function listOwnerJournal(): Promise<OwnerPost[]> {
  * been fixed. Offering them rather than backfilling silently is the point: the
  * owner decides which of their old jobs become public pages.
  */
+/** How many completed jobs to look through, and how many to offer. */
+const WRITABLE_SCAN = 200;
+const WRITABLE_SHOWN = 50;
+
 export type WritableJob = {
   id: string;
   jobNumber: string;
@@ -117,7 +121,8 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
 
   const supabase = asFlexibleClient(await createClient());
 
-  const [{ data: jobs }, { data: written }] = await Promise.all([
+  const [{ data: jobs, error: jobsError }, { data: written, error: writtenError }] =
+    await Promise.all([
     supabase
       .from("jobs")
       .select("id, job_number, customer_description, ai_summary, completed_at")
@@ -125,7 +130,14 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
       .eq("status", "completed")
       .is("archived_at", null)
       .order("completed_at", { ascending: false, nullsFirst: false })
-      .limit(50),
+      /*
+       * Fetched wide and cut narrow, because the cut has to happen after the
+       * filter. Limiting to 50 here and then removing the ones that already
+       * have posts shows an empty list the moment the 50 most recent jobs are
+       * all written up, while older jobs that need one sit invisible behind
+       * them.
+       */
+      .limit(WRITABLE_SCAN),
     supabase
       .from("journal_posts")
       .select("job_id")
@@ -136,12 +148,18 @@ export async function listWritableJobs(): Promise<WritableJob[]> {
       .neq("status", "declined"),
   ]);
 
+  // Said out loud rather than shown as "no jobs". A failed read and a business
+  // with nothing to write up look identical on screen and are not the same.
+  if (jobsError) console.error("writable jobs read failed", jobsError);
+  if (writtenError) console.error("written jobs read failed", writtenError);
+
   const taken = new Set(
     ((written ?? []) as Record<string, unknown>[]).map((row) => text(row.job_id)),
   );
 
   return ((jobs ?? []) as Record<string, unknown>[])
     .filter((row) => !taken.has(text(row.id)))
+    .slice(0, WRITABLE_SHOWN)
     .map((row) => ({
       id: text(row.id),
       jobNumber: row.job_number ? String(row.job_number) : "",

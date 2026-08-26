@@ -142,6 +142,71 @@ export function readsAsTestData(value: string): boolean {
   return false;
 }
 
+/*
+ * Street words that identify nobody, and would wreck a post if guarded.
+ *
+ * The forbidden list is built from the tokens of a street address, and that is
+ * right for "Tefft" and catastrophic for "Water". A customer at 88 Water Street
+ * would have "water" stripped out of their own complaint by `deidentify`, and
+ * then every draft containing it rejected by `houseStyle` — including one using
+ * this app's own diagram label, "Through a person or into water". A correct post
+ * about a wet GFCI would fail twice and be stored as a refusal.
+ *
+ * Three kinds of word are dropped:
+ *
+ * - **Street types, directions and unit words.** "Street", "North", "Apt". None
+ *   of them narrows an address to a household.
+ * - **Words this app writes about.** A house on Power Street or Well Road would
+ *   otherwise censor the vocabulary of the trade. Taken from `ELECTRICAL`, so
+ *   the two lists cannot drift apart.
+ * - **The ordinary nouns street names are made of.** Oak, Church, Spring, Park.
+ *   A street name shared with half the county is not an identifier, and the
+ *   house number that would make it one is dropped separately for being numeric.
+ *
+ * What survives is the distinctive part, which is the part that identifies:
+ * "Tefft", "Hilldale", a surname used as a street.
+ */
+const STREET_FURNITURE = new Set([
+  "street", "st", "road", "rd", "avenue", "ave", "lane", "ln", "drive", "dr",
+  "court", "ct", "place", "pl", "boulevard", "blvd", "way", "circle", "cir",
+  "terrace", "ter", "trail", "highway", "hwy", "parkway", "pkwy", "alley",
+  "loop", "run", "path", "row", "square", "sq", "crescent", "close",
+  "north", "south", "east", "west", "northeast", "northwest", "southeast",
+  "southwest", "upper", "lower", "old", "new",
+  "apt", "apartment", "unit", "suite", "ste", "floor", "building", "bldg",
+  "the", "and", "of",
+  // Ordinary nouns that half the streets in America are named after.
+  "water", "park", "hill", "mill", "spring", "oak", "elm", "pine", "maple",
+  "cedar", "main", "first", "second", "third", "fourth", "fifth", "church",
+  "school", "market", "mountain", "valley", "lake", "river", "forest",
+  "garden", "gardens", "meadow", "ridge", "view", "sunset", "sunrise",
+  "grove", "orchard", "vista", "bay", "beach", "ocean", "palm", "olive",
+  "cypress", "willow", "birch", "walnut", "cherry", "apple", "rose",
+  "laurel", "juniper", "aspen", "sycamore", "spruce", "union", "liberty",
+  "washington", "lincoln", "franklin", "jackson", "madison", "monroe",
+  "center", "central", "college", "high", "state", "county", "canyon",
+  "mesa", "vale", "glen", "dale", "field", "fields", "wood", "woods",
+]);
+
+/**
+ * The parts of a street address worth treating as identifying.
+ *
+ * Everything else in the line is dropped: house numbers because they are
+ * numeric, short fragments because a two-letter term matches everywhere, and
+ * the words above because guarding them costs a post and protects nobody.
+ */
+export function streetIdentifiers(addressLine: string): string[] {
+  return (addressLine ?? "")
+    .split(/\s+/)
+    .map((token) => token.replace(/[^A-Za-z'\u2019-]/g, "").trim())
+    .filter(
+      (token) =>
+        token.length >= 3 &&
+        !STREET_FURNITURE.has(token.toLowerCase()) &&
+        !ELECTRICAL_WORDS.has(token.toLowerCase()),
+    );
+}
+
 /**
  * Anything that points at one household, taken out.
  *

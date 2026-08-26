@@ -4,7 +4,12 @@ import { checkPost, retryNote } from "@/lib/blog-voice";
 import { writeJournalPost, type DraftedPost } from "@/lib/claude";
 import { diagramLabels, isDiagramKey } from "@/lib/journal-diagrams";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
-import { describeSource, postSlug, readJournalSource } from "@/lib/journal-source";
+import {
+  describeSource,
+  postSlug,
+  readJournalSource,
+  streetIdentifiers,
+} from "@/lib/journal-source";
 import { jobCategoryLabel } from "@/lib/new-job-input";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -170,7 +175,10 @@ export async function writePostForJob(input: {
       text(customerRow.first_name),
       text(customerRow.last_name),
       text(customerRow.company_name),
-      ...text(property.address_line_1).split(/\s+/),
+      // Only the distinctive part of the street. Guarding "Water" or "Power"
+      // because somebody lives on that street censors the vocabulary of the
+      // trade and refuses the post for using it.
+      ...streetIdentifiers(text(property.address_line_1)),
     ]
       .map((entry) => entry.trim())
       .filter((entry) => entry.length >= 3 && !/^\d+$/.test(entry));

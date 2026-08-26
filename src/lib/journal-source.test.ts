@@ -9,6 +9,7 @@ import {
   postSlug,
   seasonOf,
   soundsElectrical,
+  streetIdentifiers,
 } from "./journal-source.ts";
 
 /*
@@ -264,4 +265,40 @@ test("a slug is never empty and never ends in a hyphen", () => {
 
 test("accents fold rather than making a second URL", () => {
   assert.equal(postSlug("¿Por qué se bota el breaker?"), "por-que-se-bota-el-breaker");
+});
+
+test("a street named after an ordinary word does not censor the post", () => {
+  /*
+   * The best catch of the review, and it would have been invisible until a
+   * customer on Water Street reported a wet outlet. Every token of the address
+   * became a forbidden term, so "water" was stripped from their own complaint
+   * and any draft containing it was refused — including one using this app's
+   * own diagram label, "Through a person or into water".
+   */
+  assert.deepEqual(streetIdentifiers("88 Water Street"), []);
+  assert.deepEqual(streetIdentifiers("14 Power Ave"), []);
+  assert.deepEqual(streetIdentifiers("6 Well Road"), []);
+  assert.deepEqual(streetIdentifiers("12 Park Lane"), []);
+  assert.deepEqual(streetIdentifiers("900 North Church Street"), []);
+});
+
+test("the distinctive part of a street is still guarded", () => {
+  // The case the list exists for. "Tefft" names one street in one town.
+  assert.deepEqual(streetIdentifiers("412 Tefft Street"), ["Tefft"]);
+  assert.deepEqual(streetIdentifiers("77 Hilldale Ct, Apt 4"), ["Hilldale"]);
+  assert.deepEqual(streetIdentifiers(""), []);
+});
+
+test("a complaint about water survives a customer who lives on Water Street", () => {
+  // End to end: the wet-GFCI post that would have been refused twice.
+  const source = readJournalSource({
+    ...JOB_9,
+    customerDescription:
+      "Water is getting into the outlet by the pool and the breaker keeps tripping.",
+    identifiers: streetIdentifiers("88 Water Street"),
+  });
+
+  assert.ok(source);
+  assert.match(source.complaint, /Water is getting into the outlet/);
+  assert.deepEqual(source.forbidden, []);
 });

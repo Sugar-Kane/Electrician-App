@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { checkPost, retryNote } from "@/lib/blog-voice";
 import { editJournalPost, type DraftedPost } from "@/lib/claude";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
+import { streetIdentifiers } from "@/lib/journal-source";
 import { writePostForJob } from "@/lib/journal-writer";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -331,7 +332,7 @@ async function forbiddenWordsFor(
     read(customer, "first_name"),
     read(customer, "last_name"),
     read(customer, "company_name"),
-    ...read(property, "address_line_1").split(/\s+/),
+    ...streetIdentifiers(read(property, "address_line_1")),
   ]
     .map((entry) => entry.trim())
     // Three characters, and never a bare house number: "412" would reject any
