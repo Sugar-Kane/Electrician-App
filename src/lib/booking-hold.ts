@@ -131,8 +131,15 @@ export function heldReply(input: {
  * A URL read down a phone line is not a link, it is a spelling test. The caller
  * is told what is about to arrive and why, and the link goes by text.
  */
-export function holdSpoken(input: { feeCents: number }): string {
+export function holdSpoken(input: { feeCents: number; language?: string }): string {
   if (input.feeCents <= 0) return "";
+
+  if (input.language === "es") {
+    return (
+      `Le enviaré por mensaje un enlace para pagar la tarifa de diagnóstico de ${feeLabel(input.feeCents)}, ` +
+      "y el pago confirma la cita."
+    );
+  }
 
   return (
     `I will text you a link to pay the ${feeLabel(input.feeCents)} diagnostic fee, ` +

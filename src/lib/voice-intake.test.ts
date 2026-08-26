@@ -53,9 +53,47 @@ test("every caller is told the call may be recorded, before they say anything", 
   const greeting = buildGreeting("Pacific Plains Electric");
   assert.match(greeting, /may be recorded/i);
   assert.ok(
-    greeting.indexOf(RECORDING_NOTICE) < greeting.indexOf("What is the problem"),
+    greeting.indexOf(RECORDING_NOTICE) < greeting.indexOf("How can I help you today"),
     "the notice must come before the first question",
   );
+  assert.equal(
+    greeting,
+    `Hi, this is Sofia with Pacific Plains Electric. ${RECORDING_NOTICE} How can I help you today?`,
+  );
+});
+
+test("a Spanish caller gets Spanish for fixed voice steps too", () => {
+  const spanishContext = { ...context, language: "es" as const };
+  const spanishAction = decideIntakeAction({
+    decision: {
+      tool: "propose_visit",
+      input: {
+        contact_name: "Ana",
+        description: "no hay luz",
+        address_line_1: "1 A St",
+        city: "Nipomo",
+        postal_code: "93444",
+        slot_start: "2026-08-11T15:00:00.000Z",
+        urgency: "routine",
+        language: "es",
+      },
+    },
+    customerText: "no hay luz en la cocina",
+    context: spanishContext,
+  });
+  const result = decideVoiceStep({
+    action: spanishAction,
+    callerText: "no hay luz en la cocina",
+    failedTurns: 0,
+    canTransfer: true,
+    context: spanishContext,
+  });
+
+  assert.equal(result.kind, "listen");
+  assert.match(result.say, /Podemos ir/);
+  assert.match(result.say, /visita de diagnóstico/);
+  assert.match(result.say, /¿Quiere que reserve esa cita\?/);
+  assert.doesNotMatch(result.say, /Would you like/i);
 });
 
 test("asking for a person beats anything the model wanted to do", () => {
@@ -64,6 +102,8 @@ test("asking for a person beats anything the model wanted to do", () => {
     "let me speak to Nick",
     "give me a human",
     "I want an operator",
+    "quiero hablar con una persona",
+    "necesito un representante",
   ]) {
     assert.equal(wantsHuman(phrase), true, phrase);
     const result = step({
@@ -150,11 +190,24 @@ test("anything the caller said is escaped before it becomes XML", () => {
 test("the listen step always gives the caller a way out of silence", () => {
   const twiml = listenTwiml({ say: "What is the problem?", actionUrl: "https://x.test/api/twilio/voice?turn=2" });
   assert.match(twiml, /<Gather input="speech"/);
-  assert.match(twiml, /speechTimeout="auto"/);
+  assert.match(twiml, /speechTimeout="3"/);
+  assert.match(twiml, /speechModel="deepgram_nova-3"/);
+  assert.match(twiml, /language="multi"/);
   assert.match(twiml, /action="https:\/\/x\.test\/api\/twilio\/voice\?turn=2"/);
   // Twilio falls through the Gather when nothing is said; without this the
   // caller sits on an open line listening to nothing.
   assert.match(twiml, /<Hangup\/>/);
+});
+
+test("Spanish TwiML speaks with a US Spanish voice", () => {
+  const twiml = listenTwiml({
+    say: "¿Cómo le puedo ayudar?",
+    actionUrl: "https://x.test/api/twilio/voice",
+    language: "es",
+  });
+
+  assert.match(twiml, /voice="Polly\.Lupe" language="es-US"/);
+  assert.match(twiml, /Lo siento, no escuché nada/);
 });
 
 test("an unanswered transfer becomes a callback rather than a dead line", () => {

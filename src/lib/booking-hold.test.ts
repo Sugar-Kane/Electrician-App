@@ -130,3 +130,12 @@ test("spoken, there is no URL to read out", () => {
   assert.doesNotMatch(said, /https?:/);
   assert.equal(holdSpoken({ feeCents: 0 }), "");
 });
+
+test("a held appointment is explained in Spanish to a Spanish caller", () => {
+  const said = holdSpoken({ feeCents: 10000, language: "es" });
+
+  assert.match(said, /Le enviaré por mensaje un enlace/);
+  assert.match(said, /\$100/);
+  assert.match(said, /el pago confirma la cita/);
+  assert.doesNotMatch(said, /I will text/i);
+});

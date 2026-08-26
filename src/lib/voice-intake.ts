@@ -18,11 +18,23 @@ import type { IntakeAction, IntakeContext } from "@/lib/sms-intake";
  */
 export const RECORDING_NOTICE = "This call may be recorded or transcribed.";
 
+/** A stable human name makes the automated greeting feel like an introduction. */
+export const RECEPTIONIST_NAME = "Sofia";
+
 /** How many misunderstandings before a person takes over. */
 export const MAX_FAILED_TURNS = 2;
 
 export function buildGreeting(businessName: string): string {
-  return `Thanks for calling ${businessName}. ${RECORDING_NOTICE} I can book an electrician for you. What is the problem?`;
+  return `Hi, this is ${RECEPTIONIST_NAME} with ${businessName}. ${RECORDING_NOTICE} How can I help you today?`;
+}
+
+function isSpanish(language: string): boolean {
+  return language === "es";
+}
+
+function slotSpoken(action: Extract<IntakeAction, { kind: "book" | "propose" }>): string {
+  const label = isSpanish(action.language) ? action.slot.labels?.es ?? action.slot.label : action.slot.label;
+  return spoken(label);
 }
 
 /**
@@ -32,7 +44,7 @@ export function buildGreeting(businessName: string): string {
  * automated system is a customer the business has already lost.
  */
 export function wantsHuman(text: string): boolean {
-  return /\b(human|person|real person|someone else|representative|agent|operator|talk to (nick|the electrician|somebody|someone)|speak (to|with) (a|an|someone|nick)|customer service|manager|stop|this is useless)\b/i.test(
+  return /\b(human|person|real person|someone else|representative|agent|operator|talk to (nick|the electrician|somebody|someone)|speak (to|with) (a|an|someone|nick)|customer service|manager|stop|this is useless|humano|persona|representante|agente|operador|hablar con (alguien|una persona|un humano|el electricista)|servicio al cliente|gerente)\b/i.test(
     text,
   );
 }
@@ -59,31 +71,44 @@ export function decideVoiceStep(input: {
 
   if (wantsHuman(input.callerText)) {
     return input.canTransfer
-      ? { kind: "transfer", say: "Of course. Connecting you now." }
+      ? {
+          kind: "transfer",
+          say: isSpanish(action.language)
+            ? "Por supuesto. Le comunico ahora."
+            : "Of course. Connecting you now.",
+        }
       : {
           kind: "hangup",
-          say: "I understand. I have noted that you would like a call back, and someone will phone you shortly. Thanks for calling.",
+          say: isSpanish(action.language)
+            ? "Entiendo. He anotado que desea que le llamen, y alguien le devolverá la llamada en breve. Gracias por llamar."
+            : "I understand. I have noted that you would like a call back, and someone will phone you shortly. Thanks for calling.",
         };
   }
 
   if (action.kind === "book") {
     return {
       kind: "hangup",
-      say: `You are booked for ${spoken(action.slot.label)}. We will text you when the technician is on the way. Thanks for calling ${context.businessName}.`,
+      say: isSpanish(action.language)
+        ? `Su cita está reservada para ${slotSpoken(action)}. Le enviaremos un mensaje cuando el técnico vaya en camino. Gracias por llamar a ${context.businessName}.`
+        : `You are booked for ${slotSpoken(action)}. We will text you when the technician is on the way. Thanks for calling ${context.businessName}.`,
     };
   }
 
   if (action.kind === "callback") {
     return {
       kind: "hangup",
-      say: "I have taken your details and someone will call you back shortly. Thanks for calling.",
+      say: isSpanish(action.language)
+        ? "Ya tengo sus datos y alguien le llamará en breve. Gracias por llamar."
+        : "I have taken your details and someone will call you back shortly. Thanks for calling.",
     };
   }
 
   if (action.kind === "propose") {
     return {
       kind: "listen",
-      say: `We can come ${spoken(action.slot.label)}. The diagnostic visit is ${context.diagnosticFee}. Would you like me to book that?`,
+      say: isSpanish(action.language)
+        ? `Podemos ir ${slotSpoken(action)}. La visita de diagnóstico cuesta ${context.diagnosticFee}. ¿Quiere que reserve esa cita?`
+        : `We can come ${slotSpoken(action)}. The diagnostic visit is ${context.diagnosticFee}. Would you like me to book that?`,
     };
   }
 
@@ -91,10 +116,17 @@ export function decideVoiceStep(input: {
   // through a system that clearly is not understanding them.
   if (input.failedTurns >= MAX_FAILED_TURNS) {
     return input.canTransfer
-      ? { kind: "transfer", say: "Let me put you through to the electrician." }
+      ? {
+          kind: "transfer",
+          say: isSpanish(action.language)
+            ? "Permítame comunicarle con el electricista."
+            : "Let me put you through to the electrician.",
+        }
       : {
           kind: "hangup",
-          say: "Sorry — I am having trouble with this one. I have noted your number and someone will call you back shortly.",
+          say: isSpanish(action.language)
+            ? "Lo siento, estoy teniendo dificultades para entenderle. Ya tengo su número y alguien le llamará en breve."
+            : "Sorry — I am having trouble with this one. I have noted your number and someone will call you back shortly.",
         };
   }
 
@@ -124,28 +156,39 @@ export function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-const VOICE = 'voice="Polly.Joanna"';
+function voiceAttributes(language: string = "en"): string {
+  return isSpanish(language)
+    ? 'voice="Polly.Lupe" language="es-US"'
+    : 'voice="Polly.Joanna" language="en-US"';
+}
+
+function silenceMessage(language: string): string {
+  return isSpanish(language)
+    ? "Lo siento, no escuché nada. Llame de nuevo cuando esté listo."
+    : "Sorry, I did not catch that. Please call back when you are ready.";
+}
 
 /** Speak, then listen for the caller's next sentence. */
-export function listenTwiml(input: { say: string; actionUrl: string }): string {
+export function listenTwiml(input: { say: string; actionUrl: string; language?: string }): string {
+  const voice = voiceAttributes(input.language);
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<Response>",
-    `<Gather input="speech" speechTimeout="auto" language="en-US" action="${escapeXml(input.actionUrl)}" method="POST">`,
-    `<Say ${VOICE}>${escapeXml(input.say)}</Say>`,
+    `<Gather input="speech" speechTimeout="3" speechModel="deepgram_nova-3" language="multi" action="${escapeXml(input.actionUrl)}" method="POST">`,
+    `<Say ${voice}>${escapeXml(input.say)}</Say>`,
     "</Gather>",
     // Reached only when the caller says nothing at all.
-    `<Say ${VOICE}>Sorry, I did not catch that. Please call back when you are ready.</Say>`,
+    `<Say ${voice}>${escapeXml(silenceMessage(input.language ?? "en"))}</Say>`,
     "<Hangup/>",
     "</Response>",
   ].join("");
 }
 
-export function hangupTwiml(say: string): string {
+export function hangupTwiml(say: string, language: string = "en"): string {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<Response>",
-    `<Say ${VOICE}>${escapeXml(say)}</Say>`,
+    `<Say ${voiceAttributes(language)}>${escapeXml(say)}</Say>`,
     "<Hangup/>",
     "</Response>",
   ].join("");
@@ -163,11 +206,12 @@ export function transferTwiml(input: {
   callerId: string;
   actionUrl: string;
   timeoutSeconds?: number;
+  language?: string;
 }): string {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<Response>",
-    `<Say ${VOICE}>${escapeXml(input.say)}</Say>`,
+    `<Say ${voiceAttributes(input.language)}>${escapeXml(input.say)}</Say>`,
     `<Dial timeout="${input.timeoutSeconds ?? 20}" callerId="${escapeXml(input.callerId)}" action="${escapeXml(input.actionUrl)}" method="POST">`,
     `<Number>${escapeXml(input.to)}</Number>`,
     "</Dial>",
@@ -188,6 +232,8 @@ export function voiceInstructions(): string {
     "- The caller cannot see anything. Never refer to links, buttons, or writing anything down.",
     "- Ask for one thing at a time. Two questions in one breath do not work on the phone.",
     "- Speech recognition makes mistakes. If an address or name looks garbled, ask them to repeat it rather than booking on a guess.",
+    "- Reply entirely in the language the caller just used. A Spanish caller gets Spanish on the first reply; stay in Spanish unless they switch or ask you to switch.",
+    "- Report that latest language accurately in the tool call, and never mix English and Spanish in one spoken reply.",
     "- Use confirm_visit when the caller agrees to a window you already offered out loud.",
   ].join("\n");
 }

@@ -35,6 +35,27 @@ test("every caller is told the call may be recorded, in the first thing said", (
   assert.match(instructions, /Open with exactly/);
 });
 
+test("Sofia introduces herself personally and asks how she can help today", () => {
+  const instructions = buildRealtimeInstructions({
+    ...CONTEXT,
+    businessName: "Pacific Plains Electric",
+  });
+
+  assert.match(
+    instructions,
+    /Hi, this is Sofia with Pacific Plains Electric\..*How can I help you today\?/,
+  );
+});
+
+test("the first Spanish caller turn gets a Spanish reply and stays Spanish", () => {
+  const instructions = buildRealtimeInstructions(CONTEXT);
+
+  assert.match(instructions, /Spanish caller gets Spanish|speak Spanish, answer in natural conversational Spanish/i);
+  assert.match(instructions, /that very first turn/i);
+  assert.match(instructions, /unless the caller switches languages/i);
+  assert.match(instructions, /Never mix English and Spanish/i);
+});
+
 test("the instructions say the model's words book nothing", () => {
   const instructions = buildRealtimeInstructions(CONTEXT);
   assert.match(instructions, /Nothing you say books anything/);

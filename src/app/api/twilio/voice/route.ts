@@ -121,7 +121,7 @@ export async function POST(request: Request) {
         .update({ status: answered ? "transferred" : "completed", outcome: `dial:${text(params.DialCallStatus)}` })
         .eq("call_sid", callSid);
 
-      if (answered) return twiml(hangupTwiml("Thanks for calling."));
+      if (answered) return twiml(hangupTwiml("Thanks for calling.", context.language));
 
       if (existingCall?.customer_id) {
         await recordBookingRequest({
@@ -150,7 +150,12 @@ export async function POST(request: Request) {
       }
 
       return twiml(
-        hangupTwiml("Sorry, nobody is free right now. I have noted your number and we will call you back shortly."),
+        hangupTwiml(
+          context.language === "es"
+            ? "Lo siento, nadie está disponible ahora. Ya tengo su número y le devolveremos la llamada en breve."
+            : "Sorry, nobody is free right now. I have noted your number and we will call you back shortly.",
+          context.language,
+        ),
       );
     }
 
@@ -202,6 +207,7 @@ export async function POST(request: Request) {
             to: escalationNumber,
             callerId: to,
             actionUrl: `${callbackOrigin}/api/twilio/voice?step=after-dial`,
+            language: context.language,
           }),
         );
       }
@@ -210,6 +216,7 @@ export async function POST(request: Request) {
         listenTwiml({
           say: "Sorry, I did not catch that. Could you say that again?",
           actionUrl: `${callbackOrigin}/api/twilio/voice`,
+          language: context.language,
         }),
       );
     }
@@ -258,7 +265,9 @@ export async function POST(request: Request) {
      */
     const say =
       recorded.payUrl && recorded.feeCents && action.kind === "book"
-        ? `I have ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString())} held for you. ${holdSpoken({ feeCents: recorded.feeCents })}`
+        ? action.language === "es"
+          ? `Le he apartado ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "es-US")}. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language })}`
+          : `I have ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "en-US")} held for you. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language })}`
         : voiceStep.say;
 
     await database
@@ -284,16 +293,18 @@ export async function POST(request: Request) {
           to: escalationNumber,
           callerId: to,
           actionUrl: `${callbackOrigin}/api/twilio/voice?step=after-dial`,
+          language: action.language,
         }),
       );
     }
 
-    if (voiceStep.kind === "hangup") return twiml(hangupTwiml(say));
+    if (voiceStep.kind === "hangup") return twiml(hangupTwiml(say, action.language));
 
     return twiml(
       listenTwiml({
         say,
         actionUrl: `${callbackOrigin}/api/twilio/voice`,
+        language: action.language,
       }),
     );
   } catch {
