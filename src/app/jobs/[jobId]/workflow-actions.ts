@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { recordActivity } from "@/lib/activity";
 import { sendJobEventMessage } from "@/lib/automatic-messages";
+import { writePostForJob } from "@/lib/journal-writer";
 import {
   canAdvance,
   isWorkflowState,
@@ -253,6 +255,25 @@ export async function advanceJob(
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/schedule");
   revalidatePath("/");
+
+  /*
+   * The write-up, after the response has gone.
+   *
+   * `after` runs the callback once this action's response is flushed, so the
+   * tap that finishes a job returns at the speed it always did and the model
+   * runs on its own time. Writing it inline would hold an electrician standing
+   * in somebody's garage while a language model composes prose about them.
+   *
+   * `writePostForJob` never throws and never needs anything from the caller. A
+   * job with nothing worth writing about produces no post and says why on the
+   * job's own screen; that is the ordinary case rather than an error.
+   */
+  if (requested === "completed") {
+    after(async () => {
+      await writePostForJob({ jobId: job.id });
+      revalidatePath(`/jobs/${jobNumber}`);
+    });
+  }
 
   // Setting off and turning up are the two moments the customer is waiting on,
   // so they are the two that are worth a text. Nothing else in the workflow

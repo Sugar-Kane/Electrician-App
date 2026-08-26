@@ -563,6 +563,175 @@ export async function lookUpListPrice(input: {
   }
 }
 
+/* ---------------------------------------------------------------- journals */
+
+const JOURNAL_TOOLS = [
+  {
+    name: "publish_post",
+    description: "Write the post. Use this when there is genuinely something for a homeowner to learn here.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description:
+            "The question a homeowner would type into a search box, worded as they would word it. Not a headline about the business.",
+        },
+        dek: { type: "string", description: "One sentence under the title. Under 160 characters." },
+        body: {
+          type: "string",
+          description:
+            "The post. Plain prose in short paragraphs separated by a blank line. **bold** and - bullets are the only formatting.",
+        },
+        lesson: {
+          type: "string",
+          description:
+            "Two or three sentences a reader can take away and use, written for somebody who is not an electrician.",
+        },
+        diagram: {
+          type: "string",
+          description: "The key of one diagram from the catalogue, or an empty string for none.",
+        },
+        diagram_labels: {
+          type: "array",
+          items: { type: "string" },
+          description: "One short label per slot, in the order the catalogue lists them. Four words each at most.",
+        },
+        diagram_caption: { type: "string", description: "One line under the diagram. Empty string for none." },
+      },
+      required: ["title", "dek", "body", "lesson", "diagram", "diagram_labels", "diagram_caption"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "decline",
+    description:
+      "Refuse to write a post. Use this when the job description is not a real electrical complaint, when there is nothing a reader could learn, or when writing anything true would mean guessing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reason: { type: "string", description: "One sentence, for the owner to read." },
+      },
+      required: ["reason"],
+      additionalProperties: false,
+    },
+  },
+] as const;
+
+export type DraftedPost = {
+  title: string;
+  dek: string;
+  body: string;
+  lesson: string;
+  diagram: string;
+  diagramLabels: string[];
+  diagramCaption: string;
+};
+
+export type JournalDraft =
+  | { ok: true; post: DraftedPost }
+  | { ok: false; reason: string };
+
+function readDraft(input: Record<string, unknown>): DraftedPost {
+  const read = (key: string) => (typeof input[key] === "string" ? (input[key] as string).trim() : "");
+  return {
+    title: read("title"),
+    dek: read("dek"),
+    body: read("body"),
+    lesson: read("lesson"),
+    diagram: read("diagram"),
+    diagramLabels: Array.isArray(input.diagram_labels) ? (input.diagram_labels as string[]) : [],
+    diagramCaption: read("diagram_caption"),
+  };
+}
+
+/**
+ * Write up a finished job as something a stranger can learn from.
+ *
+ * Refusing is a first-class answer, not a failure. Production holds a job whose
+ * description is an offensive one-liner and whose notes are a dictation test;
+ * `readJournalSource` catches that one before it reaches here, but the model is
+ * the second line and it needs a way to say no that is not an exception.
+ *
+ * Two attempts at most. `houseStyle` repairs the em dashes and reports what it
+ * cannot repair, and the second attempt is given that list by name — a model
+ * told "do not sound like an AI" produces the same draft again, and a model told
+ * "you used *delve into* and *a testament to*" does not.
+ *
+ * Returns null on any failure, like everything else in this file. No post is
+ * written, the job says so, and nobody is shown a stack trace.
+ */
+export async function writeJournalPost(input: {
+  system: string;
+  brief: string;
+  kind: "story" | "lesson";
+  forbidden: string[];
+  /** Applied to a draft; returns the repaired text and what is still wrong. */
+  check: (draft: DraftedPost) => { post: DraftedPost; problems: string };
+}): Promise<JournalDraft | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+
+  const turns: Anthropic.MessageParam[] = [{ role: "user", content: input.brief }];
+
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const response = await anthropic.messages.create(
+        {
+          model: "claude-opus-5",
+          max_tokens: 3000,
+          system: [{ type: "text", text: input.system, cache_control: { type: "ephemeral" } }],
+          tools: JOURNAL_TOOLS as unknown as Anthropic.Tool[],
+          tool_choice: { type: "any" },
+          messages: turns,
+        },
+        { timeout: 90_000 },
+      );
+
+      if (response.stop_reason === "refusal") {
+        return { ok: false, reason: "There was nothing here that could be written up." };
+      }
+
+      const call = response.content.find((block) => block.type === "tool_use");
+      if (!call || call.type !== "tool_use") return null;
+
+      if (call.name === "decline") {
+        const reason = (call.input as { reason?: unknown })?.reason;
+        return {
+          ok: false,
+          reason: typeof reason === "string" && reason.trim() ? reason.trim().slice(0, 300) : "Not enough to write about.",
+        };
+      }
+
+      const { post, problems } = input.check(readDraft((call.input ?? {}) as Record<string, unknown>));
+      if (!problems) return { ok: true, post };
+
+      // Last attempt, and it still reads wrong. No post is better than one that
+      // announces itself as machine-written on the business's own domain.
+      if (attempt === 1) {
+        console.error("journal draft rejected twice", problems);
+        return { ok: false, reason: "The draft did not read well enough to publish." };
+      }
+
+      turns.push(
+        { role: "assistant", content: response.content },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: call.id, content: "Not published. Fix these and call publish_post again:" },
+            { type: "text", text: problems },
+          ],
+        } as Anthropic.MessageParam,
+      );
+    }
+
+    return null;
+  } catch (error) {
+    console.error("journal draft failed", error);
+    return null;
+  }
+}
+
 export type AgentToolCall = { id: string; name: string; input: Record<string, unknown> };
 export type AgentReply = {
   text: string;
