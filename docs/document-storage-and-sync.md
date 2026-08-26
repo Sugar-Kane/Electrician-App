@@ -79,8 +79,12 @@ https://www.googleapis.com/auth/drive.file
 
    ```text
    http://localhost:3000/api/integrations/google-drive/callback
-   https://electrician-app-blue.vercel.app/api/integrations/google-drive/callback
+   https://www.volteira.com/api/integrations/google-drive/callback
    ```
+
+   The production URI must use the exact origin in `NEXT_PUBLIC_APP_URL`. If
+   that value changes, add the matching callback URI in Google Cloud before
+   redeploying.
 
 6. Add the following server-only Vercel environment values:
 
