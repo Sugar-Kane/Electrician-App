@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  completionTime,
   deidentify,
   describeSource,
   readJournalSource,
@@ -301,4 +302,42 @@ test("a complaint about water survives a customer who lives on Water Street", ()
   assert.ok(source);
   assert.match(source.complaint, /Water is getting into the outlet/);
   assert.deepEqual(source.forbidden, []);
+});
+
+test("a job's completion time comes off the progress rows, not the job", () => {
+  /*
+   * `jobs` has no `completed_at`. This is the rule that replaced reading one,
+   * after selecting that column failed every journal query outright — the
+   * writer saw a missing job and the owner's list came back empty, neither of
+   * them saying why.
+   */
+  const LATER = "2026-08-12T19:16:49.707Z";
+  const EARLIER = "2026-08-12T17:40:00.000Z";
+
+  // Two technicians. The job is finished when the last of them is.
+  assert.equal(completionTime({ progress: [EARLIER, LATER], updatedAt: "" }), LATER);
+  assert.equal(completionTime({ progress: [LATER, EARLIER], updatedAt: "" }), LATER);
+
+  // Job 9 in production: a progress row exists even with no technician on the
+  // job, so the real timestamp wins over the job's own.
+  assert.equal(
+    completionTime({ progress: [LATER], updatedAt: "2026-08-12T19:16:49.855Z" }),
+    LATER,
+  );
+
+  // No progress row at all. `updated_at` on a completed job is the moment the
+  // status was written, which is the same event seen from the other side.
+  assert.equal(
+    completionTime({ progress: [], updatedAt: "2026-08-12T19:16:49.855Z" }),
+    "2026-08-12T19:16:49.855Z",
+  );
+  assert.equal(
+    completionTime({ progress: [null, undefined, ""], updatedAt: "2026-08-12T19:16:49.855Z" }),
+    "2026-08-12T19:16:49.855Z",
+  );
+
+  // Nothing usable rather than a made-up date. The caller supplies "now", and
+  // it should be doing that knowingly.
+  assert.equal(completionTime({ progress: [], updatedAt: "" }), "");
+  assert.equal(completionTime({ progress: ["not a date"], updatedAt: "also not" }), "");
 });

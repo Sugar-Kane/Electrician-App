@@ -249,6 +249,36 @@ export function deidentify(value: string, forbidden: string[]): string {
   return text.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
 }
 
+/**
+ * When a job was finished.
+ *
+ * **`jobs` has no `completed_at` column.** The timestamp lives on
+ * `job_technician_progress`, one row per technician, written where the status
+ * is set. Selecting it from `jobs` is not a wrong value, it is a PostgREST
+ * error that fails the whole select, and every read then behaves as though the
+ * job does not exist.
+ *
+ * The last technician to finish is when the job finished, so the newest
+ * timestamp wins. A job can also carry no progress row at all, and the job's
+ * own `updated_at` stands in there: for a completed job that is the moment the
+ * status was written, which is the same event from the other side.
+ */
+export function completionTime(input: {
+  progress?: readonly (string | null | undefined)[];
+  updatedAt?: string | null;
+}): string {
+  const finished = (input.progress ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value !== "" && !Number.isNaN(new Date(value).getTime()))
+    .sort();
+
+  const latest = finished[finished.length - 1] ?? "";
+  if (latest) return latest;
+
+  const updated = typeof input.updatedAt === "string" ? input.updatedAt.trim() : "";
+  return Number.isNaN(new Date(updated).getTime()) ? "" : updated;
+}
+
 /** "late August". Vaguer than a date, and natural in a sentence. */
 export function seasonOf(iso: string): string {
   const date = new Date(iso);
