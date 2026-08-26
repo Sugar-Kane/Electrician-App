@@ -1,7 +1,7 @@
 import type { IntakeContext } from "@/lib/sms-intake";
 // An explicit .ts specifier, so the tests can run this module directly under
 // Node's type stripping the way the other import-free modules do.
-import { RECEPTIONIST_NAME, RECORDING_NOTICE } from "./voice-intake.ts";
+import { RECEPTIONIST_NAME, buildGreeting } from "./voice-intake.ts";
 
 /**
  * Configuring a Grok realtime voice session to answer the business phone.
@@ -159,12 +159,20 @@ export function buildKeyterms(input: {
 export function buildRealtimeInstructions(context: IntakeContext): string {
   return [
     `You are ${RECEPTIONIST_NAME}, the receptionist answering the phone for ${context.businessName}, an electrical contractor serving ${context.serviceArea}.`,
-    `Open with exactly: "Hi, this is ${RECEPTIONIST_NAME} with ${context.businessName}. ${RECORDING_NOTICE} How can I help you today?"`,
+    `Open with exactly: "${buildGreeting(context.businessName, context.language)}"`,
     "",
     "You are speaking out loud to someone who cannot see anything. Be brief, warm, and ordinary. One question at a time.",
     "",
     "Language:",
-    "- The opening is in English because the caller has not spoken yet.",
+    /*
+     * The opening language is decided before the call, from this caller's
+     * record. A number that has spoken Spanish to us before should not have to
+     * establish that again, and a number we know nothing about opens in
+     * English because that is the safer guess, not because English is default.
+     */
+    context.language === "es"
+      ? "- This caller's record says Spanish, so the opening above is already in Spanish. Stay in Spanish."
+      : "- The opening is in English because this caller has not spoken to us in anything else.",
     "- As soon as the caller speaks, reply entirely in the language they just used. If they speak Spanish, answer in natural conversational Spanish on that very first turn and continue in Spanish.",
     "- Stay in that language unless the caller switches languages or asks you to switch. If a very short answer is ambiguous, keep using the conversation's current language.",
     "- Translate every question, confirmation, price, safety message, tool result, and goodbye before speaking it. Keep names and the business name unchanged. Never mix English and Spanish in one reply.",

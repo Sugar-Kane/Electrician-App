@@ -5,7 +5,12 @@ import { readInboundText, type IntakeTurn } from "@/lib/claude";
 import { HOLD_MINUTES, heldReply } from "@/lib/booking-hold";
 import { readLanguage, readLanguageSource } from "@/lib/customer-language";
 import { localeFor } from "@/lib/intake-phrases";
-import { loadIntakeContext, recordBookingRequest, slotLabel } from "@/lib/intake-shared";
+import {
+  loadIntakeContext,
+  recordBookingRequest,
+  recordDetectedLanguage,
+  slotLabel,
+} from "@/lib/intake-shared";
 import {
   buildIntakeSystemPrompt,
   decideIntakeAction,
@@ -202,38 +207,6 @@ export async function handleInboundText(input: {
   }
 }
 
-/**
- * Remember the language, when it turned out to be a new one.
- *
- * The decision has already been made — `decideIntakeAction` ran the detection
- * through `resolveLanguage`, which is where the owner's pin wins — so this
- * writes what it was told and decides nothing itself. That is deliberate: a
- * second copy of the rule here is a second copy to keep in step, and the two
- * would disagree the first time either moved.
- *
- * `languageChanged` is false for almost every message, which is the point. The
- * language usually has not changed, and a write per inbound text is a write per
- * inbound text.
- *
- * The `language_source = 'detected'` filter is belt and braces against a race:
- * the owner could have pinned this customer between the read at the top of the
- * turn and this write, and their choice is not something a text message undoes.
- */
-async function recordDetectedLanguage(
-  database: ReturnType<typeof getSupabaseAdmin>,
-  customerId: string,
-  action: IntakeAction,
-) {
-  if (!action.languageChanged) return;
-
-  await database
-    .from("customers")
-    .update({ preferred_language: action.language, language_source: "detected" })
-    .eq("id", customerId)
-    .eq("language_source", "detected");
-}
-
-/** Put a name on the lead as soon as the customer gives one. */
 async function recordExtractedName(
   database: ReturnType<typeof getSupabaseAdmin>,
   customerId: string,

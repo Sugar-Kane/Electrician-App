@@ -4,9 +4,11 @@ import { holdSpoken } from "@/lib/booking-hold";
 import { readInboundText } from "@/lib/claude";
 import {
   findOrCreateCustomerByPhone,
+  loadCustomerLanguage,
   loadIntakeContext,
   organizationForPhoneNumber,
   recordBookingRequest,
+  recordDetectedLanguage,
   slotLabel,
 } from "@/lib/intake-shared";
 import { buildIntakeSystemPrompt, decideIntakeAction } from "@/lib/sms-intake";
@@ -106,10 +108,32 @@ export async function POST(request: Request) {
       .eq("call_sid", callSid)
       .maybeSingle();
 
+    /*
+     * Who is calling, before the context is built rather than after.
+     *
+     * The language lives on the customer, and `loadIntakeContext` wants it as
+     * an argument. Resolved here so every branch below — the greeting, each
+     * spoken reply, the after-dial message — is built from what this caller's
+     * record actually says instead of the English default.
+     */
+    const callerId = existingCall?.customer_id
+      ? String(existingCall.customer_id)
+      : ((await findOrCreateCustomerByPhone({
+          database,
+          organizationId,
+          phone: from,
+          note: "Created from an inbound phone call.",
+          channel: "phone",
+        })) ?? "");
+
+    const { language, languageSource } = await loadCustomerLanguage(database, callerId);
+
     const { context, timeZone } = await loadIntakeContext({
       database,
       organizationId,
       isFirstReply: false,
+      language,
+      languageSource,
     });
 
     // The transfer did not connect: Twilio comes back here with the dial
@@ -161,16 +185,9 @@ export async function POST(request: Request) {
 
     // First request of the call: greet, and start listening.
     if (!existingCall) {
-      const customerId = await findOrCreateCustomerByPhone({
-        database,
-        organizationId,
-        phone: from,
-        note: "Created from an inbound phone call.",
-      });
-
       await database.from("voice_calls").insert({
         organization_id: organizationId,
-        customer_id: customerId,
+        customer_id: callerId || null,
         call_sid: callSid,
         from_number: from,
         to_number: to,
@@ -180,7 +197,7 @@ export async function POST(request: Request) {
 
       return twiml(
         listenTwiml({
-          say: buildGreeting(context.businessName),
+          say: buildGreeting(context.businessName, context.language),
           actionUrl: `${callbackOrigin}/api/twilio/voice`,
         }),
       );
@@ -229,6 +246,16 @@ export async function POST(request: Request) {
     });
 
     const action = decideIntakeAction({ decision, customerText: speech, context });
+
+    /*
+     * Remember it, so the next turn does not start from English again.
+     *
+     * Without this a caller who has been speaking Spanish drops back to English
+     * the moment they say something too short to judge — "si", a house number,
+     * a phone number — because the fallback is whatever the record says, and
+     * nothing was ever written to it.
+     */
+    await recordDetectedLanguage(database, callerId, action);
     const escalationNumber = process.env.ESCALATION_PHONE_NUMBER ?? "";
     const voiceStep = decideVoiceStep({
       action,

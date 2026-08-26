@@ -4,6 +4,7 @@ import { BOOKING_TOOL_NAMES } from "@/lib/booking-tool-rules";
 import { buildSessionUpdate, realtimeUrlForCall } from "@/lib/grok-voice";
 import {
   findOrCreateCustomerByPhone,
+  loadCustomerLanguage,
   loadIntakeContext,
   organizationForPhoneNumber,
 } from "@/lib/intake-shared";
@@ -82,7 +83,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not open a customer record" }, { status: 500 });
   }
 
-  const { context } = await loadIntakeContext({ database, organizationId, isFirstReply: false });
+  /*
+   * What this caller's record says, so the session opens in their language
+   * rather than discovering it again every call.
+   */
+  const { language, languageSource } = await loadCustomerLanguage(database, customerId);
+
+  const { context } = await loadIntakeContext({
+    database,
+    organizationId,
+    isFirstReply: false,
+    language,
+    languageSource,
+  });
 
   // Keyed by call_id the same way a Twilio call is keyed by CallSid: one row
   // per call, so the transcript and any booking hang off something addressable.
