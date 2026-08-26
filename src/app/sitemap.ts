@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { listPublicJournal } from "@/lib/journal-data";
-import { journalIndexPath, journalPostPath, originOf } from "@/lib/journal-urls";
+import { appSitemapCarries, journalIndexPath, journalPostPath, originOf } from "@/lib/journal-urls";
 import { listJournalOrganizations } from "@/lib/journal-sitemap";
 
 /**
@@ -29,8 +29,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const organization of organizations) {
     // Canonical elsewhere. Listing it here asks a crawler to index a URL whose
     // own tag points at a different host, which is a contradiction it resolves
-    // by trusting neither.
-    if (organization.hostname) continue;
+    // by trusting neither. The tenant sitemap applies the other half of this
+    // same rule, so every post is submitted exactly once.
+    if (!appSitemapCarries(organization.hostname)) continue;
 
     entries.push({
       url: `${origin}${journalIndexPath(organization.slug, false)}`,

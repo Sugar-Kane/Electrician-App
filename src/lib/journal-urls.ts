@@ -28,6 +28,12 @@ export function originOf(value: string | null | undefined): string {
   return trimmed;
 }
 
+/** A hostname reduced to one comparable form, or "" if it is not one. */
+export function hostOf(value: string | null | undefined): string {
+  const host = (value ?? "").trim().toLowerCase();
+  return /^[a-z0-9.-]+$/.test(host) ? host : "";
+}
+
 /**
  * The origin a post's canonical URL is built on.
  *
@@ -40,9 +46,47 @@ export function canonicalOrigin(input: {
   /** The hostname this business has verified, or "" for none. */
   tenantHost: string | null | undefined;
 }): string {
-  const host = (input.tenantHost ?? "").trim().toLowerCase();
-  if (host && /^[a-z0-9.-]+$/.test(host)) return `https://${host}`;
+  const host = hostOf(input.tenantHost);
+  if (host) return `https://${host}`;
   return originOf(input.appUrl);
+}
+
+/**
+ * Which of a post's two addresses gets submitted to crawlers.
+ *
+ * A post is reachable on both hostnames on purpose, but a sitemap is a claim
+ * that a URL is worth indexing, and submitting a URL whose own canonical tag
+ * points at a different host is a contradiction a crawler resolves by trusting
+ * neither signal. So exactly one of these two may carry any given post, and
+ * both answers come from here rather than from a rule written twice.
+ *
+ * The deciding fact is **verification**, not whether a hostname resolves.
+ * `get_booking_page_by_host` matches an `organization_domains` row without
+ * looking at `verified_at`, so a domain that is pointed at us but still
+ * pending serves real pages — and those pages canonicalise home, because
+ * `get_verified_host_for_slug` does check it. Left unguarded, that setup
+ * window is one where the tenant sitemap advertises URLs that disown
+ * themselves while the product sitemap lists the same posts a second time.
+ */
+export function appSitemapCarries(verifiedHost: string | null | undefined): boolean {
+  return hostOf(verifiedHost) === "";
+}
+
+/**
+ * The origin a tenant hostname may submit its journal from, or "".
+ *
+ * Compared against the host the request came in on rather than merely tested
+ * for existence: a business can hold several domain rows, and a request
+ * arriving on a second, unverified one is not on the address that owns these
+ * posts even though the business does have a verified address elsewhere.
+ */
+export function tenantSitemapOrigin(input: {
+  requestHost: string | null | undefined;
+  verifiedHost: string | null | undefined;
+}): string {
+  const verified = hostOf(input.verifiedHost);
+  if (!verified) return "";
+  return verified === hostOf(input.requestHost) ? `https://${verified}` : "";
 }
 
 /**

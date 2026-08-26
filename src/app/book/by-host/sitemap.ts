@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 
-import { listPublicJournal } from "@/lib/journal-data";
-import { journalIndexPath, journalPostPath } from "@/lib/journal-urls";
+import { listPublicJournal, verifiedHostFor } from "@/lib/journal-data";
+import { journalIndexPath, journalPostPath, tenantSitemapOrigin } from "@/lib/journal-urls";
 import { getBookingPageByHost } from "@/lib/public-booking";
 
 /**
@@ -17,6 +17,14 @@ import { getBookingPageByHost } from "@/lib/public-booking";
  * Only the journal. The booking page this hostname mainly serves is `noindex`
  * by design, so listing it would be asking a crawler to index a page that tells
  * it not to.
+ *
+ * And only once this hostname is **verified**. Resolving is not the same test:
+ * `get_booking_page_by_host` matches a domain row whatever its `verified_at`,
+ * so a domain still pending verification serves these pages already, while the
+ * canonical on them keeps pointing home until it passes. Submitting from here
+ * during that window would put every post in two sitemaps and advertise URLs
+ * that disown themselves. Nothing is lost by waiting: the posts stay in the
+ * product's sitemap the whole time, and move here the day it verifies.
  */
 
 export const revalidate = 3600;
@@ -28,7 +36,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const page = await getBookingPageByHost(host);
   if (!page) return [];
 
-  const origin = `https://${host}`;
+  const origin = tenantSitemapOrigin({
+    requestHost: host,
+    verifiedHost: await verifiedHostFor(page.slug),
+  });
+  if (!origin) return [];
+
   const posts = await listPublicJournal(page.slug, 200);
 
   return [
