@@ -116,6 +116,10 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
       .select("trigger_event, is_active")
       .eq("organization_id", context.organizationId)
       .eq("channel", "sms")
+      // The English row is the switch of record. Every language shares the
+      // on/off decision, and reading them all would make "is this notification
+      // on" depend on which row came back last.
+      .eq("language", "en")
       .in("trigger_event", ["job_en_route", "job_arrived"]),
   ]);
 

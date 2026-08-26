@@ -44,6 +44,10 @@ export default async function AutomaticMessagesPage() {
         .select("trigger_event, body, is_active")
         .eq("organization_id", context.organizationId)
         .eq("channel", "sms")
+        // This screen edits the English wording. The map below is keyed by
+        // trigger alone, so a second language would collide and the editor
+        // would show whichever row came back last.
+        .eq("language", "en")
     : { data: null };
 
   const templates = new Map(

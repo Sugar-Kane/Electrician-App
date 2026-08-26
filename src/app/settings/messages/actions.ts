@@ -42,7 +42,10 @@ export async function saveMessageTemplate(
     .update({ body, is_active: isActive })
     .eq("organization_id", context.organizationId)
     .eq("trigger_event", trigger)
-    .eq("channel", "sms");
+    .eq("channel", "sms")
+    // Without this the same body is written over every language's row, so
+    // editing the English wording silently destroys the Spanish one.
+    .eq("language", "en");
 
   if (error) return { error: "That could not be saved. Try again." };
 
