@@ -175,9 +175,9 @@ export const BOOKING_TOOLS: McpTool[] = [
   },
   {
     name: "request_callback",
-    title: "Ask the electrician to call back",
+    title: "Transfer to a person or request a callback",
     description:
-      "Log that the customer wants a call back. Use whenever a visit cannot be booked from this call — no address, outside the service area, a quote for a large job, or they simply asked to speak to someone. Ask the customer which they want first: the electrician to call them straight back, or a callback later to get scheduled. This refuses until you have asked.",
+      "Hand the conversation to a person. Infer the customer's intent from what they already said: use transfer when they ask to speak, talk, connect, or be put through to a live person; use callback when they ask for someone to call, ring, or get back to them. Do not present a canned timing choice. Ask one natural clarifying question only when their words do not distinguish a live transfer from a returned call.",
     inputSchema: {
       type: "object",
       properties: {
@@ -188,11 +188,11 @@ export const BOOKING_TOOLS: McpTool[] = [
         },
         urgency: URGENCY,
         caller_phone: CALLER_PHONE,
-        when: {
+        handoff: {
           type: "string",
-          enum: ["now", "later"],
+          enum: ["transfer", "callback"],
           description:
-            'Which the customer chose when you asked. "now" if they want the electrician to ring them straight back, "later" if a callback to get scheduled is fine. Never guess — ask them.',
+            'The intent expressed in the conversation. "transfer" means connect this live call to a person. "callback" means end this call and have a person return their call. Infer this from their words; only clarify if ambiguous.',
         },
       },
       required: [
@@ -200,7 +200,7 @@ export const BOOKING_TOOLS: McpTool[] = [
         "description",
         "urgency",
         "caller_phone",
-        "when",
+        "handoff",
       ],
       additionalProperties: false,
     },
@@ -292,11 +292,11 @@ export function intakeAnswers(args: Record<string, unknown>): IntakeAnswer[] {
  * is either a homeowner sitting in the dark waiting for a call that was filed
  * as routine, or the owner's phone ringing at ten at night for a dripping fan.
  */
-export function callbackWhen(
+export function callbackHandoff(
   args: Record<string, unknown>,
-): "now" | "later" | "" {
-  const value = text(args.when).toLowerCase();
-  return value === "now" || value === "later" ? value : "";
+): "transfer" | "callback" | "" {
+  const value = text(args.handoff).toLowerCase();
+  return value === "transfer" || value === "callback" ? value : "";
 }
 
 /**
@@ -306,8 +306,8 @@ export function callbackWhen(
  * is still talking to the customer. Empty when there is nothing missing.
  */
 export function callbackShortfall(args: Record<string, unknown>): string {
-  if (!callbackWhen(args)) {
-    return 'NOT BOOKED. You have not asked the customer what they would like. Ask "Would you like the electrician to call you straight back, or shall we call you back later to get you scheduled?" and call request_callback again with when set to "now" or "later".';
+  if (!callbackHandoff(args)) {
+    return 'NOT BOOKED. Determine whether the customer asked to speak to a live person on this call or asked for someone to return their call. Use handoff "transfer" for a live connection and "callback" for a returned call. Do not present a canned timing choice; clarify naturally only if their words are ambiguous.';
   }
 
   return "";
@@ -366,7 +366,9 @@ export function buildDecision(
         // describes the fault; this describes what the customer asked for. A
         // dripping extractor fan can still be somebody who wants a person now,
         // and no power at midnight can still be somebody happy to wait.
-        when: callbackWhen(args),
+        // The shared stored decision predates live transfers. Keep its internal
+        // values stable while the voice-facing contract uses human words.
+        when: callbackHandoff(args) === "transfer" ? "now" : "later",
       },
     };
   }
@@ -421,19 +423,10 @@ export function slotList(context: IntakeContext): string {
   const clock = `Right now it is ${context.nowLabel} where the business is.`;
 
   if (context.offeredSlots.length === 0) {
-    /*
-     * Ask, do not decide.
-     *
-     * This used to order the model to take a callback, and the customer was
-     * never consulted — a homeowner with no power got "someone will call you
-     * back" when what they wanted was somebody now. The two are a real choice
-     * and it is theirs, so the instruction is to put it to them.
-     */
     return [
       clock,
       "No arrival windows are open, so a visit cannot be booked on this call.",
-      'Tell the customer that, then ask which they would prefer: "Would you like the electrician to call you straight back, or shall we call you back later to get you scheduled?"',
-      'Call request_callback with when set to "now" or "later" — whichever they chose. Do not offer them a time and do not choose for them.',
+      "Continue naturally from what the customer already asked for. If they asked to speak to a live person, call request_callback with handoff set to transfer. If they asked for someone to call them, use callback. Do not present a canned timing choice. Clarify only if their intent is ambiguous.",
     ].join(" ");
   }
   return [
@@ -460,8 +453,8 @@ export function describeOutcome(input: {
   deliveryPreference?: "text" | "email" | "both" | "";
   /** The slot is reserved and the fee is not paid yet. */
   held?: boolean;
-  /** Which the customer chose on a callback: somebody now, or a call later. */
-  when?: "now" | "later" | "";
+  /** Whether they asked for a live connection or a returned call. */
+  handoff?: "transfer" | "callback" | "";
   /** Whether Twilio has taken control of the live call for a human transfer. */
   transfer?: "started" | "unavailable";
 }): ToolResult {
@@ -475,14 +468,14 @@ export function describeOutcome(input: {
      * scheduled" is not, and saying the wrong one is how a person ends up
      * waiting by a phone all evening.
      */
-    if (input.when === "now") {
+    if (input.handoff === "transfer") {
       if (input.transfer === "started") {
         return {
           text: "Live transfer started. Twilio is now connecting the caller to the electrician. Stop speaking immediately; do not say goodbye or promise a callback.",
         };
       }
       return {
-        text: `Logged for ${input.phone}, and ${context.businessName} is being alerted right now. Tell the customer an electrician will call them straight back on that number, and read the number back so they can correct it. Do not promise a specific number of minutes. Then close with a proper goodbye.`,
+        text: `The live transfer was unavailable. A callback is logged for ${input.phone}, and ${context.businessName} is being alerted. Apologize briefly, tell the customer a person will return their call, and close with a proper goodbye.`,
       };
     }
 
@@ -542,7 +535,7 @@ export function describeOutcome(input: {
 
     return {
       isError: true,
-      text: "NOT BOOKED. Ask the customer whether they would like the electrician to call them straight back, or a callback later to get scheduled, then use request_callback with when set to what they chose.",
+      text: "NOT BOOKED. Use what the customer already said to determine whether they want a live transfer or a returned call, then use request_callback with handoff set to transfer or callback. Clarify naturally only if their intent is ambiguous.",
     };
   }
 

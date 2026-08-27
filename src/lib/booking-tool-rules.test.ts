@@ -7,7 +7,7 @@ import {
   MINIMUM_INTAKE_ANSWERS,
   buildDecision,
   callbackShortfall,
-  callbackWhen,
+  callbackHandoff,
   callerEmail,
   callerPhone,
   customerWords,
@@ -217,6 +217,7 @@ test("an urgent callback is described as urgent to the model", () => {
     contact_name: "Dana Reyes",
     description: "Half the house has no power and I need someone today.",
     urgency: "urgent",
+    handoff: "callback",
   });
 
   assert.match(result.text, /as soon as possible/);
@@ -403,29 +404,20 @@ test("a booking carries its interview into the action", () => {
   assert.ok(action.intakeAnswers.every((entry) => entry.answer.length > 0));
 });
 
-test("with nothing open the customer is asked, not told", () => {
-  /*
-   * The regression this exists for. A caller at 5:43pm was told a technician
-   * would ring back, because `slotList` ordered the model to take a callback
-   * and nobody put the choice to the customer. Somebody with no power who
-   * wanted a person now got a routine callback instead.
-   */
+test("with nothing open the model follows the intent already in the conversation", () => {
   const empty: IntakeContext = { ...CONTEXT, offeredSlots: [] };
   const text = slotList(empty);
 
-  assert.match(
-    text,
-    /Would you like the electrician to call you straight back/,
-  );
-  assert.match(text, /shall we call you back later/);
-  // The old instruction decided for them. It must not survive.
-  assert.doesNotMatch(text, /Use request_callback — do not offer/);
-  assert.match(text, /do not choose for them/);
+  assert.match(text, /what the customer already asked for/);
+  assert.match(text, /handoff set to transfer/);
+  assert.match(text, /If they asked for someone to call them, use callback/);
+  assert.doesNotMatch(text, /straight back/);
+  assert.doesNotMatch(text, /now or later/i);
   // The clock is still first, so the model can tell tonight from next week.
   assert.match(text, /^Right now it is/);
 });
 
-test("a callback is refused until the customer has actually chosen", () => {
+test("a handoff is refused until the conversation reveals transfer or callback", () => {
   const asked = {
     contact_name: "Adam",
     description: "Fridge is dead",
@@ -434,19 +426,19 @@ test("a callback is refused until the customer has actually chosen", () => {
 
   const refusal = callbackShortfall(asked);
   assert.match(refusal, /^NOT BOOKED\./);
-  assert.match(refusal, /straight back/);
-  assert.match(refusal, /"now" or "later"/);
+  assert.match(refusal, /live person/);
+  assert.match(refusal, /return their call/);
+  assert.doesNotMatch(refusal, /straight back/);
 
-  // A value the model invented is not a choice either.
-  assert.match(callbackShortfall({ ...asked, when: "maybe" }), /^NOT BOOKED\./);
-  assert.match(callbackShortfall({ ...asked, when: "" }), /^NOT BOOKED\./);
+  assert.match(callbackShortfall({ ...asked, handoff: "maybe" }), /^NOT BOOKED\./);
+  assert.match(callbackShortfall({ ...asked, handoff: "" }), /^NOT BOOKED\./);
 
-  assert.equal(callbackShortfall({ ...asked, when: "now" }), "");
-  assert.equal(callbackShortfall({ ...asked, when: "later" }), "");
+  assert.equal(callbackShortfall({ ...asked, handoff: "transfer" }), "");
+  assert.equal(callbackShortfall({ ...asked, handoff: "callback" }), "");
 
-  assert.equal(callbackWhen({ when: "NOW" }), "now");
-  assert.equal(callbackWhen({ when: "later" }), "later");
-  assert.equal(callbackWhen({}), "");
+  assert.equal(callbackHandoff({ handoff: "TRANSFER" }), "transfer");
+  assert.equal(callbackHandoff({ handoff: "callback" }), "callback");
+  assert.equal(callbackHandoff({}), "");
 });
 
 test("what the caller is told back matches what they asked for", () => {
@@ -457,51 +449,58 @@ test("what the caller is told back matches what they asked for", () => {
     caller_phone: "+12098199985",
   };
 
-  const decision = buildDecision("request_callback", { ...args, when: "now" })!;
+  const decision = buildDecision("request_callback", { ...args, handoff: "transfer" })!;
   const action = decideIntakeAction({
     decision,
     customerText: "",
     context: CONTEXT,
   });
 
-  const now = describeOutcome({
+  const unavailable = describeOutcome({
     name: "request_callback",
     action,
     context: CONTEXT,
     phone: "+12098199985",
-    when: "now",
+    handoff: "transfer",
   });
 
-  // A commitment the owner's phone is about to make good on.
-  assert.match(now.text, /straight back/);
-  assert.match(now.text, /alerted right now/);
-  assert.doesNotMatch(now.text, /to get them scheduled/);
+  assert.match(unavailable.text, /live transfer was unavailable/i);
+  assert.match(unavailable.text, /return their call/);
 
   const transferring = describeOutcome({
     name: "request_callback",
     action,
     context: CONTEXT,
     phone: "+12098199985",
-    when: "now",
+    handoff: "transfer",
     transfer: "started",
   });
   assert.match(transferring.text, /Live transfer started/);
   assert.match(transferring.text, /Stop speaking immediately/);
   assert.doesNotMatch(transferring.text, /straight back/);
 
-  const later = describeOutcome({
+  const callback = describeOutcome({
     name: "request_callback",
     action,
     context: CONTEXT,
     phone: "+12098199985",
-    when: "later",
+    handoff: "callback",
   });
 
-  assert.match(later.text, /to get them scheduled/);
-  assert.doesNotMatch(later.text, /straight back/);
+  assert.match(callback.text, /to get them scheduled/);
+  assert.doesNotMatch(callback.text, /straight back/);
 
   // The choice reaches the stored decision, so the owner's list can show it.
   assert.equal((decision.input as Record<string, unknown>).when, "now");
   // And it is kept apart from the fault's own urgency, which is a different fact.
   assert.equal((decision.input as Record<string, unknown>).urgency, "routine");
+});
+
+test("the voice tool exposes transfer or callback, never now or later", () => {
+  const tool = BOOKING_TOOLS.find((entry) => entry.name === "request_callback")!;
+  const schema = JSON.stringify(tool.inputSchema);
+  assert.match(schema, /transfer/);
+  assert.match(schema, /callback/);
+  assert.doesNotMatch(schema, /"now"/);
+  assert.doesNotMatch(schema, /"later"/);
 });

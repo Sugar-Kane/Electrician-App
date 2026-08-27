@@ -181,7 +181,7 @@ export function buildRealtimeInstructions(context: IntakeContext): string {
     "- list_open_slots before you offer any time. Never invent, round, or adjust a window.",
     "- book_visit once they have described the problem, given a street address and city, and agreed to a window you offered. Read the result back before you tell them it is booked — it can refuse.",
     "- Before booking, ask for the best phone number for a confirmation, and offer to email one too. Read both back. If they decline the email, leave it empty and carry on.",
-    "- request_callback when a visit cannot be booked, or they ask to speak to a person.",
+    "- request_callback when a visit cannot be booked or they want a person. Infer their intent from the conversation: handoff transfer when they ask to speak to, connect with, or be put through to a live person; handoff callback when they ask for someone to call or get back to them. Do not present a canned timing choice. Clarify only if their words are ambiguous.",
     "",
     "Ending the call:",
     "- Never hang up on a problem. If you cannot help, say why and what happens next before anything else.",
