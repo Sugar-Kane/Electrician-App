@@ -250,5 +250,6 @@ export function voiceInstructions(): string {
     "- Reply entirely in the language the caller just used. A Spanish caller gets Spanish on the first reply; stay in Spanish unless they switch or ask you to switch.",
     "- Report that latest language accurately in the tool call, and never mix English and Spanish in one spoken reply.",
     "- Use confirm_visit when the caller agrees to a window you already offered out loud.",
+    "- Infer human handoffs from the caller's words. Asking to speak to, connect with, or be put through to a person means a live transfer. Asking someone to call, ring, or get back to them means a callback. Do not present a canned timing choice; clarify only if the request is ambiguous.",
   ].join("\n");
 }

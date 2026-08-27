@@ -227,6 +227,10 @@ test("the phone instructions rule out anything the caller cannot see", () => {
   assert.match(instructions, /cannot see/i);
   assert.match(instructions, /one thing at a time/i);
   assert.match(instructions, /Speech recognition makes mistakes/i);
+  assert.match(instructions, /Infer human handoffs/);
+  assert.match(instructions, /live transfer/);
+  assert.match(instructions, /means a callback/);
+  assert.doesNotMatch(instructions, /ask 'now or later'/i);
 });
 
 /*

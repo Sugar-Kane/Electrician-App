@@ -6,7 +6,7 @@ import {
   BOOKING_TOOLS,
   buildDecision,
   callbackShortfall,
-  callbackWhen,
+  callbackHandoff,
   callerEmail,
   callerPhone,
   customerWords,
@@ -164,7 +164,7 @@ export async function runBookingTool(input: {
   const answers = intakeAnswers(input.args);
   const preference = deliveryPreference(input.args);
   // Which the caller chose when asked. Refused above unless they were.
-  const chosen = callbackWhen(input.args);
+  const chosen = callbackHandoff(input.args);
   const recorded = await recordBookingRequest({
     database: input.database,
     organizationId: input.session.organizationId,
@@ -251,7 +251,7 @@ export async function runBookingTool(input: {
       contactName: action.contactName,
       description: action.description,
       urgency: action.urgency ?? ("routine" as const),
-      when: chosen || ("later" as const),
+      when: chosen === "transfer" ? ("now" as const) : ("later" as const),
       context,
       intakeAnswers: answers,
       owner,
@@ -262,7 +262,7 @@ export async function runBookingTool(input: {
   }
 
   let transfer: "started" | "unavailable" | undefined;
-  if (action.kind === "callback" && chosen === "now") {
+  if (action.kind === "callback" && chosen === "transfer") {
     transfer = "unavailable";
     const caller = toE164(input.session.phone ?? phone);
     const business = toE164(context.businessPhone);
@@ -333,7 +333,7 @@ export async function runBookingTool(input: {
     action,
     context,
     phone,
-    when: chosen,
+    handoff: chosen,
     deliveryPreference: preference,
     held: Boolean(recorded.payUrl),
     transfer,
