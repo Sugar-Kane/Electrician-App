@@ -18,7 +18,10 @@ import {
   slotList,
   unreachableCaller,
 } from "@/lib/booking-tool-rules";
-import { sendBookingConfirmations, sendCallbackAlert } from "@/lib/booking-notifications";
+import {
+  sendBookingConfirmations,
+  sendCallbackAlert,
+} from "@/lib/booking-notifications";
 import {
   findOrCreateCustomerByPhone,
   loadIntakeContext,
@@ -28,6 +31,10 @@ import { type ToolResult } from "@/lib/mcp-protocol";
 import { type McpSession } from "@/lib/mcp-session-token";
 import { decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { recordActivity } from "@/lib/activity";
+import { toE164 } from "@/lib/phone-format";
+import { findActiveInboundTwilioCall, redirectTwilioCall } from "@/lib/twilio";
+import { liveTransferTwiml, transferActionUrl } from "@/lib/twilio-transfer";
 
 /**
  * Running a booking tool against the real schedule.
@@ -55,7 +62,10 @@ async function resolveCustomer(input: {
   args: Record<string, unknown>;
 }): Promise<{ customerId: string; phone: string }> {
   if (input.session.customerId) {
-    return { customerId: input.session.customerId, phone: input.session.phone ?? "" };
+    return {
+      customerId: input.session.customerId,
+      phone: input.session.phone ?? "",
+    };
   }
 
   const phone = callerPhone(input.args);
@@ -67,7 +77,10 @@ async function resolveCustomer(input: {
     phone,
     note: "Created from an inbound phone call.",
     channel: "phone",
-    contactName: typeof input.args.contact_name === "string" ? input.args.contact_name : "",
+    contactName:
+      typeof input.args.contact_name === "string"
+        ? input.args.contact_name
+        : "",
   });
 
   return { customerId: customerId ?? "", phone };
@@ -88,7 +101,8 @@ export async function runBookingTool(input: {
   });
 
   if (input.name === "list_open_slots") return { text: slotList(context) };
-  if (input.name === "get_intake_questions") return { text: intakeQuestionList() };
+  if (input.name === "get_intake_questions")
+    return { text: intakeQuestionList() };
 
   // Before anything is written: was the customer actually interviewed, and did
   // they actually say yes? Both are refusals the model can act on, not errors.
@@ -114,16 +128,24 @@ export async function runBookingTool(input: {
    * unaffected. Refused before anything is written, because the model is still
    * on the phone with them and asking again costs nothing.
    */
-  if (!input.session.customerId && (input.name === "book_visit" || input.name === "request_callback")) {
+  if (
+    !input.session.customerId &&
+    (input.name === "book_visit" || input.name === "request_callback")
+  ) {
     const unreachable = unreachableCaller(input.name, input.args);
     if (unreachable) return { isError: true, text: unreachable };
   }
 
   const decision = buildDecision(input.name, input.args);
-  if (!decision) return { isError: true, text: `NOT BOOKED. Unknown tool: ${input.name}` };
+  if (!decision)
+    return { isError: true, text: `NOT BOOKED. Unknown tool: ${input.name}` };
 
   const callerText = customerWords(input.args);
-  const action = decideIntakeAction({ decision, customerText: callerText, context });
+  const action = decideIntakeAction({
+    decision,
+    customerText: callerText,
+    context,
+  });
 
   const { customerId, phone } = await resolveCustomer({
     database: input.database,
@@ -178,7 +200,12 @@ export async function runBookingTool(input: {
    * Every failure inside is still swallowed. The appointment is in the calendar
    * and no delivery problem may unmake it.
    */
-  if (action.kind === "book" && recorded.requestId && recorded.publicToken && !recorded.alreadyExisted) {
+  if (
+    action.kind === "book" &&
+    recorded.requestId &&
+    recorded.publicToken &&
+    !recorded.alreadyExisted
+  ) {
     const confirmations = {
       requestId: recorded.requestId,
       organizationId: input.session.organizationId,
@@ -211,7 +238,11 @@ export async function runBookingTool(input: {
    * person heard about. A caller was promised a call back and the promise
    * reached the database and stopped there.
    */
-  if (action.kind === "callback" && recorded.requestId && !recorded.alreadyExisted) {
+  if (
+    action.kind === "callback" &&
+    recorded.requestId &&
+    !recorded.alreadyExisted
+  ) {
     const alert = {
       requestId: recorded.requestId,
       organizationId: input.session.organizationId,
@@ -230,6 +261,73 @@ export async function runBookingTool(input: {
     after(() => sendCallbackAlert(alert));
   }
 
+  let transfer: "started" | "unavailable" | undefined;
+  if (action.kind === "callback" && chosen === "now") {
+    transfer = "unavailable";
+    const caller = toE164(input.session.phone ?? phone);
+    const business = toE164(context.businessPhone);
+    const electrician = toE164(owner.phone ?? "");
+    const origin = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+    if (
+      recorded.requestId &&
+      !recorded.alreadyExisted &&
+      caller &&
+      business &&
+      electrician &&
+      electrician !== caller &&
+      electrician !== business
+    ) {
+      const call = await findActiveInboundTwilioCall({
+        from: caller,
+        to: business,
+      });
+      if (call) {
+        const actionUrl = transferActionUrl({
+          origin,
+          callSid: call.sid,
+          requestId: recorded.requestId,
+          language: action.language,
+        });
+        const body = liveTransferTwiml({
+          to: electrician,
+          callerId: business,
+          actionUrl,
+          language: action.language,
+        });
+        if (body) {
+          const redirected = await redirectTwilioCall({
+            callSid: call.sid,
+            twiml: body,
+          });
+          if (redirected.ok) {
+            transfer = "started";
+            await input.database.from("inbound_calls").upsert(
+              {
+                organization_id: input.session.organizationId,
+                provider: "twilio",
+                provider_call_id: call.sid,
+                from_number: call.from,
+                to_number: call.to,
+                status: "transferring",
+                started_at: call.startedAt,
+              },
+              { onConflict: "provider,provider_call_id" },
+            );
+            await recordActivity(input.database, {
+              organizationId: input.session.organizationId,
+              eventType: "booking.transfer_started",
+              label: "Live transfer started",
+              customerId,
+              bookingRequestId: recorded.requestId,
+              metadata: { provider_call_id: call.sid },
+            });
+          }
+        }
+      }
+    }
+  }
+
   return describeOutcome({
     name: input.name,
     action,
@@ -238,5 +336,6 @@ export async function runBookingTool(input: {
     when: chosen,
     deliveryPreference: preference,
     held: Boolean(recorded.payUrl),
+    transfer,
   });
 }

@@ -3,6 +3,10 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { publicOrigin, webhookUrlCandidates } from "@/lib/twilio-webhook-url";
+import {
+  activeInboundCall,
+  type ActiveTwilioCall,
+} from "@/lib/twilio-transfer";
 
 /**
  * Twilio REST access over fetch.
@@ -50,14 +54,19 @@ function asIsoDate(value: unknown): string | null {
 }
 
 /** Read the authoritative phone numbers and timing for a signed CallSid. */
-export async function fetchTwilioCall(callSid: string): Promise<TwilioCallDetails | null> {
+export async function fetchTwilioCall(
+  callSid: string,
+): Promise<TwilioCallDetails | null> {
   const auth = credentials();
   if (!auth) return null;
 
   try {
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls/${callSid}.json`,
-      { headers: { Authorization: twilioAuthorization(auth) }, cache: "no-store" },
+      {
+        headers: { Authorization: twilioAuthorization(auth) },
+        cache: "no-store",
+      },
     );
     if (!response.ok) return null;
 
@@ -81,6 +90,93 @@ export async function fetchTwilioCall(callSid: string): Promise<TwilioCallDetail
   }
 }
 
+/** Find the parent leg Twilio still controls for a caller currently speaking to xAI. */
+export async function findActiveInboundTwilioCall(input: {
+  from: string;
+  to: string;
+}): Promise<ActiveTwilioCall | null> {
+  const auth = credentials();
+  if (!auth) return null;
+
+  const query = new URLSearchParams({
+    From: input.from,
+    To: input.to,
+    Status: "in-progress",
+    PageSize: "20",
+  });
+
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls.json?${query}`,
+      {
+        headers: { Authorization: twilioAuthorization(auth) },
+        cache: "no-store",
+      },
+    );
+    if (!response.ok) return null;
+    return activeInboundCall(await response.json(), input);
+  } catch {
+    return null;
+  }
+}
+
+export type TwilioRedirectResult =
+  | { ok: true; callSid: string; status: string }
+  | { ok: false; errorCode: string; errorDetail: string };
+
+/** Replace the TwiML on a live call, which ends the xAI leg and starts the transfer. */
+export async function redirectTwilioCall(input: {
+  callSid: string;
+  twiml: string;
+}): Promise<TwilioRedirectResult> {
+  const auth = credentials();
+  if (!auth) {
+    return {
+      ok: false,
+      errorCode: "not_configured",
+      errorDetail: "Twilio is not configured.",
+    };
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls/${input.callSid}.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: twilioAuthorization(auth),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ Twiml: input.twiml }),
+      },
+    );
+    const payload = (await response.json()) as {
+      sid?: string;
+      status?: string;
+      code?: number;
+      message?: string;
+    };
+    if (!response.ok || !payload.sid) {
+      return {
+        ok: false,
+        errorCode: String(payload.code ?? response.status),
+        errorDetail: payload.message ?? "Twilio could not redirect the call.",
+      };
+    }
+    return {
+      ok: true,
+      callSid: payload.sid,
+      status: payload.status ?? "in-progress",
+    };
+  } catch {
+    return {
+      ok: false,
+      errorCode: "network_error",
+      errorDetail: "Could not reach Twilio.",
+    };
+  }
+}
+
 /** Fetch recording bytes without ever putting Twilio credentials in a browser. */
 export async function fetchTwilioRecordingMedia(input: {
   recordingSid: string;
@@ -89,7 +185,9 @@ export async function fetchTwilioRecordingMedia(input: {
   const auth = credentials();
   if (!auth) return null;
 
-  const headers: Record<string, string> = { Authorization: twilioAuthorization(auth) };
+  const headers: Record<string, string> = {
+    Authorization: twilioAuthorization(auth),
+  };
   if (input.range) headers.Range = input.range;
 
   try {
@@ -133,7 +231,8 @@ export async function sendSms(input: {
     Body: input.body,
     MessagingServiceSid: input.messagingServiceSid,
   });
-  if (input.statusCallbackUrl) form.set("StatusCallback", input.statusCallbackUrl);
+  if (input.statusCallbackUrl)
+    form.set("StatusCallback", input.statusCallbackUrl);
 
   try {
     const response = await fetch(
@@ -165,7 +264,11 @@ export async function sendSms(input: {
       };
     }
 
-    return { ok: true, providerMessageId: payload.sid, status: payload.status ?? "queued" };
+    return {
+      ok: true,
+      providerMessageId: payload.sid,
+      status: payload.status ?? "queued",
+    };
   } catch {
     return {
       ok: false,
@@ -201,7 +304,9 @@ export function verifyTwilioSignature(input: {
       .reduce((accumulator, key) => accumulator + key + input.params[key], url);
 
     const expected = Buffer.from(
-      createHmac("sha1", auth.authToken).update(Buffer.from(payload, "utf-8")).digest("base64"),
+      createHmac("sha1", auth.authToken)
+        .update(Buffer.from(payload, "utf-8"))
+        .digest("base64"),
     );
     if (expected.length !== provided.length) return false;
     return timingSafeEqual(expected, provided);

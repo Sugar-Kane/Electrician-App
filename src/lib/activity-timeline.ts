@@ -66,6 +66,9 @@ export type TimelineDay = {
 const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "booking.requested": { kind: "inquiry", title: "Asked for an electrician" },
   "booking.callback_requested": { kind: "inquiry", title: "Asked for a callback" },
+  "booking.transfer_started": { kind: "inquiry", title: "Live transfer started" },
+  "booking.transfer_connected": { kind: "inquiry", title: "Connected to the electrician" },
+  "booking.transfer_missed": { kind: "inquiry", title: "Live transfer was missed" },
   "booking.fee_accepted": { kind: "money", title: "Agreed to the diagnostic fee" },
   "booking.hold_placed": { kind: "appointment", title: "Appointment held" },
   "booking.payment_confirmed": { kind: "money", title: "Diagnostic fee paid" },
