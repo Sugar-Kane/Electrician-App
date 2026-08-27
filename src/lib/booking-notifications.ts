@@ -2,13 +2,17 @@ import "server-only";
 
 import {
   confirmationEmail,
+  customerCallbackSms,
   customerConfirmationSms,
   emailSender,
   looksLikeEmail,
   ownerBookingEmail,
   ownerBookingSms,
+  ownerCallbackEmail,
+  ownerCallbackSms,
   ownerIntakeSms,
   type BookingFacts,
+  type CallbackFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import { slotLabel } from "@/lib/intake-shared";
@@ -341,5 +345,189 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       .eq("id", input.requestId);
   } catch {
     // Deliberately silent.
+  }
+}
+
+export type CallbackNotification = {
+  requestId: string;
+  organizationId: string;
+  customerId: string;
+  /** The number to ring them back on, already normalised. */
+  phone: string;
+  contactName: string;
+  description: string;
+  urgency: "routine" | "urgent";
+  /** Which the customer chose when asked: somebody now, or a call later. */
+  when: "now" | "later";
+  context: IntakeContext;
+  intakeAnswers?: { question: string; answer: string }[];
+  /** Where this business wants booking alerts sent. */
+  owner?: { email: string; phone: string };
+  /** Origin for the link in the owner's email, e.g. https://www.volteira.com */
+  origin: string;
+  /**
+   * True when the customer has already been told, in a thread they are reading.
+   *
+   * The same reason the booking sender has one: a callback agreed over text
+   * ends with the assistant saying so in that thread, and a second text a moment
+   * later reads as a malfunction.
+   */
+  customerAlreadyToldBySms?: boolean;
+};
+
+/**
+ * Telling somebody a call produced no booking.
+ *
+ * The sibling of `sendBookingConfirmations`, and it exists because that
+ * function could not be stretched to cover this: every message it builds needs
+ * a window, an address and a fee, and a callback has none of the three.
+ *
+ * Until this existed a callback reached nobody. Both intake paths sent only on
+ * `action.kind === "book"`, so the one outcome that exists *because* a person
+ * has to ring somebody back was the one outcome no person heard about — the
+ * owner found it by opening the app, if he opened the app.
+ *
+ * Best-effort throughout, like its sibling: the lead is recorded either way and
+ * no delivery failure may unmake it.
+ */
+export async function sendCallbackAlert(input: CallbackNotification): Promise<void> {
+  const database = getSupabaseAdmin();
+  const attempts: Attempt[] = [];
+
+  const note = (attempt: Omit<Attempt, "at">) =>
+    attempts.push({ ...attempt, at: new Date().toISOString() });
+
+  const facts: CallbackFacts = {
+    businessName: input.context.businessName,
+    businessPhone: input.context.businessPhone,
+    contactName: input.contactName,
+    customerPhone: input.phone,
+    description: input.description,
+    urgency: input.urgency,
+    when: input.when,
+    intakeAnswers: input.intakeAnswers,
+    link: input.origin ? `${input.origin.replace(/\/+$/, "")}/booking-requests` : undefined,
+  };
+
+  // The same claim the booking sender takes, for the same reason: a retried
+  // tool call must not put the same lead on the owner's phone twice.
+  const { data: claimed } = await database
+    .from("booking_requests")
+    .update({ confirmed_notified_at: new Date().toISOString() })
+    .eq("id", input.requestId)
+    .is("confirmed_notified_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (!claimed) return;
+
+  const { data: settings } = await database
+    .from("messaging_settings")
+    .select("messaging_service_sid")
+    .eq("organization_id", input.organizationId)
+    .maybeSingle();
+
+  const messagingServiceSid = String(settings?.messaging_service_sid ?? "");
+
+  /*
+   * The owner first, and that ordering is deliberate.
+   *
+   * On a booking the customer is worst off without their confirmation. Here it
+   * is the other way round: the customer has just been told somebody will ring
+   * them, and the only thing that makes that true is this message arriving.
+   */
+  const ownerPhone = input.owner?.phone ?? "";
+  if (messagingServiceSid && ownerPhone) {
+    const sent = await sendSms({
+      to: ownerPhone,
+      body: ownerCallbackSms(facts),
+      messagingServiceSid,
+    });
+    note({
+      channel: "sms",
+      to: ownerPhone,
+      audience: "owner",
+      ok: sent.ok,
+      detail: sent.ok ? sent.status : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
+  } else if (!ownerPhone) {
+    note({
+      channel: "sms",
+      to: "",
+      audience: "owner",
+      ok: false,
+      detail:
+        "This business has not set a booking-alert phone number. Set one at Settings → Booking alerts.",
+    });
+  }
+
+  const ownerEmail = input.owner?.email ?? "";
+  if (ownerEmail) {
+    const message = ownerCallbackEmail(facts);
+    const sent = await sendEmail({
+      to: ownerEmail,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      from: emailSender(facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+    });
+    note({
+      channel: "email",
+      to: ownerEmail,
+      audience: "owner",
+      ok: sent.ok,
+      detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
+  }
+
+  // The customer, so the promise made out loud has something behind it.
+  if (input.customerAlreadyToldBySms) {
+    note({
+      channel: "sms",
+      to: input.phone,
+      audience: "customer",
+      ok: true,
+      detail: "Confirmed in the text thread itself; a second copy was not sent.",
+    });
+  } else if (messagingServiceSid && input.phone) {
+    await database.from("messaging_consent").upsert(
+      {
+        organization_id: input.organizationId,
+        customer_id: input.customerId,
+        channel: "sms",
+        scope: "transactional",
+        opted_in_at: new Date().toISOString(),
+        opted_out_at: null,
+        source: "phone_callback",
+        proof_text: "Caller gave this number on a phone call and asked to be called back.",
+      },
+      { onConflict: "customer_id,channel,scope" },
+    );
+
+    const body = customerCallbackSms(facts);
+    const result = await sendSms({ to: input.phone, body, messagingServiceSid });
+    note({
+      channel: "sms",
+      to: input.phone,
+      audience: "customer",
+      ok: result.ok,
+      detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
+    });
+    await recordOutbound({
+      database,
+      organizationId: input.organizationId,
+      customerId: input.customerId,
+      body,
+      result,
+    });
+  }
+
+  try {
+    await database
+      .from("booking_requests")
+      .update({ notification_results: attempts })
+      .eq("id", input.requestId);
+  } catch {
+    // Deliberately silent, like its sibling.
   }
 }

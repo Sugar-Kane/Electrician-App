@@ -170,6 +170,146 @@ function escapeHtml(value: string): string {
 }
 
 /**
+ * What is known when nothing could be booked.
+ *
+ * A separate type rather than a loosened `BookingFacts`, because every field
+ * that makes a booking message a booking message — the window, the address, the
+ * fee — is absent here, and making them optional would let a caller build a
+ * confirmation that quietly promises nothing.
+ */
+export type CallbackFacts = {
+  businessName: string;
+  businessPhone: string;
+  contactName: string;
+  /** The number to ring them back on, already normalised. */
+  customerPhone: string;
+  /** What they need, in their own words. */
+  description: string;
+  urgency: "routine" | "urgent";
+  /** Which the customer chose when asked: somebody now, or a call later. */
+  when: "now" | "later";
+  intakeAnswers?: { question: string; answer: string }[];
+  /** The booking-requests list, for the owner's email. */
+  link?: string;
+};
+
+/**
+ * The owner's alert when a call produced no booking.
+ *
+ * Until this existed a callback reached nobody at all: both intake paths only
+ * sent on a booking, so the one outcome that exists *because* a person has to
+ * ring somebody back was the one outcome no person heard about. The owner found
+ * it by opening the app.
+ *
+ * "Now" leads with the fact that they are waiting, because that is the whole
+ * difference between a text read at leisure and one acted on. Both versions say
+ * plainly that nothing is scheduled — a message that merely names a customer
+ * and a problem reads like a booking at a glance.
+ */
+export function ownerCallbackSms(facts: CallbackFacts): string {
+  const who = squash(facts.contactName) || "A caller";
+  const lead =
+    facts.when === "now"
+      ? `${who} is asking for a call back now — ${facts.customerPhone}.`
+      : `Callback requested: ${who}, ${facts.customerPhone}.`;
+
+  return clip(
+    [
+      lead,
+      facts.urgency === "urgent" ? "They called it urgent." : "",
+      facts.description ? squash(facts.description) : "",
+      // Last, and never omitted. Everything above this reads like a booking.
+      "Nothing is scheduled.",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    SMS_LIMIT,
+  );
+}
+
+/**
+ * The same, with the interview, for the owner's inbox.
+ *
+ * Carries the answers because they are what decide whether this is a five
+ * minute phone call or a visit, and the owner is about to make that call.
+ */
+export function ownerCallbackEmail(facts: CallbackFacts): EmailBody {
+  const who = squash(facts.contactName) || "A caller";
+  const answers = facts.intakeAnswers ?? [];
+  const heading =
+    facts.when === "now"
+      ? `${who} asked for a call back now`
+      : `${who} asked for a callback`;
+
+  const lines = [
+    heading,
+    facts.customerPhone,
+    facts.urgency === "urgent" ? "They called it urgent." : "",
+    "",
+    facts.description ? `What they need: ${squash(facts.description)}` : "",
+    "",
+    ...(answers.length > 0 ? ["What they said on the call:"] : []),
+    ...answers.flatMap((entry) => [`  ${squash(entry.question)}`, `    ${squash(entry.answer)}`]),
+    "",
+    "Nothing is scheduled. No visit was booked on this call.",
+    facts.link ? `Open the request: ${facts.link}` : "",
+  ].filter((line) => line !== "");
+
+  const tel = facts.customerPhone.replace(/[^\d+]/g, "");
+  const html = [
+    `<p style="font-size:18px;margin:0 0 4px"><strong>${escapeHtml(heading)}</strong></p>`,
+    `<p style="margin:0 0 16px"><a href="tel:${escapeHtml(tel)}">${escapeHtml(facts.customerPhone)}</a>${
+      facts.urgency === "urgent" ? " — <strong>they called it urgent</strong>" : ""
+    }</p>`,
+    facts.description
+      ? `<p><strong>What they need:</strong> ${escapeHtml(squash(facts.description))}</p>`
+      : "",
+    ...(answers.length > 0
+      ? [
+          "<p><strong>What they said on the call:</strong></p><ul>",
+          ...answers.map(
+            (entry) =>
+              `<li>${escapeHtml(squash(entry.question))}<br /><strong>${escapeHtml(squash(entry.answer))}</strong></li>`,
+          ),
+          "</ul>",
+        ]
+      : []),
+    "<p><strong>Nothing is scheduled.</strong> No visit was booked on this call.</p>",
+    facts.link ? `<p><a href="${escapeHtml(facts.link)}">Open the request</a></p>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  return {
+    subject:
+      facts.when === "now"
+        ? `Call back now: ${who}`
+        : `Callback requested: ${who}`,
+    text: lines.join("\n"),
+    html,
+  };
+}
+
+/**
+ * The customer's copy, which has to match what they were just promised.
+ *
+ * They chose between somebody now and a call later, and were told which they
+ * were getting. A text saying the other thing is how a person ends up waiting
+ * by a phone all evening for a call that was filed as routine.
+ */
+export function customerCallbackSms(facts: CallbackFacts): string {
+  const promise =
+    facts.when === "now"
+      ? "an electrician will call you back shortly"
+      : "we'll call you back to get you scheduled";
+
+  return clip(
+    `${facts.businessName}: thanks for calling. We have your details and ${promise}. Need us sooner? Call ${facts.businessPhone}.`,
+    SMS_LIMIT,
+  );
+}
+
+/**
  * The same confirmation, for a caller who gave an email address.
  *
  * Plain text and HTML say exactly the same things: a mail client that shows

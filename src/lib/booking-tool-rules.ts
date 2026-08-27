@@ -155,7 +155,7 @@ export const BOOKING_TOOLS: McpTool[] = [
     name: "request_callback",
     title: "Ask the electrician to call back",
     description:
-      "Log that the customer wants a call back. Use whenever a visit cannot be booked from this call — no address, outside the service area, a quote for a large job, or they simply asked to speak to someone.",
+      "Log that the customer wants a call back. Use whenever a visit cannot be booked from this call — no address, outside the service area, a quote for a large job, or they simply asked to speak to someone. Ask the customer which they want first: the electrician to call them straight back, or a callback later to get scheduled. This refuses until you have asked.",
     inputSchema: {
       type: "object",
       properties: {
@@ -163,8 +163,14 @@ export const BOOKING_TOOLS: McpTool[] = [
         description: { type: "string", description: "What the customer needs, in their own words." },
         urgency: URGENCY,
         caller_phone: CALLER_PHONE,
+        when: {
+          type: "string",
+          enum: ["now", "later"],
+          description:
+            'Which the customer chose when you asked. "now" if they want the electrician to ring them straight back, "later" if a callback to get scheduled is fine. Never guess — ask them.',
+        },
       },
-      required: ["contact_name", "description", "urgency", "caller_phone"],
+      required: ["contact_name", "description", "urgency", "caller_phone", "when"],
       additionalProperties: false,
     },
   },
@@ -244,6 +250,33 @@ export function intakeAnswers(args: Record<string, unknown>): IntakeAnswer[] {
   })).filter((entry) => entry.answer.length > 0);
 }
 
+/**
+ * Whether the caller wants somebody now, or a call back later.
+ *
+ * Empty when the model has not asked. That is a refusal below rather than a
+ * default, because the two are a real choice a person makes and the wrong guess
+ * is either a homeowner sitting in the dark waiting for a call that was filed
+ * as routine, or the owner's phone ringing at ten at night for a dripping fan.
+ */
+export function callbackWhen(args: Record<string, unknown>): "now" | "later" | "" {
+  const value = text(args.when).toLowerCase();
+  return value === "now" || value === "later" ? value : "";
+}
+
+/**
+ * Why a callback cannot be logged yet.
+ *
+ * The same shape as `intakeShortfall`: a refusal the model can act on while it
+ * is still talking to the customer. Empty when there is nothing missing.
+ */
+export function callbackShortfall(args: Record<string, unknown>): string {
+  if (!callbackWhen(args)) {
+    return 'NOT BOOKED. You have not asked the customer what they would like. Ask "Would you like the electrician to call you straight back, or shall we call you back later to get you scheduled?" and call request_callback again with when set to "now" or "later".';
+  }
+
+  return "";
+}
+
 export function deliveryPreference(args: Record<string, unknown>): "text" | "email" | "both" | "" {
   const value = text(args.delivery_preference);
   return value === "text" || value === "email" || value === "both" ? value : "";
@@ -291,6 +324,11 @@ export function buildDecision(
         contact_name: text(args.contact_name),
         description: text(args.description),
         urgency: urgency(args.urgency),
+        // Deliberately alongside `urgency` rather than folded into it. Urgency
+        // describes the fault; this describes what the customer asked for. A
+        // dripping extractor fan can still be somebody who wants a person now,
+        // and no power at midnight can still be somebody happy to wait.
+        when: callbackWhen(args),
       },
     };
   }
@@ -340,7 +378,20 @@ export function slotList(context: IntakeContext): string {
   const clock = `Right now it is ${context.nowLabel} where the business is.`;
 
   if (context.offeredSlots.length === 0) {
-    return `${clock} No arrival windows are open. Use request_callback — do not offer the customer a time.`;
+    /*
+     * Ask, do not decide.
+     *
+     * This used to order the model to take a callback, and the customer was
+     * never consulted — a homeowner with no power got "someone will call you
+     * back" when what they wanted was somebody now. The two are a real choice
+     * and it is theirs, so the instruction is to put it to them.
+     */
+    return [
+      clock,
+      "No arrival windows are open, so a visit cannot be booked on this call.",
+      'Tell the customer that, then ask which they would prefer: "Would you like the electrician to call you straight back, or shall we call you back later to get you scheduled?"',
+      'Call request_callback with when set to "now" or "later" — whichever they chose. Do not offer them a time and do not choose for them.',
+    ].join(" ");
   }
   return [
     clock,
@@ -364,13 +415,28 @@ export function describeOutcome(input: {
   deliveryPreference?: "text" | "email" | "both" | "";
   /** The slot is reserved and the fee is not paid yet. */
   held?: boolean;
+  /** Which the customer chose on a callback: somebody now, or a call later. */
+  when?: "now" | "later" | "";
 }): ToolResult {
   const { action, context } = input;
 
   if (input.name === "request_callback") {
+    /*
+     * Two different promises, because the customer was asked which they wanted
+     * and the words back to them have to match the answer. "Straight back" is
+     * a commitment the owner's phone is about to make good on; "to get you
+     * scheduled" is not, and saying the wrong one is how a person ends up
+     * waiting by a phone all evening.
+     */
+    if (input.when === "now") {
+      return {
+        text: `Logged for ${input.phone}, and ${context.businessName} is being alerted right now. Tell the customer an electrician will call them straight back on that number, and read the number back so they can correct it. Do not promise a specific number of minutes. Then close with a proper goodbye.`,
+      };
+    }
+
     const urgent = action.kind === "callback" && action.urgency === "urgent";
     return {
-      text: `Callback logged for ${input.phone}. Tell the customer ${context.businessName} will call them back${urgent ? " as soon as possible" : " to get them scheduled"}. Do not promise a specific time.`,
+      text: `Callback logged for ${input.phone}. Tell the customer ${context.businessName} will call them back${urgent ? " as soon as possible" : " to get them scheduled"}. Do not promise a specific time. Then close with a proper goodbye.`,
     };
   }
 
@@ -424,7 +490,7 @@ export function describeOutcome(input: {
 
     return {
       isError: true,
-      text: "NOT BOOKED. Use request_callback and tell the customer someone will call them back.",
+      text: 'NOT BOOKED. Ask the customer whether they would like the electrician to call them straight back, or a callback later to get scheduled, then use request_callback with when set to what they chose.',
     };
   }
 

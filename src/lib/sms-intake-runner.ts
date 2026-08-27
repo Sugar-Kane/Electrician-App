@@ -1,6 +1,6 @@
 import "server-only";
 
-import { sendBookingConfirmations } from "@/lib/booking-notifications";
+import { sendBookingConfirmations, sendCallbackAlert } from "@/lib/booking-notifications";
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
 import { HOLD_MINUTES, heldReply } from "@/lib/booking-hold";
 import { readLanguage, readLanguageSource } from "@/lib/customer-language";
@@ -188,6 +188,35 @@ export async function handleInboundText(input: {
         deliveryPreference: action.deliveryPreference,
         customerAlreadyToldBySms: true,
         held: Boolean(recorded.payUrl),
+      });
+    }
+
+    /*
+     * And the callback, for the same reason one line up.
+     *
+     * The conversation below is marked `needs_human`, which is a flag on a list
+     * somebody has to go and look at. That is not a notification either, and a
+     * customer who has just been told an electrician will call them back is
+     * relying on somebody being told.
+     *
+     * `when` is "later" on this path: a text conversation is not somebody
+     * waiting on the line, and the tool that asks the question is the voice
+     * one. If the text assistant ever learns to ask, it passes it here.
+     */
+    if (action.kind === "callback" && requestId && !recorded.alreadyExisted) {
+      await sendCallbackAlert({
+        requestId,
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        phone: input.phone,
+        contactName: action.contactName,
+        description: action.description,
+        urgency: action.urgency ?? "routine",
+        when: "later",
+        context,
+        owner,
+        origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+        customerAlreadyToldBySms: true,
       });
     }
 

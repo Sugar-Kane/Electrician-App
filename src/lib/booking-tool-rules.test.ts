@@ -6,6 +6,8 @@ import {
   INTAKE_QUESTIONS,
   MINIMUM_INTAKE_ANSWERS,
   buildDecision,
+  callbackShortfall,
+  callbackWhen,
   callerEmail,
   callerPhone,
   customerWords,
@@ -344,4 +346,84 @@ test("a booking carries its interview into the action", () => {
   assert.equal(action.intakeAnswers.length, 3);
   assert.equal(action.deliveryPreference, "both");
   assert.ok(action.intakeAnswers.every((entry) => entry.answer.length > 0));
+});
+
+test("with nothing open the customer is asked, not told", () => {
+  /*
+   * The regression this exists for. A caller at 5:43pm was told a technician
+   * would ring back, because `slotList` ordered the model to take a callback
+   * and nobody put the choice to the customer. Somebody with no power who
+   * wanted a person now got a routine callback instead.
+   */
+  const empty: IntakeContext = { ...CONTEXT, offeredSlots: [] };
+  const text = slotList(empty);
+
+  assert.match(text, /Would you like the electrician to call you straight back/);
+  assert.match(text, /shall we call you back later/);
+  // The old instruction decided for them. It must not survive.
+  assert.doesNotMatch(text, /Use request_callback — do not offer/);
+  assert.match(text, /do not choose for them/);
+  // The clock is still first, so the model can tell tonight from next week.
+  assert.match(text, /^Right now it is/);
+});
+
+test("a callback is refused until the customer has actually chosen", () => {
+  const asked = { contact_name: "Adam", description: "Fridge is dead", urgency: "routine" };
+
+  const refusal = callbackShortfall(asked);
+  assert.match(refusal, /^NOT BOOKED\./);
+  assert.match(refusal, /straight back/);
+  assert.match(refusal, /"now" or "later"/);
+
+  // A value the model invented is not a choice either.
+  assert.match(callbackShortfall({ ...asked, when: "maybe" }), /^NOT BOOKED\./);
+  assert.match(callbackShortfall({ ...asked, when: "" }), /^NOT BOOKED\./);
+
+  assert.equal(callbackShortfall({ ...asked, when: "now" }), "");
+  assert.equal(callbackShortfall({ ...asked, when: "later" }), "");
+
+  assert.equal(callbackWhen({ when: "NOW" }), "now");
+  assert.equal(callbackWhen({ when: "later" }), "later");
+  assert.equal(callbackWhen({}), "");
+});
+
+test("what the caller is told back matches what they asked for", () => {
+  const args = {
+    contact_name: "Adam",
+    description: "Refrigerator not turning on when plugged into one outlet",
+    urgency: "routine",
+    caller_phone: "+12098199985",
+  };
+
+  const decision = buildDecision("request_callback", { ...args, when: "now" })!;
+  const action = decideIntakeAction({ decision, customerText: "", context: CONTEXT });
+
+  const now = describeOutcome({
+    name: "request_callback",
+    action,
+    context: CONTEXT,
+    phone: "+12098199985",
+    when: "now",
+  });
+
+  // A commitment the owner's phone is about to make good on.
+  assert.match(now.text, /straight back/);
+  assert.match(now.text, /alerted right now/);
+  assert.doesNotMatch(now.text, /to get them scheduled/);
+
+  const later = describeOutcome({
+    name: "request_callback",
+    action,
+    context: CONTEXT,
+    phone: "+12098199985",
+    when: "later",
+  });
+
+  assert.match(later.text, /to get them scheduled/);
+  assert.doesNotMatch(later.text, /straight back/);
+
+  // The choice reaches the stored decision, so the owner's list can show it.
+  assert.equal((decision.input as Record<string, unknown>).when, "now");
+  // And it is kept apart from the fault's own urgency, which is a different fact.
+  assert.equal((decision.input as Record<string, unknown>).urgency, "routine");
 });
