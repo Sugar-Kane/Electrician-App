@@ -48,7 +48,10 @@ function run(name: string, args: Record<string, unknown>, context = CONTEXT) {
     customerText: customerWords(args),
     context,
   });
-  return { action, result: describeOutcome({ name, action, context, phone: "+18055550142" }) };
+  return {
+    action,
+    result: describeOutcome({ name, action, context, phone: "+18055550142" }),
+  };
 }
 
 const BOOKABLE = {
@@ -83,7 +86,11 @@ test("a booking is refused until the customer actually says yes", () => {
 });
 
 test("a booking is refused until the intake questions were actually asked", () => {
-  const refusal = intakeShortfall({ ...COMPLETE, answer_onset: "", answer_breaker: "" });
+  const refusal = intakeShortfall({
+    ...COMPLETE,
+    answer_onset: "",
+    answer_breaker: "",
+  });
   assert.match(refusal, /^NOT BOOKED/);
   assert.match(refusal, new RegExp(String(MINIMUM_INTAKE_ANSWERS)));
   assert.match(refusal, /get_intake_questions/);
@@ -91,13 +98,21 @@ test("a booking is refused until the intake questions were actually asked", () =
 
 test("a question with no answer is not an answer", () => {
   // Otherwise the model can satisfy the gate by sending whitespace back.
-  const blank = { ...COMPLETE, answer_scope: "  ", answer_onset: " ", answer_breaker: "" };
+  const blank = {
+    ...COMPLETE,
+    answer_scope: "  ",
+    answer_onset: " ",
+    answer_breaker: "",
+  };
   assert.deepEqual(intakeAnswers(blank), []);
   assert.match(intakeShortfall(blank), /^NOT BOOKED/);
 });
 
 test("a booking is refused until they have said how to send the link", () => {
-  const refusal = intakeShortfall({ ...COMPLETE, delivery_preference: "carrier pigeon" });
+  const refusal = intakeShortfall({
+    ...COMPLETE,
+    delivery_preference: "carrier pigeon",
+  });
   assert.match(refusal, /text, email, or both/i);
 });
 
@@ -109,7 +124,11 @@ test("a complete conversation passes the gate", () => {
 
 test("the booking result tells her to say the deposit and what happens next", () => {
   const decision = buildDecision("book_visit", COMPLETE)!;
-  const action = decideIntakeAction({ decision, customerText: "no power", context: CONTEXT });
+  const action = decideIntakeAction({
+    decision,
+    customerText: "no power",
+    context: CONTEXT,
+  });
   const result = describeOutcome({
     name: "book_visit",
     action,
@@ -127,8 +146,13 @@ test("the booking result tells her to say the deposit and what happens next", ()
 test("every intake answer is a flat string, never a nested object", () => {
   // A nested schema is the thing a tool API is most likely to reject, and a
   // rejected tool is a silent failure: the model simply stops having it.
-  const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "book_visit")!;
-  const properties = tool.inputSchema.properties as Record<string, { type: string }>;
+  const tool = BOOKING_TOOLS.find(
+    (candidate) => candidate.name === "book_visit",
+  )!;
+  const properties = tool.inputSchema.properties as Record<
+    string,
+    { type: string }
+  >;
 
   for (const [name, schema] of Object.entries(properties)) {
     assert.equal(schema.type, "string", `${name} is ${schema.type}`);
@@ -177,7 +201,11 @@ test("an ordinary water heater call is bookable", () => {
 });
 
 test("a booking with no street address asks for one instead", () => {
-  const { result } = run("book_visit", { ...COMPLETE, address_line_1: "", city: "" });
+  const { result } = run("book_visit", {
+    ...COMPLETE,
+    address_line_1: "",
+    city: "",
+  });
 
   assert.equal(result.isError, true);
   assert.match(result.text, /^NOT BOOKED\./);
@@ -229,7 +257,10 @@ test("the caller's number is asked for, since one URL serves every call", () => 
 
   // Normalised on the way in, so the number Twilio is handed and the number a
   // customer lookup matches on are the same string.
-  assert.equal(callerPhone({ caller_phone: " +1 805 555 0142 " }), "+18055550142");
+  assert.equal(
+    callerPhone({ caller_phone: " +1 805 555 0142 " }),
+    "+18055550142",
+  );
   assert.equal(callerPhone({ caller_phone: "(805) 555-0142" }), "+18055550142");
   assert.equal(callerPhone({}), "");
 });
@@ -246,7 +277,9 @@ test("a number nobody could be reached on is refused before anything is written"
    */
   assert.equal(callerPhone({ caller_phone: "613432210" }), "");
 
-  const refusal = unreachableCaller("book_visit", { caller_phone: "613432210" });
+  const refusal = unreachableCaller("book_visit", {
+    caller_phone: "613432210",
+  });
   assert.match(refusal, /^NOT BOOKED\./);
   assert.match(refusal, /613432210/);
   // Told what to do about it, in the words the model needs to hear back.
@@ -257,19 +290,35 @@ test("a number nobody could be reached on is refused before anything is written"
   assert.match(unreachableCaller("request_callback", {}), /request_callback/);
 
   // A number that works is not a problem.
-  assert.equal(unreachableCaller("book_visit", { caller_phone: "(805) 555-0142" }), "");
-  assert.equal(unreachableCaller("book_visit", { caller_phone: "+18055550142" }), "");
+  assert.equal(
+    unreachableCaller("book_visit", { caller_phone: "(805) 555-0142" }),
+    "",
+  );
+  assert.equal(
+    unreachableCaller("book_visit", { caller_phone: "+18055550142" }),
+    "",
+  );
 });
 
 test("the schema asks for little and the server enforces the rest", () => {
   // The connector went silent when `required` grew to ten entries. Enforcement
   // lives in intakeShortfall, which refuses in words the model can act on.
-  const tool = BOOKING_TOOLS.find((candidate) => candidate.name === "book_visit")!;
+  const tool = BOOKING_TOOLS.find(
+    (candidate) => candidate.name === "book_visit",
+  )!;
   const required = tool.inputSchema.required as string[];
 
   assert.ok(required.length <= 6, `${required.length} required properties`);
-  for (const optional of ["caller_email", "caller_confirmed", "delivery_preference", "answer_scope"]) {
-    assert.ok(!required.includes(optional), `${optional} should not be required`);
+  for (const optional of [
+    "caller_email",
+    "caller_confirmed",
+    "delivery_preference",
+    "answer_scope",
+  ]) {
+    assert.ok(
+      !required.includes(optional),
+      `${optional} should not be required`,
+    );
   }
   assert.match(tool.description, /how they want their booking link/i);
 });
@@ -278,13 +327,19 @@ test("both spellings of a yes are accepted", () => {
   // The schema says "yes"; a model that sends a real boolean is still right.
   assert.equal(intakeShortfall({ ...COMPLETE, caller_confirmed: "yes" }), "");
   assert.equal(intakeShortfall({ ...COMPLETE, caller_confirmed: true }), "");
-  assert.match(intakeShortfall({ ...COMPLETE, caller_confirmed: "maybe" }), /^NOT BOOKED/);
+  assert.match(
+    intakeShortfall({ ...COMPLETE, caller_confirmed: "maybe" }),
+    /^NOT BOOKED/,
+  );
 });
 
 test("declining the email does not block the booking", () => {
   const { action } = run("book_visit", { ...COMPLETE, caller_email: "" });
   assert.equal(action.kind, "book");
-  assert.equal(callerEmail({ caller_email: "  adam@gmail.com " }), "adam@gmail.com");
+  assert.equal(
+    callerEmail({ caller_email: "  adam@gmail.com " }),
+    "adam@gmail.com",
+  );
   assert.equal(callerEmail({}), "");
 });
 
@@ -358,7 +413,10 @@ test("with nothing open the customer is asked, not told", () => {
   const empty: IntakeContext = { ...CONTEXT, offeredSlots: [] };
   const text = slotList(empty);
 
-  assert.match(text, /Would you like the electrician to call you straight back/);
+  assert.match(
+    text,
+    /Would you like the electrician to call you straight back/,
+  );
   assert.match(text, /shall we call you back later/);
   // The old instruction decided for them. It must not survive.
   assert.doesNotMatch(text, /Use request_callback — do not offer/);
@@ -368,7 +426,11 @@ test("with nothing open the customer is asked, not told", () => {
 });
 
 test("a callback is refused until the customer has actually chosen", () => {
-  const asked = { contact_name: "Adam", description: "Fridge is dead", urgency: "routine" };
+  const asked = {
+    contact_name: "Adam",
+    description: "Fridge is dead",
+    urgency: "routine",
+  };
 
   const refusal = callbackShortfall(asked);
   assert.match(refusal, /^NOT BOOKED\./);
@@ -396,7 +458,11 @@ test("what the caller is told back matches what they asked for", () => {
   };
 
   const decision = buildDecision("request_callback", { ...args, when: "now" })!;
-  const action = decideIntakeAction({ decision, customerText: "", context: CONTEXT });
+  const action = decideIntakeAction({
+    decision,
+    customerText: "",
+    context: CONTEXT,
+  });
 
   const now = describeOutcome({
     name: "request_callback",
@@ -410,6 +476,18 @@ test("what the caller is told back matches what they asked for", () => {
   assert.match(now.text, /straight back/);
   assert.match(now.text, /alerted right now/);
   assert.doesNotMatch(now.text, /to get them scheduled/);
+
+  const transferring = describeOutcome({
+    name: "request_callback",
+    action,
+    context: CONTEXT,
+    phone: "+12098199985",
+    when: "now",
+    transfer: "started",
+  });
+  assert.match(transferring.text, /Live transfer started/);
+  assert.match(transferring.text, /Stop speaking immediately/);
+  assert.doesNotMatch(transferring.text, /straight back/);
 
   const later = describeOutcome({
     name: "request_callback",

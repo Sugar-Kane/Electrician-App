@@ -66,20 +66,30 @@ export const BOOKING_TOOLS: McpTool[] = [
     title: "List open arrival windows",
     description:
       "The arrival windows this business actually has open, with the exact slot_start value each one must be booked with. Call this before offering the customer any time. Never invent or adjust a window.",
-    inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
   },
   {
     name: "get_intake_questions",
     title: "The questions to ask before booking",
     description:
       "The questions this business wants asked before a visit is booked. Call this after the customer describes the problem, ask them conversationally — not as a list read aloud — and pass what you learn to book_visit.",
-    inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
   },
   {
     name: "book_visit",
     title: "Book a diagnostic visit",
     description:
-      "Book a visit. Only call this after all of: the customer described the problem, you asked the get_intake_questions questions, you took a service address, you offered a window and they accepted it, you asked \"Would you like me to go ahead and book that?\" and they said yes, you took a callback number, and you asked how they want their booking link. This refuses unless the intake answers and the caller's yes are both present. Read the result back before telling the customer anything is booked.",
+      'Book a visit. Only call this after all of: the customer described the problem, you asked the get_intake_questions questions, you took a service address, you offered a window and they accepted it, you asked "Would you like me to go ahead and book that?" and they said yes, you took a callback number, and you asked how they want their booking link. This refuses unless the intake answers and the caller\'s yes are both present. Read the result back before telling the customer anything is booked.',
     inputSchema: {
       type: "object",
       properties: {
@@ -91,37 +101,49 @@ export const BOOKING_TOOLS: McpTool[] = [
         },
         address_line_1: { type: "string", description: "Street address." },
         city: { type: "string" },
-        postal_code: { type: "string", description: "Five digits, or an empty string." },
+        postal_code: {
+          type: "string",
+          description: "Five digits, or an empty string.",
+        },
         slot_start: {
           type: "string",
-          description: "The exact slot_start value of an open window, copied from list_open_slots.",
+          description:
+            "The exact slot_start value of an open window, copied from list_open_slots.",
         },
-        urgency: { ...URGENCY, description: "urgent only if they say today, now, or no power." },
+        urgency: {
+          ...URGENCY,
+          description: "urgent only if they say today, now, or no power.",
+        },
         caller_phone: CALLER_PHONE,
         caller_email: {
           type: "string",
           description:
-            "The caller's email for a written confirmation. Ask every caller: \"What is the best email for your confirmation?\" Read it back before using it. Send an empty string only if they decline — an empty value never blocks the booking.",
+            'The caller\'s email for a written confirmation. Ask every caller: "What is the best email for your confirmation?" Read it back before using it. Send an empty string only if they decline — an empty value never blocks the booking.',
         },
         answer_scope: {
           type: "string",
-          description: "Their answer to: Is this affecting the whole house, one room, or a single outlet or fixture?  Empty string if you could not get one.",
+          description:
+            "Their answer to: Is this affecting the whole house, one room, or a single outlet or fixture?  Empty string if you could not get one.",
         },
         answer_onset: {
           type: "string",
-          description: "Their answer to: When did it start, and did anything change just before?  Empty string if you could not get one.",
+          description:
+            "Their answer to: When did it start, and did anything change just before?  Empty string if you could not get one.",
         },
         answer_breaker: {
           type: "string",
-          description: "Their answer to: Have you looked at the breaker panel? Is anything tripped, and does it reset?  Empty string if you could not get one.",
+          description:
+            "Their answer to: Have you looked at the breaker panel? Is anything tripped, and does it reset?  Empty string if you could not get one.",
         },
         answer_property: {
           type: "string",
-          description: "Their answer to: Is this a house, a condo, or a commercial space, and roughly how old is the building?  Empty string if you could not get one.",
+          description:
+            "Their answer to: Is this a house, a condo, or a commercial space, and roughly how old is the building?  Empty string if you could not get one.",
         },
         answer_access: {
           type: "string",
-          description: "Their answer to: Is there anything the electrician needs to get in — gate code, dog, parking, someone home?  Empty string if you could not get one.",
+          description:
+            "Their answer to: Is there anything the electrician needs to get in — gate code, dog, parking, someone home?  Empty string if you could not get one.",
         },
         caller_confirmed: {
           type: "string",
@@ -160,7 +182,10 @@ export const BOOKING_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         contact_name: { type: "string" },
-        description: { type: "string", description: "What the customer needs, in their own words." },
+        description: {
+          type: "string",
+          description: "What the customer needs, in their own words.",
+        },
         urgency: URGENCY,
         caller_phone: CALLER_PHONE,
         when: {
@@ -170,7 +195,13 @@ export const BOOKING_TOOLS: McpTool[] = [
             'Which the customer chose when you asked. "now" if they want the electrician to ring them straight back, "later" if a callback to get scheduled is fine. Never guess — ask them.',
         },
       },
-      required: ["contact_name", "description", "urgency", "caller_phone", "when"],
+      required: [
+        "contact_name",
+        "description",
+        "urgency",
+        "caller_phone",
+        "when",
+      ],
       additionalProperties: false,
     },
   },
@@ -215,7 +246,10 @@ export function callerPhone(args: Record<string, unknown>): string {
  * on the phone with them, and asking again is free. Empty when there is nothing
  * wrong.
  */
-export function unreachableCaller(name: string, args: Record<string, unknown>): string {
+export function unreachableCaller(
+  name: string,
+  args: Record<string, unknown>,
+): string {
   const heard = text(args.caller_phone).trim();
 
   if (!heard) {
@@ -258,7 +292,9 @@ export function intakeAnswers(args: Record<string, unknown>): IntakeAnswer[] {
  * is either a homeowner sitting in the dark waiting for a call that was filed
  * as routine, or the owner's phone ringing at ten at night for a dripping fan.
  */
-export function callbackWhen(args: Record<string, unknown>): "now" | "later" | "" {
+export function callbackWhen(
+  args: Record<string, unknown>,
+): "now" | "later" | "" {
   const value = text(args.when).toLowerCase();
   return value === "now" || value === "later" ? value : "";
 }
@@ -277,7 +313,9 @@ export function callbackShortfall(args: Record<string, unknown>): string {
   return "";
 }
 
-export function deliveryPreference(args: Record<string, unknown>): "text" | "email" | "both" | "" {
+export function deliveryPreference(
+  args: Record<string, unknown>,
+): "text" | "email" | "both" | "" {
   const value = text(args.delivery_preference);
   return value === "text" || value === "email" || value === "both" ? value : "";
 }
@@ -352,7 +390,10 @@ export function buildDecision(
         // separately and the text path did not check at all. Now both go
         // through the same one.
         ...Object.fromEntries(
-          INTAKE_QUESTIONS.map(({ key }) => [`answer_${key}`, text(args[`answer_${key}`])]),
+          INTAKE_QUESTIONS.map(({ key }) => [
+            `answer_${key}`,
+            text(args[`answer_${key}`]),
+          ]),
         ),
         delivery_preference: text(args.delivery_preference),
       },
@@ -366,7 +407,9 @@ export function buildDecision(
 export function intakeQuestionList(): string {
   return [
     "Ask these before booking, conversationally — one at a time, not read as a list:",
-    ...INTAKE_QUESTIONS.map((entry, index) => `${index + 1}. ${entry.question}`),
+    ...INTAKE_QUESTIONS.map(
+      (entry, index) => `${index + 1}. ${entry.question}`,
+    ),
     "",
     `Pass each answer to book_visit as answer_scope, answer_onset, answer_breaker, answer_property, and answer_access. At least ${MINIMUM_INTAKE_ANSWERS} must be answered or the booking will be refused. If a customer will not answer one, move on — do not invent an answer.`,
   ].join("\n");
@@ -396,7 +439,9 @@ export function slotList(context: IntakeContext): string {
   return [
     clock,
     "Open arrival windows, soonest first:",
-    ...context.offeredSlots.map((slot) => `- ${slot.label} (slot_start: ${slot.start})`),
+    ...context.offeredSlots.map(
+      (slot) => `- ${slot.label} (slot_start: ${slot.start})`,
+    ),
     `The diagnostic visit costs ${context.diagnosticFee}. Book with the exact slot_start value above.`,
   ].join("\n");
 }
@@ -417,6 +462,8 @@ export function describeOutcome(input: {
   held?: boolean;
   /** Which the customer chose on a callback: somebody now, or a call later. */
   when?: "now" | "later" | "";
+  /** Whether Twilio has taken control of the live call for a human transfer. */
+  transfer?: "started" | "unavailable";
 }): ToolResult {
   const { action, context } = input;
 
@@ -429,6 +476,11 @@ export function describeOutcome(input: {
      * waiting by a phone all evening.
      */
     if (input.when === "now") {
+      if (input.transfer === "started") {
+        return {
+          text: "Live transfer started. Twilio is now connecting the caller to the electrician. Stop speaking immediately; do not say goodbye or promise a callback.",
+        };
+      }
       return {
         text: `Logged for ${input.phone}, and ${context.businessName} is being alerted right now. Tell the customer an electrician will call them straight back on that number, and read the number back so they can correct it. Do not promise a specific number of minutes. Then close with a proper goodbye.`,
       };
@@ -490,7 +542,7 @@ export function describeOutcome(input: {
 
     return {
       isError: true,
-      text: 'NOT BOOKED. Ask the customer whether they would like the electrician to call them straight back, or a callback later to get scheduled, then use request_callback with when set to what they chose.',
+      text: "NOT BOOKED. Ask the customer whether they would like the electrician to call them straight back, or a callback later to get scheduled, then use request_callback with when set to what they chose.",
     };
   }
 
