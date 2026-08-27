@@ -10,7 +10,7 @@ import {
 } from "@/lib/customer-language";
 import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
 import { localeFor } from "@/lib/intake-phrases";
-import { calendarDate, nowLabel, slotLabel } from "@/lib/schedule-labels";
+import { nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -81,17 +81,28 @@ export async function loadIntakeContext(input: {
   const timeZone = text(organization?.timezone) || DEFAULT_TIMEZONE;
   const slug = text(organization?.slug);
 
-  // The business's today, not the server's. Between five in the afternoon and
-  // midnight Pacific the UTC date is already tomorrow, and asking from it
-  // silently drops the rest of the working day.
   const nowIso = new Date().toISOString();
-  const fromDate = calendarDate(nowIso, timeZone);
 
   let offeredSlots: OfferedSlot[] = [];
   if (slug) {
+    /*
+     * No date, on purpose, and this is the second half of a bug that cost every
+     * evening booking for weeks.
+     *
+     * This used to compute the business's today and pass it, which was right in
+     * itself — between five in the afternoon and midnight Pacific the UTC date
+     * is already tomorrow, and asking from it drops the rest of the working
+     * day. But the function's own guard refused anything earlier than the
+     * *server's* `current_date`, so the correct date was rejected and the
+     * receptionist was told there was no availability at all, seven hours a
+     * day, every day.
+     *
+     * Two definitions of "today" are one too many. The function knows the
+     * timezone, so the function decides; null asks it to.
+     */
     const { data: slots } = await database.rpc("list_public_booking_slots", {
       p_slug: slug,
-      p_from_date: fromDate,
+      p_from_date: null,
       p_days: 14,
     });
     offeredSlots = ((slots as { slot_start: string; slot_end: string }[] | null) ?? [])

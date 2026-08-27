@@ -5,6 +5,8 @@ import { after } from "next/server";
 import {
   BOOKING_TOOLS,
   buildDecision,
+  callbackShortfall,
+  callbackWhen,
   callerEmail,
   callerPhone,
   customerWords,
@@ -16,7 +18,7 @@ import {
   slotList,
   unreachableCaller,
 } from "@/lib/booking-tool-rules";
-import { sendBookingConfirmations } from "@/lib/booking-notifications";
+import { sendBookingConfirmations, sendCallbackAlert } from "@/lib/booking-notifications";
 import {
   findOrCreateCustomerByPhone,
   loadIntakeContext,
@@ -95,6 +97,14 @@ export async function runBookingTool(input: {
     if (shortfall) return { isError: true, text: shortfall };
   }
 
+  // And on a callback: did the customer actually get to choose? A caller with
+  // no power who wanted somebody now, filed as a routine callback because
+  // nobody asked, is the whole reason this is a refusal and not a default.
+  if (input.name === "request_callback") {
+    const shortfall = callbackShortfall(input.args);
+    if (shortfall) return { isError: true, text: shortfall };
+  }
+
   /*
    * A visit nobody can be told about is worse than a refusal, and so is a
    * callback to a number that does not exist.
@@ -131,6 +141,8 @@ export async function runBookingTool(input: {
   const email = callerEmail(input.args);
   const answers = intakeAnswers(input.args);
   const preference = deliveryPreference(input.args);
+  // Which the caller chose when asked. Refused above unless they were.
+  const chosen = callbackWhen(input.args);
   const recorded = await recordBookingRequest({
     database: input.database,
     organizationId: input.session.organizationId,
@@ -191,11 +203,39 @@ export async function runBookingTool(input: {
     after(() => sendBookingConfirmations(confirmations));
   }
 
+  /*
+   * And the callback, which used to tell nobody at all.
+   *
+   * The send was gated on `action.kind === "book"`, so the one outcome that
+   * exists because a person has to ring somebody back was the one outcome no
+   * person heard about. A caller was promised a call back and the promise
+   * reached the database and stopped there.
+   */
+  if (action.kind === "callback" && recorded.requestId && !recorded.alreadyExisted) {
+    const alert = {
+      requestId: recorded.requestId,
+      organizationId: input.session.organizationId,
+      customerId,
+      phone,
+      contactName: action.contactName,
+      description: action.description,
+      urgency: action.urgency ?? ("routine" as const),
+      when: chosen || ("later" as const),
+      context,
+      intakeAnswers: answers,
+      owner,
+      origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+    };
+
+    after(() => sendCallbackAlert(alert));
+  }
+
   return describeOutcome({
     name: input.name,
     action,
     context,
     phone,
+    when: chosen,
     deliveryPreference: preference,
     held: Boolean(recorded.payUrl),
   });

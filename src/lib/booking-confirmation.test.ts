@@ -6,9 +6,13 @@ import {
   customerConfirmationSms,
   emailSender,
   looksLikeEmail,
+  customerCallbackSms,
   ownerBookingEmail,
   ownerBookingSms,
+  ownerCallbackEmail,
+  ownerCallbackSms,
   type BookingFacts,
+  type CallbackFacts,
 } from "./booking-confirmation.ts";
 
 const FACTS: BookingFacts = {
@@ -202,4 +206,114 @@ test("a booking with no address still confirms the window", () => {
   const message = customerConfirmationSms({ ...FACTS, addressLine1: "", city: "" });
   assert.match(message, /Mon, Aug 10/);
   assert.doesNotMatch(message, / at \./);
+});
+
+/**
+ * The row a real call left behind, from production.
+ *
+ * Adam rang at 5:43pm about a fridge that would not start. The receptionist was
+ * told there was no availability, took a callback, and nobody was told —
+ * `notification_results` was `[]`. These are the messages that should have gone
+ * out, tested against what he actually said.
+ */
+const CALLBACK: CallbackFacts = {
+  businessName: "Pacific Plains Electric",
+  businessPhone: "(805) 626-7761",
+  contactName: "Adam",
+  customerPhone: "+12098199985",
+  description: "refrigerator not turning on when plugged into one outlet, started yesterday with new refrigerator",
+  urgency: "routine",
+  when: "later",
+  link: "https://www.volteira.com/booking-requests",
+};
+
+test("the owner's callback text never reads like a booking", () => {
+  const later = ownerCallbackSms(CALLBACK);
+
+  assert.match(later, /Callback requested: Adam/);
+  assert.match(later, /\+12098199985/);
+  assert.match(later, /refrigerator/);
+  /*
+   * The line that has to be there. Everything above it — a name, a number, a
+   * problem — is exactly the shape of the booking alert, and on a lock screen
+   * the two are one glance apart. An electrician who thinks a visit is on the
+   * calendar because of this text is worse off than one who got nothing.
+   */
+  assert.match(later, /Nothing is scheduled\./);
+
+  const now = ownerCallbackSms({ ...CALLBACK, when: "now" });
+  // Leads with the fact that a person is waiting, because that is the whole
+  // difference between a text read later and one acted on.
+  assert.match(now, /^Adam is asking for a call back now/);
+  assert.match(now, /Nothing is scheduled\./);
+
+  assert.match(
+    ownerCallbackSms({ ...CALLBACK, urgency: "urgent" }),
+    /They called it urgent\./,
+  );
+
+  // Two segments, like everything else sent to a phone here.
+  for (const body of [later, now]) assert.ok(body.length <= 320, `${body.length} chars`);
+});
+
+test("a caller with no name still produces a message worth acting on", () => {
+  const anonymous = ownerCallbackSms({ ...CALLBACK, contactName: "", description: "" });
+
+  assert.match(anonymous, /A caller/);
+  assert.match(anonymous, /\+12098199985/);
+  assert.match(anonymous, /Nothing is scheduled\./);
+  // No stray punctuation where the name and the problem were.
+  assert.doesNotMatch(anonymous, /: ,|\s{2}/);
+});
+
+test("the callback email says the same thing in both bodies", () => {
+  const message = ownerCallbackEmail({ ...CALLBACK, intakeAnswers: WITH_ANSWERS.intakeAnswers });
+
+  assert.match(message.subject, /Callback requested: Adam/);
+  for (const body of [message.text, message.html]) {
+    assert.match(body, /Adam/);
+    assert.match(body, /\+12098199985/);
+    assert.match(body, /refrigerator/);
+    assert.match(body, /[Nn]othing is scheduled/);
+    assert.match(body, /booking-requests/);
+  }
+
+  // The answers ride along, because they decide whether this is a phone call
+  // or a visit and the owner is about to make that call.
+  for (const entry of WITH_ANSWERS.intakeAnswers) {
+    assert.match(message.text, new RegExp(entry.answer.slice(0, 12)));
+    assert.match(message.html, new RegExp(entry.answer.slice(0, 12)));
+  }
+
+  const urgent = ownerCallbackEmail({ ...CALLBACK, when: "now" });
+  assert.match(urgent.subject, /^Call back now: Adam/);
+});
+
+test("what a caller said is escaped before it becomes callback HTML", () => {
+  const message = ownerCallbackEmail({
+    ...CALLBACK,
+    contactName: '<script>alert("x")</script>',
+    description: "Sparks & smoke <from> the panel",
+  });
+
+  assert.doesNotMatch(message.html, /<script>/);
+  assert.match(message.html, /&lt;script&gt;/);
+  assert.match(message.html, /Sparks &amp; smoke &lt;from&gt;/);
+});
+
+test("the customer's text matches the promise they were just given", () => {
+  const later = customerCallbackSms(CALLBACK);
+  assert.match(later, /call you back to get you scheduled/);
+  assert.match(later, /\(805\) 626-7761/);
+
+  const now = customerCallbackSms({ ...CALLBACK, when: "now" });
+  assert.match(now, /an electrician will call you back shortly/);
+  /*
+   * Saying the wrong one of these is how somebody ends up waiting by a phone
+   * all evening for a call that was filed as routine.
+   */
+  assert.doesNotMatch(now, /to get you scheduled/);
+  assert.doesNotMatch(later, /shortly/);
+
+  for (const body of [later, now]) assert.ok(body.length <= 320, `${body.length} chars`);
 });

@@ -83,10 +83,18 @@ export async function getBookingPageByHost(host: string) {
 
 export async function getPublicBookingSlots(slug: string, days = 21) {
   const supabase = createPublicClient();
-  const fromDate = new Date().toISOString().slice(0, 10);
+  /*
+   * No date, on purpose.
+   *
+   * This passed `new Date().toISOString().slice(0, 10)` — the UTC date — which
+   * from five in the afternoon Pacific is already tomorrow, so the page quietly
+   * dropped the rest of the working day every evening. Only the function knows
+   * the business's timezone, so only the function can say what "today" is; null
+   * asks it to.
+   */
   const { data, error } = await supabase.rpc("list_public_booking_slots", {
     p_slug: slug,
-    p_from_date: fromDate,
+    p_from_date: null,
     p_days: days,
   });
 
