@@ -9,6 +9,7 @@ import {
 import { currentContext } from "@/lib/request-context";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { toE164 } from "@/lib/phone-format";
 
 /**
  * One customer, read for their own page.
@@ -37,6 +38,13 @@ export type CustomerProfile = {
   timeZone: string;
   /** Which language they are written to in, and who decided. */
   language: LanguageState;
+  /** Recorded inbound calls, newest first. Audio is served through an authenticated route. */
+  recordings: {
+    sid: string;
+    startedAt: string;
+    durationSeconds: number | null;
+    channels: number | null;
+  }[];
   /** What has happened to them, newest first, ready for `buildTimeline`. */
   history: ActivityRow[];
 };
@@ -91,11 +99,15 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
 
   if (!customer) return null;
 
+  const customerPhone = text(customer.phone);
+  const recordedFrom = toE164(customerPhone);
+
   const [
     { data: properties },
     { data: jobs },
     { data: requests },
     { data: conversation },
+    { data: recordings },
     { data: history },
   ] = await Promise.all([
       supabase
@@ -130,6 +142,19 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle(),
+      recordedFrom
+        ? supabase
+            .from("inbound_calls")
+            .select(
+              "recording_sid, recording_status, recording_channels, recording_started_at, started_at, duration_seconds",
+            )
+            .eq("organization_id", context.organizationId)
+            .eq("from_number", recordedFrom)
+            .eq("recording_status", "completed")
+            .not("recording_sid", "is", null)
+            .order("recording_started_at", { ascending: false, nullsFirst: false })
+            .limit(20)
+        : Promise.resolve({ data: [] }),
       // Everything that has happened to this person, whichever part of the app
       // it happened in. Capped: a history is for reading, and nobody reads the
       // hundredth entry.
@@ -174,7 +199,7 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
       text(customer.company_name) ||
       [text(customer.first_name), text(customer.last_name)].filter(Boolean).join(" ") ||
       "Unnamed customer",
-    phone: text(customer.phone),
+    phone: customerPhone,
     email: text(customer.email),
     preferredContact: text(customer.preferred_contact),
     address: propertyList[0]?.address ?? "",
@@ -197,6 +222,16 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
       language: readLanguage(customer.preferred_language),
       source: readLanguageSource(customer.language_source),
     },
+    recordings: ((recordings ?? []) as Record<string, unknown>[])
+      .map((row) => ({
+        sid: text(row.recording_sid),
+        startedAt: text(row.recording_started_at) || text(row.started_at),
+        durationSeconds:
+          typeof row.duration_seconds === "number" ? row.duration_seconds : null,
+        channels:
+          typeof row.recording_channels === "number" ? row.recording_channels : null,
+      }))
+      .filter((row) => Boolean(row.sid)),
     history: ((history ?? []) as Record<string, unknown>[]).map((row) => ({
       id: text(row.id),
       eventType: text(row.event_type),

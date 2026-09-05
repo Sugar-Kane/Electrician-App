@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { organizationForPhoneNumber } from "@/lib/intake-shared";
+import { recordActivity } from "@/lib/activity";
+import {
+  findOrCreateCustomerByPhone,
+  organizationForPhoneNumber,
+} from "@/lib/intake-shared";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   fetchTwilioCall,
@@ -53,9 +57,43 @@ export async function POST(request: Request) {
     return new NextResponse("No organization owns the called number", { status: 404 });
   }
 
+  const customerId = await findOrCreateCustomerByPhone({
+    database,
+    organizationId,
+    phone: call.from,
+    note: "Created from an inbound recorded phone call.",
+    channel: "phone",
+  });
+
+  // Keep the durable call record attached to the customer rather than merely
+  // to a phone number. This also repairs calls that were first inserted by the
+  // transfer path, before the recording was ready.
+  const { data: conversation } = await database
+    .from("inbound_conversations")
+    .upsert(
+      {
+        organization_id: organizationId,
+        contact_phone: call.from,
+        ...(customerId ? { customer_id: customerId } : {}),
+        last_channel: "voice",
+        last_message_at: call.endedAt ?? new Date().toISOString(),
+      },
+      { onConflict: "organization_id,contact_phone" },
+    )
+    .select("id")
+    .maybeSingle();
+
+  const { data: previous } = await database
+    .from("inbound_calls")
+    .select("recording_sid")
+    .eq("provider", "twilio")
+    .eq("provider_call_id", recording.callSid)
+    .maybeSingle();
+
   const { error } = await database.from("inbound_calls").upsert(
     {
       organization_id: organizationId,
+      ...(conversation?.id ? { conversation_id: conversation.id } : {}),
       provider: "twilio",
       provider_call_id: recording.callSid,
       from_number: call.from,
@@ -77,5 +115,23 @@ export async function POST(request: Request) {
   );
 
   if (error) return new NextResponse("Could not save recording", { status: 500 });
+
+  if (
+    customerId &&
+    recording.status === "completed" &&
+    previous?.recording_sid !== recording.recordingSid
+  ) {
+    await recordActivity(database, {
+      organizationId,
+      customerId,
+      eventType: "call.recording_ready",
+      label: "Call recording saved",
+      metadata: {
+        via: "voice",
+        duration_seconds: recording.durationSeconds,
+      },
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }

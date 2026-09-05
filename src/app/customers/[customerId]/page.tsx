@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ChevronRight,
+  Download,
+  Headphones,
   Mail,
   MapPin,
   MessagesSquare,
@@ -15,6 +17,27 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
 import { getCustomerProfile } from "@/lib/customer-profile";
+
+function recordingLabel(startedAt: string, timeZone: string): string {
+  if (!startedAt) return "Recorded call";
+  const date = new Date(startedAt);
+  if (Number.isNaN(date.getTime())) return "Recorded call";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function durationLabel(seconds: number | null): string {
+  if (seconds === null || seconds < 0) return "";
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
+}
 
 /**
  * One customer, and everything of theirs.
@@ -175,6 +198,57 @@ export default async function CustomerPage({
           </ul>
         )}
       </section>
+
+      {profile.recordings.length > 0 ? (
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <div className="flex items-start gap-2">
+            <Headphones className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+            <div>
+              <h2 className="text-sm font-semibold">Call recordings</h2>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">
+                Inbound calls saved securely for this customer.
+              </p>
+            </div>
+          </div>
+
+          <ul className="mt-3 space-y-3">
+            {profile.recordings.map((recording) => {
+              const source = `/api/twilio/recordings/${encodeURIComponent(recording.sid)}`;
+              return (
+                <li key={recording.sid} className="rounded-control border border-line bg-raised p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">
+                      {recordingLabel(recording.startedAt, profile.timeZone)}
+                    </p>
+                    <p className="text-xs text-ink-faint">
+                      {[durationLabel(recording.durationSeconds), recording.channels === 2 ? "2 channels" : ""]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  <audio
+                    controls
+                    preload="none"
+                    className="mt-3 h-11 w-full"
+                    src={source}
+                    aria-label={`Recording from ${recordingLabel(recording.startedAt, profile.timeZone)}`}
+                  >
+                    Your browser cannot play this recording.
+                  </audio>
+                  <a
+                    href={source}
+                    download={`${profile.name || "customer"}-call.mp3`}
+                    className="tap-target mt-2 inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-xs font-semibold text-brand"
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden />
+                    Download recording
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {/*
         Last, because it is the long one and because everything above it is what

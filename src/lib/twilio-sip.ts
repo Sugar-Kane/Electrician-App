@@ -40,6 +40,8 @@ export function xaiSipBridgeTwiml(input: {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<Response>",
+    '  <Say voice="Polly.Joanna">This call will be recorded to document your service request. By staying on the line, you consent to the recording.</Say>',
+    '  <Say voice="Polly.Lupe" language="es-US">Esta llamada será grabada para documentar su solicitud de servicio. Al permanecer en la línea, usted acepta la grabación.</Say>',
     '  <Dial answerOnBridge="true" record="record-from-answer-dual"',
     `        recordingStatusCallback="${escapeXml(callbackUrl)}"`,
     '        recordingStatusCallbackMethod="POST"',

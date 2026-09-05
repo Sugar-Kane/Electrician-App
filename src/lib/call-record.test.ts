@@ -53,15 +53,12 @@ test("the panel says where the words came from, and does not say transcript", ()
   const title = callRecordTitle(record);
   const provenance = callRecordProvenance(record);
 
-  /*
-   * The one thing this must never claim. There is no recording — the receptionist
-   * runs on a realtime model that keeps the audio and sends back structured tool
-   * calls, so what exists is what it wrote down. An electrician deciding whether
-   * to trust "no, nothing tripped" has to know which of those they are reading.
-   */
+  // The panel is the receptionist's structured notes, not a transcript. The
+  // actual audio is shown separately on the customer profile when available.
   assert.doesNotMatch(title, /transcript|recording/i);
   assert.doesNotMatch(provenance, /transcript/i);
-  assert.match(provenance, /no recording/i);
+  assert.doesNotMatch(provenance, /no recording/i);
+  assert.match(provenance, /written down by the receptionist/i);
   assert.match(title, /said on the call/);
 });
 

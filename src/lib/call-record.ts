@@ -7,13 +7,12 @@
  * intake answers are what tell an electrician whether to bring a ladder, and
  * they were being thrown away at the point of most use.
  *
- * Said plainly, because it decides what this module is allowed to claim: there
- * is no recording and no word-for-word transcript. The receptionist runs on a
- * realtime model that holds the audio itself and sends back structured tool
- * calls, so what exists is what it wrote down — the customer's own words as it
- * heard them, the questions it asked, and the answers it got. This module shows
- * that and calls it that. A panel headed "transcript" over a summary would be a
- * lie an electrician might rely on.
+ * Said plainly, because it decides what this module is allowed to claim: these
+ * are not a word-for-word transcript. They are the structured notes the
+ * receptionist wrote down — the customer's words as it heard them, the
+ * questions it asked, and the answers it got. The actual audio, when available,
+ * is stored separately on the customer profile. A panel headed "transcript"
+ * over these notes would still be a lie an electrician might rely on.
  *
  * Import-free, so the shaping can be tested without a database.
  */
@@ -116,12 +115,13 @@ export function callRecordTitle(record: CallRecord): string {
 /**
  * The one line under the title, saying where this came from and how firm it is.
  *
- * Names the receptionist as the source rather than implying a recording,
- * because that difference matters to somebody deciding how much to trust it.
+ * Names the receptionist as the source rather than implying these notes are
+ * the recording, because that difference matters to somebody deciding how much
+ * to trust them.
  */
 export function callRecordProvenance(record: CallRecord): string {
   if (record.channel === "phone" && record.byReceptionist) {
-    return "Written down by the receptionist during the call. There is no recording.";
+    return "Written down by the receptionist during the call.";
   }
   if (record.channel === "sms") return "Taken from the text conversation.";
   if (record.channel === "web") return "Filled in by the customer on the booking page.";
