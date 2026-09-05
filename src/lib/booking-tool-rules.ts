@@ -475,13 +475,13 @@ export function describeOutcome(input: {
         };
       }
       return {
-        text: `The live transfer was unavailable. A callback is logged for ${input.phone}, and ${context.businessName} is being alerted. Apologize briefly, tell the customer a person will return their call, and close with a proper goodbye.`,
+        text: `The live transfer was unavailable. A callback is logged for ${input.phone}. Tell the customer: "I'm sending your callback request to an electrician right away. Our response time is usually within 24 hours." Make clear that 24 hours is the usual response time, not a guarantee. Then close with a proper goodbye.`,
       };
     }
 
     const urgent = action.kind === "callback" && action.urgency === "urgent";
     return {
-      text: `Callback logged for ${input.phone}. Tell the customer ${context.businessName} will call them back${urgent ? " as soon as possible" : " to get them scheduled"}. Do not promise a specific time. Then close with a proper goodbye.`,
+      text: `Callback logged for ${input.phone}. Tell the customer: "I'm sending your callback request to an electrician right away. Our response time is usually within 24 hours."${urgent ? " Add that the request was marked urgent." : ""} Make clear that 24 hours is the usual response time, not a guarantee. Then close with a proper goodbye.`,
     };
   }
 

@@ -86,6 +86,15 @@ export async function POST(request: Request) {
     .eq("provider_call_id", callSid)
     .eq("organization_id", organizationId);
 
+  // The claim only protects the live call from duplicate MCP tool invocations.
+  // Once Twilio reports the Dial result, a later call from the same customer
+  // must be allowed to ask for a person again while the callback stays open.
+  await database
+    .from("booking_requests")
+    .update({ transfer_started_at: null })
+    .eq("id", requestId)
+    .eq("organization_id", organizationId);
+
   await recordActivity(database, {
     organizationId,
     eventType: connected

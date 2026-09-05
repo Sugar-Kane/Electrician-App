@@ -193,9 +193,11 @@ export async function runBookingTool(input: {
    * that Twilio and Resend take. A five second `book_visit` is what a realtime
    * client sits and waits through, and what it eventually gives up on.
    *
-   * `alreadyExisted` is the other half. The booking was there before this call
-   * and somebody has already been told about it; sending again is precisely the
-   * thing that put thirteen texts on the owner's phone.
+   * `alreadyExisted` is the other half for appointments. The booking was there
+   * before this call and somebody has already been told about it; sending again
+   * is precisely the thing that put thirteen texts on the owner's phone. A
+   * callback uses the sender's database claim instead, because an older open
+   * callback may never have reached the owner and needs to be repaired.
    *
    * Every failure inside is still swallowed. The appointment is in the calendar
    * and no delivery problem may unmake it.
@@ -238,11 +240,7 @@ export async function runBookingTool(input: {
    * person heard about. A caller was promised a call back and the promise
    * reached the database and stopped there.
    */
-  if (
-    action.kind === "callback" &&
-    recorded.requestId &&
-    !recorded.alreadyExisted
-  ) {
+  if (action.kind === "callback" && recorded.requestId) {
     const alert = {
       requestId: recorded.requestId,
       organizationId: input.session.organizationId,
@@ -271,7 +269,6 @@ export async function runBookingTool(input: {
 
     if (
       recorded.requestId &&
-      !recorded.alreadyExisted &&
       caller &&
       business &&
       electrician &&
@@ -296,11 +293,17 @@ export async function runBookingTool(input: {
           language: action.language,
         });
         if (body) {
-          const redirected = await redirectTwilioCall({
-            callSid: call.sid,
-            twiml: body,
-          });
-          if (redirected.ok) {
+          const { data: claimed } = await input.database
+            .from("booking_requests")
+            .update({ transfer_started_at: new Date().toISOString() })
+            .eq("id", recorded.requestId)
+            .is("transfer_started_at", null)
+            .select("id")
+            .maybeSingle();
+          const redirected = claimed
+            ? await redirectTwilioCall({ callSid: call.sid, twiml: body })
+            : null;
+          if (redirected?.ok) {
             transfer = "started";
             await input.database.from("inbound_calls").upsert(
               {
@@ -322,6 +325,13 @@ export async function runBookingTool(input: {
               bookingRequestId: recorded.requestId,
               metadata: { provider_call_id: call.sid },
             });
+          } else if (claimed) {
+            // A failed REST request did not redirect anything. Release the
+            // claim so the caller can try again instead of being locked out.
+            await input.database
+              .from("booking_requests")
+              .update({ transfer_started_at: null })
+              .eq("id", recorded.requestId);
           }
         }
       }

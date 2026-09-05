@@ -332,13 +332,14 @@ export type RecordedRequest = {
  * when the customer accepted a window the scheduler itself offered.
  */
 /**
- * The live booking this customer already has at this window.
+ * The live request this customer already has.
  *
  * Only reached when the unique index has just refused an insert, so there is
- * one by definition. Rebuilt into the same shape a successful insert returns,
- * including the payment link, so the words said back to the caller are the same
- * whether they are hearing about the booking that was made or the one that
- * already existed.
+ * one by definition. A callback only needs its request ID so notification and
+ * transfer idempotency can run against that existing row. A visit is rebuilt
+ * into the same shape a successful insert returns, including the payment link,
+ * so the words said back to the caller are the same whether they are hearing
+ * about the booking that was made or the one that already existed.
  */
 async function liveBookingAt(input: {
   database: Database;
@@ -347,6 +348,21 @@ async function liveBookingAt(input: {
   action: IntakeAction;
 }): Promise<RecordedRequest> {
   const { action } = input;
+  if (action.kind === "callback") {
+    const { data } = await input.database
+      .from("booking_requests")
+      .select("id")
+      .eq("organization_id", input.organizationId)
+      .eq("customer_id", input.customerId)
+      .eq("intent", "callback")
+      .in("status", ["new", "needs_review"])
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    return data?.id ? { requestId: String(data.id) } : {};
+  }
+
   if (action.kind !== "book") return {};
 
   const { data } = await input.database
@@ -456,9 +472,10 @@ export async function recordBookingRequest(input: {
    * One phone call once produced thirteen of these in under a second, each with
    * byte-identical arguments, because the client fanned the same tool call out
    * across thirteen fresh sessions. Every one of them booked, and every one of
-   * them texted the owner. The appointment the caller agreed to already exists,
-   * so this returns it and says so, and the caller of this function sends
-   * nothing.
+   * them texted the owner. The request the caller made already exists, so this
+   * returns it and says so. Appointment notifications remain suppressed by
+   * `alreadyExisted`; callback notification and transfer code take their own
+   * atomic claims.
    */
   if (insertError?.code === "23505") {
     return { ...(await liveBookingAt(input)), alreadyExisted: true };

@@ -220,8 +220,10 @@ test("an urgent callback is described as urgent to the model", () => {
     handoff: "callback",
   });
 
-  assert.match(result.text, /as soon as possible/);
-  assert.match(result.text, /Do not promise a specific time/);
+  assert.match(result.text, /send.*right away/i);
+  assert.match(result.text, /usually within 24 hours/);
+  assert.match(result.text, /marked urgent/);
+  assert.match(result.text, /not a guarantee/);
 });
 
 test("with nothing open the model is told to take a callback, not to improvise", () => {
@@ -465,7 +467,7 @@ test("what the caller is told back matches what they asked for", () => {
   });
 
   assert.match(unavailable.text, /live transfer was unavailable/i);
-  assert.match(unavailable.text, /return their call/);
+  assert.match(unavailable.text, /usually within 24 hours/);
 
   const transferring = describeOutcome({
     name: "request_callback",
@@ -487,8 +489,9 @@ test("what the caller is told back matches what they asked for", () => {
     handoff: "callback",
   });
 
-  assert.match(callback.text, /to get them scheduled/);
-  assert.doesNotMatch(callback.text, /straight back/);
+  assert.match(callback.text, /send.*right away/i);
+  assert.match(callback.text, /usually within 24 hours/);
+  assert.match(callback.text, /not a guarantee/);
 
   // The choice reaches the stored decision, so the owner's list can show it.
   assert.equal((decision.input as Record<string, unknown>).when, "now");

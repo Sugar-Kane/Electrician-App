@@ -103,8 +103,8 @@ export function transferCompleted(status: string): boolean {
 export function missedTransferTwiml(language: string): string {
   return hangupTwiml(
     language === "es"
-      ? "Lo siento, el electricista no pudo contestar. Ya tenemos sus datos y le llamaremos en breve."
-      : "Sorry, the electrician could not answer. We have your details and will call you back shortly.",
+      ? "Lo siento, el electricista no pudo contestar. Estoy enviando su solicitud de devolución de llamada a un electricista ahora mismo. Normalmente respondemos dentro de 24 horas."
+      : "Sorry, the electrician could not answer. I'm sending your callback request to an electrician right away. Our response time is usually within 24 hours.",
     language,
   );
 }

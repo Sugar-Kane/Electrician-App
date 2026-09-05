@@ -298,13 +298,8 @@ export function ownerCallbackEmail(facts: CallbackFacts): EmailBody {
  * by a phone all evening for a call that was filed as routine.
  */
 export function customerCallbackSms(facts: CallbackFacts): string {
-  const promise =
-    facts.when === "now"
-      ? "an electrician will call you back shortly"
-      : "we'll call you back to get you scheduled";
-
   return clip(
-    `${facts.businessName}: thanks for calling. We have your details and ${promise}. Need us sooner? Call ${facts.businessPhone}.`,
+    `${facts.businessName}: your callback request was sent to an electrician right away. Our response time is usually within 24 hours. Need us sooner? Call ${facts.businessPhone}.`,
     SMS_LIMIT,
   );
 }

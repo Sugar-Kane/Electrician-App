@@ -303,17 +303,12 @@ test("what a caller said is escaped before it becomes callback HTML", () => {
 
 test("the customer's text matches the promise they were just given", () => {
   const later = customerCallbackSms(CALLBACK);
-  assert.match(later, /call you back to get you scheduled/);
+  assert.match(later, /sent to an electrician right away/);
+  assert.match(later, /usually within 24 hours/);
   assert.match(later, /\(805\) 626-7761/);
 
   const now = customerCallbackSms({ ...CALLBACK, when: "now" });
-  assert.match(now, /an electrician will call you back shortly/);
-  /*
-   * Saying the wrong one of these is how somebody ends up waiting by a phone
-   * all evening for a call that was filed as routine.
-   */
-  assert.doesNotMatch(now, /to get you scheduled/);
-  assert.doesNotMatch(later, /shortly/);
+  assert.equal(now, later);
 
   for (const body of [later, now]) assert.ok(body.length <= 320, `${body.length} chars`);
 });
