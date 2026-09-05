@@ -90,6 +90,8 @@ test("only an answered completed dial counts as connected", () => {
   assert.equal(transferCompleted("completed"), true);
   assert.equal(transferCompleted("no-answer"), false);
   assert.equal(transferCompleted("busy"), false);
-  assert.match(missedTransferTwiml("en"), /will call you back shortly/);
-  assert.match(missedTransferTwiml("es"), /le llamaremos en breve/);
+  assert.match(missedTransferTwiml("en"), /right away/);
+  assert.match(missedTransferTwiml("en"), /usually within 24 hours/);
+  assert.match(missedTransferTwiml("es"), /ahora mismo/);
+  assert.match(missedTransferTwiml("es"), /dentro de 24 horas/);
 });
