@@ -23,6 +23,9 @@ test("records both call legs and posts the completed recording to Volteira", () 
   });
 
   assert.ok(xml);
+  assert.match(xml, /This call will be recorded/);
+  assert.match(xml, /Esta llamada será grabada/);
+  assert.ok(xml.indexOf("This call will be recorded") < xml.indexOf("<Dial"));
   assert.match(xml, /record="record-from-answer-dual"/);
   assert.match(xml, /recordingStatusCallbackMethod="POST"/);
   assert.match(xml, /recordingStatusCallbackEvent="completed absent"/);

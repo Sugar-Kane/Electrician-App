@@ -69,6 +69,7 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "booking.transfer_started": { kind: "inquiry", title: "Live transfer started" },
   "booking.transfer_connected": { kind: "inquiry", title: "Connected to the electrician" },
   "booking.transfer_missed": { kind: "inquiry", title: "Live transfer was missed" },
+  "call.recording_ready": { kind: "inquiry", title: "Call recording saved" },
   "booking.fee_accepted": { kind: "money", title: "Agreed to the diagnostic fee" },
   "booking.hold_placed": { kind: "appointment", title: "Appointment held" },
   "booking.payment_confirmed": { kind: "money", title: "Diagnostic fee paid" },
