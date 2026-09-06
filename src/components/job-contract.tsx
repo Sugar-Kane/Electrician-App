@@ -160,7 +160,9 @@ function ContractRow({
                   className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
                 >
                   <Download className="h-4 w-4" aria-hidden />
-                  {contract.status === "signed" ? "Download signed contract" : "Download"}
+                  {contract.status === "signed" && contract.signedCopySaved
+                    ? "Download signed contract"
+                    : "Download contract PDF"}
                 </a>
 
                 <button

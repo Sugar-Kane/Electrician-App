@@ -40,27 +40,26 @@ function laterInstant(left: string, right: string): string {
     : new Date(rightMillis).toISOString();
 }
 
-async function markContractSigned(input: {
+async function finalizeSignedContract(input: {
   contractId: string;
+  documentId: string;
   organizationId: string;
   signedAt: string;
   lastEventAt: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const admin = asFlexibleClient(getSupabaseAdmin());
-  const downloadedAt = new Date().toISOString();
-  const { error } = await admin
-    .from("contracts")
-    .update({
-      status: "signed",
-      signed_at: input.signedAt,
-      signature_downloaded_at: downloadedAt,
-      signature_last_event: "DOCUMENT_COMPLETED",
-      signature_last_event_at: input.lastEventAt,
-    })
-    .eq("id", input.contractId)
-    .eq("organization_id", input.organizationId);
-
-  if (error) console.error("documenso: signed contract status could not be saved", error);
+  const { data, error } = await admin.rpc("finalize_signed_contract_document", {
+    p_contract_id: input.contractId,
+    p_document_id: input.documentId,
+    p_organization_id: input.organizationId,
+    p_signed_at: input.signedAt,
+    p_last_event_at: input.lastEventAt,
+  });
+  if (error || data !== true) {
+    console.error("documenso: signed contract could not be finalized", error);
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -103,12 +102,16 @@ export async function fileSignedContract(input: {
     const signedAt = validInstant(text(contract.signed_at)) ||
       validInstant(input.completedAt ?? "") ||
       new Date().toISOString();
-    await markContractSigned({
+    const finalized = await finalizeSignedContract({
       contractId,
+      documentId: text(already.id),
       organizationId,
       signedAt,
       lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
     });
+    if (!finalized) {
+      return { ok: false, error: "The signed PDF is saved, but its status could not be reconciled." };
+    }
     return { ok: true, contractId, jobId, alreadyFiled: true };
   }
 
@@ -195,12 +198,16 @@ export async function fileSignedContract(input: {
         validInstant(input.completedAt ?? "") ||
         validInstant(envelope.completedAt) ||
         new Date().toISOString();
-      await markContractSigned({
+      const finalized = await finalizeSignedContract({
         contractId,
+        documentId: text(wonElsewhere.id),
         organizationId,
         signedAt,
         lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
       });
+      if (!finalized) {
+        return { ok: false, error: "The signed PDF is saved, but its status could not be reconciled." };
+      }
       return { ok: true, contractId, jobId, alreadyFiled: true };
     }
     return { ok: false, error: "The signed PDF could not be filed." };
@@ -209,20 +216,32 @@ export async function fileSignedContract(input: {
   const signedAt = validInstant(input.completedAt ?? "") ||
     validInstant(envelope.completedAt) ||
     new Date().toISOString();
-  await admin
-    .from("documents")
-    .update({ archived_at: new Date().toISOString() })
-    .eq("organization_id", organizationId)
-    .eq("contract_id", contractId)
-    .is("archived_at", null)
-    .neq("id", text(created.id));
-
-  await markContractSigned({
+  const finalized = await finalizeSignedContract({
     contractId,
+    documentId: text(created.id),
     organizationId,
     signedAt,
     lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
   });
+  if (!finalized) {
+    const { error: deleteError } = await admin
+      .from("documents")
+      .delete()
+      .eq("id", text(created.id))
+      .eq("organization_id", organizationId);
+    if (!deleteError) {
+      await getSupabaseAdmin().storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
+    } else {
+      // Keep a recoverable database pointer if deletion itself failed, but make
+      // sure the incomplete replacement is never chosen as the current PDF.
+      await admin
+        .from("documents")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", text(created.id))
+        .eq("organization_id", organizationId);
+    }
+    return { ok: false, error: "The signed PDF could not replace the current contract safely." };
+  }
 
   await recordActivity(admin, {
     organizationId,

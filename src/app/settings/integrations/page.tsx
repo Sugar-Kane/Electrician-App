@@ -30,6 +30,7 @@ export default async function IntegrationsPage() {
   const signingApiReady = isDocumensoConfigured();
   const signingWebhookReady = Boolean(process.env.DOCUMENSO_WEBHOOK_SECRET?.trim());
   const signingReady = signingApiReady && signingWebhookReady;
+  const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://www.volteira.com").replace(/\/+$/, "");
   let connections: { id: string; createdAt: string; expiresAt: string; lastUsedAt: string }[] = [];
 
   if (context && canManage) {
@@ -90,7 +91,7 @@ export default async function IntegrationsPage() {
                 {!signingWebhookReady ? <li>• Matching webhook secret</li> : null}
               </ul>
               <p className="mt-3 break-all text-xs leading-5 text-ink-faint">
-                Webhook: https://www.volteira.com/api/documenso/webhook
+                Webhook: {appOrigin}/api/documenso/webhook
               </p>
             </div>
           ) : (

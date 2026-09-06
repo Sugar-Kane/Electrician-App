@@ -64,3 +64,34 @@ test("a PDF without Volteira's signing labels is refused by returning no fields"
 
   assert.deepEqual(await locateContractSignatureFields(pdf), { customer: [], contractor: [] });
 });
+
+test("a pasted hand-signing label cannot steal the electronic signature field", async () => {
+  const pdf = await renderToBuffer(
+    React.createElement(
+      Document,
+      null,
+      React.createElement(
+        Page,
+        { size: "LETTER", style: { padding: 48 } },
+        React.createElement(Text, null, "Customer signature"),
+        React.createElement(View, { style: { height: 260 } }),
+        React.createElement(
+          View,
+          {
+            style: {
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+            },
+          },
+          signingColumn("Customer"),
+          signingColumn("Contractor"),
+        ),
+      ),
+    ),
+  );
+
+  const fields = await locateContractSignatureFields(pdf);
+  assert.deepEqual(fields.customer.map((field) => field.type), ["SIGNATURE", "NAME", "DATE"]);
+  assert.ok(fields.customer[0]!.positionY > 35);
+});

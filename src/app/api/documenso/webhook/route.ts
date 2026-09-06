@@ -86,6 +86,7 @@ export async function POST(request: Request) {
            signature_last_event, signature_last_event_at, jobs ( job_number )`,
         )
         .eq("id", contractId)
+        .is("signature_envelope_id", null)
         .maybeSingle());
     }
   }

@@ -24,9 +24,10 @@ import {
  *
  * The signature block is real space on the page rather than a picture of one, so
  * a printed copy can be signed by hand today and an electronic signature can be
- * placed against the same coordinates later — and it is omitted entirely when
- * the business's own text already ends with somewhere to sign, because two
- * signature blocks on one contract is not a tidiness problem.
+ * placed against the same coordinates later. If the business's own text has
+ * manual signing lines, the canonical block is labelled specifically for
+ * electronic execution. This preserves their wording while guaranteeing that
+ * every reviewed PDF has two machine-detectable places for Documenso.
  */
 
 export type ContractDocumentData = {
@@ -166,18 +167,20 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
 
         <Body body={data.body} />
 
-        {ownSignatures ? null : (
-          <View style={{ marginTop: 30 }} wrap={false}>
-            <Text style={sheet.sectionHeading}>SIGNATURES</Text>
-            <Text style={[sheet.muted, { marginBottom: 6 }]}>
-              By signing below both parties agree to the work and the price set out above.
-            </Text>
-            <View style={[sheet.row, { justifyContent: "space-between", marginTop: 6 }]}>
-              <SignatureLine role="Customer signature" name={data.customer.name} />
-              <SignatureLine role="Contractor signature" name={business.name} />
-            </View>
+        <View style={{ marginTop: 30 }} wrap={false}>
+          <Text style={sheet.sectionHeading}>
+            {ownSignatures ? "ELECTRONIC SIGNATURES" : "SIGNATURES"}
+          </Text>
+          <Text style={[sheet.muted, { marginBottom: 6 }]}>
+            {ownSignatures
+              ? "For electronic execution, both parties sign below. These signatures apply to the agreement above."
+              : "By signing below both parties agree to the work and the price set out above."}
+          </Text>
+          <View style={[sheet.row, { justifyContent: "space-between", marginTop: 6 }]}>
+            <SignatureLine role="Customer signature" name={data.customer.name} />
+            <SignatureLine role="Contractor signature" name={business.name} />
           </View>
-        )}
+        </View>
 
         <DocumentFooter business={business} />
       </Page>

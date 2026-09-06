@@ -64,7 +64,11 @@ function closestLabel(
   anchor: PositionedText,
 ): PositionedText | null {
   const candidates = all.filter(
-    (item) => item.page === anchor.page && normal(item.text) === text && Math.abs(item.x - anchor.x) < 80,
+    (item) =>
+      item.page === anchor.page &&
+      normal(item.text) === text &&
+      Math.abs(item.x - anchor.x) < 80 &&
+      item.baselineY < anchor.baselineY,
   );
   return candidates.sort(
     (a, b) => Math.abs(a.baselineY - anchor.baselineY) - Math.abs(b.baselineY - anchor.baselineY),
@@ -72,7 +76,10 @@ function closestLabel(
 }
 
 function fieldsFor(all: PositionedText[], role: "customer" | "contractor"): DocumensoField[] {
-  const signature = all.find((item) => normal(item.text) === `${role} signature`);
+  // A business may have pasted its own hand-signing line into the agreement.
+  // Volteira's canonical electronic block is rendered after that body, so the
+  // final exact label is the one whose ruled area Documenso should fill.
+  const signature = all.filter((item) => normal(item.text) === `${role} signature`).at(-1);
   if (!signature) return [];
 
   const fields: DocumensoField[] = [fieldAbove(signature, "SIGNATURE", 34, 35)];
