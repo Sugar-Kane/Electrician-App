@@ -119,6 +119,36 @@ export async function attachCheckoutToBooking(
   return !error && data === true;
 }
 
+/** Give a newly submitted web booking the same clock as its Checkout session. */
+export async function prepareBookingCheckout(bookingToken: string, expiresAt: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("booking_requests")
+    .update({ expires_at: expiresAt })
+    .eq("public_token", bookingToken)
+    .eq("status", "awaiting_payment")
+    .is("deposit_checkout_session_id", null)
+    .select("id")
+    .maybeSingle();
+
+  return !error && Boolean(data);
+}
+
+/** Release a web slot when Stripe could not produce or attach its checkout. */
+export async function releaseBookingCheckoutSetup(bookingToken: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("booking_requests")
+    .update({ status: "expired" })
+    .eq("public_token", bookingToken)
+    .eq("status", "awaiting_payment")
+    .is("deposit_checkout_session_id", null)
+    .select("id")
+    .maybeSingle();
+
+  return !error && Boolean(data);
+}
+
 export type BookingPaymentIntent = {
   organization_id: string;
   organization_slug: string;

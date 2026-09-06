@@ -1,5 +1,7 @@
 import "server-only";
 
+import type Stripe from "stripe";
+
 import { attachCheckoutToBooking } from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
 
@@ -18,6 +20,27 @@ import { getStripe } from "@/lib/stripe";
  */
 
 export type CheckoutResult = { url: string } | { error: string };
+
+/**
+ * Methods Stripe documents as having delayed payment notification.
+ *
+ * The rest remain dashboard-managed and dynamically ordered. These few cannot
+ * share a 30-minute appointment hold because settlement can take days, by
+ * which point the slot may have been offered to somebody else.
+ */
+const DELAYED_PAYMENT_METHODS = [
+  "acss_debit",
+  "au_becs_debit",
+  "bacs_debit",
+  "boleto",
+  "customer_balance",
+  "konbini",
+  "nz_bank_account",
+  "oxxo",
+  "pay_by_bank",
+  "sepa_debit",
+  "us_bank_account",
+] satisfies Stripe.Checkout.SessionCreateParams.ExcludedPaymentMethodType[];
 
 /**
  * The origin to send somebody back to.
@@ -79,7 +102,10 @@ export async function startBookingCheckout(input: {
       {
         mode: "payment",
         // Payment methods are managed in Stripe so Checkout can show the best
-        // eligible options for this customer, device and currency.
+        // eligible instant options for this customer, device and currency.
+        // Delayed-settlement methods are the exception: a bank debit that
+        // settles days later cannot safely confirm a slot held for 30 minutes.
+        excluded_payment_method_types: DELAYED_PAYMENT_METHODS,
         integration_identifier: "volteira_diagnostic_booking_kqvmrjta",
         customer_email: input.email || undefined,
         // Half an hour, the same as the hold the slot is under. A checkout that
