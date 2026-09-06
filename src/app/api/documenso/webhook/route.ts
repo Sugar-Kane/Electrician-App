@@ -6,6 +6,7 @@ import {
   documensoEventContractStatus,
   isStaleDocumensoEvent,
   sameDocumensoEvent,
+  wouldRegressDocumensoStatus,
 } from "@/lib/documenso-status";
 import { fileSignedContract } from "@/lib/signed-contract";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -103,10 +104,7 @@ export async function POST(request: Request) {
     return Response.json({ received: true, ignored: true, reason: "stale" });
   }
   const currentStatus = text(contract.status);
-  if (
-    (currentStatus === "signed" && status !== "signed") ||
-    (currentStatus === "void" && status === "sent")
-  ) {
+  if (wouldRegressDocumensoStatus(currentStatus, status)) {
     return Response.json({ received: true, ignored: true, reason: "terminal-status" });
   }
   const duplicate = sameDocumensoEvent(
@@ -126,9 +124,13 @@ export async function POST(request: Request) {
   if (status === "signed") {
     patch.status = "signed";
     patch.signed_at = eventTime(body.payload?.completedAt ?? at);
+    patch.signature_send_token = null;
+    patch.signature_send_started_at = null;
   } else if (status === "void") {
     patch.status = "void";
     patch.signature_rejected_at = at;
+    patch.signature_send_token = null;
+    patch.signature_send_started_at = null;
   } else {
     patch.status = "sent";
     patch.signature_sent_at = text(contract.signature_sent_at) || at;

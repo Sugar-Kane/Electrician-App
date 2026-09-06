@@ -399,6 +399,32 @@ export async function sendContractForSignature(
     return query.select("id").maybeSingle();
   };
 
+  // Claim before reading the PDF. Version restoration takes the same row-level
+  // claim, so the file inspected here cannot be swapped out between inspection
+  // and the provider upload.
+  const { data: claimed, error: claimError } = await claimSend(envelopeId || null);
+  if (claimError) {
+    if ((claimError as { code?: string }).code === "23505") {
+      return {
+        error: "Another contract for this job is already being sent or waiting for signatures.",
+      };
+    }
+    return { error: "The signature request could not be prepared. Try again." };
+  }
+  if (!claimed) {
+    const { data: latest } = await supabase
+      .from("contracts")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .maybeSingle();
+    return {
+      error: text(latest?.status) === "sent"
+        ? "This contract is already waiting for signatures."
+        : "Another signature request is being prepared. Refresh in a moment.",
+    };
+  }
+
   let document: Record<string, unknown> | null = null;
   let pdf: Buffer | null = null;
   let fields: Awaited<ReturnType<typeof locateContractSignatureFields>> | null = null;
@@ -416,12 +442,16 @@ export async function sendContractForSignature(
     document = (documentData ?? null) as Record<string, unknown> | null;
 
     const storagePath = text(document?.storage_path);
-    if (!storagePath) return { error: "Build the contract PDF before sending it." };
+    if (!storagePath) {
+      await releaseClaim();
+      return { error: "Build the contract PDF before sending it." };
+    }
 
     const downloaded = await getSupabaseAdmin().storage
       .from(DOCUMENTS_BUCKET)
       .download(storagePath);
     if (downloaded.error || !downloaded.data) {
+      await releaseClaim();
       return { error: "The contract PDF could not be opened. Rebuild it and try again." };
     }
 
@@ -430,33 +460,18 @@ export async function sendContractForSignature(
       fields = await locateContractSignatureFields(pdf);
     } catch (error) {
       console.error("contract: could not inspect signature fields", error);
+      await releaseClaim();
       return { error: "The signing places could not be read from this PDF. Rebuild it and try again." };
     }
 
     if (!fields.customer.some((field) => field.type === "SIGNATURE")) {
+      await releaseClaim();
       return { error: "This PDF has no customer signing place. Rebuild it and try again." };
     }
     if (!fields.contractor.some((field) => field.type === "SIGNATURE")) {
+      await releaseClaim();
       return { error: "This PDF has no contractor signing place. Rebuild it and try again." };
     }
-  }
-
-  // A disabled button covers a normal double-click. The database claim covers
-  // concurrent tabs, multiple owners and retries after an interrupted request.
-  const { data: claimed, error: claimError } = await claimSend(envelopeId || null);
-  if (claimError) return { error: "The signature request could not be prepared. Try again." };
-  if (!claimed) {
-    const { data: latest } = await supabase
-      .from("contracts")
-      .select("status")
-      .eq("organization_id", organizationId)
-      .eq("id", contractId)
-      .maybeSingle();
-    return {
-      error: text(latest?.status) === "sent"
-        ? "This contract is already waiting for signatures."
-        : "Another signature request is being prepared. Refresh in a moment.",
-    };
   }
 
   if (!envelopeId && pdf && fields) {
@@ -506,7 +521,29 @@ export async function sendContractForSignature(
       .select("id")
       .maybeSingle();
 
-    if (linkedError || !linked) {
+    let linkConfirmed = Boolean(linked);
+    if (linkedError) {
+      // A timeout can be reported after Postgres committed the update. Never
+      // delete the external draft until a fresh read proves it is not linked.
+      const { data: rechecked, error: recheckError } = await supabase
+        .from("contracts")
+        .select("signature_envelope_id, signature_send_token")
+        .eq("organization_id", organizationId)
+        .eq("id", contractId)
+        .maybeSingle();
+      if (recheckError || !rechecked) {
+        return { error: "The signature request could not be confirmed. Refresh shortly." };
+      }
+      const recheckedEnvelope = text(rechecked.signature_envelope_id);
+      if (recheckedEnvelope === envelopeId) {
+        if (text(rechecked.signature_send_token) !== sendToken) {
+          return { error: "Another signature request is being prepared. Refresh in a moment." };
+        }
+        linkConfirmed = true;
+      }
+    }
+
+    if (!linkConfirmed) {
       // The provider draft contains customer details, so do not knowingly leave
       // it orphaned if Volteira could not link it to its contract.
       try {
@@ -539,7 +576,7 @@ export async function sendContractForSignature(
       return { error: "", contractId, notice: "Signed contract saved to this job." };
     }
     if (["REJECTED", "CANCELLED"].includes(providerEnvelope.status)) {
-      await supabase
+      const { data: voided, error: voidError } = await supabase
         .from("contracts")
         .update({
           status: "void",
@@ -549,7 +586,23 @@ export async function sendContractForSignature(
         })
         .eq("organization_id", organizationId)
         .eq("id", contractId)
-        .eq("signature_send_token", sendToken);
+        .eq("signature_send_token", sendToken)
+        .in("status", ["draft", "sent"])
+        .select("id")
+        .maybeSingle();
+      if (voidError) {
+        return { error: "The request was declined or canceled, but its status could not be saved. Refresh shortly." };
+      }
+      if (voided) {
+        await recordActivity(supabase, {
+          organizationId,
+          jobId,
+          actorUserId: userId,
+          eventType: "contract.declined",
+          label: "Contract signature request declined or canceled",
+          metadata: { envelope_id: envelopeId },
+        });
+      }
       revalidatePath(`/jobs/${jobNumber}`);
       return { error: "This signature request was declined or canceled. Generate a new draft." };
     }
@@ -713,11 +766,32 @@ export async function refreshContractSignature(
   }
 
   if (["REJECTED", "CANCELLED"].includes(envelope.status)) {
-    await supabase
+    const { data: voided, error: voidError } = await supabase
       .from("contracts")
-      .update({ status: "void", signature_rejected_at: new Date().toISOString() })
+      .update({
+        status: "void",
+        signature_rejected_at: new Date().toISOString(),
+        signature_send_token: null,
+        signature_send_started_at: null,
+      })
       .eq("organization_id", organizationId)
-      .eq("id", contractId);
+      .eq("id", contractId)
+      .in("status", ["draft", "sent"])
+      .select("id")
+      .maybeSingle();
+    if (voidError) {
+      return { error: "The request was declined or canceled, but its status could not be saved. Try again." };
+    }
+    if (voided) {
+      await recordActivity(supabase, {
+        organizationId,
+        jobId: text(data?.job_id) || null,
+        actorUserId: auth.user.id,
+        eventType: "contract.declined",
+        label: "Contract signature request declined or canceled",
+        metadata: { envelope_id: envelopeId },
+      });
+    }
     revalidatePath(`/jobs/${jobNumber}`);
     return { error: "This signature request was declined or canceled. Generate a new draft." };
   }

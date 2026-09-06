@@ -5,6 +5,7 @@ import {
   documensoEventContractStatus,
   isStaleDocumensoEvent,
   sameDocumensoEvent,
+  wouldRegressDocumensoStatus,
 } from "./documenso-status.ts";
 
 test("Documenso lifecycle events map without prematurely calling one signature complete", () => {
@@ -49,4 +50,13 @@ test("Documenso deliveries older than the stored audit event are stale", () => {
     false,
   );
   assert.equal(isStaleDocumensoEvent(null, "2026-09-06T08:00:00Z"), false);
+});
+
+test("terminal signing outcomes cannot be rewound or recorded twice", () => {
+  assert.equal(wouldRegressDocumensoStatus("signed", "sent"), true);
+  assert.equal(wouldRegressDocumensoStatus("signed", "void"), true);
+  assert.equal(wouldRegressDocumensoStatus("void", "sent"), true);
+  assert.equal(wouldRegressDocumensoStatus("void", "void"), true);
+  assert.equal(wouldRegressDocumensoStatus("void", "signed"), false);
+  assert.equal(wouldRegressDocumensoStatus("draft", "sent"), false);
 });

@@ -1,5 +1,7 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 
 import { getDocumentVersions, type DocumentVersion } from "@/lib/document-workspace";
@@ -56,6 +58,41 @@ export async function restoreDocumentVersion(
 
   if (!owner) return { error: "That document has no earlier versions to go back to." };
 
+  let contractClaimToken = "";
+  if (owner.column === "contract_id") {
+    contractClaimToken = randomUUID();
+    const staleBefore = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { data: claimed, error: claimError } = await supabase
+      .from("contracts")
+      .update({
+        signature_send_token: contractClaimToken,
+        signature_send_started_at: new Date().toISOString(),
+      })
+      .eq("id", owner.id)
+      .eq("organization_id", organizationId)
+      .eq("status", "draft")
+      .is("signature_envelope_id", null)
+      .or(`signature_send_token.is.null,signature_send_started_at.lt.${staleBefore}`)
+      .select("id")
+      .maybeSingle();
+
+    if (claimError || !claimed) {
+      return {
+        error: "Earlier contract versions cannot be restored after signing has started.",
+      };
+    }
+  }
+
+  const releaseContractClaim = async () => {
+    if (!contractClaimToken) return;
+    await supabase
+      .from("contracts")
+      .update({ signature_send_token: null, signature_send_started_at: null })
+      .eq("id", owner.id)
+      .eq("organization_id", organizationId)
+      .eq("signature_send_token", contractClaimToken);
+  };
+
   const stamp = new Date().toISOString();
 
   /*
@@ -74,6 +111,7 @@ export async function restoreDocumentVersion(
 
   if (archived) {
     console.error("files: could not archive the current version", archived);
+    await releaseContractClaim();
     return { error: "That version could not be restored." };
   }
 
@@ -94,6 +132,7 @@ export async function restoreDocumentVersion(
       .eq(owner.column, owner.id)
       .eq("archived_at", stamp);
 
+    await releaseContractClaim();
     return { error: "That version could not be restored. Nothing was changed." };
   }
 
@@ -110,6 +149,7 @@ export async function restoreDocumentVersion(
    * for, and the notice says the text was not moved.
    */
   const restoredSource = await putSourceBack(supabase, organizationId, owner, row.source_snapshot);
+  await releaseContractClaim();
 
   revalidatePath("/files", "layout");
   revalidatePath("/invoices");

@@ -42,3 +42,15 @@ export function isStaleDocumensoEvent(
   const incomingInstant = instant(incomingAt);
   return storedInstant !== null && incomingInstant !== null && incomingInstant < storedInstant;
 }
+
+/** Terminal local states cannot be rewound by later non-terminal deliveries. */
+export function wouldRegressDocumensoStatus(
+  current: string,
+  incoming: "sent" | "signed" | "void",
+): boolean {
+  if (current === "signed") return incoming !== "signed";
+  // A completed envelope is stronger evidence than a prior decline event and
+  // may reconcile it; repeated decline/cancel events remain one local outcome.
+  if (current === "void") return incoming !== "signed";
+  return false;
+}
