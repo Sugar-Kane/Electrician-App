@@ -73,6 +73,7 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "booking.fee_accepted": { kind: "money", title: "Agreed to the diagnostic fee" },
   "booking.hold_placed": { kind: "appointment", title: "Appointment held" },
   "booking.payment_confirmed": { kind: "money", title: "Diagnostic fee paid" },
+  "booking.payment_setup_failed": { kind: "money", title: "Payment link needs attention" },
   "booking.scheduled_from_text": { kind: "appointment", title: "Appointment scheduled" },
   // Not a customer review. This is the booking asking for a person to look at
   // it — the wording it shipped with reads the other way round entirely.

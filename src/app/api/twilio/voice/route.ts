@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { holdSpoken } from "@/lib/booking-hold";
+import { bookingNeedsReviewReply, holdSpoken } from "@/lib/booking-hold";
 import { readInboundText } from "@/lib/claude";
 import {
   findOrCreateCustomerByPhone,
@@ -128,13 +128,14 @@ export async function POST(request: Request) {
 
     const { language, languageSource } = await loadCustomerLanguage(database, callerId);
 
-    const { context, timeZone } = await loadIntakeContext({
-      database,
-      organizationId,
-      isFirstReply: false,
-      language,
-      languageSource,
-    });
+    const { context, timeZone, organizationSlug, diagnosticMinutes } =
+      await loadIntakeContext({
+        database,
+        organizationId,
+        isFirstReply: false,
+        language,
+        languageSource,
+      });
 
     // The transfer did not connect: Twilio comes back here with the dial
     // status rather than anything the caller said.
@@ -170,6 +171,11 @@ export async function POST(request: Request) {
           callerText: "Caller asked for a person; the transfer was not answered.",
           model: null,
           decision: null,
+          checkout: {
+            origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+            organizationSlug,
+            diagnosticMinutes,
+          },
         });
       }
 
@@ -266,7 +272,12 @@ export async function POST(request: Request) {
     });
 
     const customerId = existingCall.customer_id ? String(existingCall.customer_id) : "";
-    let recorded: { requestId?: string; payUrl?: string; feeCents?: number } = {};
+    let recorded: {
+      requestId?: string;
+      payUrl?: string;
+      feeCents?: number;
+      needsReview?: boolean;
+    } = {};
     if (customerId) {
       recorded = await recordBookingRequest({
         database,
@@ -282,6 +293,11 @@ export async function POST(request: Request) {
         // fee was said down the phone and recorded nowhere, and nothing could
         // be held for payment.
         depositCents: action.kind === "book" ? context.diagnosticFeeCents : undefined,
+        checkout: {
+          origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+          organizationSlug,
+          diagnosticMinutes,
+        },
       });
     }
 
@@ -291,7 +307,12 @@ export async function POST(request: Request) {
      * what `sendBookingConfirmations` is already sending them.
      */
     const say =
-      recorded.payUrl && recorded.feeCents && action.kind === "book"
+      recorded.needsReview && action.kind === "book"
+        ? bookingNeedsReviewReply({
+            businessPhone: context.businessPhone,
+            language: action.language,
+          })
+        : recorded.payUrl && recorded.feeCents && action.kind === "book"
         ? action.language === "es"
           ? `Le he apartado ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "es-US")}. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language })}`
           : `I have ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "en-US")} held for you. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language })}`

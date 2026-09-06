@@ -92,7 +92,8 @@ export async function runBookingTool(input: {
   name: string;
   args: Record<string, unknown>;
 }): Promise<ToolResult> {
-  const { context, timeZone, owner } = await loadIntakeContext({
+  const { context, timeZone, owner, organizationSlug, diagnosticMinutes } =
+    await loadIntakeContext({
     database: input.database,
     organizationId: input.session.organizationId,
     // A phone call has no thread and sends no SMS, so the opt-out footer that
@@ -181,6 +182,11 @@ export async function runBookingTool(input: {
     intakeAnswers: answers,
     deliveryPreference: preference || undefined,
     depositCents: context.diagnosticFeeCents,
+    checkout: {
+      origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+      organizationSlug,
+      diagnosticMinutes,
+    },
   });
 
   /*
@@ -227,6 +233,7 @@ export async function runBookingTool(input: {
       jobId: recorded.jobId,
       owner,
       held: Boolean(recorded.payUrl),
+      needsReview: recorded.needsReview,
     };
 
     after(() => sendBookingConfirmations(confirmations));
@@ -346,6 +353,7 @@ export async function runBookingTool(input: {
     handoff: chosen,
     deliveryPreference: preference,
     held: Boolean(recorded.payUrl),
+    needsReview: recorded.needsReview,
     transfer,
   });
 }

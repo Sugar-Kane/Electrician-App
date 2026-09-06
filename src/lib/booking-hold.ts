@@ -21,7 +21,9 @@ export type HoldDecision =
   /** Write the job now, the way it has always worked. */
   | { kind: "schedule"; because: string }
   /** Reserve the slot and ask for the fee first. */
-  | { kind: "hold"; feeCents: number; holdMinutes: number };
+  | { kind: "hold"; feeCents: number; holdMinutes: number }
+  /** Never confirm an unpaid visit when checkout is unavailable. */
+  | { kind: "payment_unavailable"; feeCents: number; because: string };
 
 /** Long enough to find a card, short enough not to lose the slot for a day. */
 export const HOLD_MINUTES = 30;
@@ -43,16 +45,12 @@ export function decideHold(input: {
     return { kind: "schedule", because: "no diagnostic fee is charged" };
   }
 
-  /*
-   * The fallback, and the reason this cannot make things worse than they are.
-   *
-   * With no payment provider configured there is no link to send, and a hold
-   * nobody can pay is an appointment that quietly never happens. Booking it the
-   * way it books today is the current behaviour exactly — so the worst outcome
-   * of this whole change is the behaviour it replaced.
-   */
   if (!input.paymentsAvailable) {
-    return { kind: "schedule", because: "payments are not configured" };
+    return {
+      kind: "payment_unavailable",
+      feeCents: fee,
+      because: "payments are not configured",
+    };
   }
 
   return { kind: "hold", feeCents: fee, holdMinutes: HOLD_MINUTES };
@@ -144,5 +142,25 @@ export function holdSpoken(input: { feeCents: number; language?: string }): stri
   return (
     `I will text you a link to pay the ${feeLabel(input.feeCents)} diagnostic fee, ` +
     `and paying it confirms the appointment.`
+  );
+}
+
+/** What the customer is told when an unpaid visit cannot be safely created. */
+export function bookingNeedsReviewReply(input: {
+  businessPhone: string;
+  language?: string;
+}): string {
+  if (input.language === "es") {
+    return (
+      "No pude confirmar la cita automáticamente. " +
+      "Envié su solicitud a un electricista para que termine de programarla. " +
+      `Normalmente respondemos dentro de 24 horas. Si necesita llamarnos, marque ${input.businessPhone}.`
+    );
+  }
+
+  return (
+    "I could not confirm the appointment automatically. " +
+    "I sent your request to an electrician to finish scheduling it. " +
+    `Our response time is usually within 24 hours. If you need us, call ${input.businessPhone}.`
   );
 }

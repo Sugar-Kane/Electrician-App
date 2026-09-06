@@ -8,7 +8,11 @@ import {
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
 import { originFromHeaders, startBookingCheckout } from "@/lib/booking-checkout";
-import { getPublicBookingPage } from "@/lib/public-booking";
+import {
+  getPublicBookingPage,
+  prepareBookingCheckout,
+  releaseBookingCheckoutSetup,
+} from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
 import { checkServiceArea } from "@/lib/service-area";
 import { smsConsentRecord } from "@/lib/sms-consent";
@@ -223,6 +227,16 @@ export async function startPublicBooking(
     return { error: "Secure checkout could not be started. Please try again." };
   }
 
+  // Stripe accepts a custom expiry only when it is at least 30 minutes from
+  // the moment the session is created. The intake was inserted a moment ago,
+  // so its original 30-minute database deadline is already a few milliseconds
+  // too short. Reset both clocks with one minute of allowance before creating
+  // the session; customers are still told the simple, conservative 30 minutes.
+  const heldUntil = new Date(Date.now() + 31 * 60_000).toISOString();
+  if (!(await prepareBookingCheckout(intake.booking_token, heldUntil))) {
+    return { error: "That arrival window could not be held. Choose another available time." };
+  }
+
   // The same checkout the texted pay link starts. One place decides what is
   // charged, what the customer is told they are paying for, and which booking
   // the money lands against.
@@ -236,10 +250,12 @@ export async function startPublicBooking(
     diagnosticMinutes: bookingPage.diagnostic_minutes,
     origin: requestOrigin,
     intakeId: intake.intake_id,
+    expiresAt: heldUntil,
   });
 
   if ("error" in checkout) {
     console.error("booking: checkout could not be started", checkout.error);
+    await releaseBookingCheckoutSetup(intake.booking_token).catch(() => undefined);
     return { error: "Secure checkout could not be started. Please try again." };
   }
 

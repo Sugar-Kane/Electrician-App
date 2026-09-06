@@ -12,26 +12,27 @@ import {
   ownerCallbackSms,
   ownerIntakeSms,
   type BookingFacts,
+  type BookingMessageState,
   type CallbackFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import { slotLabel } from "@/lib/intake-shared";
+import { consentIsActive } from "@/lib/messaging-rules";
 import { type IntakeContext } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
 
 /**
- * Telling everyone who needs to know that a booking happened.
+ * Telling everyone who needs to know what happened to a booking request.
  *
  * Four things, in order of who is worst off without them: the customer, who
  * otherwise has only a memory of a phone call; and the owner, who otherwise
  * finds out by opening the app.
  *
- * Every send is best-effort and independent. A booking is already in the
- * calendar by the time this runs, and no delivery failure may undo it — an
- * unregistered A2P campaign, a mistyped email, or a provider outage each cost a
- * message, never the appointment. Failures are recorded on the message row so
- * they are visible the next morning rather than lost.
+ * Every send is best-effort and independent. The booking, hold, or review
+ * request is already durable by the time this runs, and no delivery failure
+ * may undo it. Failures are recorded on the message row so they are visible the
+ * next morning rather than lost.
  */
 
 type Database = ReturnType<typeof getSupabaseAdmin>;
@@ -76,13 +77,30 @@ export type BookingNotification = {
   /**
    * The slot is reserved and the fee is not paid yet.
    *
-   * Only changes what the owner is told. A held time on his phone as "New
-   * booking" is a day planned around an appointment that may never be paid for.
+   * Changes every message from "booked" to "held". A held time presented as a
+   * booking is a day planned around an appointment that may never be paid for.
    */
   held?: boolean;
+  /** Payment setup failed, so this is a saved request rather than a hold or job. */
+  needsReview?: boolean;
+  /**
+   * A paid booking gets a second, distinct notification after its earlier hold
+   * notice. Keeping a separate claim makes Stripe retries harmless.
+   */
+  notificationPhase?: "request" | "payment";
+  /**
+   * Payment fulfillment must respect the consent ledger as it exists now; it
+   * must not silently re-opt-in somebody who texted STOP after receiving the
+   * original payment link.
+   */
+  customerSmsConsent?: "phone_booking" | "existing" | "none";
 };
 
 function factsFor(input: BookingNotification): BookingFacts {
+  const bookingLink = input.origin
+    ? `${input.origin.replace(/\/+$/, "")}/booking/${input.publicToken}`
+    : "";
+
   return {
     businessName: input.context.businessName,
     businessPhone: input.context.businessPhone,
@@ -94,7 +112,11 @@ function factsFor(input: BookingNotification): BookingFacts {
     description: input.description,
     intakeAnswers: input.intakeAnswers,
     customerPhone: input.phone,
-    link: input.origin ? `${input.origin.replace(/\/+$/, "")}/booking/${input.publicToken}` : undefined,
+    link: bookingLink
+      ? input.held
+        ? `${bookingLink}/pay`
+        : bookingLink
+      : undefined,
   };
 }
 
@@ -159,26 +181,40 @@ type Attempt = {
   ok: boolean;
   detail?: string;
   at: string;
+  phase?: "request" | "payment";
 };
 
 export async function sendBookingConfirmations(input: BookingNotification): Promise<void> {
   const database = getSupabaseAdmin();
   const facts = factsFor(input);
+  const messageState: BookingMessageState = input.needsReview
+    ? "needs_review"
+    : input.held
+      ? "held"
+      : "confirmed";
+  const notificationPhase = input.notificationPhase ?? "request";
   const attempts: Attempt[] = [];
 
   const note = (attempt: Omit<Attempt, "at">) =>
-    attempts.push({ ...attempt, at: new Date().toISOString() });
+    attempts.push({ ...attempt, phase: notificationPhase, at: new Date().toISOString() });
 
   // Claim the booking before sending. A retried tool call, or a model that
   // books twice, must not text the same customer about the same appointment
   // twice — and the claim is worth more than the send.
-  const { data: claimed } = await database
-    .from("booking_requests")
-    .update({ confirmed_notified_at: new Date().toISOString() })
-    .eq("id", input.requestId)
-    .is("confirmed_notified_at", null)
-    .select("id")
-    .maybeSingle();
+  const claimAt = new Date().toISOString();
+  const claim =
+    notificationPhase === "payment"
+      ? database
+          .from("booking_requests")
+          .update({ payment_notified_at: claimAt })
+          .eq("id", input.requestId)
+          .is("payment_notified_at", null)
+      : database
+          .from("booking_requests")
+          .update({ confirmed_notified_at: claimAt })
+          .eq("id", input.requestId)
+          .is("confirmed_notified_at", null);
+  const { data: claimed } = await claim.select("id").maybeSingle();
 
   if (!claimed) return;
 
@@ -203,39 +239,71 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: input.phone,
       audience: "customer",
       ok: true,
-      detail: "Confirmed in the text thread itself; a second copy was not sent.",
+      detail: "Customer was told in the text thread itself; a second copy was not sent.",
     });
   } else if (messagingServiceSid && input.phone && wantsText) {
-    await database.from("messaging_consent").upsert(
-      {
-        organization_id: input.organizationId,
-        customer_id: input.customerId,
-        channel: "sms",
-        scope: "transactional",
-        opted_in_at: new Date().toISOString(),
-        opted_out_at: null,
-        source: "phone_booking",
-        proof_text: `Caller gave this number on a phone call to book ${facts.slotLabel}.`,
-      },
-      { onConflict: "customer_id,channel,scope" },
-    );
+    const consentMode = input.customerSmsConsent ?? "phone_booking";
 
-    const body = customerConfirmationSms(facts);
-    const result = await sendSms({ to: input.phone, body, messagingServiceSid });
-    note({
-      channel: "sms",
-      to: input.phone,
-      audience: "customer",
-      ok: result.ok,
-      detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
-    });
-    await recordOutbound({
-      database,
-      organizationId: input.organizationId,
-      customerId: input.customerId,
-      body,
-      result,
-    });
+    if (consentMode === "phone_booking") {
+      await database.from("messaging_consent").upsert(
+        {
+          organization_id: input.organizationId,
+          customer_id: input.customerId,
+          channel: "sms",
+          scope: "transactional",
+          opted_in_at: new Date().toISOString(),
+          opted_out_at: null,
+          source: "phone_booking",
+          proof_text: `Caller gave this number on a phone call to book ${facts.slotLabel}.`,
+        },
+        { onConflict: "customer_id,channel,scope" },
+      );
+    }
+
+    const { data: consent } =
+      consentMode === "none"
+        ? { data: null }
+        : await database
+            .from("messaging_consent")
+            .select("opted_in_at, opted_out_at")
+            .eq("organization_id", input.organizationId)
+            .eq("customer_id", input.customerId)
+            .eq("channel", "sms")
+            .eq("scope", "transactional")
+            .maybeSingle();
+
+    if (
+      consentMode === "none" ||
+      !consentIsActive({
+        optedInAt: consent?.opted_in_at ? String(consent.opted_in_at) : null,
+        optedOutAt: consent?.opted_out_at ? String(consent.opted_out_at) : null,
+      })
+    ) {
+      note({
+        channel: "sms",
+        to: input.phone,
+        audience: "customer",
+        ok: false,
+        detail: "Customer transactional SMS consent is not active.",
+      });
+    } else {
+      const body = customerConfirmationSms(facts, messageState);
+      const result = await sendSms({ to: input.phone, body, messagingServiceSid });
+      note({
+        channel: "sms",
+        to: input.phone,
+        audience: "customer",
+        ok: result.ok,
+        detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
+      });
+      await recordOutbound({
+        database,
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        body,
+        result,
+      });
+    }
   }
 
   // The owner. Deliberately a different number from the business line, so a
@@ -256,7 +324,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   if (messagingServiceSid && ownerPhone) {
     const sent = await sendSms({
       to: ownerPhone,
-      body: ownerBookingSms(facts, input.held ?? false),
+      body: ownerBookingSms(facts, messageState),
       messagingServiceSid,
     });
     note({
@@ -290,7 +358,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       input.origin && input.jobId
         ? `${input.origin.replace(/\/+$/, "")}/jobs/${input.jobId}`
         : undefined;
-    const message = ownerBookingEmail(facts, jobUrl);
+    const message = ownerBookingEmail(facts, jobUrl, messageState);
     const sent = await sendEmail({
       to: ownerEmail,
       subject: message.subject,
@@ -318,7 +386,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
 
   // The email, when the caller gave one that could plausibly be delivered to.
   if (input.email && wantsEmail && looksLikeEmail(input.email)) {
-    const message = confirmationEmail(facts);
+    const message = confirmationEmail(facts, messageState);
     const sent = await sendEmail({
       to: input.email,
       subject: message.subject,
@@ -339,9 +407,17 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // Written last and never allowed to fail the call: this is the record of what
   // was attempted, and it is the answer to "was anybody actually told?".
   try {
+    const { data: prior } = await database
+      .from("booking_requests")
+      .select("notification_results")
+      .eq("id", input.requestId)
+      .maybeSingle();
+    const priorAttempts = Array.isArray(prior?.notification_results)
+      ? prior.notification_results
+      : [];
     await database
       .from("booking_requests")
-      .update({ notification_results: attempts })
+      .update({ notification_results: [...priorAttempts, ...attempts] })
       .eq("id", input.requestId);
   } catch {
     // Deliberately silent.

@@ -1,7 +1,12 @@
 import { headers } from "next/headers";
 
 import { originFromHeaders, startBookingCheckout } from "@/lib/booking-checkout";
-import { getBookingPaymentIntent } from "@/lib/public-booking";
+import {
+  expirePublicBookingCheckout,
+  expirePublicBookingHold,
+  getBookingPaymentIntent,
+} from "@/lib/public-booking";
+import { getStripe } from "@/lib/stripe";
 
 /**
  * The link a text message carries.
@@ -49,6 +54,35 @@ export async function GET(
   if (intent.already_paid) return back("");
   if (intent.status !== "awaiting_payment") return back("expired");
 
+  const expiresAt = intent.expires_at ? Date.parse(intent.expires_at) : Number.NaN;
+  if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    await expirePublicBookingHold(token).catch(() => undefined);
+    return back("expired");
+  }
+
+  // Voice and text bookings create Checkout before the link is sent, so the
+  // 30-minute Stripe session and the 30-minute slot hold share one clock. A
+  // repeat tap retrieves that session rather than extending the hold.
+  if (intent.checkout_session_id?.startsWith("cs_")) {
+    const stripe = getStripe();
+    if (!stripe) return back("unavailable");
+
+    try {
+      const session = await stripe.checkout.sessions.retrieve(intent.checkout_session_id);
+      if (session.status === "open" && session.url) {
+        return Response.redirect(session.url, 303);
+      }
+      if (session.status === "expired") {
+        await expirePublicBookingCheckout(token, session.id).catch(() => undefined);
+        return back("expired");
+      }
+      return back("");
+    } catch {
+      return back("unavailable");
+    }
+  }
+
+  // Compatibility for a hold created before eager Checkout sessions shipped.
   const checkout = await startBookingCheckout({
     bookingToken: token,
     feeCents: intent.fee_cents,
@@ -58,6 +92,7 @@ export async function GET(
     emergency: intent.priority === "emergency",
     diagnosticMinutes: intent.diagnostic_minutes,
     origin,
+    expiresAt: intent.expires_at ?? undefined,
   });
 
   if ("error" in checkout) {
