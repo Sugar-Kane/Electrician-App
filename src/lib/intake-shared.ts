@@ -1,6 +1,7 @@
 import "server-only";
 
 import { recordActivity } from "@/lib/activity";
+import { startBookingCheckout } from "@/lib/booking-checkout";
 import { decideHold, payLinkFor } from "@/lib/booking-hold";
 import {
   readLanguage,
@@ -8,7 +9,10 @@ import {
   type LanguageCode,
   type LanguageSource,
 } from "@/lib/customer-language";
-import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
+import {
+  DEFAULT_DIAGNOSTIC_FEE_CENTS,
+  DEFAULT_DIAGNOSTIC_MINUTES,
+} from "@/lib/diagnostic-visit";
 import { localeFor } from "@/lib/intake-phrases";
 import { nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
@@ -35,6 +39,8 @@ export { slotLabel };
 export type LoadedContext = {
   context: IntakeContext;
   timeZone: string;
+  organizationSlug: string;
+  diagnosticMinutes: number;
   messagingServiceSid: string;
   /** Where this business wants to hear about a booking. */
   owner: { email: string; phone: string };
@@ -68,7 +74,7 @@ export async function loadIntakeContext(input: {
       .maybeSingle(),
     database
       .from("service_settings")
-      .select("diagnostic_fee_cents, automatic_booking_radius_miles")
+      .select("diagnostic_fee_cents, diagnostic_minutes, automatic_booking_radius_miles")
       .eq("organization_id", organizationId)
       .maybeSingle(),
     database
@@ -131,6 +137,11 @@ export async function loadIntakeContext(input: {
 
   return {
     timeZone,
+    organizationSlug: slug,
+    diagnosticMinutes:
+      typeof settings?.diagnostic_minutes === "number"
+        ? settings.diagnostic_minutes
+        : DEFAULT_DIAGNOSTIC_MINUTES,
     messagingServiceSid: text(messaging?.messaging_service_sid),
     // Per business, and nothing else. There is deliberately no deployment-wide
     // fallback: one deployment serves many electricians, so a single address
@@ -313,6 +324,8 @@ export type RecordedRequest = {
   heldUntil?: string;
   /** What they owe to confirm it. */
   feeCents?: number;
+  /** The request is saved for a person, but no appointment was confirmed. */
+  needsReview?: boolean;
   /**
    * This booking was already there, and this call did not make it.
    *
@@ -381,7 +394,8 @@ async function liveBookingAt(input: {
 
   const row = data as Record<string, unknown>;
   const publicToken = text(row.public_token) || undefined;
-  const held = text(row.status) === "awaiting_payment";
+  const status = text(row.status);
+  const held = status === "awaiting_payment";
 
   return {
     requestId: text(row.id) || undefined,
@@ -393,6 +407,7 @@ async function liveBookingAt(input: {
         : undefined,
     heldUntil: held ? text(row.expires_at) || undefined : undefined,
     feeCents: typeof row.deposit_cents === "number" ? row.deposit_cents : undefined,
+    needsReview: status === "new" || status === "needs_review" || undefined,
   };
 }
 
@@ -413,6 +428,12 @@ export async function recordBookingRequest(input: {
   deliveryPreference?: "text" | "email" | "both";
   /** The deposit as quoted to them, frozen at the moment they agreed. */
   depositCents?: number;
+  /** Everything needed to create the Stripe session before its link is sent. */
+  checkout: {
+    origin: string;
+    organizationSlug: string;
+    diagnosticMinutes: number;
+  };
   /**
    * How the customer actually reached us.
    *
@@ -522,9 +543,9 @@ export async function recordBookingRequest(input: {
    * same fee quoted, nothing collected. Now both channels produce a booking in
    * `awaiting_payment` and both are finished by the same Stripe webhook.
    *
-   * `decideHold` is the one place that decides which, and its fallback is what
-   * makes this unable to be worse than what it replaced: with no payment
-   * provider there is no link to send, so it books exactly as before.
+   * `decideHold` is the one place that decides which. A broken payment setup
+   * leaves a request for a person; it never turns a fee-bearing visit into an
+   * unpaid confirmed job.
    */
   const decision = decideHold({
     intent: "book",
@@ -532,18 +553,70 @@ export async function recordBookingRequest(input: {
     paymentsAvailable: Boolean(getStripe()),
   });
 
+  const markNeedsReview = async (because: string): Promise<RecordedRequest> => {
+    console.error(`booking payment unavailable: ${because}`, {
+      requestId,
+      organizationId: input.organizationId,
+      depositCents: input.depositCents,
+    });
+
+    await input.database
+      .from("booking_requests")
+      .update({ status: "needs_review" })
+      .eq("id", requestId);
+
+    await recordActivity(input.database, {
+      organizationId: input.organizationId,
+      eventType: "booking.payment_setup_failed",
+      label: "Payment link unavailable; booking needs review",
+      customerId: input.customerId,
+      bookingRequestId: requestId,
+      metadata: {
+        amount_cents: input.depositCents,
+        via: input.channel === "phone" ? "voice" : "sms",
+      },
+    });
+
+    return { requestId, publicToken, needsReview: true };
+  };
+
+  if (decision.kind === "payment_unavailable") {
+    return markNeedsReview(decision.because);
+  }
+
   if (decision.kind === "hold") {
     const payUrl = publicToken
-      ? payLinkFor(process.env.NEXT_PUBLIC_APP_URL ?? "", publicToken)
+      ? payLinkFor(input.checkout.origin, publicToken)
       : "";
 
     if (payUrl) {
-      const heldUntil = new Date(Date.now() + decision.holdMinutes * 60_000).toISOString();
+      // Stripe requires a session expiry at least 30 minutes in the future.
+      // One minute of clock/network allowance keeps the customer-promised
+      // 30-minute hold valid while the session is being created.
+      const heldUntil = new Date(
+        Date.now() + decision.holdMinutes * 60_000 + 60_000,
+      ).toISOString();
 
-      await input.database
+      const { error: holdError } = await input.database
         .from("booking_requests")
         .update({ status: "awaiting_payment", expires_at: heldUntil })
         .eq("id", requestId);
+
+      if (holdError) return markNeedsReview("the appointment hold could not be saved");
+
+      const checkout = await startBookingCheckout({
+        bookingToken: publicToken!,
+        feeCents: decision.feeCents,
+        email: input.email,
+        organizationId: input.organizationId,
+        slug: input.checkout.organizationSlug,
+        emergency: action.urgency === "urgent",
+        diagnosticMinutes: input.checkout.diagnosticMinutes,
+        origin: input.checkout.origin,
+        expiresAt: heldUntil,
+      });
+
+      if ("error" in checkout) return markNeedsReview(checkout.error);
 
       await recordActivity(input.database, {
         organizationId: input.organizationId,
@@ -560,31 +633,11 @@ export async function recordBookingRequest(input: {
       return { requestId, publicToken, payUrl, heldUntil, feeCents: decision.feeCents };
     }
 
-    /*
-     * A fee to collect, a provider to collect it with, and nowhere to send the
-     * customer. Booking it outright is still right — the appointment is real
-     * and they are expecting it — but this is a misconfiguration rather than a
-     * decision, and it is invisible from the outside: the booking just goes
-     * back to being unpaid, exactly as it looked before any of this existed.
-     */
-    console.error(
+    return markNeedsReview(
       publicToken
-        ? "booking hold skipped: NEXT_PUBLIC_APP_URL is not a usable https origin, so no payment link could be built"
-        : "booking hold skipped: the booking row came back without a public token",
-      { requestId, organizationId: input.organizationId, feeCents: decision.feeCents },
+        ? "NEXT_PUBLIC_APP_URL is not a usable https origin, so no payment link could be built"
+        : "the booking row came back without a public token",
     );
-  } else if ((input.depositCents ?? 0) > 0) {
-    /*
-     * A fee was quoted to this customer and nothing will be collected before
-     * the visit. Expected where payments are not configured at all, which is
-     * why it is the deliberate fallback — but a business that thinks it is
-     * taking deposits should be able to find out that it is not.
-     */
-    console.warn(`booking hold skipped: ${decision.because}`, {
-      requestId,
-      organizationId: input.organizationId,
-      depositCents: input.depositCents,
-    });
   }
 
   const { data: scheduled } = await input.database.rpc("schedule_sms_booking_request", {

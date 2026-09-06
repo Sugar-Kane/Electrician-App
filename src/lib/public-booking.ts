@@ -125,6 +125,8 @@ export type BookingPaymentIntent = {
   diagnostic_minutes: number;
   priority: string;
   already_paid: boolean;
+  checkout_session_id: string | null;
+  expires_at: string | null;
 };
 
 /**
@@ -175,6 +177,17 @@ export async function expirePublicBookingCheckout(
   const { data, error } = await supabase.rpc("expire_public_booking_checkout", {
     p_booking_token: bookingToken,
     p_checkout_session_id: checkoutSessionId,
+  });
+
+  if (error) throw new Error("Unable to release the expired booking hold.");
+  return data === true;
+}
+
+/** Mark an elapsed hold expired even when an older row never received a session. */
+export async function expirePublicBookingHold(bookingToken: string) {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("expire_public_booking_hold", {
+    p_booking_token: bookingToken,
   });
 
   if (error) throw new Error("Unable to release the expired booking hold.");

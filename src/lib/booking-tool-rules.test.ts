@@ -179,6 +179,21 @@ test("a complete booking into an offered window is booked", () => {
   assert.match(result.text, /18 Palm Street/);
 });
 
+test("a payment setup failure is saved for review and never called booked", () => {
+  const { action } = run("book_visit", COMPLETE);
+  const result = describeOutcome({
+    name: "book_visit",
+    action,
+    context: CONTEXT,
+    phone: "+18055550142",
+    needsReview: true,
+  });
+
+  assert.match(result.text, /No appointment was booked/i);
+  assert.match(result.text, /usually within 24 hours/i);
+  assert.match(result.text, /Do not say the time is booked or held/i);
+});
+
 test("a window the model invented is refused, and the real ones are handed back", () => {
   // The failure that matters most: a model that promises a time nobody has.
   const { action, result } = run("book_visit", {

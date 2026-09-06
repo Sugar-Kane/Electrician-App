@@ -2,7 +2,11 @@ import "server-only";
 
 import { sendBookingConfirmations, sendCallbackAlert } from "@/lib/booking-notifications";
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
-import { HOLD_MINUTES, heldReply } from "@/lib/booking-hold";
+import {
+  HOLD_MINUTES,
+  bookingNeedsReviewReply,
+  heldReply,
+} from "@/lib/booking-hold";
 import { readLanguage, readLanguageSource } from "@/lib/customer-language";
 import { localeFor } from "@/lib/intake-phrases";
 import {
@@ -66,7 +70,14 @@ export async function handleInboundText(input: {
         .maybeSingle(),
     ]);
 
-    const { context, messagingServiceSid, timeZone, owner } = await loadIntakeContext({
+    const {
+      context,
+      messagingServiceSid,
+      timeZone,
+      owner,
+      organizationSlug,
+      diagnosticMinutes,
+    } = await loadIntakeContext({
       database,
       organizationId: input.organizationId,
       // The opt-out rides the first thing this system ever says to them.
@@ -125,6 +136,11 @@ export async function handleInboundText(input: {
       // was stated in the conversation, agreed to in principle, and recorded
       // nowhere — which is also why nothing was ever held for payment.
       depositCents: action.kind === "book" ? context.diagnosticFeeCents : undefined,
+      checkout: {
+        origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+        organizationSlug,
+        diagnosticMinutes,
+      },
     });
 
     const { requestId, jobId, publicToken } = recorded;
@@ -154,12 +170,20 @@ export async function handleInboundText(input: {
           })
         : "";
 
+    const paymentProblem =
+      action.kind === "book" && recorded.needsReview
+        ? bookingNeedsReviewReply({
+            businessPhone: context.businessPhone,
+            language: action.language,
+          })
+        : "";
+
     await replyToCustomer({
       database,
       organizationId: input.organizationId,
       conversationId: input.conversationId,
       to: input.phone,
-      body: held || action.reply,
+      body: paymentProblem || held || action.reply,
       messagingServiceSid,
     });
 
@@ -188,6 +212,7 @@ export async function handleInboundText(input: {
         deliveryPreference: action.deliveryPreference,
         customerAlreadyToldBySms: true,
         held: Boolean(recorded.payUrl),
+        needsReview: recorded.needsReview,
       });
     }
 
@@ -225,7 +250,8 @@ export async function handleInboundText(input: {
       .update({
         // A callback needs a person. A booked visit, or a
         // question the customer still has to answer, does not.
-        status: action.kind === "callback" ? "needs_human" : "open",
+        status:
+          action.kind === "callback" || recorded.needsReview ? "needs_human" : "open",
         escalation_reason: null,
       })
       .eq("id", input.conversationId);

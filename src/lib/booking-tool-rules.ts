@@ -453,6 +453,8 @@ export function describeOutcome(input: {
   deliveryPreference?: "text" | "email" | "both" | "";
   /** The slot is reserved and the fee is not paid yet. */
   held?: boolean;
+  /** The request was saved, but no appointment was confirmed. */
+  needsReview?: boolean;
   /** Whether they asked for a live connection or a returned call. */
   handoff?: "transfer" | "callback" | "";
   /** Whether Twilio has taken control of the live call for a human transfer. */
@@ -487,6 +489,12 @@ export function describeOutcome(input: {
 
   if (input.name === "book_visit") {
     if (action.kind === "book") {
+      if (input.needsReview) {
+        return {
+          text: `No appointment was booked automatically. The request was saved for an electrician to review. Tell the customer: "I could not confirm the appointment automatically. I sent your request to an electrician to finish scheduling it. Our response time is usually within 24 hours." Make clear that 24 hours is the usual response time, not a guarantee. Do not say the time is booked or held.`,
+        };
+      }
+
       // The words after a booking are the ones the customer will hold the
       // business to, so they are written here rather than left to the model:
       // what was booked, what it costs, and what happens next.

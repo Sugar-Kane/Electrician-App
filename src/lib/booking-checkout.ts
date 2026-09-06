@@ -60,6 +60,8 @@ export async function startBookingCheckout(input: {
   origin: string;
   /** Carried into the payment intent for reconciliation. */
   intakeId?: string;
+  /** Match Stripe's lifetime to the slot hold when one already exists. */
+  expiresAt?: string;
 }): Promise<CheckoutResult> {
   const stripe = getStripe();
   if (!stripe) return { error: "Payments are not configured." };
@@ -67,16 +69,22 @@ export async function startBookingCheckout(input: {
   if (!input.feeCents || input.feeCents <= 0) return { error: "There is nothing to pay." };
 
   const back = `${input.origin}/booking/${encodeURIComponent(input.bookingToken)}`;
+  const requestedExpiry = input.expiresAt ? Date.parse(input.expiresAt) : Number.NaN;
+  const expiresAt = Number.isFinite(requestedExpiry)
+    ? Math.floor(requestedExpiry / 1_000)
+    : Math.floor(Date.now() / 1_000) + 30 * 60;
 
   try {
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
-        payment_method_types: ["card"],
+        // Payment methods are managed in Stripe so Checkout can show the best
+        // eligible options for this customer, device and currency.
+        integration_identifier: "volteira_diagnostic_booking_kqvmrjta",
         customer_email: input.email || undefined,
         // Half an hour, the same as the hold the slot is under. A checkout that
         // outlives the reservation invites paying for a time already given away.
-        expires_at: Math.floor(Date.now() / 1_000) + 30 * 60,
+        expires_at: expiresAt,
         line_items: [
           {
             quantity: 1,

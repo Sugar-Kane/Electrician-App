@@ -12,6 +12,7 @@ import {
   ownerCallbackSms,
   ownerIntakeSms,
   type BookingFacts,
+  type BookingMessageState,
   type CallbackFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
@@ -21,17 +22,16 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
 
 /**
- * Telling everyone who needs to know that a booking happened.
+ * Telling everyone who needs to know what happened to a booking request.
  *
  * Four things, in order of who is worst off without them: the customer, who
  * otherwise has only a memory of a phone call; and the owner, who otherwise
  * finds out by opening the app.
  *
- * Every send is best-effort and independent. A booking is already in the
- * calendar by the time this runs, and no delivery failure may undo it — an
- * unregistered A2P campaign, a mistyped email, or a provider outage each cost a
- * message, never the appointment. Failures are recorded on the message row so
- * they are visible the next morning rather than lost.
+ * Every send is best-effort and independent. The booking, hold, or review
+ * request is already durable by the time this runs, and no delivery failure
+ * may undo it. Failures are recorded on the message row so they are visible the
+ * next morning rather than lost.
  */
 
 type Database = ReturnType<typeof getSupabaseAdmin>;
@@ -76,13 +76,19 @@ export type BookingNotification = {
   /**
    * The slot is reserved and the fee is not paid yet.
    *
-   * Only changes what the owner is told. A held time on his phone as "New
-   * booking" is a day planned around an appointment that may never be paid for.
+   * Changes every message from "booked" to "held". A held time presented as a
+   * booking is a day planned around an appointment that may never be paid for.
    */
   held?: boolean;
+  /** Payment setup failed, so this is a saved request rather than a hold or job. */
+  needsReview?: boolean;
 };
 
 function factsFor(input: BookingNotification): BookingFacts {
+  const bookingLink = input.origin
+    ? `${input.origin.replace(/\/+$/, "")}/booking/${input.publicToken}`
+    : "";
+
   return {
     businessName: input.context.businessName,
     businessPhone: input.context.businessPhone,
@@ -94,7 +100,11 @@ function factsFor(input: BookingNotification): BookingFacts {
     description: input.description,
     intakeAnswers: input.intakeAnswers,
     customerPhone: input.phone,
-    link: input.origin ? `${input.origin.replace(/\/+$/, "")}/booking/${input.publicToken}` : undefined,
+    link: bookingLink
+      ? input.held
+        ? `${bookingLink}/pay`
+        : bookingLink
+      : undefined,
   };
 }
 
@@ -164,6 +174,11 @@ type Attempt = {
 export async function sendBookingConfirmations(input: BookingNotification): Promise<void> {
   const database = getSupabaseAdmin();
   const facts = factsFor(input);
+  const messageState: BookingMessageState = input.needsReview
+    ? "needs_review"
+    : input.held
+      ? "held"
+      : "confirmed";
   const attempts: Attempt[] = [];
 
   const note = (attempt: Omit<Attempt, "at">) =>
@@ -203,7 +218,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: input.phone,
       audience: "customer",
       ok: true,
-      detail: "Confirmed in the text thread itself; a second copy was not sent.",
+      detail: "Customer was told in the text thread itself; a second copy was not sent.",
     });
   } else if (messagingServiceSid && input.phone && wantsText) {
     await database.from("messaging_consent").upsert(
@@ -220,7 +235,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       { onConflict: "customer_id,channel,scope" },
     );
 
-    const body = customerConfirmationSms(facts);
+    const body = customerConfirmationSms(facts, messageState);
     const result = await sendSms({ to: input.phone, body, messagingServiceSid });
     note({
       channel: "sms",
@@ -256,7 +271,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   if (messagingServiceSid && ownerPhone) {
     const sent = await sendSms({
       to: ownerPhone,
-      body: ownerBookingSms(facts, input.held ?? false),
+      body: ownerBookingSms(facts, messageState),
       messagingServiceSid,
     });
     note({
@@ -290,7 +305,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       input.origin && input.jobId
         ? `${input.origin.replace(/\/+$/, "")}/jobs/${input.jobId}`
         : undefined;
-    const message = ownerBookingEmail(facts, jobUrl);
+    const message = ownerBookingEmail(facts, jobUrl, messageState);
     const sent = await sendEmail({
       to: ownerEmail,
       subject: message.subject,
@@ -318,7 +333,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
 
   // The email, when the caller gave one that could plausibly be delivered to.
   if (input.email && wantsEmail && looksLikeEmail(input.email)) {
-    const message = confirmationEmail(facts);
+    const message = confirmationEmail(facts, messageState);
     const sent = await sendEmail({
       to: input.email,
       subject: message.subject,

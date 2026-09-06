@@ -28,6 +28,8 @@ export type BookingFacts = {
   customerPhone?: string;
 };
 
+export type BookingMessageState = "confirmed" | "held" | "needs_review";
+
 /** Two SMS segments. Past this a message arrives split and looks broken. */
 const SMS_LIMIT = 320;
 
@@ -47,15 +49,33 @@ function clip(value: string, limit: number): string {
  * later. The link goes last so that a message truncated by a carrier still
  * carries the appointment itself.
  */
-export function customerConfirmationSms(facts: BookingFacts): string {
+export function customerConfirmationSms(
+  facts: BookingFacts,
+  state: BookingMessageState = "confirmed",
+): string {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
-  const parts = [
-    `${facts.businessName}: you're booked for ${facts.slotLabel}`,
-    address ? ` at ${address}` : "",
-    `. The diagnostic visit is ${facts.diagnosticFee}.`,
-    facts.link ? ` Details: ${facts.link}` : "",
-    ` Questions? Call ${facts.businessPhone}.`,
-  ];
+  const parts =
+    state === "held"
+      ? [
+          `${facts.businessName}: your time is held for ${facts.slotLabel}`,
+          address ? ` at ${address}` : "",
+          `. Pay the ${facts.diagnosticFee} diagnostic fee to confirm`,
+          facts.link ? `: ${facts.link}` : ".",
+          ` It is credited toward approved repair work. Questions? Call ${facts.businessPhone}.`,
+        ]
+      : state === "needs_review"
+        ? [
+            `${facts.businessName}: we saved your request for ${facts.slotLabel}, but no appointment is confirmed.`,
+            " An electrician will contact you to finish scheduling, usually within 24 hours.",
+            ` Questions? Call ${facts.businessPhone}.`,
+          ]
+        : [
+            `${facts.businessName}: you're booked for ${facts.slotLabel}`,
+            address ? ` at ${address}` : "",
+            `. The diagnostic visit is ${facts.diagnosticFee}.`,
+            facts.link ? ` Details: ${facts.link}` : "",
+            ` Questions? Call ${facts.businessPhone}.`,
+          ];
   return clip(parts.join(""), SMS_LIMIT);
 }
 
@@ -66,13 +86,20 @@ export function customerConfirmationSms(facts: BookingFacts): string {
  * wrong, in that order. No link — this one is for someone who already has the
  * app.
  */
-export function ownerBookingSms(facts: BookingFacts, held = false): string {
+export function ownerBookingSms(
+  facts: BookingFacts,
+  state: BookingMessageState = "confirmed",
+): string {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
   return clip(
     [
       // A held time is not a booking yet, and telling the owner it is means he
       // plans a day around an appointment that may never be paid for.
-      held ? `Held (unpaid): ${facts.slotLabel}.` : `New booking: ${facts.slotLabel}.`,
+      state === "held"
+        ? `Held (unpaid): ${facts.slotLabel}.`
+        : state === "needs_review"
+          ? `Action needed — booking needs review: ${facts.slotLabel}. Nothing is confirmed.`
+          : `New booking: ${facts.slotLabel}.`,
       facts.contactName ? ` ${facts.contactName}.` : "",
       address ? ` ${address}.` : "",
       facts.description ? ` "${clip(facts.description, 120)}"` : "",
@@ -109,7 +136,11 @@ export type EmailBody = { subject: string; text: string; html: string };
  * load a van from: what is wrong, where, when, and everything the caller said
  * when asked. It leads with the window because that is what decides the day.
  */
-export function ownerBookingEmail(facts: BookingFacts, jobUrl?: string): EmailBody {
+export function ownerBookingEmail(
+  facts: BookingFacts,
+  jobUrl?: string,
+  state: BookingMessageState = "confirmed",
+): EmailBody {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
   const answers = facts.intakeAnswers ?? [];
 
@@ -118,6 +149,11 @@ export function ownerBookingEmail(facts: BookingFacts, jobUrl?: string): EmailBo
     address ? `${address}` : "",
     facts.contactName ? `${squash(facts.contactName)}${facts.customerPhone ? ` — ${facts.customerPhone}` : ""}` : "",
     "",
+    state === "held"
+      ? "Status: Held and unpaid. This is not a confirmed booking yet."
+      : state === "needs_review"
+        ? "Status: Action needed. Automatic booking could not be completed, and no appointment is confirmed."
+        : "Status: Confirmed.",
     facts.description ? `Problem: ${squash(facts.description)}` : "",
     "",
     ...(answers.length > 0 ? ["What they said on the call:"] : []),
@@ -133,6 +169,11 @@ export function ownerBookingEmail(facts: BookingFacts, jobUrl?: string): EmailBo
     facts.contactName
       ? `<p style="margin:0 0 16px">${escapeHtml(squash(facts.contactName))}${facts.customerPhone ? ` — <a href="tel:${escapeHtml(facts.customerPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(facts.customerPhone)}</a>` : ""}</p>`
       : "",
+    state === "held"
+      ? "<p><strong>Status: Held and unpaid.</strong> This is not a confirmed booking yet.</p>"
+      : state === "needs_review"
+        ? "<p><strong>Status: Action needed.</strong> Automatic booking could not be completed, and no appointment is confirmed.</p>"
+        : "<p><strong>Status: Confirmed.</strong></p>",
     facts.description
       ? `<p><strong>Problem:</strong> ${escapeHtml(squash(facts.description))}</p>`
       : "",
@@ -154,7 +195,13 @@ export function ownerBookingEmail(facts: BookingFacts, jobUrl?: string): EmailBo
 
   const who = facts.contactName ? ` — ${squash(facts.contactName)}` : "";
   return {
-    subject: `New booking: ${facts.slotLabel}${who}`,
+    subject: `${
+      state === "held"
+        ? "Held (unpaid)"
+        : state === "needs_review"
+          ? "Action needed"
+          : "New booking"
+    }: ${facts.slotLabel}${who}`,
     text: lines.join("\n"),
     html,
   };
@@ -310,14 +357,21 @@ export function customerCallbackSms(facts: CallbackFacts): string {
  * Plain text and HTML say exactly the same things: a mail client that shows
  * one must not show a customer a different appointment from the other.
  */
-export function confirmationEmail(facts: BookingFacts): EmailBody {
+export function confirmationEmail(
+  facts: BookingFacts,
+  state: BookingMessageState = "confirmed",
+): EmailBody {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
   const greeting = facts.contactName ? `Hi ${squash(facts.contactName)},` : "Hi,";
 
   const lines = [
     greeting,
     "",
-    `Your appointment with ${facts.businessName} is booked.`,
+    state === "held"
+      ? `Your requested time with ${facts.businessName} is being held. It is not confirmed until the diagnostic fee is paid.`
+      : state === "needs_review"
+        ? `We saved your request with ${facts.businessName}, but no appointment is confirmed. An electrician will contact you to finish scheduling, usually within 24 hours.`
+        : `Your appointment with ${facts.businessName} is booked.`,
     "",
     `When: ${facts.slotLabel}`,
     address ? `Where: ${address}` : "",
@@ -328,7 +382,11 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
       `  ${squash(entry.answer)}`,
     ]),
     "",
-    facts.link ? `View this appointment: ${facts.link}` : "",
+    facts.link
+      ? state === "held"
+        ? `Pay and confirm this appointment: ${facts.link}`
+        : `View this appointment: ${facts.link}`
+      : "",
     `Need to change it, or think something is wrong? Call ${facts.businessPhone}.`,
     "",
     facts.businessName,
@@ -336,7 +394,11 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
 
   const html = [
     `<p>${escapeHtml(greeting)}</p>`,
-    `<p>Your appointment with ${escapeHtml(facts.businessName)} is booked.</p>`,
+    state === "held"
+      ? `<p>Your requested time with ${escapeHtml(facts.businessName)} is being held. <strong>It is not confirmed until the diagnostic fee is paid.</strong></p>`
+      : state === "needs_review"
+        ? `<p>We saved your request with ${escapeHtml(facts.businessName)}, but <strong>no appointment is confirmed.</strong> An electrician will contact you to finish scheduling, usually within 24 hours.</p>`
+        : `<p>Your appointment with ${escapeHtml(facts.businessName)} is booked.</p>`,
     "<ul>",
     `<li><strong>When:</strong> ${escapeHtml(facts.slotLabel)}</li>`,
     address ? `<li><strong>Where:</strong> ${escapeHtml(address)}</li>` : "",
@@ -350,7 +412,7 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
     ),
     "</ul>",
     facts.link
-      ? `<p><a href="${escapeHtml(facts.link)}">View this appointment</a></p>`
+      ? `<p><a href="${escapeHtml(facts.link)}">${state === "held" ? "Pay and confirm this appointment" : "View this appointment"}</a></p>`
       : "",
     `<p>Need to change it, or think something is wrong? Call ${escapeHtml(facts.businessPhone)}.</p>`,
     `<p>${escapeHtml(facts.businessName)}</p>`,
@@ -359,7 +421,12 @@ export function confirmationEmail(facts: BookingFacts): EmailBody {
     .join("");
 
   return {
-    subject: `Your ${facts.businessName} appointment: ${facts.slotLabel}`,
+    subject:
+      state === "held"
+        ? `Payment needed to confirm: ${facts.slotLabel}`
+        : state === "needs_review"
+          ? `We need to finish scheduling: ${facts.slotLabel}`
+          : `Your ${facts.businessName} appointment: ${facts.slotLabel}`,
     text: lines.join("\n"),
     html,
   };

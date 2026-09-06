@@ -49,6 +49,15 @@ test("a confirmation with no link is still a complete confirmation", () => {
   assert.match(message, /\$100/);
 });
 
+test("a held appointment is never called booked in the customer's text", () => {
+  const message = customerConfirmationSms(FACTS, "held");
+
+  assert.match(message, /time is held/i);
+  assert.match(message, /pay the \$100 diagnostic fee to confirm/i);
+  assert.match(message, /credited toward approved repair work/i);
+  assert.doesNotMatch(message, /you(?:'|’)re booked/i);
+});
+
 test("nothing sent to a phone runs past two segments", () => {
   const long = customerConfirmationSms({
     ...FACTS,
@@ -87,6 +96,39 @@ test("the email says the same thing in both bodies", () => {
   }
   assert.match(mail.subject, /Pacific Plains Electric/);
   assert.match(mail.subject, /Mon, Aug 10/);
+});
+
+test("held customer and owner emails say unpaid, not booked", () => {
+  const customer = confirmationEmail(FACTS, "held");
+  const owner = ownerBookingEmail(FACTS, undefined, "held");
+
+  for (const body of [customer.text, customer.html]) {
+    assert.match(body, /not confirmed until the diagnostic fee is paid/i);
+    assert.doesNotMatch(body, /is booked/i);
+  }
+  assert.match(customer.subject, /payment needed/i);
+
+  for (const body of [owner.text, owner.html]) {
+    assert.match(body, /held and unpaid/i);
+    assert.match(body, /not a confirmed booking/i);
+  }
+  assert.match(owner.subject, /^Held \(unpaid\):/);
+});
+
+test("a payment setup failure tells both sides that no appointment exists", () => {
+  const customerText = customerConfirmationSms(FACTS, "needs_review");
+  const customerEmail = confirmationEmail(FACTS, "needs_review");
+  const ownerText = ownerBookingSms(FACTS, "needs_review");
+  const ownerEmail = ownerBookingEmail(FACTS, undefined, "needs_review");
+
+  for (const body of [customerText, customerEmail.text, customerEmail.html]) {
+    assert.match(body, /no appointment is confirmed/i);
+    assert.match(body, /within 24 hours/i);
+  }
+  for (const body of [ownerText, ownerEmail.text, ownerEmail.html]) {
+    assert.match(body, /action needed/i);
+    assert.match(body, /no(?:thing| appointment) is confirmed/i);
+  }
 });
 
 test("anything a caller said is escaped before it becomes HTML", () => {

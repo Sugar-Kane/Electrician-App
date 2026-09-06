@@ -7,6 +7,7 @@ import {
   heldReply,
   holdSentence,
   holdSpoken,
+  bookingNeedsReviewReply,
   payLinkFor,
   HOLD_MINUTES,
 } from "./booking-hold.ts";
@@ -33,13 +34,14 @@ test("no fee means no hold", () => {
   }
 });
 
-test("without payments configured it books exactly the way it books today", () => {
-  // The fallback that makes this change unable to be worse than what it
-  // replaces: no provider, no link, no hold — the current behaviour.
+test("without payments configured it never confirms a visit that owes a fee", () => {
   const decision = decideHold({ intent: "book", depositCents: 10000, paymentsAvailable: false });
 
-  assert.equal(decision.kind, "schedule");
-  assert.equal(decision.kind === "schedule" && decision.because, "payments are not configured");
+  assert.equal(decision.kind, "payment_unavailable");
+  assert.equal(
+    decision.kind === "payment_unavailable" && decision.because,
+    "payments are not configured",
+  );
 });
 
 test("a nonsense fee is not a fee", () => {
@@ -138,4 +140,18 @@ test("a held appointment is explained in Spanish to a Spanish caller", () => {
   assert.match(said, /\$100/);
   assert.match(said, /el pago confirma la cita/);
   assert.doesNotMatch(said, /I will text/i);
+});
+
+test("a failed payment setup promises review, never a booking", () => {
+  const english = bookingNeedsReviewReply({ businessPhone: "805-555-0100" });
+  assert.match(english, /could not confirm/i);
+  assert.match(english, /usually within 24 hours/i);
+  assert.doesNotMatch(english, /booked/i);
+
+  const spanish = bookingNeedsReviewReply({
+    businessPhone: "805-555-0100",
+    language: "es",
+  });
+  assert.match(spanish, /No pude confirmar/);
+  assert.match(spanish, /dentro de 24 horas/);
 });
