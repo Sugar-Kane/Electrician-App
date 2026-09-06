@@ -2,12 +2,14 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Download, FileText, LoaderCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, Download, FileText, LoaderCircle, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 
 import {
   generateContract,
+  refreshContractSignature,
   rebuildContractPdf,
+  sendContractForSignature,
   type ContractState,
 } from "@/app/jobs/[jobId]/contract-actions";
 import { PdfViewer } from "@/components/pdf-viewer";
@@ -57,6 +59,7 @@ function ContractRow({
   contract,
   jobNumber,
   current,
+  signingConfigured,
   open,
   onToggle,
 }: {
@@ -64,11 +67,42 @@ function ContractRow({
   jobNumber: string;
   /** The newest draft. The others are labelled as superseded. */
   current: boolean;
+  signingConfigured: boolean;
   open: boolean;
   onToggle: () => void;
 }) {
   const [state, rebuild, rebuilding] = useActionState(rebuildContractPdf, initialState);
+  const [sendState, sendForSignature, sending] = useActionState(
+    sendContractForSignature,
+    initialState,
+  );
+  const [refreshState, refreshSignature, refreshing] = useActionState(
+    refreshContractSignature,
+    initialState,
+  );
   const [showText, setShowText] = useState(false);
+
+  const signatureStatus = (() => {
+    if (contract.status === "signed") {
+      return {
+        className: "text-positive",
+        label: contract.signedLabel ? `Signed ${contract.signedLabel}` : "Signed",
+      };
+    }
+    if (contract.status === "sent") {
+      const recipient = contract.signatureRecipientEmail
+        ? ` · ${contract.signatureRecipientEmail}`
+        : "";
+      return {
+        className: "text-caution",
+        label: `${contract.signatureSentLabel ? `Sent ${contract.signatureSentLabel}` : "Sent"}${recipient}`,
+      };
+    }
+    if (contract.status === "void") {
+      return { className: "text-critical", label: "Signature request declined or canceled" };
+    }
+    return null;
+  })();
 
   return (
     <li className="rounded-control border border-line">
@@ -86,6 +120,10 @@ function ContractRow({
             <span className="mt-0.5 block text-xs text-caution">
               {contract.unfilled.length} {contract.unfilled.length === 1 ? "blank" : "blanks"} left
               to fill in
+            </span>
+          ) : signatureStatus ? (
+            <span className={`mt-0.5 block text-xs ${signatureStatus.className}`}>
+              {signatureStatus.label}
             </span>
           ) : (
             <span className="mt-0.5 block text-xs text-ink-faint">
@@ -115,7 +153,7 @@ function ContractRow({
                   className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
                 >
                   <Download className="h-4 w-4" aria-hidden />
-                  Download
+                  {contract.status === "signed" ? "Download signed contract" : "Download"}
                 </a>
 
                 <button
@@ -163,6 +201,73 @@ function ContractRow({
               {contract.body}
             </pre>
           ) : null}
+
+          {current && contract.document && contract.unfilled.length === 0 ? (
+            <div className="mt-3 border-t border-line pt-3">
+              {contract.status === "draft" ? (
+                signingConfigured ? (
+                  <form action={sendForSignature}>
+                    <input type="hidden" name="contractId" value={contract.id} />
+                    <input type="hidden" name="jobNumber" value={jobNumber} />
+                    <button
+                      type="submit"
+                      disabled={sending}
+                      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60 sm:w-auto"
+                    >
+                      {sending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Send className="h-4 w-4" aria-hidden />
+                      )}
+                      {sending ? "Sending…" : "Send for signature"}
+                    </button>
+                    <p className="mt-2 text-xs leading-5 text-ink-faint">
+                      The customer signs first. The contractor receives it next, and the completed
+                      PDF is saved back to this job.
+                    </p>
+                  </form>
+                ) : (
+                  <p className="rounded-control border border-caution/25 bg-caution-bg px-3 py-2 text-xs text-caution">
+                    Connect Documenso before sending this contract for signature.
+                  </p>
+                )
+              ) : contract.status === "sent" ||
+                (contract.status === "signed" && !contract.signedCopySaved) ? (
+                <form action={refreshSignature}>
+                  <input type="hidden" name="contractId" value={contract.id} />
+                  <input type="hidden" name="jobNumber" value={jobNumber} />
+                  <button
+                    type="submit"
+                    disabled={refreshing}
+                    className="tap-target inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60 sm:w-auto"
+                  >
+                    {refreshing ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : contract.status === "signed" ? (
+                      <Download className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" aria-hidden />
+                    )}
+                    {refreshing
+                      ? "Checking…"
+                      : contract.status === "signed"
+                        ? "Save signed copy"
+                        : "Check signature status"}
+                  </button>
+                </form>
+              ) : contract.status === "signed" ? (
+                <p className="flex items-center gap-2 text-sm font-semibold text-positive">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  Signed copy saved with this job
+                </p>
+              ) : null}
+
+              <FormMessage
+                error={sendState.error || refreshState.error}
+                notice={sendState.notice || refreshState.notice}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </li>
@@ -172,9 +277,11 @@ function ContractRow({
 export function JobContract({
   jobNumber,
   contracts,
+  signingConfigured,
 }: {
   jobNumber: string;
   contracts: JobContractRecord[];
+  signingConfigured: boolean;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
   // The newest draft is open on arrival. It is the one somebody came here to
@@ -214,6 +321,7 @@ export function JobContract({
               contract={contract}
               jobNumber={jobNumber}
               current={index === 0}
+              signingConfigured={signingConfigured}
               open={open === contract.id}
               onToggle={() => setOpen(open === contract.id ? null : contract.id)}
             />

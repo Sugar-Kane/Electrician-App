@@ -855,6 +855,11 @@ export type JobContract = {
   createdLabel: string;
   body: string;
   unfilled: string[];
+  status: "draft" | "sent" | "signed" | "void";
+  signatureSentLabel: string;
+  signedLabel: string;
+  signatureRecipientEmail: string;
+  signedCopySaved: boolean;
   /** The stored PDF, or empty when one has not been built yet. */
   document: { url: string; fileName: string; versionNumber: number } | null;
 };
@@ -889,7 +894,10 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
 
   const { data } = await context.database
     .from("contracts")
-    .select("id, body, unfilled, created_at")
+    .select(
+      `id, body, unfilled, status, created_at, signature_sent_at, signed_at,
+       signature_recipient_email, signature_downloaded_at`,
+    )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false })
@@ -914,6 +922,26 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
       id,
       body: typeof row.body === "string" ? row.body : "",
       unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+      status: ["sent", "signed", "void"].includes(String(row.status))
+        ? (String(row.status) as "sent" | "signed" | "void")
+        : "draft",
+      signatureSentLabel: inZone(row.signature_sent_at as string | null, context.timeZone, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      signedLabel: inZone(row.signed_at as string | null, context.timeZone, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      signatureRecipientEmail:
+        typeof row.signature_recipient_email === "string"
+          ? row.signature_recipient_email
+          : "",
+      signedCopySaved: Boolean(row.signature_downloaded_at),
       createdLabel: inZone(row.created_at as string | null, context.timeZone, {
         month: "short",
         day: "numeric",
