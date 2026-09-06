@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Json } from "@/lib/database.types";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/public";
 
 export type PublicBookingPage = {
@@ -106,7 +107,10 @@ export async function attachCheckoutToBooking(
   bookingToken: string,
   checkoutSessionId: string,
 ) {
-  const supabase = createPublicClient();
+  // This is a mutation, reached only from our server after Stripe created the
+  // session. Never give the anonymous browser key authority to attach money to
+  // a booking.
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("attach_public_booking_checkout", {
     p_booking_token: bookingToken,
     p_checkout_session_id: checkoutSessionId,
@@ -156,7 +160,10 @@ export async function confirmPublicBookingPayment(input: {
   amountCents: number;
   currency: string;
 }) {
-  const supabase = createPublicClient();
+  // Only a signature-verified Stripe event (or a server-side retrieval of the
+  // completed session) reaches this helper. The database permission mirrors
+  // that boundary: service role, never anon/authenticated.
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("confirm_public_booking_payment", {
     p_booking_token: input.bookingToken,
     p_checkout_session_id: input.checkoutSessionId,
@@ -173,7 +180,7 @@ export async function expirePublicBookingCheckout(
   bookingToken: string,
   checkoutSessionId: string,
 ) {
-  const supabase = createPublicClient();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("expire_public_booking_checkout", {
     p_booking_token: bookingToken,
     p_checkout_session_id: checkoutSessionId,
@@ -185,7 +192,7 @@ export async function expirePublicBookingCheckout(
 
 /** Mark an elapsed hold expired even when an older row never received a session. */
 export async function expirePublicBookingHold(bookingToken: string) {
-  const supabase = createPublicClient();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("expire_public_booking_hold", {
     p_booking_token: bookingToken,
   });
