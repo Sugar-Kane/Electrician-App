@@ -46,7 +46,7 @@ async function finalizeSignedContract(input: {
   organizationId: string;
   signedAt: string;
   lastEventAt: string;
-}): Promise<boolean> {
+}): Promise<"finalized" | "not_finalized" | "unknown"> {
   const admin = asFlexibleClient(getSupabaseAdmin());
   const { data, error } = await admin.rpc("finalize_signed_contract_document", {
     p_contract_id: input.contractId,
@@ -55,11 +55,38 @@ async function finalizeSignedContract(input: {
     p_signed_at: input.signedAt,
     p_last_event_at: input.lastEventAt,
   });
-  if (error || data !== true) {
-    console.error("documenso: signed contract could not be finalized", error);
-    return false;
+  if (!error) {
+    return data === true ? "finalized" : "not_finalized";
   }
-  return true;
+
+  // A lost HTTP response can arrive after Postgres committed the transaction.
+  // Confirm the exact contract and PDF state before any caller removes data.
+  console.error("documenso: signed contract finalization response was lost", error);
+  const [contractResult, documentResult] = await Promise.all([
+    admin
+      .from("contracts")
+      .select("status, signature_downloaded_at")
+      .eq("id", input.contractId)
+      .eq("organization_id", input.organizationId)
+      .maybeSingle(),
+    admin
+      .from("documents")
+      .select("id, archived_at")
+      .eq("id", input.documentId)
+      .eq("contract_id", input.contractId)
+      .eq("organization_id", input.organizationId)
+      .maybeSingle(),
+  ]);
+
+  if (contractResult.error || documentResult.error || !contractResult.data || !documentResult.data) {
+    return "unknown";
+  }
+
+  return text(contractResult.data.status) === "signed" &&
+    Boolean(contractResult.data.signature_downloaded_at) &&
+    documentResult.data.archived_at === null
+    ? "finalized"
+    : "not_finalized";
 }
 
 /**
@@ -102,14 +129,14 @@ export async function fileSignedContract(input: {
     const signedAt = validInstant(text(contract.signed_at)) ||
       validInstant(input.completedAt ?? "") ||
       new Date().toISOString();
-    const finalized = await finalizeSignedContract({
+    const finalization = await finalizeSignedContract({
       contractId,
       documentId: text(already.id),
       organizationId,
       signedAt,
       lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
     });
-    if (!finalized) {
+    if (finalization !== "finalized") {
       return { ok: false, error: "The signed PDF is saved, but its status could not be reconciled." };
     }
     return { ok: true, contractId, jobId, alreadyFiled: true };
@@ -198,14 +225,14 @@ export async function fileSignedContract(input: {
         validInstant(input.completedAt ?? "") ||
         validInstant(envelope.completedAt) ||
         new Date().toISOString();
-      const finalized = await finalizeSignedContract({
+      const finalization = await finalizeSignedContract({
         contractId,
         documentId: text(wonElsewhere.id),
         organizationId,
         signedAt,
         lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
       });
-      if (!finalized) {
+      if (finalization !== "finalized") {
         return { ok: false, error: "The signed PDF is saved, but its status could not be reconciled." };
       }
       return { ok: true, contractId, jobId, alreadyFiled: true };
@@ -216,14 +243,22 @@ export async function fileSignedContract(input: {
   const signedAt = validInstant(input.completedAt ?? "") ||
     validInstant(envelope.completedAt) ||
     new Date().toISOString();
-  const finalized = await finalizeSignedContract({
+  const finalization = await finalizeSignedContract({
     contractId,
     documentId: text(created.id),
     organizationId,
     signedAt,
     lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
   });
-  if (!finalized) {
+  if (finalization === "unknown") {
+    // Keep both the row and object. A retry can safely reconcile this exact
+    // provider envelope, while deleting here could erase the committed winner.
+    return {
+      ok: false,
+      error: "The signed PDF was saved, but Volteira could not confirm which version is current. Refresh shortly.",
+    };
+  }
+  if (finalization === "not_finalized") {
     const { error: deleteError } = await admin
       .from("documents")
       .delete()

@@ -71,6 +71,15 @@ export function isDocumensoConfigured(): boolean {
   return Boolean(token());
 }
 
+export function isDocumensoWebhookConfigured(): boolean {
+  return Boolean((process.env.DOCUMENSO_WEBHOOK_SECRET ?? "").trim());
+}
+
+/** Sending is safe only when completed envelopes can also return to Volteira. */
+export function isDocumensoReady(): boolean {
+  return isDocumensoConfigured() && isDocumensoWebhookConfigured();
+}
+
 async function providerRequest(path: string, init: RequestInit): Promise<Response> {
   const authorization = token();
   if (!authorization) {

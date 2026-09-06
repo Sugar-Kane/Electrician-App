@@ -2,12 +2,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 
 import { recordActivity } from "@/lib/activity";
-import {
-  documensoEventContractStatus,
-  isStaleDocumensoEvent,
-  sameDocumensoEvent,
-  wouldRegressDocumensoStatus,
-} from "@/lib/documenso-status";
+import { documensoEventContractStatus } from "@/lib/documenso-status";
 import { fileSignedContract } from "@/lib/signed-contract";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -64,86 +59,37 @@ export async function POST(request: Request) {
   }
 
   const admin = asFlexibleClient(getSupabaseAdmin());
-  const query = admin
-    .from("contracts")
-    .select(
-      `id, organization_id, job_id, status, signature_sent_at,
-       signature_last_event, signature_last_event_at, jobs ( job_number )`,
-    )
-    .eq("signature_provider", "documenso")
-    .eq("signature_envelope_id", envelopeId);
-  let { data } = await query.maybeSingle();
-
-  // Covers the very small window between creating the external envelope and
-  // writing its id to the local row.  The external id is the immutable contract
-  // uuid rather than a customer-controlled value.
-  if (!data) {
-    const contractId = externalContractId(body.payload?.externalId);
-    if (contractId) {
-      ({ data } = await admin
-        .from("contracts")
-        .select(
-          `id, organization_id, job_id, status, signature_sent_at,
-           signature_last_event, signature_last_event_at, jobs ( job_number )`,
-        )
-        .eq("id", contractId)
-        .is("signature_envelope_id", null)
-        .maybeSingle());
-    }
-  }
-
-  if (!data) return Response.json({ received: true, ignored: true });
-  const contract = data as Record<string, unknown>;
-  const contractId = text(contract.id);
-  const organizationId = text(contract.organization_id);
-  const jobId = text(contract.job_id);
-  const job = (contract.jobs ?? null) as Record<string, unknown> | null;
-  const jobNumber = String(job?.job_number ?? "");
   const at = eventTime(body.createdAt ?? body.payload?.completedAt);
-  if (isStaleDocumensoEvent(text(contract.signature_last_event_at), at)) {
-    return Response.json({ received: true, ignored: true, reason: "stale" });
-  }
-  const currentStatus = text(contract.status);
-  if (wouldRegressDocumensoStatus(currentStatus, status)) {
-    return Response.json({ received: true, ignored: true, reason: "terminal-status" });
-  }
-  const duplicate = sameDocumensoEvent(
-    text(contract.signature_last_event),
-    text(contract.signature_last_event_at),
-    event,
-    at,
-  );
-
-  const patch: Record<string, unknown> = {
-    signature_provider: "documenso",
-    signature_envelope_id: envelopeId,
-    signature_last_event: event,
-    signature_last_event_at: at,
-  };
-
-  if (status === "signed") {
-    patch.status = "signed";
-    patch.signed_at = eventTime(body.payload?.completedAt ?? at);
-    patch.signature_send_token = null;
-    patch.signature_send_started_at = null;
-  } else if (status === "void") {
-    patch.status = "void";
-    patch.signature_rejected_at = at;
-    patch.signature_send_token = null;
-    patch.signature_send_started_at = null;
-  } else {
-    patch.status = "sent";
-    patch.signature_sent_at = text(contract.signature_sent_at) || at;
+  const completedAt = status === "signed"
+    ? eventTime(body.payload?.completedAt ?? at)
+    : null;
+  const { data, error } = await admin.rpc("apply_documenso_event", {
+    p_envelope_id: envelopeId,
+    p_external_contract_id: externalContractId(body.payload?.externalId) || null,
+    p_event: event,
+    p_event_at: at,
+    p_status: status,
+    p_signed_at: completedAt,
+  });
+  if (error) {
+    console.error("documenso: webhook transition failed", error);
+    return Response.json({ error: "Could not save signature status." }, { status: 500 });
   }
 
-  const { error } = await admin
-    .from("contracts")
-    .update(patch)
-    .eq("id", contractId)
-    .eq("organization_id", organizationId);
-  if (error) return Response.json({ error: "Could not save signature status." }, { status: 500 });
+  const transition = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  const contractId = text(transition?.matched_contract_id);
+  const organizationId = text(transition?.matched_organization_id);
+  const jobId = text(transition?.matched_job_id);
+  const jobNumber = text(transition?.matched_job_number);
+  const applied = transition?.was_applied === true;
+  const duplicate = transition?.was_duplicate === true;
+  const outcome = text(transition?.outcome) || "not-found";
 
-  if (!duplicate && status === "void") {
+  if (!contractId) {
+    return Response.json({ received: true, ignored: true, reason: outcome });
+  }
+
+  if (applied && status === "void") {
     await recordActivity(admin, {
       organizationId,
       jobId: jobId || null,
@@ -152,8 +98,9 @@ export async function POST(request: Request) {
     });
   }
 
-  if (status === "signed") {
-    const completedAt = eventTime(body.payload?.completedAt ?? at);
+  // A duplicate completion may be Documenso retrying after the status commit
+  // succeeded but sealed-PDF filing did not. Let it retry that idempotent work.
+  if (status === "signed" && (applied || duplicate) && completedAt) {
     after(async () => {
       try {
         const filed = await fileSignedContract({ envelopeId, completedAt });
@@ -167,6 +114,9 @@ export async function POST(request: Request) {
     });
   }
 
-  if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
-  return Response.json({ received: true });
+  if (applied && jobNumber) revalidatePath(`/jobs/${jobNumber}`);
+  if (!applied && !duplicate) {
+    return Response.json({ received: true, ignored: true, reason: outcome });
+  }
+  return Response.json({ received: true, duplicate: duplicate || undefined });
 }

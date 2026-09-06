@@ -14,6 +14,7 @@ import {
   DocumensoError,
   getDocumensoEnvelope,
   isDocumensoConfigured,
+  isDocumensoReady,
 } from "@/lib/documenso";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { formatMoney } from "@/lib/invoice-messages";
@@ -278,8 +279,8 @@ export async function sendContractForSignature(
   const contractId = String(formData.get("contractId") ?? "").trim();
   const jobNumber = String(formData.get("jobNumber") ?? "").trim();
   if (!contractId || !jobNumber) return { error: "That contract could not be found." };
-  if (!isDocumensoConfigured()) {
-    return { error: "Document signing is not connected yet." };
+  if (!isDocumensoReady()) {
+    return { error: "Document signing is not fully connected yet." };
   }
 
   const supabase = asFlexibleClient(await createClient());
@@ -643,10 +644,12 @@ export async function sendContractForSignature(
 
   try {
     await distributeDocumensoEnvelope(envelopeId);
-  } catch (error) {
-    await releaseClaim();
+  } catch {
+    // A network failure is ambiguous: Documenso may have accepted the send
+    // before the response disappeared. Keep the claim so another draft for
+    // this job cannot be distributed until a retry checks provider state.
     return {
-      error: error instanceof DocumensoError ? error.message : "The contract could not be sent for signing.",
+      error: "The send could not be confirmed. Volteira will check its status before another send.",
     };
   }
 

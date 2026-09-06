@@ -2,7 +2,11 @@ import Link from "next/link";
 import { Check, ChevronRight, ExternalLink, FileSignature, KeyRound, LockKeyhole, PlugZap, Store, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { isDocumensoConfigured } from "@/lib/documenso";
+import {
+  isDocumensoConfigured,
+  isDocumensoReady,
+  isDocumensoWebhookConfigured,
+} from "@/lib/documenso";
 import { currentContext } from "@/lib/request-context";
 import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -28,8 +32,8 @@ export default async function IntegrationsPage() {
   const context = await currentContext();
   const canManage = context?.role === "owner";
   const signingApiReady = isDocumensoConfigured();
-  const signingWebhookReady = Boolean(process.env.DOCUMENSO_WEBHOOK_SECRET?.trim());
-  const signingReady = signingApiReady && signingWebhookReady;
+  const signingWebhookReady = isDocumensoWebhookConfigured();
+  const signingReady = isDocumensoReady();
   const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://www.volteira.com").replace(/\/+$/, "");
   let connections: { id: string; createdAt: string; expiresAt: string; lastUsedAt: string }[] = [];
 
