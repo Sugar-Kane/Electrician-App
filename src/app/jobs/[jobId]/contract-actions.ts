@@ -313,6 +313,7 @@ export async function sendContractForSignature(
   const contract = data as Record<string, unknown>;
   const status = text(contract.status);
   const job = (contract.jobs ?? null) as Record<string, unknown> | null;
+  const jobId = text(job?.id);
   const customer = (job?.customers ?? null) as Record<string, unknown> | null;
   const organization = (contract.organizations ?? null) as Record<string, unknown> | null;
 
@@ -322,6 +323,25 @@ export async function sendContractForSignature(
   }
   if (status === "void") {
     return { error: "This signature request was canceled or declined. Generate a new draft." };
+  }
+  if (!jobId) return { error: "This contract is not attached to a job." };
+
+  const { data: otherPending, error: pendingError } = await supabase
+    .from("contracts")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("job_id", jobId)
+    .eq("status", "sent")
+    .neq("id", contractId)
+    .limit(1)
+    .maybeSingle();
+  if (pendingError) {
+    return { error: "The other contracts for this job could not be checked. Try again." };
+  }
+  if (otherPending) {
+    return {
+      error: "Another contract for this job is already waiting for signatures. Finish or cancel it first.",
+    };
   }
 
   const unfilled = Array.isArray(contract.unfilled) ? contract.unfilled : [];
@@ -507,11 +527,11 @@ export async function sendContractForSignature(
     .update({
       status: "sent",
       signature_sent_at: sentAt,
-      signature_last_event: "DOCUMENT_SENT",
-      signature_last_event_at: sentAt,
     })
     .eq("organization_id", organizationId)
-    .eq("id", contractId);
+    .eq("id", contractId)
+    .neq("status", "signed")
+    .neq("status", "void");
 
   if (savedError) {
     // The provider did send it. Say so plainly rather than inviting a second
@@ -523,7 +543,7 @@ export async function sendContractForSignature(
 
   await recordActivity(supabase, {
     organizationId,
-    jobId: text(job?.id) || null,
+    jobId,
     actorUserId: userId,
     eventType: "contract.sent",
     label: "Contract sent for signature",

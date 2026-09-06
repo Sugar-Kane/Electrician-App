@@ -25,10 +25,26 @@ function signedFileName(fileName: string): string {
     : `${safe}-signed.pdf`;
 }
 
+function validInstant(value: string): string {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : "";
+}
+
+function laterInstant(left: string, right: string): string {
+  const leftMillis = Date.parse(left);
+  const rightMillis = Date.parse(right);
+  if (!Number.isFinite(leftMillis)) return right;
+  if (!Number.isFinite(rightMillis)) return left;
+  return leftMillis >= rightMillis
+    ? new Date(leftMillis).toISOString()
+    : new Date(rightMillis).toISOString();
+}
+
 async function markContractSigned(input: {
   contractId: string;
   organizationId: string;
   signedAt: string;
+  lastEventAt: string;
 }): Promise<void> {
   const admin = asFlexibleClient(getSupabaseAdmin());
   const downloadedAt = new Date().toISOString();
@@ -39,7 +55,7 @@ async function markContractSigned(input: {
       signed_at: input.signedAt,
       signature_downloaded_at: downloadedAt,
       signature_last_event: "DOCUMENT_COMPLETED",
-      signature_last_event_at: input.signedAt,
+      signature_last_event_at: input.lastEventAt,
     })
     .eq("id", input.contractId)
     .eq("organization_id", input.organizationId);
@@ -65,7 +81,7 @@ export async function fileSignedContract(input: {
   const admin = asFlexibleClient(getSupabaseAdmin());
   const { data: contractData } = await admin
     .from("contracts")
-    .select("id, organization_id, job_id, signed_at")
+    .select("id, organization_id, job_id, signed_at, signature_last_event_at")
     .eq("signature_provider", "documenso")
     .eq("signature_envelope_id", input.envelopeId)
     .maybeSingle();
@@ -84,10 +100,14 @@ export async function fileSignedContract(input: {
     .maybeSingle();
 
   if (already) {
+    const signedAt = validInstant(text(contract.signed_at)) ||
+      validInstant(input.completedAt ?? "") ||
+      new Date().toISOString();
     await markContractSigned({
       contractId,
       organizationId,
-      signedAt: text(contract.signed_at) || input.completedAt || new Date().toISOString(),
+      signedAt,
+      lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
     });
     return { ok: true, contractId, jobId, alreadyFiled: true };
   }
@@ -171,17 +191,24 @@ export async function fileSignedContract(input: {
       .eq("signature_envelope_id", input.envelopeId)
       .maybeSingle();
     if (wonElsewhere) {
+      const signedAt = validInstant(text(contract.signed_at)) ||
+        validInstant(input.completedAt ?? "") ||
+        validInstant(envelope.completedAt) ||
+        new Date().toISOString();
       await markContractSigned({
         contractId,
         organizationId,
-        signedAt: text(contract.signed_at) || input.completedAt || new Date().toISOString(),
+        signedAt,
+        lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
       });
       return { ok: true, contractId, jobId, alreadyFiled: true };
     }
     return { ok: false, error: "The signed PDF could not be filed." };
   }
 
-  const signedAt = input.completedAt || new Date().toISOString();
+  const signedAt = validInstant(input.completedAt ?? "") ||
+    validInstant(envelope.completedAt) ||
+    new Date().toISOString();
   await admin
     .from("documents")
     .update({ archived_at: new Date().toISOString() })
@@ -190,7 +217,12 @@ export async function fileSignedContract(input: {
     .is("archived_at", null)
     .neq("id", text(created.id));
 
-  await markContractSigned({ contractId, organizationId, signedAt });
+  await markContractSigned({
+    contractId,
+    organizationId,
+    signedAt,
+    lastEventAt: laterInstant(text(contract.signature_last_event_at), signedAt),
+  });
 
   await recordActivity(admin, {
     organizationId,

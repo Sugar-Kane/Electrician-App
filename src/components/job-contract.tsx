@@ -103,6 +103,13 @@ function ContractRow({
     }
     return null;
   })();
+  const showSigningSection = Boolean(
+    contract.document &&
+      contract.unfilled.length === 0 &&
+      ((current && contract.status === "draft") ||
+        contract.status === "sent" ||
+        contract.status === "signed"),
+  );
 
   return (
     <li className="rounded-control border border-line">
@@ -202,7 +209,7 @@ function ContractRow({
             </pre>
           ) : null}
 
-          {current && contract.document && contract.unfilled.length === 0 ? (
+          {showSigningSection ? (
             <div className="mt-3 border-t border-line pt-3">
               {contract.status === "draft" ? (
                 signingConfigured ? (

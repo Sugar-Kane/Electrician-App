@@ -39,6 +39,7 @@ type EnvelopeResponse = {
   id?: unknown;
   envelopeId?: unknown;
   status?: unknown;
+  completedAt?: unknown;
   recipients?: unknown;
   envelopeItems?: unknown;
 };
@@ -178,6 +179,7 @@ export async function deleteDocumensoEnvelope(envelopeId: string): Promise<void>
 export type DocumensoEnvelope = {
   id: string;
   status: string;
+  completedAt: string;
   itemIds: string[];
 };
 
@@ -193,6 +195,7 @@ export async function getDocumensoEnvelope(envelopeId: string): Promise<Documens
   return {
     id: string(result.id) || string(result.envelopeId) || envelopeId,
     status: string(result.status),
+    completedAt: string(result.completedAt),
     itemIds: items.map((item) => string(item.id)).filter(Boolean),
   };
 }
