@@ -15,6 +15,7 @@ import {
 import { PdfViewer } from "@/components/pdf-viewer";
 import { FormMessage } from "@/components/ui/field";
 import {
+  canRebuildContractPdf,
   isContractSignatureRecovery,
   showsContractSigningSection,
 } from "@/lib/contract-signing-ui";
@@ -92,6 +93,7 @@ function ContractRow({
       !contract.documentMatchesContract,
   );
   const signatureRecovery = isContractSignatureRecovery(contract);
+  const canRebuild = canRebuildContractPdf(contract);
 
   const signatureStatus = (() => {
     if (contract.status === "signed") {
@@ -220,7 +222,7 @@ function ContractRow({
                 </form>
               ) : null}
             </>
-          ) : (
+          ) : canRebuild ? (
             /*
               A contract drafted before documents existed, or one whose render
               failed. The words are safe either way — they were frozen when the
@@ -248,6 +250,14 @@ function ContractRow({
               </button>
               {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
             </form>
+          ) : (
+            <div className="rounded-control border border-caution/25 bg-caution-bg p-4">
+              <p className="text-sm leading-6 text-caution">
+                This contract has already entered signing, so Volteira will not replace it with a
+                newly rendered unsigned PDF. Use the signing status action below to recover the
+                provider copy.
+              </p>
+            </div>
           )}
 
           {showText || !contract.document ? (

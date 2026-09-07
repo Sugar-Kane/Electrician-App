@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { draftScope } from "@/lib/claude";
 import { contractSourceMatches } from "@/lib/contract-source";
+import { canRebuildContractPdf } from "@/lib/contract-signing-ui";
 import { fillTemplate, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import {
   createDocumensoEnvelope,
@@ -242,20 +243,84 @@ export async function rebuildContractPdf(
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return { error: "You are not a member of a business." };
 
+  const { data: contract } = await supabase
+    .from("contracts")
+    .select("id, job_id, status, signature_envelope_id")
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .maybeSingle();
+  if (!contract) return { error: "That contract could not be found." };
+  if (!canRebuildContractPdf({
+    status: text(contract.status) as "draft" | "sent" | "signed" | "void",
+    signatureEnvelopeLinked: Boolean(text(contract.signature_envelope_id)),
+  })) {
+    return {
+      error: "A contract already prepared for signing cannot be rebuilt. Check its signing status instead.",
+    };
+  }
+
+  const jobId = text(contract.job_id);
+  const staleBefore = signatureClaimStaleBefore();
+  if (!jobId || !(await clearStaleSignatureClaimsForJob(supabase, {
+    organizationId,
+    jobId,
+    staleBefore,
+  }))) {
+    return { error: "That contract's signing state could not be checked. Try again." };
+  }
+
+  // Sending, assistant scope edits and manual PDF rebuilds all take the same
+  // job-wide claim. The words and the current PDF therefore cannot change
+  // while another request is preparing the copy a customer will sign.
+  const rebuildToken = randomUUID();
+  const { data: claimed, error: claimError } = await supabase
+    .from("contracts")
+    .update({
+      signature_send_token: rebuildToken,
+      signature_send_started_at: new Date().toISOString(),
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .eq("status", "draft")
+    .is("signature_envelope_id", null)
+    .is("signature_send_token", null)
+    .select("id")
+    .maybeSingle();
+  if (claimError || !claimed) {
+    return { error: "That contract is being prepared for signing. Refresh and try again." };
+  }
+
+  const releaseClaim = async () => {
+    await supabase
+      .from("contracts")
+      .update({ signature_send_token: null, signature_send_started_at: null })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("signature_send_token", rebuildToken);
+  };
+
   const { data: organization } = await supabase
     .from("organizations")
     .select("timezone")
     .eq("id", organizationId)
     .maybeSingle();
 
-  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
-  const document = await generateContractPdf({
-    database: supabase,
-    organizationId,
-    contractId,
-    timeZone: text(organization?.timezone) || "America/Los_Angeles",
-    uploadedBy: userId,
-  });
+  let document: Awaited<ReturnType<typeof import("@/lib/pdf/contract-data")["generateContractPdf"]>>;
+  try {
+    const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+    document = await generateContractPdf({
+      database: supabase,
+      organizationId,
+      contractId,
+      timeZone: text(organization?.timezone) || "America/Los_Angeles",
+      uploadedBy: userId,
+    });
+  } catch (error) {
+    console.error("contract: PDF rebuild failed", error);
+    await releaseClaim();
+    return { error: "The contract PDF could not be built. Try again." };
+  }
+  await releaseClaim();
 
   if (document.error) return { error: document.error };
 

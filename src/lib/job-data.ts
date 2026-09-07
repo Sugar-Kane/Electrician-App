@@ -897,18 +897,36 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const jobId = typeof job?.id === "string" ? job.id : "";
   if (!jobId) return [];
 
-  const { data } = await context.database
-    .from("contracts")
-    .select(
-      `id, body, scope, unfilled, status, created_at, signature_sent_at, signed_at,
-       signature_recipient_email, signature_downloaded_at, signature_envelope_id`,
-    )
-    .eq("organization_id", context.organizationId)
-    .eq("job_id", jobId)
-    .order("created_at", { ascending: false })
-    .limit(10);
+  const columns = `id, body, scope, unfilled, status, created_at, signature_sent_at, signed_at,
+    signature_recipient_email, signature_downloaded_at, signature_envelope_id`;
+  const [recentResult, recoveryResult] = await Promise.all([
+    context.database
+      .from("contracts")
+      .select(columns)
+      .eq("organization_id", context.organizationId)
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    // A provider-linked draft may hold the job-wide send lock after an
+    // ambiguous response. It must remain reachable even after it falls beyond
+    // the ordinary ten-draft history window.
+    context.database
+      .from("contracts")
+      .select(columns)
+      .eq("organization_id", context.organizationId)
+      .eq("job_id", jobId)
+      .eq("status", "draft")
+      .not("signature_envelope_id", "is", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const rows = (data ?? []) as Record<string, unknown>[];
+  const combined = [
+    ...((recentResult.data ?? []) as Record<string, unknown>[]),
+    ...((recoveryResult.data ?? []) as Record<string, unknown>[]),
+  ];
+  const rows = [...new Map(combined.map((row) => [String(row.id), row])).values()].sort(
+    (a, b) => Date.parse(String(b.created_at ?? "")) - Date.parse(String(a.created_at ?? "")),
+  );
 
   const { currentDocuments } = await import("@/lib/pdf/store");
   const stored = await currentDocuments({

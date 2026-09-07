@@ -9,6 +9,13 @@ type ContractSigningSectionInput = {
   signatureEnvelopeLinked: boolean;
 };
 
+export function canRebuildContractPdf(input: {
+  status: ContractSigningStatus;
+  signatureEnvelopeLinked: boolean;
+}): boolean {
+  return input.status === "draft" && !input.signatureEnvelopeLinked;
+}
+
 /**
  * Decide whether a contract row needs signing controls.
  *
@@ -20,12 +27,17 @@ type ContractSigningSectionInput = {
 export function showsContractSigningSection(input: ContractSigningSectionInput): boolean {
   if (input.status === "draft" && input.signatureEnvelopeLinked) return true;
 
+  // A missing or temporarily unsigned storage URL must not hide the provider
+  // status action. Sent contracts can still be checked, and completed ones can
+  // still recover their sealed copy from Documenso.
+  if (input.status === "sent" || input.status === "signed") return true;
+
   return Boolean(
     input.hasDocument &&
       input.unfilledCount === 0 &&
-      ((input.current && input.status === "draft" && input.documentMatchesContract) ||
-        input.status === "sent" ||
-        input.status === "signed"),
+      input.current &&
+      input.status === "draft" &&
+      input.documentMatchesContract,
   );
 }
 
