@@ -81,6 +81,12 @@ function ContractRow({
     initialState,
   );
   const [showText, setShowText] = useState(false);
+  const needsRebuild = Boolean(
+    current &&
+      contract.status === "draft" &&
+      contract.document &&
+      !contract.documentMatchesContract,
+  );
 
   const signatureStatus = (() => {
     if (contract.status === "signed") {
@@ -106,7 +112,7 @@ function ContractRow({
   const showSigningSection = Boolean(
     contract.document &&
       contract.unfilled.length === 0 &&
-      ((current && contract.status === "draft") ||
+      ((current && contract.status === "draft" && contract.documentMatchesContract) ||
         contract.status === "sent" ||
         contract.status === "signed"),
   );
@@ -128,6 +134,8 @@ function ContractRow({
               {contract.unfilled.length} {contract.unfilled.length === 1 ? "blank" : "blanks"} left
               to fill in
             </span>
+          ) : needsRebuild ? (
+            <span className="mt-0.5 block text-xs text-caution">PDF needs rebuilding</span>
           ) : signatureStatus ? (
             <span className={`mt-0.5 block text-xs ${signatureStatus.className}`}>
               {signatureStatus.label}
@@ -174,6 +182,33 @@ function ContractRow({
                   {showText ? "Hide text version" : "Text version"}
                 </button>
               </div>
+
+              {needsRebuild ? (
+                <form
+                  action={rebuild}
+                  className="mt-3 rounded-control border border-caution/30 bg-caution-bg p-4"
+                >
+                  <p className="text-sm leading-6 text-caution">
+                    The contract wording changed after this PDF was made. Rebuild it before
+                    sending so the customer receives the wording shown in the text version.
+                  </p>
+                  <input type="hidden" name="contractId" value={contract.id} />
+                  <input type="hidden" name="jobNumber" value={jobNumber} />
+                  <button
+                    type="submit"
+                    disabled={rebuilding}
+                    className="tap-target mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
+                  >
+                    {rebuilding ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" aria-hidden />
+                    )}
+                    {rebuilding ? "Rebuilding…" : "Rebuild the PDF"}
+                  </button>
+                  {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
+                </form>
+              ) : null}
             </>
           ) : (
             /*

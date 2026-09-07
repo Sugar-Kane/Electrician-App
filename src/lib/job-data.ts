@@ -8,6 +8,7 @@ import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import type { ActivityRow } from "@/lib/activity-timeline";
+import { contractSourceMatches } from "@/lib/contract-source";
 import { hasCoordinates } from "@/lib/coordinates";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
@@ -862,6 +863,8 @@ export type JobContract = {
   signedCopySaved: boolean;
   /** The stored PDF, or empty when one has not been built yet. */
   document: { url: string; fileName: string; versionNumber: number } | null;
+  /** False when the contract wording changed after this PDF was rendered. */
+  documentMatchesContract: boolean;
 };
 
 /**
@@ -895,7 +898,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const { data } = await context.database
     .from("contracts")
     .select(
-      `id, body, unfilled, status, created_at, signature_sent_at, signed_at,
+      `id, body, scope, unfilled, status, created_at, signature_sent_at, signed_at,
        signature_recipient_email, signature_downloaded_at`,
     )
     .eq("organization_id", context.organizationId)
@@ -917,11 +920,14 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   return rows.map((row) => {
     const id = String(row.id);
     const document = stored.get(id) ?? null;
+    const body = typeof row.body === "string" ? row.body : "";
+    const scope = typeof row.scope === "string" ? row.scope : "";
+    const unfilled = Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [];
 
     return {
       id,
-      body: typeof row.body === "string" ? row.body : "",
-      unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+      body,
+      unfilled,
       status: ["sent", "signed", "void"].includes(String(row.status))
         ? (String(row.status) as "sent" | "signed" | "void")
         : "draft",
@@ -955,6 +961,9 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
             versionNumber: document.versionNumber,
           }
         : null,
+      documentMatchesContract: Boolean(
+        document && contractSourceMatches(document.sourceSnapshot, { body, scope, unfilled }),
+      ),
     };
   });
 }

@@ -13,7 +13,10 @@ export function signatureClaimStaleBefore(now: number = Date.now()): string {
  *
  * The database's job-wide unique index prevents two live claims. Cleaning only
  * the target draft, however, lets a crashed send on an older draft block every
- * newer draft forever.
+ * newer draft forever. A draft that already has a provider envelope is not
+ * abandoned merely because its lease is old: distribution may have succeeded
+ * while the response and webhook were delayed. Those claims stay in place
+ * until the send action takes them over atomically and checks Documenso first.
  */
 export async function clearStaleSignatureClaimsForJob(
   database: FlexibleSupabaseClient,
@@ -25,6 +28,7 @@ export async function clearStaleSignatureClaimsForJob(
     .eq("organization_id", input.organizationId)
     .eq("job_id", input.jobId)
     .eq("status", "draft")
+    .is("signature_envelope_id", null)
     .not("signature_send_token", "is", null)
     .or(`signature_send_started_at.is.null,signature_send_started_at.lt.${input.staleBefore}`);
 

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { recordActivity } from "@/lib/activity";
 import { draftScope } from "@/lib/claude";
+import { contractSourceMatches } from "@/lib/contract-source";
 import { fillTemplate, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import {
   createDocumensoEnvelope,
@@ -303,7 +304,8 @@ export async function sendContractForSignature(
   const { data } = await supabase
     .from("contracts")
     .select(
-      `id, status, unfilled, signature_envelope_id, signature_sent_at,
+      `id, body, scope, status, unfilled, signature_envelope_id, signature_sent_at,
+       signature_send_token, signature_send_started_at,
        signature_recipient_email, signature_contractor_email,
        jobs (
          id, job_number,
@@ -376,6 +378,7 @@ export async function sendContractForSignature(
   const sendToken = randomUUID();
   const sendStartedAt = new Date().toISOString();
   const staleBefore = signatureClaimStaleBefore();
+  const existingClaimToken = text(contract.signature_send_token);
 
   /** Release only this request's claim; a newer retry must remain untouched. */
   const releaseClaim = async () => {
@@ -405,6 +408,27 @@ export async function sendContractForSignature(
     return query.select("id").maybeSingle();
   };
 
+  /**
+   * Take over an expired, provider-linked lease without ever removing it from
+   * the job-wide uniqueness guard. The provider state is checked immediately
+   * below before this owner is allowed to distribute anything.
+   */
+  const reclaimLinkedSend = async (expectedEnvelopeId: string, expectedToken: string) =>
+    supabase
+      .from("contracts")
+      .update({
+        signature_send_token: sendToken,
+        signature_send_started_at: sendStartedAt,
+      })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("status", "draft")
+      .eq("signature_envelope_id", expectedEnvelopeId)
+      .eq("signature_send_token", expectedToken)
+      .or(`signature_send_started_at.is.null,signature_send_started_at.lt.${staleBefore}`)
+      .select("id")
+      .maybeSingle();
+
   // Claim before reading the PDF. Version restoration takes the same row-level
   // claim, so the file inspected here cannot be swapped out between inspection
   // and the provider upload.
@@ -417,11 +441,13 @@ export async function sendContractForSignature(
     return { error: "Old signature activity for this job could not be checked. Try again." };
   }
 
-  const { data: claimed, error: claimError } = await claimSend(envelopeId || null);
+  const { data: claimed, error: claimError } = envelopeId && existingClaimToken
+    ? await reclaimLinkedSend(envelopeId, existingClaimToken)
+    : await claimSend(envelopeId || null);
   if (claimError) {
     if ((claimError as { code?: string }).code === "23505") {
       return {
-        error: "Another contract for this job is already being sent or waiting for signatures.",
+        error: "Another contract for this job has an unresolved signing request. Check its signing status before sending this one.",
       };
     }
     return { error: "The signature request could not be prepared. Try again." };
@@ -449,7 +475,7 @@ export async function sendContractForSignature(
   const loadSigningMaterial = async (): Promise<SigningMaterial | { error: string }> => {
     const { data: documentData } = await supabase
       .from("documents")
-      .select("storage_path, file_name")
+      .select("storage_path, file_name, source_snapshot")
       .eq("organization_id", organizationId)
       .eq("contract_id", contractId)
       .is("archived_at", null)
@@ -461,6 +487,13 @@ export async function sendContractForSignature(
     const storagePath = text(document?.storage_path);
     if (!document || !storagePath) {
       return { error: "Build the contract PDF before sending it." };
+    }
+    if (!contractSourceMatches(document.source_snapshot, {
+      body: text(contract.body),
+      scope: text(contract.scope),
+      unfilled: unfilled.map(text),
+    })) {
+      return { error: "This PDF is older than the contract wording. Rebuild it before sending." };
     }
 
     const downloaded = await getSupabaseAdmin().storage
@@ -609,14 +642,15 @@ export async function sendContractForSignature(
     try {
       providerEnvelope = await getDocumensoEnvelope(envelopeId);
     } catch (error) {
-      await releaseClaim();
+      // This may be the retry after distribution succeeded and its response
+      // disappeared. Keep the linked claim until the provider can answer; a
+      // newer contract must not be sent on the assumption that this one was not.
       return {
         error: error instanceof DocumensoError ? error.message : "The signing status could not be checked.",
       };
     }
 
     if (providerEnvelope.status === "COMPLETED") {
-      await releaseClaim();
       const filed = await fileSignedContract({ envelopeId, actorUserId: userId });
       if (!filed.ok) return { error: filed.error };
       revalidatePath(`/jobs/${jobNumber}`);
@@ -685,8 +719,9 @@ export async function sendContractForSignature(
       return { error: "", contractId, notice: "This contract was already sent and is waiting for signatures." };
     }
     if (providerEnvelope.status !== "DRAFT") {
-      await releaseClaim();
-      return { error: "The signing service returned an unfamiliar document status. Try again." };
+      return {
+        error: "The signing service returned an unfamiliar document status. Check it again before sending another contract.",
+      };
     }
 
     const recipientChanged =

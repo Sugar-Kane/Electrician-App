@@ -201,6 +201,8 @@ export type StoredDocument = {
   fileName: string;
   versionNumber: number;
   generatedLabel: string;
+  /** Exact record state this generated version was rendered from. */
+  sourceSnapshot: unknown;
 };
 
 /** An hour is longer than anybody spends reading one and short enough to leak little. */
@@ -230,7 +232,7 @@ export async function currentDocuments(input: {
 
   const { data } = await input.database
     .from("documents")
-    .select(`id, ${input.column}, storage_path, file_name, version_number, created_at`)
+    .select(`id, ${input.column}, storage_path, file_name, version_number, created_at, source_snapshot`)
     .eq("organization_id", input.organizationId)
     .in(input.column, ids)
     .is("archived_at", null)
@@ -285,6 +287,7 @@ export async function currentDocuments(input: {
             minute: "2-digit",
           }).format(new Date(createdAt))
         : "",
+      sourceSnapshot: row.source_snapshot ?? null,
     });
   }
 
@@ -310,7 +313,7 @@ export async function currentDocument(input: {
 
   const { data } = await input.database
     .from("documents")
-    .select("id, storage_path, file_name, version_number, created_at")
+    .select("id, storage_path, file_name, version_number, created_at, source_snapshot")
     .eq("organization_id", input.organizationId)
     .eq(column, id)
     .is("archived_at", null)
@@ -350,5 +353,6 @@ export async function currentDocument(input: {
           minute: "2-digit",
         }).format(new Date(createdAt))
       : "",
+    sourceSnapshot: row.source_snapshot ?? null,
   };
 }
