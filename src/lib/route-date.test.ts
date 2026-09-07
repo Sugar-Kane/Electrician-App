@@ -8,6 +8,7 @@ const jobs = [
   { id: "today", date: "2026-09-07", status: "Booked" },
   { id: "future", date: "2026-09-09", status: "Booked" },
   { id: "canceled", date: "2026-09-12", status: "Canceled" },
+  { id: "completed", date: "2026-09-13", status: "Completed" },
 ];
 
 test("a scheduled focused job selects its service day", () => {
@@ -27,6 +28,13 @@ test("an unscheduled focused job falls back to today's active work", () => {
 test("a canceled focused job does not choose its canceled service day", () => {
   assert.equal(
     routeDateFor({ jobs, today: "2026-09-07", focusJobId: "canceled" }),
+    "2026-09-07",
+  );
+});
+
+test("a completed focused job does not choose its historical service day", () => {
+  assert.equal(
+    routeDateFor({ jobs, today: "2026-09-07", focusJobId: "completed" }),
     "2026-09-07",
   );
 });

@@ -10,7 +10,8 @@ export function routeDateFor(input: {
   today: string;
   focusJobId?: string;
 }): string {
-  const active = (job: RouteDateJob) => job.status !== "Canceled";
+  const active = (job: RouteDateJob) =>
+    job.status !== "Canceled" && job.status !== "Completed";
   const focusedDate = input.jobs.find(
     (job) => job.id === input.focusJobId && active(job),
   )?.date.trim();
