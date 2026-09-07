@@ -112,7 +112,7 @@ export function RouteBuilder({
   const [skipped, setSkipped] = useState<string[]>([]);
   /** Hand-moved order. Null means "however the ordering came out". */
   const [manualOrder, setManualOrder] = useState<string[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(focusJobId ?? null);
 
   const storedStart = useSyncExternalStore(
     subscribeRouteStart,
@@ -216,7 +216,11 @@ export function RouteBuilder({
 
   /** Every job for the day — no cap. The old three-stop limit lost work. */
   const dayStops = useMemo<Stop[]>(() => {
+    const focusedDate = jobs.find(
+      (job) => job.id === focusJobId && job.status !== "Canceled",
+    )?.date;
     const dayWithWork =
+      focusedDate ??
       jobs.find((job) => job.date === today && job.status !== "Canceled")?.date ??
       jobs.find((job) => job.date >= today && job.status !== "Canceled")?.date ??
       today;
@@ -246,7 +250,7 @@ export function RouteBuilder({
         job,
       })),
     ];
-  }, [jobs, supplyStore, today]);
+  }, [focusJobId, jobs, supplyStore, today]);
 
   const ordered = useMemo<Stop[]>(() => {
     const live = dayStops.map((stop) => ({ ...stop, skipped: skipped.includes(stop.id) }));
@@ -502,26 +506,26 @@ export function RouteBuilder({
                           onClick={() => move(stop.id, -1)}
                           disabled={index <= 1}
                           aria-label={`Move ${stop.label} earlier`}
-                          className="grid h-8 w-8 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
+                          className="tap-target grid h-11 w-11 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
                         >
-                          <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+                          <ArrowUp className="h-4 w-4" aria-hidden />
                         </button>
                         <button
                           type="button"
                           onClick={() => move(stop.id, 1)}
                           disabled={index >= routeStops.length - 1}
                           aria-label={`Move ${stop.label} later`}
-                          className="grid h-8 w-8 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
+                          className="tap-target grid h-11 w-11 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
                         >
-                          <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+                          <ArrowDown className="h-4 w-4" aria-hidden />
                         </button>
                         <button
                           type="button"
                           onClick={() => toggleSkip(stop.id)}
                           aria-label={`Drop ${stop.label} from the route`}
-                          className="grid h-8 w-8 place-items-center rounded-control border border-line text-ink-faint"
+                          className="tap-target grid h-11 w-11 place-items-center rounded-control border border-line text-ink-faint"
                         >
-                          <X className="h-3.5 w-3.5" aria-hidden />
+                          <X className="h-4 w-4" aria-hidden />
                         </button>
                       </div>
                     ) : null}
@@ -541,7 +545,7 @@ export function RouteBuilder({
                     <button
                       type="button"
                       onClick={() => toggleSkip(stop.id)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand"
+                      className="tap-target inline-flex min-h-11 items-center gap-1 px-2 text-xs font-semibold text-brand"
                     >
                       <Undo2 className="h-3 w-3" aria-hidden />
                       Put back
