@@ -77,7 +77,7 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
     : undefined;
 
   return (
-    <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="The order is built on the map from today's real stops. Move or drop any of them, then lock it and navigate.">
+    <FieldPageShell title="Route builder" eyebrow="Dispatch optimization" description="The order is built on the map from the selected service day's real stops. Move or drop any of them, then lock it and navigate.">
       <RouteBuilder
         jobs={jobs}
         today={todayInZone(timeZone)}

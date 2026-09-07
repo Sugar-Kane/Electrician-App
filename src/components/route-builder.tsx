@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { JobMap, type MapStop } from "@/components/job-map";
+import { formatDayLabel } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
 import {
   buildAppleDirectionsUrl,
@@ -36,6 +37,7 @@ import {
   spanInMiles,
   type RouteStopInput,
 } from "@/lib/route-order";
+import { routeDateFor } from "@/lib/route-date";
 import {
   buildRouteKey,
   getRouteProgressServerSnapshot,
@@ -214,19 +216,15 @@ export function RouteBuilder({
   const usingFallbackStart =
     (startMode === "current" && !position) || (startMode === "custom" && !savedStartAddress);
 
+  const routeDate = useMemo(
+    () => routeDateFor({ jobs, today, focusJobId }),
+    [focusJobId, jobs, today],
+  );
+
   /** Every job for the day — no cap. The old three-stop limit lost work. */
   const dayStops = useMemo<Stop[]>(() => {
-    const focusedDate = jobs.find(
-      (job) => job.id === focusJobId && job.status !== "Canceled",
-    )?.date;
-    const dayWithWork =
-      focusedDate ??
-      jobs.find((job) => job.date === today && job.status !== "Canceled")?.date ??
-      jobs.find((job) => job.date >= today && job.status !== "Canceled")?.date ??
-      today;
-
     const dayJobs = jobs.filter(
-      (job) => job.date === dayWithWork && job.status !== "Canceled",
+      (job) => job.date === routeDate && job.status !== "Canceled",
     );
 
     const supply: Stop = {
@@ -250,7 +248,7 @@ export function RouteBuilder({
         job,
       })),
     ];
-  }, [focusJobId, jobs, supplyStore, today]);
+  }, [jobs, routeDate, supplyStore]);
 
   const ordered = useMemo<Stop[]>(() => {
     const live = dayStops.map((stop) => ({ ...stop, skipped: skipped.includes(stop.id) }));
@@ -428,10 +426,11 @@ export function RouteBuilder({
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">
-                {built ? "Route built" : "Today on the map"}
+                {built ? "Route built" : "Route on the map"}
               </h2>
               <p className="text-sm text-ink-muted">
-                {ordered.length} {ordered.length === 1 ? "stop" : "stops"} ·{" "}
+                {routeDate === today ? "Today" : formatDayLabel(routeDate)} · {ordered.length}{" "}
+                {ordered.length === 1 ? "stop" : "stops"} ·{" "}
                 {miles > 0 ? `about ${miles} mi in a straight line` : "distance unknown"}
               </p>
             </div>
