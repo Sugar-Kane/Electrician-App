@@ -860,6 +860,8 @@ export type JobContract = {
   signatureSentLabel: string;
   signedLabel: string;
   signatureRecipientEmail: string;
+  /** A provider draft exists and may need reconciliation before another draft can be sent. */
+  signatureEnvelopeLinked: boolean;
   signedCopySaved: boolean;
   /** The stored PDF, or empty when one has not been built yet. */
   document: { url: string; fileName: string; versionNumber: number } | null;
@@ -899,7 +901,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
     .from("contracts")
     .select(
       `id, body, scope, unfilled, status, created_at, signature_sent_at, signed_at,
-       signature_recipient_email, signature_downloaded_at`,
+       signature_recipient_email, signature_downloaded_at, signature_envelope_id`,
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -947,6 +949,9 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
         typeof row.signature_recipient_email === "string"
           ? row.signature_recipient_email
           : "",
+      signatureEnvelopeLinked: Boolean(
+        typeof row.signature_envelope_id === "string" && row.signature_envelope_id.trim(),
+      ),
       signedCopySaved: Boolean(row.signature_downloaded_at),
       createdLabel: inZone(row.created_at as string | null, context.timeZone, {
         month: "short",

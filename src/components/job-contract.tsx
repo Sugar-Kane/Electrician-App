@@ -14,6 +14,10 @@ import {
 } from "@/app/jobs/[jobId]/contract-actions";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { FormMessage } from "@/components/ui/field";
+import {
+  isContractSignatureRecovery,
+  showsContractSigningSection,
+} from "@/lib/contract-signing-ui";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
 
 /**
@@ -87,6 +91,7 @@ function ContractRow({
       contract.document &&
       !contract.documentMatchesContract,
   );
+  const signatureRecovery = isContractSignatureRecovery(contract);
 
   const signatureStatus = (() => {
     if (contract.status === "signed") {
@@ -109,13 +114,14 @@ function ContractRow({
     }
     return null;
   })();
-  const showSigningSection = Boolean(
-    contract.document &&
-      contract.unfilled.length === 0 &&
-      ((current && contract.status === "draft" && contract.documentMatchesContract) ||
-        contract.status === "sent" ||
-        contract.status === "signed"),
-  );
+  const showSigningSection = showsContractSigningSection({
+    current,
+    status: contract.status,
+    hasDocument: Boolean(contract.document),
+    unfilledCount: contract.unfilled.length,
+    documentMatchesContract: contract.documentMatchesContract,
+    signatureEnvelopeLinked: contract.signatureEnvelopeLinked,
+  });
 
   return (
     <li className="rounded-control border border-line">
@@ -129,7 +135,11 @@ function ContractRow({
           <span className="block text-sm font-semibold">
             {current ? "Draft" : "Superseded draft"} · {contract.createdLabel}
           </span>
-          {contract.unfilled.length > 0 ? (
+          {signatureRecovery ? (
+            <span className="mt-0.5 block text-xs text-caution">
+              Signature send needs checking
+            </span>
+          ) : contract.unfilled.length > 0 ? (
             <span className="mt-0.5 block text-xs text-caution">
               {contract.unfilled.length} {contract.unfilled.length === 1 ? "blank" : "blanks"} left
               to fill in
@@ -263,11 +273,18 @@ function ContractRow({
                       ) : (
                         <Send className="h-4 w-4" aria-hidden />
                       )}
-                      {sending ? "Sending…" : "Send for signature"}
+                      {sending
+                        ? signatureRecovery
+                          ? "Checking…"
+                          : "Sending…"
+                        : signatureRecovery
+                          ? "Check or finish sending"
+                          : "Send for signature"}
                     </button>
                     <p className="mt-2 text-xs leading-5 text-ink-faint">
-                      The customer signs first. The contractor receives it next, and the completed
-                      PDF is saved back to this job.
+                      {signatureRecovery
+                        ? "Volteira checks Documenso first, then safely finishes the send only if it is still needed."
+                        : "The customer signs first. The contractor receives it next, and the completed PDF is saved back to this job."}
                     </p>
                   </form>
                 ) : (
