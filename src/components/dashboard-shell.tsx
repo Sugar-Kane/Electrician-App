@@ -391,7 +391,10 @@ export function DashboardShell({
               <h2 id="snapshot-heading" className="text-sm font-semibold">
                 Business
               </h2>
-              <Link href="/reports" className="text-xs font-semibold text-brand">
+              <Link
+                href="/reports"
+                className="tap-target -my-2 inline-flex min-h-11 items-center px-2 text-xs font-semibold text-brand"
+              >
                 Reports
               </Link>
             </div>

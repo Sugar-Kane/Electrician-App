@@ -90,7 +90,10 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
               <h2 id="stock-results" className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
                 {query ? `Stock matching “${query}”` : "What is on the van"}
               </h2>
-              <Link href="/inventory" className="text-xs font-semibold text-brand">
+              <Link
+                href="/inventory"
+                className="tap-target -my-2 inline-flex min-h-11 items-center px-2 text-xs font-semibold text-brand"
+              >
                 Manage stock
               </Link>
             </div>

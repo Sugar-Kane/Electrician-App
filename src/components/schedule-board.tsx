@@ -269,7 +269,7 @@ export function ScheduleBoard({
         {view === "day" ? (
           <DayView jobs={jobs.filter((job) => job.date === date)} date={date} />
         ) : view === "week" ? (
-          <WeekView days={week} jobs={jobs} today={today} onPickDay={(day) => go(day, "day")} />
+          <WeekView days={week} jobs={jobs} onPickDay={(day) => go(day, "day")} />
         ) : view === "crew" ? (
           crew
         ) : (

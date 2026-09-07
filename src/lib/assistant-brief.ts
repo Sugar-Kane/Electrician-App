@@ -66,7 +66,6 @@ export function neutralize(value: string): string {
   return (value ?? "")
     // Newlines and control characters first: without this, one customer name
     // could append a hundred invented rows to the table below it.
-    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, " ")
     // The tokens a model is most likely to read as structure.
     .replace(/\b(system|assistant|human)\s*:/gi, "$1-")
