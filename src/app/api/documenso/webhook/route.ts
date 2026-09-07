@@ -89,12 +89,28 @@ export async function POST(request: Request) {
     return Response.json({ received: true, ignored: true, reason: outcome });
   }
 
-  if (applied && status === "void") {
+  // The browser action and provider callback race normally. A stable event key
+  // lets either one fill the history row, including a webhook retry after the
+  // status committed but the first HTTP request died before recording it.
+  if ((applied || duplicate) && status === "sent") {
+    await recordActivity(admin, {
+      organizationId,
+      jobId: jobId || null,
+      eventType: "contract.sent",
+      label: "Contract sent for signature",
+      metadata: { via: "email", envelope_id: envelopeId },
+      dedupeKey: `documenso:${envelopeId}:sent`,
+    });
+  }
+
+  if ((applied || duplicate) && status === "void") {
     await recordActivity(admin, {
       organizationId,
       jobId: jobId || null,
       eventType: "contract.declined",
       label: "Contract signature request declined or canceled",
+      metadata: { envelope_id: envelopeId },
+      dedupeKey: `documenso:${envelopeId}:declined`,
     });
   }
 

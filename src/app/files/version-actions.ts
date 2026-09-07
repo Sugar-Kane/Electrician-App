@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 
 import { getDocumentVersions, type DocumentVersion } from "@/lib/document-workspace";
 import { currentContext } from "@/lib/request-context";
+import {
+  clearStaleSignatureClaimsForJob,
+  signatureClaimStaleBefore,
+} from "@/lib/signature-claim";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -61,7 +65,22 @@ export async function restoreDocumentVersion(
   let contractClaimToken = "";
   if (owner.column === "contract_id") {
     contractClaimToken = randomUUID();
-    const staleBefore = new Date(Date.now() - 10 * 60_000).toISOString();
+    const staleBefore = signatureClaimStaleBefore();
+    const { data: contractState } = await supabase
+      .from("contracts")
+      .select("job_id")
+      .eq("id", owner.id)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    const jobId = typeof contractState?.job_id === "string" ? contractState.job_id : "";
+    if (!jobId || !(await clearStaleSignatureClaimsForJob(supabase, {
+      organizationId,
+      jobId,
+      staleBefore,
+    }))) {
+      return { error: "That contract's signing state could not be checked." };
+    }
+
     const { data: claimed, error: claimError } = await supabase
       .from("contracts")
       .update({
@@ -72,7 +91,7 @@ export async function restoreDocumentVersion(
       .eq("organization_id", organizationId)
       .eq("status", "draft")
       .is("signature_envelope_id", null)
-      .or(`signature_send_token.is.null,signature_send_started_at.lt.${staleBefore}`)
+      .is("signature_send_token", null)
       .select("id")
       .maybeSingle();
 

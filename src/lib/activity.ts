@@ -33,6 +33,8 @@ export type ActivityInput = {
   actorUserId?: string | null;
   /** `amount_cents`, `via`, `note` are read by the timeline; anything else is kept. */
   metadata?: Record<string, unknown>;
+  /** Stable provider event key when two independent recovery paths may record it. */
+  dedupeKey?: string | null;
 };
 
 export async function recordActivity(
@@ -41,7 +43,7 @@ export async function recordActivity(
 ): Promise<void> {
   if (!input.organizationId || !input.eventType) return;
 
-  const { error } = await database.from("activity_events").insert({
+  const row = {
     organization_id: input.organizationId,
     event_type: input.eventType,
     label: input.label,
@@ -54,7 +56,14 @@ export async function recordActivity(
     entity_type: input.jobId ? "job" : input.customerId ? "customer" : null,
     entity_id: input.jobId ?? input.customerId ?? null,
     metadata: input.metadata ?? {},
-  });
+    dedupe_key: input.dedupeKey ?? null,
+  };
+
+  const { error } = input.dedupeKey
+    ? await database
+        .from("activity_events")
+        .upsert(row, { onConflict: "organization_id,dedupe_key", ignoreDuplicates: true })
+    : await database.from("activity_events").insert(row);
 
   if (error) {
     // Logged, not raised. See rule 1.

@@ -139,6 +139,15 @@ export async function fileSignedContract(input: {
     if (finalization !== "finalized") {
       return { ok: false, error: "The signed PDF is saved, but its status could not be reconciled." };
     }
+    await recordActivity(admin, {
+      organizationId,
+      jobId: jobId || null,
+      actorUserId: input.actorUserId ?? null,
+      eventType: "contract.signed",
+      label: "Contract signed",
+      metadata: { envelope_id: input.envelopeId },
+      dedupeKey: `documenso:${input.envelopeId}:signed`,
+    });
     return { ok: true, contractId, jobId, alreadyFiled: true };
   }
 
@@ -235,6 +244,15 @@ export async function fileSignedContract(input: {
       if (finalization !== "finalized") {
         return { ok: false, error: "The signed PDF is saved, but its status could not be reconciled." };
       }
+      await recordActivity(admin, {
+        organizationId,
+        jobId: jobId || null,
+        actorUserId: input.actorUserId ?? null,
+        eventType: "contract.signed",
+        label: "Contract signed",
+        metadata: { envelope_id: input.envelopeId },
+        dedupeKey: `documenso:${input.envelopeId}:signed`,
+      });
       return { ok: true, contractId, jobId, alreadyFiled: true };
     }
     return { ok: false, error: "The signed PDF could not be filed." };
@@ -284,6 +302,8 @@ export async function fileSignedContract(input: {
     actorUserId: input.actorUserId ?? null,
     eventType: "contract.signed",
     label: "Contract signed",
+    metadata: { envelope_id: input.envelopeId },
+    dedupeKey: `documenso:${input.envelopeId}:signed`,
   });
 
   return { ok: true, contractId, jobId, alreadyFiled: false };
