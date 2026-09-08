@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import {
@@ -15,6 +17,10 @@ import { invoiceTotals } from "@/lib/invoice-math";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { currentContext } from "@/lib/request-context";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
+import {
+  clearStaleSignatureClaimsForJob,
+  signatureClaimStaleBefore,
+} from "@/lib/signature-claim";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { sendSms } from "@/lib/twilio";
@@ -415,7 +421,10 @@ export async function runConfirmedTool(
 
       const { data: found } = await supabase
         .from("contracts")
-        .select("id, body, scope, status, jobs!inner ( job_number )")
+        .select(
+          `id, body, scope, status, job_id, signature_envelope_id,
+           signature_send_token, jobs!inner ( job_number )`,
+        )
         .eq("organization_id", organizationId)
         .eq("jobs.job_number", jobNumber)
         .order("created_at", { ascending: false })
@@ -427,6 +436,9 @@ export async function runConfirmedTool(
 
       const allowed = canEditContract({ status: text(contract.status) || "draft" });
       if (!allowed.ok) return allowed.because;
+      if (text(contract.signature_envelope_id)) {
+        return "That contract has already been prepared for signing. Draft a new contract before changing its scope.";
+      }
 
       const currentScope = text(contract.scope);
       if (!currentScope) {
@@ -441,25 +453,80 @@ export async function runConfirmedTool(
         return "That contract's wording no longer matches what was recorded, so the scope could not be replaced safely. Nothing was changed.";
       }
 
-      const { error } = await supabase
+      const jobId = text(contract.job_id);
+      const staleBefore = signatureClaimStaleBefore();
+      if (!jobId || !(await clearStaleSignatureClaimsForJob(supabase, {
+        organizationId,
+        jobId,
+        staleBefore,
+      }))) {
+        return "That contract's signing state could not be checked, so nothing was changed.";
+      }
+
+      // Hold the same claim used by sending and version restoration until the
+      // replacement PDF is on file. This prevents a sender from reading the
+      // prior PDF after the wording update but before its new render exists.
+      const editToken = randomUUID();
+      const { data: claimed, error: claimError } = await supabase
+        .from("contracts")
+        .update({
+          signature_send_token: editToken,
+          signature_send_started_at: new Date().toISOString(),
+        })
+        .eq("id", text(contract.id))
+        .eq("organization_id", organizationId)
+        .eq("status", "draft")
+        .is("signature_envelope_id", null)
+        .is("signature_send_token", null)
+        .select("id")
+        .maybeSingle();
+
+      if (claimError || !claimed) {
+        return "That contract is being prepared for signing, so its scope was not changed.";
+      }
+
+      const releaseClaim = async () => {
+        await supabase
+          .from("contracts")
+          .update({ signature_send_token: null, signature_send_started_at: null })
+          .eq("id", text(contract.id))
+          .eq("organization_id", organizationId)
+          .eq("signature_send_token", editToken);
+      };
+
+      const { data: updated, error } = await supabase
         .from("contracts")
         .update({ body, scope: nextScope, updated_at: new Date().toISOString() })
         .eq("id", text(contract.id))
-        .eq("organization_id", organizationId);
+        .eq("organization_id", organizationId)
+        .eq("status", "draft")
+        .is("signature_envelope_id", null)
+        .eq("signature_send_token", editToken)
+        .select("id")
+        .maybeSingle();
 
-      if (error) {
+      if (error || !updated) {
         console.error("assistant: contract scope could not be saved", error);
+        await releaseClaim();
         return "That contract could not be changed.";
       }
 
-      const { generateContractPdf } = await import("@/lib/pdf/contract-data");
-      const rebuilt = await generateContractPdf({
-        database: supabase,
-        organizationId,
-        contractId: text(contract.id),
-        timeZone: context.timeZone,
-        uploadedBy: context.userId ?? "",
-      });
+      let rebuilt: Awaited<ReturnType<typeof import("@/lib/pdf/contract-data")["generateContractPdf"]>>;
+      try {
+        const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+        rebuilt = await generateContractPdf({
+          database: supabase,
+          organizationId,
+          contractId: text(contract.id),
+          timeZone: context.timeZone,
+          uploadedBy: context.userId ?? "",
+        });
+      } catch (renderError) {
+        console.error("assistant: edited contract PDF could not be rebuilt", renderError);
+        await releaseClaim();
+        return `The scope on job #${jobNumber}'s contract is updated, but the PDF could not be rebuilt. Open the job to regenerate it.`;
+      }
+      await releaseClaim();
 
       // The wording is the work; a PDF that failed to render can be rebuilt.
       // Saying so beats implying the edit did not happen.

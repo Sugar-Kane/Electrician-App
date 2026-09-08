@@ -8,6 +8,7 @@ import { defaultBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import type { ActivityRow } from "@/lib/activity-timeline";
+import { contractSourceMatches } from "@/lib/contract-source";
 import { hasCoordinates } from "@/lib/coordinates";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
@@ -855,8 +856,17 @@ export type JobContract = {
   createdLabel: string;
   body: string;
   unfilled: string[];
+  status: "draft" | "sent" | "signed" | "void";
+  signatureSentLabel: string;
+  signedLabel: string;
+  signatureRecipientEmail: string;
+  /** A provider draft exists and may need reconciliation before another draft can be sent. */
+  signatureEnvelopeLinked: boolean;
+  signedCopySaved: boolean;
   /** The stored PDF, or empty when one has not been built yet. */
   document: { url: string; fileName: string; versionNumber: number } | null;
+  /** False when the contract wording changed after this PDF was rendered. */
+  documentMatchesContract: boolean;
 };
 
 /**
@@ -887,15 +897,49 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const jobId = typeof job?.id === "string" ? job.id : "";
   if (!jobId) return [];
 
-  const { data } = await context.database
-    .from("contracts")
-    .select("id, body, unfilled, created_at")
-    .eq("organization_id", context.organizationId)
-    .eq("job_id", jobId)
-    .order("created_at", { ascending: false })
-    .limit(10);
+  const columns = `id, body, scope, unfilled, status, created_at, signature_sent_at, signed_at,
+    signature_recipient_email, signature_downloaded_at, signature_envelope_id`;
+  const [recentResult, pendingRecoveryResult, completedRecoveryResult] = await Promise.all([
+    context.database
+      .from("contracts")
+      .select(columns)
+      .eq("organization_id", context.organizationId)
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    // A provider-linked draft may hold the job-wide send lock after an
+    // ambiguous response, and a sent contract holds it while signatures are
+    // outstanding. Both must remain reachable after they fall beyond the
+    // ordinary ten-draft history window.
+    context.database
+      .from("contracts")
+      .select(columns)
+      .eq("organization_id", context.organizationId)
+      .eq("job_id", jobId)
+      .in("status", ["draft", "sent"])
+      .not("signature_envelope_id", "is", null)
+      .order("created_at", { ascending: false }),
+    // A completed provider envelope whose sealed PDF has not been filed is
+    // also an active recovery item, even though it no longer blocks a send.
+    context.database
+      .from("contracts")
+      .select(columns)
+      .eq("organization_id", context.organizationId)
+      .eq("job_id", jobId)
+      .eq("status", "signed")
+      .is("signature_downloaded_at", null)
+      .not("signature_envelope_id", "is", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const rows = (data ?? []) as Record<string, unknown>[];
+  const combined = [
+    ...((recentResult.data ?? []) as Record<string, unknown>[]),
+    ...((pendingRecoveryResult.data ?? []) as Record<string, unknown>[]),
+    ...((completedRecoveryResult.data ?? []) as Record<string, unknown>[]),
+  ];
+  const rows = [...new Map(combined.map((row) => [String(row.id), row])).values()].sort(
+    (a, b) => Date.parse(String(b.created_at ?? "")) - Date.parse(String(a.created_at ?? "")),
+  );
 
   const { currentDocuments } = await import("@/lib/pdf/store");
   const stored = await currentDocuments({
@@ -909,11 +953,37 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   return rows.map((row) => {
     const id = String(row.id);
     const document = stored.get(id) ?? null;
+    const body = typeof row.body === "string" ? row.body : "";
+    const scope = typeof row.scope === "string" ? row.scope : "";
+    const unfilled = Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [];
 
     return {
       id,
-      body: typeof row.body === "string" ? row.body : "",
-      unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+      body,
+      unfilled,
+      status: ["sent", "signed", "void"].includes(String(row.status))
+        ? (String(row.status) as "sent" | "signed" | "void")
+        : "draft",
+      signatureSentLabel: inZone(row.signature_sent_at as string | null, context.timeZone, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      signedLabel: inZone(row.signed_at as string | null, context.timeZone, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      signatureRecipientEmail:
+        typeof row.signature_recipient_email === "string"
+          ? row.signature_recipient_email
+          : "",
+      signatureEnvelopeLinked: Boolean(
+        typeof row.signature_envelope_id === "string" && row.signature_envelope_id.trim(),
+      ),
+      signedCopySaved: Boolean(row.signature_downloaded_at),
       createdLabel: inZone(row.created_at as string | null, context.timeZone, {
         month: "short",
         day: "numeric",
@@ -927,6 +997,9 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
             versionNumber: document.versionNumber,
           }
         : null,
+      documentMatchesContract: Boolean(
+        document && contractSourceMatches(document.sourceSnapshot, { body, scope, unfilled }),
+      ),
     };
   });
 }

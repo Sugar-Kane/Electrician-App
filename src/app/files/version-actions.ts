@@ -1,9 +1,15 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 
 import { getDocumentVersions, type DocumentVersion } from "@/lib/document-workspace";
 import { currentContext } from "@/lib/request-context";
+import {
+  clearStaleSignatureClaimsForJob,
+  signatureClaimStaleBefore,
+} from "@/lib/signature-claim";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,6 +62,56 @@ export async function restoreDocumentVersion(
 
   if (!owner) return { error: "That document has no earlier versions to go back to." };
 
+  let contractClaimToken = "";
+  if (owner.column === "contract_id") {
+    contractClaimToken = randomUUID();
+    const staleBefore = signatureClaimStaleBefore();
+    const { data: contractState } = await supabase
+      .from("contracts")
+      .select("job_id")
+      .eq("id", owner.id)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    const jobId = typeof contractState?.job_id === "string" ? contractState.job_id : "";
+    if (!jobId || !(await clearStaleSignatureClaimsForJob(supabase, {
+      organizationId,
+      jobId,
+      staleBefore,
+    }))) {
+      return { error: "That contract's signing state could not be checked." };
+    }
+
+    const { data: claimed, error: claimError } = await supabase
+      .from("contracts")
+      .update({
+        signature_send_token: contractClaimToken,
+        signature_send_started_at: new Date().toISOString(),
+      })
+      .eq("id", owner.id)
+      .eq("organization_id", organizationId)
+      .eq("status", "draft")
+      .is("signature_envelope_id", null)
+      .is("signature_send_token", null)
+      .select("id")
+      .maybeSingle();
+
+    if (claimError || !claimed) {
+      return {
+        error: "Earlier contract versions cannot be restored after signing has started.",
+      };
+    }
+  }
+
+  const releaseContractClaim = async () => {
+    if (!contractClaimToken) return;
+    await supabase
+      .from("contracts")
+      .update({ signature_send_token: null, signature_send_started_at: null })
+      .eq("id", owner.id)
+      .eq("organization_id", organizationId)
+      .eq("signature_send_token", contractClaimToken);
+  };
+
   const stamp = new Date().toISOString();
 
   /*
@@ -74,6 +130,7 @@ export async function restoreDocumentVersion(
 
   if (archived) {
     console.error("files: could not archive the current version", archived);
+    await releaseContractClaim();
     return { error: "That version could not be restored." };
   }
 
@@ -94,6 +151,7 @@ export async function restoreDocumentVersion(
       .eq(owner.column, owner.id)
       .eq("archived_at", stamp);
 
+    await releaseContractClaim();
     return { error: "That version could not be restored. Nothing was changed." };
   }
 
@@ -110,6 +168,7 @@ export async function restoreDocumentVersion(
    * for, and the notice says the text was not moved.
    */
   const restoredSource = await putSourceBack(supabase, organizationId, owner, row.source_snapshot);
+  await releaseContractClaim();
 
   revalidatePath("/files", "layout");
   revalidatePath("/invoices");

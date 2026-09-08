@@ -1,10 +1,32 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
 import { draftScope } from "@/lib/claude";
+import { contractSourceMatches } from "@/lib/contract-source";
+import { canRebuildContractPdf } from "@/lib/contract-signing-ui";
 import { fillTemplate, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
+import {
+  createDocumensoEnvelope,
+  deleteDocumensoEnvelope,
+  distributeDocumensoEnvelope,
+  DocumensoError,
+  getDocumensoEnvelope,
+  isDocumensoConfigured,
+  isDocumensoReady,
+} from "@/lib/documenso";
+import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { formatMoney } from "@/lib/invoice-messages";
+import { locateContractSignatureFields } from "@/lib/pdf/signature-fields";
+import { fileSignedContract } from "@/lib/signed-contract";
+import {
+  clearStaleSignatureClaimsForJob,
+  signatureClaimStaleBefore,
+} from "@/lib/signature-claim";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -221,24 +243,739 @@ export async function rebuildContractPdf(
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return { error: "You are not a member of a business." };
 
+  const { data: contract } = await supabase
+    .from("contracts")
+    .select("id, job_id, status, signature_envelope_id")
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .maybeSingle();
+  if (!contract) return { error: "That contract could not be found." };
+  if (!canRebuildContractPdf({
+    status: text(contract.status) as "draft" | "sent" | "signed" | "void",
+    signatureEnvelopeLinked: Boolean(text(contract.signature_envelope_id)),
+  })) {
+    return {
+      error: "A contract already prepared for signing cannot be rebuilt. Check its signing status instead.",
+    };
+  }
+
+  const jobId = text(contract.job_id);
+  const staleBefore = signatureClaimStaleBefore();
+  if (!jobId || !(await clearStaleSignatureClaimsForJob(supabase, {
+    organizationId,
+    jobId,
+    staleBefore,
+  }))) {
+    return { error: "That contract's signing state could not be checked. Try again." };
+  }
+
+  // Sending, assistant scope edits and manual PDF rebuilds all take the same
+  // job-wide claim. The words and the current PDF therefore cannot change
+  // while another request is preparing the copy a customer will sign.
+  const rebuildToken = randomUUID();
+  const { data: claimed, error: claimError } = await supabase
+    .from("contracts")
+    .update({
+      signature_send_token: rebuildToken,
+      signature_send_started_at: new Date().toISOString(),
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .eq("status", "draft")
+    .is("signature_envelope_id", null)
+    .is("signature_send_token", null)
+    .select("id")
+    .maybeSingle();
+  if (claimError || !claimed) {
+    return { error: "That contract is being prepared for signing. Refresh and try again." };
+  }
+
+  const releaseClaim = async () => {
+    await supabase
+      .from("contracts")
+      .update({ signature_send_token: null, signature_send_started_at: null })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("signature_send_token", rebuildToken);
+  };
+
   const { data: organization } = await supabase
     .from("organizations")
     .select("timezone")
     .eq("id", organizationId)
     .maybeSingle();
 
-  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
-  const document = await generateContractPdf({
-    database: supabase,
-    organizationId,
-    contractId,
-    timeZone: text(organization?.timezone) || "America/Los_Angeles",
-    uploadedBy: userId,
-  });
+  let document: Awaited<ReturnType<typeof import("@/lib/pdf/contract-data")["generateContractPdf"]>>;
+  try {
+    const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+    document = await generateContractPdf({
+      database: supabase,
+      organizationId,
+      contractId,
+      timeZone: text(organization?.timezone) || "America/Los_Angeles",
+      uploadedBy: userId,
+    });
+  } catch (error) {
+    console.error("contract: PDF rebuild failed", error);
+    await releaseClaim();
+    return { error: "The contract PDF could not be built. Try again." };
+  }
+  await releaseClaim();
 
   if (document.error) return { error: document.error };
 
   if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
 
   return { error: "", contractId, notice: "Contract PDF ready." };
+}
+
+function validEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/**
+ * Send the frozen PDF to the customer, then to the contractor, for signature.
+ *
+ * The checks here are the pre-signature checklist that can be proved from the
+ * record: no template blanks, a final PDF, both parties named, working email
+ * addresses and a signature block for each party.  Sending is a separate click
+ * from generating precisely because a newly drafted legal document is not
+ * final merely because a model finished writing one paragraph of it.
+ */
+export async function sendContractForSignature(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const contractId = String(formData.get("contractId") ?? "").trim();
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  if (!contractId || !jobNumber) return { error: "That contract could not be found." };
+  if (!isDocumensoReady()) {
+    return { error: "Document signing is not fully connected yet." };
+  }
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id ?? "";
+  if (!userId) return { error: "You are not signed in." };
+
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .limit(1)
+    .maybeSingle();
+  const organizationId = text(membership?.organization_id);
+  if (!organizationId) return { error: "You are not a member of a business." };
+
+  const { data } = await supabase
+    .from("contracts")
+    .select(
+      `id, body, scope, status, unfilled, signature_envelope_id, signature_sent_at,
+       signature_send_token, signature_send_started_at,
+       signature_recipient_email, signature_contractor_email,
+       jobs (
+         id, job_number,
+         customers ( first_name, last_name, company_name, email )
+       ),
+       organizations ( name, owner_notification_email, timezone )`,
+    )
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (!data) return { error: "That contract could not be found." };
+  const contract = data as Record<string, unknown>;
+  const status = text(contract.status);
+  const job = (contract.jobs ?? null) as Record<string, unknown> | null;
+  const jobId = text(job?.id);
+  const customer = (job?.customers ?? null) as Record<string, unknown> | null;
+  const organization = (contract.organizations ?? null) as Record<string, unknown> | null;
+
+  if (status === "signed") return { error: "", notice: "This contract is already signed." };
+  if (status === "sent") {
+    return { error: "", notice: "This contract is already waiting for signatures." };
+  }
+  if (status === "void") {
+    return { error: "This signature request was canceled or declined. Generate a new draft." };
+  }
+  if (!jobId) return { error: "This contract is not attached to a job." };
+
+  const { data: otherPending, error: pendingError } = await supabase
+    .from("contracts")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("job_id", jobId)
+    .eq("status", "sent")
+    .neq("id", contractId)
+    .limit(1)
+    .maybeSingle();
+  if (pendingError) {
+    return { error: "The other contracts for this job could not be checked. Try again." };
+  }
+  if (otherPending) {
+    return {
+      error: "Another contract for this job is already waiting for signatures. Finish or cancel it first.",
+    };
+  }
+
+  const unfilled = Array.isArray(contract.unfilled) ? contract.unfilled : [];
+  if (unfilled.length > 0) {
+    return {
+      error: `Fill in the ${unfilled.length === 1 ? "blank" : "blanks"} before sending this contract.`,
+    };
+  }
+
+  const customerName =
+    text(customer?.company_name) ||
+    [text(customer?.first_name), text(customer?.last_name)].filter(Boolean).join(" ");
+  const customerEmail = text(customer?.email).trim();
+  const businessName = text(organization?.name).trim();
+  const contractorEmail = text(organization?.owner_notification_email).trim();
+
+  if (!customerName) return { error: "Add the customer's name before sending the contract." };
+  if (!validEmail(customerEmail)) {
+    return { error: "Add a valid customer email address before sending the contract." };
+  }
+  if (!businessName || !validEmail(contractorEmail)) {
+    return { error: "Add the business name and owner notification email before sending." };
+  }
+
+  let envelopeId = text(contract.signature_envelope_id);
+  const sendToken = randomUUID();
+  const sendStartedAt = new Date().toISOString();
+  const staleBefore = signatureClaimStaleBefore();
+  const existingClaimToken = text(contract.signature_send_token);
+
+  /** Release only this request's claim; a newer retry must remain untouched. */
+  const releaseClaim = async () => {
+    await supabase
+      .from("contracts")
+      .update({ signature_send_token: null, signature_send_started_at: null })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("signature_send_token", sendToken);
+  };
+
+  /** One request owns creation, distribution, the status transition and activity. */
+  const claimSend = async (expectedEnvelopeId: string | null) => {
+    let query = supabase
+      .from("contracts")
+      .update({
+        signature_send_token: sendToken,
+        signature_send_started_at: sendStartedAt,
+      })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("status", "draft")
+      .is("signature_send_token", null);
+    query = expectedEnvelopeId
+      ? query.eq("signature_envelope_id", expectedEnvelopeId)
+      : query.is("signature_envelope_id", null);
+    return query.select("id").maybeSingle();
+  };
+
+  /**
+   * Take over an expired, provider-linked lease without ever removing it from
+   * the job-wide uniqueness guard. The provider state is checked immediately
+   * below before this owner is allowed to distribute anything.
+   */
+  const reclaimLinkedSend = async (expectedEnvelopeId: string, expectedToken: string) =>
+    supabase
+      .from("contracts")
+      .update({
+        signature_send_token: sendToken,
+        signature_send_started_at: sendStartedAt,
+      })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("status", "draft")
+      .eq("signature_envelope_id", expectedEnvelopeId)
+      .eq("signature_send_token", expectedToken)
+      .or(`signature_send_started_at.is.null,signature_send_started_at.lt.${staleBefore}`)
+      .select("id")
+      .maybeSingle();
+
+  // Claim before reading the PDF. Version restoration takes the same row-level
+  // claim, so the file inspected here cannot be swapped out between inspection
+  // and the provider upload.
+  const staleClaimsCleared = await clearStaleSignatureClaimsForJob(supabase, {
+    organizationId,
+    jobId,
+    staleBefore,
+  });
+  if (!staleClaimsCleared) {
+    return { error: "Old signature activity for this job could not be checked. Try again." };
+  }
+
+  const { data: claimed, error: claimError } = envelopeId && existingClaimToken
+    ? await reclaimLinkedSend(envelopeId, existingClaimToken)
+    : await claimSend(envelopeId || null);
+  if (claimError) {
+    if ((claimError as { code?: string }).code === "23505") {
+      return {
+        error: "Another contract for this job has an unresolved signing request. Check its signing status before sending this one.",
+      };
+    }
+    return { error: "The signature request could not be prepared. Try again." };
+  }
+  if (!claimed) {
+    const { data: latest } = await supabase
+      .from("contracts")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .maybeSingle();
+    return {
+      error: text(latest?.status) === "sent"
+        ? "This contract is already waiting for signatures."
+        : "Another signature request is being prepared. Refresh in a moment.",
+    };
+  }
+
+  type SigningMaterial = {
+    document: Record<string, unknown>;
+    pdf: Buffer;
+    fields: Awaited<ReturnType<typeof locateContractSignatureFields>>;
+  };
+
+  const loadSigningMaterial = async (): Promise<SigningMaterial | { error: string }> => {
+    const { data: documentData } = await supabase
+      .from("documents")
+      .select("storage_path, file_name, source_snapshot")
+      .eq("organization_id", organizationId)
+      .eq("contract_id", contractId)
+      .is("archived_at", null)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const document = (documentData ?? null) as Record<string, unknown> | null;
+
+    const storagePath = text(document?.storage_path);
+    if (!document || !storagePath) {
+      return { error: "Build the contract PDF before sending it." };
+    }
+    if (!contractSourceMatches(document.source_snapshot, {
+      body: text(contract.body),
+      scope: text(contract.scope),
+      unfilled: unfilled.map(text),
+    })) {
+      return { error: "This PDF is older than the contract wording. Rebuild it before sending." };
+    }
+
+    const downloaded = await getSupabaseAdmin().storage
+      .from(DOCUMENTS_BUCKET)
+      .download(storagePath);
+    if (downloaded.error || !downloaded.data) {
+      return { error: "The contract PDF could not be opened. Rebuild it and try again." };
+    }
+
+    const pdf = Buffer.from(await downloaded.data.arrayBuffer());
+    let fields: Awaited<ReturnType<typeof locateContractSignatureFields>>;
+    try {
+      fields = await locateContractSignatureFields(pdf);
+    } catch (error) {
+      console.error("contract: could not inspect signature fields", error);
+      return { error: "The signing places could not be read from this PDF. Rebuild it and try again." };
+    }
+
+    if (!fields.customer.some((field) => field.type === "SIGNATURE")) {
+      return { error: "This PDF has no customer signing place. Rebuild it and try again." };
+    }
+    if (!fields.contractor.some((field) => field.type === "SIGNATURE")) {
+      return { error: "This PDF has no contractor signing place. Rebuild it and try again." };
+    }
+
+    return { document, pdf, fields };
+  };
+
+  /** Create a corrected draft and make it the only envelope this claim owns. */
+  const createAndLinkEnvelope = async (
+    expectedEnvelopeId: string | null,
+  ): Promise<ContractState | null> => {
+    const material = await loadSigningMaterial();
+    if ("error" in material) {
+      await releaseClaim();
+      return material;
+    }
+
+    let nextEnvelopeId: string;
+    try {
+      nextEnvelopeId = await createDocumensoEnvelope({
+        pdf: material.pdf,
+        fileName: text(material.document.file_name) || `contract-job-${jobNumber}.pdf`,
+        title: `${businessName} work agreement — job #${jobNumber}`,
+        externalId: `volteira-contract:${contractId}`,
+        timeZone: text(organization?.timezone) || "America/Los_Angeles",
+        businessName,
+        recipients: [
+          {
+            email: customerEmail,
+            name: customerName,
+            role: "SIGNER",
+            signingOrder: 1,
+            fields: material.fields.customer,
+          },
+          {
+            email: contractorEmail,
+            name: businessName,
+            role: "SIGNER",
+            signingOrder: 2,
+            fields: material.fields.contractor,
+          },
+        ],
+      });
+    } catch (error) {
+      await releaseClaim();
+      return {
+        error: error instanceof DocumensoError ? error.message : "The contract could not be prepared for signing.",
+      };
+    }
+
+    let linkQuery = supabase
+      .from("contracts")
+      .update({
+        signature_provider: "documenso",
+        signature_envelope_id: nextEnvelopeId,
+        signature_recipient_email: customerEmail,
+        signature_contractor_email: contractorEmail,
+      })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .eq("signature_send_token", sendToken)
+      .eq("status", "draft");
+    linkQuery = expectedEnvelopeId
+      ? linkQuery.eq("signature_envelope_id", expectedEnvelopeId)
+      : linkQuery.is("signature_envelope_id", null);
+    const { data: linked, error: linkedError } = await linkQuery.select("id").maybeSingle();
+
+    let linkConfirmed = Boolean(linked);
+    if (linkedError) {
+      // A timeout can be reported after Postgres committed the update. Never
+      // delete the external draft until a fresh read proves it is not linked.
+      const { data: rechecked, error: recheckError } = await supabase
+        .from("contracts")
+        .select("signature_envelope_id, signature_send_token")
+        .eq("organization_id", organizationId)
+        .eq("id", contractId)
+        .maybeSingle();
+      if (recheckError || !rechecked) {
+        return { error: "The signature request could not be confirmed. Refresh shortly." };
+      }
+      const recheckedEnvelope = text(rechecked.signature_envelope_id);
+      if (recheckedEnvelope === nextEnvelopeId) {
+        if (text(rechecked.signature_send_token) !== sendToken) {
+          return { error: "Another signature request is being prepared. Refresh in a moment." };
+        }
+        linkConfirmed = true;
+      }
+    }
+
+    if (!linkConfirmed) {
+      // The provider draft contains customer details, so do not knowingly leave
+      // it orphaned if Volteira could not link it to its contract.
+      try {
+        await deleteDocumensoEnvelope(nextEnvelopeId);
+      } catch (cleanupError) {
+        console.error("contract: could not remove orphaned signature envelope", cleanupError);
+      }
+      await releaseClaim();
+      return { error: "The signature request could not be saved. Try again." };
+    }
+
+    envelopeId = nextEnvelopeId;
+
+    // The replacement is linked before the old draft is removed, so a lost
+    // database response can never leave the contract pointing at a deletion.
+    if (expectedEnvelopeId) {
+      try {
+        await deleteDocumensoEnvelope(expectedEnvelopeId);
+      } catch (cleanupError) {
+        console.error("contract: superseded signature envelope could not be removed", cleanupError);
+      }
+    }
+
+    return null;
+  };
+
+  if (!envelopeId) {
+    const creationError = await createAndLinkEnvelope(null);
+    if (creationError) return creationError;
+  } else {
+    // A linked envelope is a recovery, not permission to blindly POST again.
+    // Reading its provider state first prevents duplicate signing emails after
+    // a prior distribute succeeded but the local status write was interrupted.
+    let providerEnvelope: Awaited<ReturnType<typeof getDocumensoEnvelope>>;
+    try {
+      providerEnvelope = await getDocumensoEnvelope(envelopeId);
+    } catch (error) {
+      // This may be the retry after distribution succeeded and its response
+      // disappeared. Keep the linked claim until the provider can answer; a
+      // newer contract must not be sent on the assumption that this one was not.
+      return {
+        error: error instanceof DocumensoError ? error.message : "The signing status could not be checked.",
+      };
+    }
+
+    if (providerEnvelope.status === "COMPLETED") {
+      const filed = await fileSignedContract({ envelopeId, actorUserId: userId });
+      if (!filed.ok) return { error: filed.error };
+      revalidatePath(`/jobs/${jobNumber}`);
+      return { error: "", contractId, notice: "Signed contract saved to this job." };
+    }
+    if (["REJECTED", "CANCELLED"].includes(providerEnvelope.status)) {
+      const { data: voided, error: voidError } = await supabase
+        .from("contracts")
+        .update({
+          status: "void",
+          signature_rejected_at: new Date().toISOString(),
+          signature_send_token: null,
+          signature_send_started_at: null,
+        })
+        .eq("organization_id", organizationId)
+        .eq("id", contractId)
+        .eq("signature_send_token", sendToken)
+        .in("status", ["draft", "sent"])
+        .select("id")
+        .maybeSingle();
+      if (voidError) {
+        return { error: "The request was declined or canceled, but its status could not be saved. Refresh shortly." };
+      }
+      if (voided) {
+        await recordActivity(supabase, {
+          organizationId,
+          jobId,
+          actorUserId: userId,
+          eventType: "contract.declined",
+          label: "Contract signature request declined or canceled",
+          metadata: { envelope_id: envelopeId },
+          dedupeKey: `documenso:${envelopeId}:declined`,
+        });
+      }
+      revalidatePath(`/jobs/${jobNumber}`);
+      return { error: "This signature request was declined or canceled. Generate a new draft." };
+    }
+    if (providerEnvelope.status === "PENDING") {
+      const sentAt = text(contract.signature_sent_at) || new Date().toISOString();
+      const { data: recovered, error: recoveryError } = await supabase
+        .from("contracts")
+        .update({
+          status: "sent",
+          signature_sent_at: sentAt,
+          signature_send_token: null,
+          signature_send_started_at: null,
+        })
+        .eq("organization_id", organizationId)
+        .eq("id", contractId)
+        .eq("signature_send_token", sendToken)
+        .select("id")
+        .maybeSingle();
+      if (recoveryError || !recovered) {
+        return { error: "The contract was sent, but its status could not be recovered. Refresh shortly." };
+      }
+      await recordActivity(supabase, {
+        organizationId,
+        jobId,
+        actorUserId: userId,
+        eventType: "contract.sent",
+        label: "Contract sent for signature",
+        metadata: { via: "email", envelope_id: envelopeId },
+        dedupeKey: `documenso:${envelopeId}:sent`,
+      });
+      revalidatePath(`/jobs/${jobNumber}`);
+      return { error: "", contractId, notice: "This contract was already sent and is waiting for signatures." };
+    }
+    if (providerEnvelope.status !== "DRAFT") {
+      return {
+        error: "The signing service returned an unfamiliar document status. Check it again before sending another contract.",
+      };
+    }
+
+    const recipientChanged =
+      text(contract.signature_recipient_email).toLowerCase() !== customerEmail.toLowerCase() ||
+      text(contract.signature_contractor_email).toLowerCase() !== contractorEmail.toLowerCase();
+    if (recipientChanged) {
+      const replacementError = await createAndLinkEnvelope(envelopeId);
+      if (replacementError) return replacementError;
+    }
+  }
+
+  // A different request may have reclaimed an expired lease while this one was
+  // waiting on the provider. Only the request still owning the linked draft is
+  // allowed to cause customer email.
+  const { data: ownership, error: ownershipError } = await supabase
+    .from("contracts")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .eq("status", "draft")
+    .eq("signature_envelope_id", envelopeId)
+    .eq("signature_send_token", sendToken)
+    .maybeSingle();
+  if (ownershipError || !ownership) {
+    return { error: "Another signature request is being prepared. Refresh in a moment." };
+  }
+
+  try {
+    await distributeDocumensoEnvelope(envelopeId);
+  } catch {
+    // A network failure is ambiguous: Documenso may have accepted the send
+    // before the response disappeared. Keep the claim so another draft for
+    // this job cannot be distributed until a retry checks provider state.
+    return {
+      error: "The send could not be confirmed. Volteira will check its status before another send.",
+    };
+  }
+
+  const sentAt = new Date().toISOString();
+  const { data: saved, error: savedError } = await supabase
+    .from("contracts")
+    .update({
+      status: "sent",
+      signature_sent_at: sentAt,
+      signature_send_token: null,
+      signature_send_started_at: null,
+    })
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .eq("signature_send_token", sendToken)
+    .in("status", ["draft", "sent"])
+    .select("id")
+    .maybeSingle();
+
+  if (!saved && !savedError) {
+    const { data: latest } = await supabase
+      .from("contracts")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .maybeSingle();
+    const latestStatus = text(latest?.status);
+    if (["signed", "void"].includes(latestStatus)) {
+      await releaseClaim();
+      revalidatePath(`/jobs/${jobNumber}`);
+      return latestStatus === "signed"
+        ? { error: "", contractId, notice: "The contract has already been signed." }
+        : { error: "This signature request was declined or canceled. Generate a new draft." };
+    }
+  }
+
+  if (savedError || !saved) {
+    // The provider did send it. Retaining the claim on a database error blocks
+    // a duplicate POST; a later retry checks provider state before doing more.
+    return {
+      error: "The contract was sent, but its status did not save. Do not send it again; refresh shortly.",
+    };
+  }
+
+  await recordActivity(supabase, {
+    organizationId,
+    jobId,
+    actorUserId: userId,
+    eventType: "contract.sent",
+    label: "Contract sent for signature",
+    metadata: { via: "email", envelope_id: envelopeId },
+    dedupeKey: `documenso:${envelopeId}:sent`,
+  });
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  return {
+    error: "",
+    contractId,
+    notice: `Sent to ${customerEmail}. The customer signs first, then ${contractorEmail}.`,
+  };
+}
+
+/**
+ * Polling fallback for a missed webhook, also useful when the owner wants a
+ * current answer without waiting for the page to refresh itself.
+ */
+export async function refreshContractSignature(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const contractId = String(formData.get("contractId") ?? "").trim();
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  if (!contractId || !jobNumber) return { error: "That contract could not be found." };
+  if (!isDocumensoConfigured()) return { error: "Document signing is not connected yet." };
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user?.id) return { error: "You are not signed in." };
+
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .limit(1)
+    .maybeSingle();
+  const organizationId = text(membership?.organization_id);
+  if (!organizationId) return { error: "You are not a member of a business." };
+
+  const { data } = await supabase
+    .from("contracts")
+    .select("id, job_id, signature_envelope_id")
+    .eq("organization_id", organizationId)
+    .eq("id", contractId)
+    .maybeSingle();
+  const envelopeId = text(data?.signature_envelope_id);
+  if (!envelopeId) return { error: "This contract has not been sent for signature." };
+
+  let envelope: Awaited<ReturnType<typeof getDocumensoEnvelope>>;
+  try {
+    envelope = await getDocumensoEnvelope(envelopeId);
+  } catch (error) {
+    return { error: error instanceof DocumensoError ? error.message : "The signing status could not be checked." };
+  }
+
+  if (envelope.status === "COMPLETED") {
+    try {
+      const filed = await fileSignedContract({
+        envelopeId,
+        actorUserId: auth.user.id,
+      });
+      if (!filed.ok) return { error: filed.error };
+    } catch (error) {
+      console.error("contract: could not file signed copy", error);
+      return { error: "The contract is signed, but the signed PDF could not be saved. Try again." };
+    }
+
+    revalidatePath(`/jobs/${jobNumber}`);
+    return { error: "", contractId, notice: "Signed contract saved to this job." };
+  }
+
+  if (["REJECTED", "CANCELLED"].includes(envelope.status)) {
+    const { data: voided, error: voidError } = await supabase
+      .from("contracts")
+      .update({
+        status: "void",
+        signature_rejected_at: new Date().toISOString(),
+        signature_send_token: null,
+        signature_send_started_at: null,
+      })
+      .eq("organization_id", organizationId)
+      .eq("id", contractId)
+      .in("status", ["draft", "sent"])
+      .select("id")
+      .maybeSingle();
+    if (voidError) {
+      return { error: "The request was declined or canceled, but its status could not be saved. Try again." };
+    }
+    if (voided) {
+      await recordActivity(supabase, {
+        organizationId,
+        jobId: text(data?.job_id) || null,
+        actorUserId: auth.user.id,
+        eventType: "contract.declined",
+        label: "Contract signature request declined or canceled",
+        metadata: { envelope_id: envelopeId },
+        dedupeKey: `documenso:${envelopeId}:declined`,
+      });
+    }
+    revalidatePath(`/jobs/${jobNumber}`);
+    return { error: "This signature request was declined or canceled. Generate a new draft." };
+  }
+
+  if (envelope.status === "PENDING") {
+    return { error: "", contractId, notice: "Still waiting for signatures." };
+  }
+
+  return { error: "", contractId, notice: "The contract is prepared but has not been sent yet." };
 }

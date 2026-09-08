@@ -16,6 +16,7 @@ import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
+import { isDocumensoReady } from "@/lib/documenso";
 import { getJob, getJobContracts, getJobControls, getJobHistory } from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
@@ -410,7 +411,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
           {controls ? (
             <div className="py-4">
-              <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
+              <JobContract
+                jobNumber={controls.jobNumber}
+                contracts={contracts}
+                signingConfigured={isDocumensoReady()}
+              />
             </div>
           ) : null}
         </div>

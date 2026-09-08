@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { Check, ChevronRight, ExternalLink, KeyRound, LockKeyhole, PlugZap, Store, TriangleAlert } from "lucide-react";
+import { Check, ChevronRight, ExternalLink, FileSignature, KeyRound, LockKeyhole, PlugZap, Store, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import {
+  isDocumensoConfigured,
+  isDocumensoReady,
+  isDocumensoWebhookConfigured,
+} from "@/lib/documenso";
 import { currentContext } from "@/lib/request-context";
 import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -26,6 +31,10 @@ export default async function IntegrationsPage() {
   const suppliers = getSupplierIntegrations();
   const context = await currentContext();
   const canManage = context?.role === "owner";
+  const signingApiReady = isDocumensoConfigured();
+  const signingWebhookReady = isDocumensoWebhookConfigured();
+  const signingReady = isDocumensoReady();
+  const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://www.volteira.com").replace(/\/+$/, "");
   let connections: { id: string; createdAt: string; expiresAt: string; lastUsedAt: string }[] = [];
 
   if (context && canManage) {
@@ -49,6 +58,65 @@ export default async function IntegrationsPage() {
     <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT and approved supplier programs without exposing business credentials to technicians or customer browsers.">
       <div className="grid gap-4 lg:grid-cols-2">
         <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
+
+        <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid h-12 w-12 place-items-center rounded-control bg-white/5 text-brand">
+                <FileSignature className="h-6 w-6" aria-hidden />
+              </span>
+              <div>
+                <p className="text-xs text-ink-faint">Electronic signatures</p>
+                <h2 className="text-lg font-semibold">Documenso</h2>
+              </div>
+            </div>
+            <span
+              className={`rounded-full px-3 py-1.5 text-[10px] font-semibold ${
+                signingReady ? "bg-positive-bg text-positive" : "bg-caution-bg text-caution"
+              }`}
+            >
+              {signingReady ? "Connected" : "Setup needed"}
+            </span>
+          </div>
+
+          <p className="mt-4 text-sm leading-6 text-ink-muted">
+            Sends the customer and contractor the frozen contract PDF in order, then saves the
+            fully signed copy back to the job.
+          </p>
+
+          {!signingReady ? (
+            <div className="mt-4 rounded-control border border-line bg-white/[0.025] p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold">
+                <KeyRound className="h-4 w-4 text-brand" aria-hidden />
+                Needed in the production deployment
+              </p>
+              <ul className="mt-3 space-y-2 text-xs text-ink-muted">
+                {!signingApiReady ? <li>• Documenso team API token</li> : null}
+                {!signingWebhookReady ? <li>• Matching webhook secret</li> : null}
+              </ul>
+              <p className="mt-3 break-all text-xs leading-5 text-ink-faint">
+                Webhook: {appOrigin}/api/documenso/webhook
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 flex items-center gap-2 text-xs font-semibold text-positive">
+              <Check className="h-4 w-4" aria-hidden />
+              Sending and signed-copy tracking are ready
+            </p>
+          )}
+
+          {canManage ? (
+            <a
+              href="https://app.documenso.com"
+              target="_blank"
+              rel="noreferrer"
+              className="tap-target mt-5 flex min-h-12 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"
+            >
+              <span>Open Documenso</span>
+              <ExternalLink className="h-4 w-4" aria-hidden />
+            </a>
+          ) : null}
+        </section>
 
         {suppliers.map((supplier) => {
           const ready = supplier.stage === "configuration_ready";

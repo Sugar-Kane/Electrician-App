@@ -2,16 +2,24 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Download, FileText, LoaderCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, Download, FileText, LoaderCircle, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 
 import {
   generateContract,
+  refreshContractSignature,
   rebuildContractPdf,
+  sendContractForSignature,
   type ContractState,
 } from "@/app/jobs/[jobId]/contract-actions";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { FormMessage } from "@/components/ui/field";
+import {
+  canRebuildContractPdf,
+  isContractSignatureRecovery,
+  needsSignedCopyRecovery,
+  showsContractSigningSection,
+} from "@/lib/contract-signing-ui";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
 
 /**
@@ -57,6 +65,7 @@ function ContractRow({
   contract,
   jobNumber,
   current,
+  signingConfigured,
   open,
   onToggle,
 }: {
@@ -64,11 +73,63 @@ function ContractRow({
   jobNumber: string;
   /** The newest draft. The others are labelled as superseded. */
   current: boolean;
+  signingConfigured: boolean;
   open: boolean;
   onToggle: () => void;
 }) {
   const [state, rebuild, rebuilding] = useActionState(rebuildContractPdf, initialState);
+  const [sendState, sendForSignature, sending] = useActionState(
+    sendContractForSignature,
+    initialState,
+  );
+  const [refreshState, refreshSignature, refreshing] = useActionState(
+    refreshContractSignature,
+    initialState,
+  );
   const [showText, setShowText] = useState(false);
+  const needsRebuild = Boolean(
+    current &&
+      contract.status === "draft" &&
+      contract.document &&
+      !contract.documentMatchesContract,
+  );
+  const signatureRecovery = isContractSignatureRecovery(contract);
+  const canRebuild = canRebuildContractPdf(contract);
+  const signedCopyRecovery = needsSignedCopyRecovery({
+    status: contract.status,
+    signedCopySaved: contract.signedCopySaved,
+    hasDocument: Boolean(contract.document),
+  });
+
+  const signatureStatus = (() => {
+    if (contract.status === "signed") {
+      return {
+        className: "text-positive",
+        label: contract.signedLabel ? `Signed ${contract.signedLabel}` : "Signed",
+      };
+    }
+    if (contract.status === "sent") {
+      const recipient = contract.signatureRecipientEmail
+        ? ` · ${contract.signatureRecipientEmail}`
+        : "";
+      return {
+        className: "text-caution",
+        label: `${contract.signatureSentLabel ? `Sent ${contract.signatureSentLabel}` : "Sent"}${recipient}`,
+      };
+    }
+    if (contract.status === "void") {
+      return { className: "text-critical", label: "Signature request declined or canceled" };
+    }
+    return null;
+  })();
+  const showSigningSection = showsContractSigningSection({
+    current,
+    status: contract.status,
+    hasDocument: Boolean(contract.document),
+    unfilledCount: contract.unfilled.length,
+    documentMatchesContract: contract.documentMatchesContract,
+    signatureEnvelopeLinked: contract.signatureEnvelopeLinked,
+  });
 
   return (
     <li className="rounded-control border border-line">
@@ -82,10 +143,20 @@ function ContractRow({
           <span className="block text-sm font-semibold">
             {current ? "Draft" : "Superseded draft"} · {contract.createdLabel}
           </span>
-          {contract.unfilled.length > 0 ? (
+          {signatureRecovery ? (
+            <span className="mt-0.5 block text-xs text-caution">
+              Signature send needs checking
+            </span>
+          ) : contract.unfilled.length > 0 ? (
             <span className="mt-0.5 block text-xs text-caution">
               {contract.unfilled.length} {contract.unfilled.length === 1 ? "blank" : "blanks"} left
               to fill in
+            </span>
+          ) : needsRebuild ? (
+            <span className="mt-0.5 block text-xs text-caution">PDF needs rebuilding</span>
+          ) : signatureStatus ? (
+            <span className={`mt-0.5 block text-xs ${signatureStatus.className}`}>
+              {signatureStatus.label}
             </span>
           ) : (
             <span className="mt-0.5 block text-xs text-ink-faint">
@@ -115,7 +186,9 @@ function ContractRow({
                   className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
                 >
                   <Download className="h-4 w-4" aria-hidden />
-                  Download
+                  {contract.status === "signed" && contract.signedCopySaved
+                    ? "Download signed contract"
+                    : "Download contract PDF"}
                 </a>
 
                 <button
@@ -127,8 +200,35 @@ function ContractRow({
                   {showText ? "Hide text version" : "Text version"}
                 </button>
               </div>
+
+              {needsRebuild ? (
+                <form
+                  action={rebuild}
+                  className="mt-3 rounded-control border border-caution/30 bg-caution-bg p-4"
+                >
+                  <p className="text-sm leading-6 text-caution">
+                    The contract wording changed after this PDF was made. Rebuild it before
+                    sending so the customer receives the wording shown in the text version.
+                  </p>
+                  <input type="hidden" name="contractId" value={contract.id} />
+                  <input type="hidden" name="jobNumber" value={jobNumber} />
+                  <button
+                    type="submit"
+                    disabled={rebuilding}
+                    className="tap-target mt-3 inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
+                  >
+                    {rebuilding ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" aria-hidden />
+                    )}
+                    {rebuilding ? "Rebuilding…" : "Rebuild the PDF"}
+                  </button>
+                  {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
+                </form>
+              ) : null}
             </>
-          ) : (
+          ) : canRebuild ? (
             /*
               A contract drafted before documents existed, or one whose render
               failed. The words are safe either way — they were frozen when the
@@ -156,12 +256,95 @@ function ContractRow({
               </button>
               {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
             </form>
+          ) : (
+            <div className="rounded-control border border-caution/25 bg-caution-bg p-4">
+              <p className="text-sm leading-6 text-caution">
+                This contract has already entered signing, so Volteira will not replace it with a
+                newly rendered unsigned PDF. Use the signing status action below to recover the
+                provider copy.
+              </p>
+            </div>
           )}
 
           {showText || !contract.document ? (
             <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-control bg-sunken px-3 py-3 text-xs leading-6 text-ink-muted">
               {contract.body}
             </pre>
+          ) : null}
+
+          {showSigningSection ? (
+            <div className="mt-3 border-t border-line pt-3">
+              {contract.status === "draft" ? (
+                signingConfigured ? (
+                  <form action={sendForSignature}>
+                    <input type="hidden" name="contractId" value={contract.id} />
+                    <input type="hidden" name="jobNumber" value={jobNumber} />
+                    <button
+                      type="submit"
+                      disabled={sending}
+                      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60 sm:w-auto"
+                    >
+                      {sending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Send className="h-4 w-4" aria-hidden />
+                      )}
+                      {sending
+                        ? signatureRecovery
+                          ? "Checking…"
+                          : "Sending…"
+                        : signatureRecovery
+                          ? "Check or finish sending"
+                          : "Send for signature"}
+                    </button>
+                    <p className="mt-2 text-xs leading-5 text-ink-faint">
+                      {signatureRecovery
+                        ? "Volteira checks Documenso first, then safely finishes the send only if it is still needed."
+                        : "The customer signs first. The contractor receives it next, and the completed PDF is saved back to this job."}
+                    </p>
+                  </form>
+                ) : (
+                  <p className="rounded-control border border-caution/25 bg-caution-bg px-3 py-2 text-xs text-caution">
+                    Connect Documenso before sending this contract for signature.
+                  </p>
+                )
+              ) : contract.status === "sent" || signedCopyRecovery ? (
+                <form action={refreshSignature}>
+                  <input type="hidden" name="contractId" value={contract.id} />
+                  <input type="hidden" name="jobNumber" value={jobNumber} />
+                  <button
+                    type="submit"
+                    disabled={refreshing}
+                    className="tap-target inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60 sm:w-auto"
+                  >
+                    {refreshing ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : contract.status === "signed" ? (
+                      <Download className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" aria-hidden />
+                    )}
+                    {refreshing
+                      ? "Checking…"
+                      : contract.status === "signed"
+                        ? contract.signedCopySaved
+                          ? "Recover signed copy"
+                          : "Save signed copy"
+                        : "Check signature status"}
+                  </button>
+                </form>
+              ) : contract.status === "signed" ? (
+                <p className="flex items-center gap-2 text-sm font-semibold text-positive">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  Signed copy saved with this job
+                </p>
+              ) : null}
+
+              <FormMessage
+                error={sendState.error || refreshState.error}
+                notice={sendState.notice || refreshState.notice}
+              />
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -172,9 +355,11 @@ function ContractRow({
 export function JobContract({
   jobNumber,
   contracts,
+  signingConfigured,
 }: {
   jobNumber: string;
   contracts: JobContractRecord[];
+  signingConfigured: boolean;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
   // The newest draft is open on arrival. It is the one somebody came here to
@@ -214,6 +399,7 @@ export function JobContract({
               contract={contract}
               jobNumber={jobNumber}
               current={index === 0}
+              signingConfigured={signingConfigured}
               open={open === contract.id}
               onToggle={() => setOpen(open === contract.id ? null : contract.id)}
             />

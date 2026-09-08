@@ -92,6 +92,9 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "job.no_show": { kind: "appointment", title: "Nobody home" },
   "estimate.sent": { kind: "money", title: "Estimate sent" },
   "estimate.approved": { kind: "money", title: "Estimate approved" },
+  "contract.sent": { kind: "job", title: "Contract sent for signature" },
+  "contract.signed": { kind: "job", title: "Contract signed" },
+  "contract.declined": { kind: "job", title: "Contract signature declined or canceled" },
   "invoice.sent": { kind: "money", title: "Invoice sent" },
   "invoice.paid": { kind: "money", title: "Invoice paid" },
 };
