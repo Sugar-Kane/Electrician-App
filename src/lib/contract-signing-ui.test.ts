@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   canRebuildContractPdf,
   isContractSignatureRecovery,
+  needsSignedCopyRecovery,
   showsContractSigningSection,
 } from "./contract-signing-ui.ts";
 
@@ -69,5 +70,24 @@ test("sent and signed contracts retain their status controls", () => {
       hasDocument: false,
     }),
     true,
+  );
+});
+
+test("a signed contract can recover a missing sealed copy or document", () => {
+  assert.equal(
+    needsSignedCopyRecovery({ status: "signed", signedCopySaved: false, hasDocument: true }),
+    true,
+  );
+  assert.equal(
+    needsSignedCopyRecovery({ status: "signed", signedCopySaved: true, hasDocument: false }),
+    true,
+  );
+  assert.equal(
+    needsSignedCopyRecovery({ status: "signed", signedCopySaved: true, hasDocument: true }),
+    false,
+  );
+  assert.equal(
+    needsSignedCopyRecovery({ status: "sent", signedCopySaved: false, hasDocument: false }),
+    false,
   );
 });

@@ -899,7 +899,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
 
   const columns = `id, body, scope, unfilled, status, created_at, signature_sent_at, signed_at,
     signature_recipient_email, signature_downloaded_at, signature_envelope_id`;
-  const [recentResult, recoveryResult] = await Promise.all([
+  const [recentResult, pendingRecoveryResult, completedRecoveryResult] = await Promise.all([
     context.database
       .from("contracts")
       .select(columns)
@@ -908,21 +908,34 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
       .order("created_at", { ascending: false })
       .limit(10),
     // A provider-linked draft may hold the job-wide send lock after an
-    // ambiguous response. It must remain reachable even after it falls beyond
-    // the ordinary ten-draft history window.
+    // ambiguous response, and a sent contract holds it while signatures are
+    // outstanding. Both must remain reachable after they fall beyond the
+    // ordinary ten-draft history window.
     context.database
       .from("contracts")
       .select(columns)
       .eq("organization_id", context.organizationId)
       .eq("job_id", jobId)
-      .eq("status", "draft")
+      .in("status", ["draft", "sent"])
+      .not("signature_envelope_id", "is", null)
+      .order("created_at", { ascending: false }),
+    // A completed provider envelope whose sealed PDF has not been filed is
+    // also an active recovery item, even though it no longer blocks a send.
+    context.database
+      .from("contracts")
+      .select(columns)
+      .eq("organization_id", context.organizationId)
+      .eq("job_id", jobId)
+      .eq("status", "signed")
+      .is("signature_downloaded_at", null)
       .not("signature_envelope_id", "is", null)
       .order("created_at", { ascending: false }),
   ]);
 
   const combined = [
     ...((recentResult.data ?? []) as Record<string, unknown>[]),
-    ...((recoveryResult.data ?? []) as Record<string, unknown>[]),
+    ...((pendingRecoveryResult.data ?? []) as Record<string, unknown>[]),
+    ...((completedRecoveryResult.data ?? []) as Record<string, unknown>[]),
   ];
   const rows = [...new Map(combined.map((row) => [String(row.id), row])).values()].sort(
     (a, b) => Date.parse(String(b.created_at ?? "")) - Date.parse(String(a.created_at ?? "")),

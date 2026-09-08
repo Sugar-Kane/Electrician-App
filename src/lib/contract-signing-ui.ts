@@ -47,3 +47,12 @@ export function isContractSignatureRecovery(input: {
 }): boolean {
   return input.status === "draft" && input.signatureEnvelopeLinked;
 }
+
+/** A provider-completed contract still needs an actionable sealed PDF. */
+export function needsSignedCopyRecovery(input: {
+  status: ContractSigningStatus;
+  signedCopySaved: boolean;
+  hasDocument: boolean;
+}): boolean {
+  return input.status === "signed" && (!input.signedCopySaved || !input.hasDocument);
+}

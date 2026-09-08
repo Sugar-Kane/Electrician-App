@@ -17,6 +17,7 @@ import { FormMessage } from "@/components/ui/field";
 import {
   canRebuildContractPdf,
   isContractSignatureRecovery,
+  needsSignedCopyRecovery,
   showsContractSigningSection,
 } from "@/lib/contract-signing-ui";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
@@ -94,6 +95,11 @@ function ContractRow({
   );
   const signatureRecovery = isContractSignatureRecovery(contract);
   const canRebuild = canRebuildContractPdf(contract);
+  const signedCopyRecovery = needsSignedCopyRecovery({
+    status: contract.status,
+    signedCopySaved: contract.signedCopySaved,
+    hasDocument: Boolean(contract.document),
+  });
 
   const signatureStatus = (() => {
     if (contract.status === "signed") {
@@ -302,8 +308,7 @@ function ContractRow({
                     Connect Documenso before sending this contract for signature.
                   </p>
                 )
-              ) : contract.status === "sent" ||
-                (contract.status === "signed" && !contract.signedCopySaved) ? (
+              ) : contract.status === "sent" || signedCopyRecovery ? (
                 <form action={refreshSignature}>
                   <input type="hidden" name="contractId" value={contract.id} />
                   <input type="hidden" name="jobNumber" value={jobNumber} />
@@ -322,7 +327,9 @@ function ContractRow({
                     {refreshing
                       ? "Checking…"
                       : contract.status === "signed"
-                        ? "Save signed copy"
+                        ? contract.signedCopySaved
+                          ? "Recover signed copy"
+                          : "Save signed copy"
                         : "Check signature status"}
                   </button>
                 </form>

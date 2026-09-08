@@ -179,8 +179,28 @@ export async function fileSignedContract(input: {
     .limit(1)
     .maybeSingle();
 
-  if (!current) return { ok: false, error: "The original contract PDF is missing." };
-  const draft = current as Record<string, unknown>;
+  // If the sealed row was removed after finalization, the unsigned source is
+  // normally still present as an archived version. It remains safe metadata
+  // for filing a fresh provider copy; its object is not reused or exposed.
+  let source = current as Record<string, unknown> | null;
+  if (!source) {
+    const { data: archived } = await admin
+      .from("documents")
+      .select(
+        `id, folder_id, job_id, file_name, display_name, version_number,
+         uploaded_by, source_snapshot`,
+      )
+      .eq("organization_id", organizationId)
+      .eq("contract_id", contractId)
+      .not("archived_at", "is", null)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    source = (archived as Record<string, unknown> | null) ?? null;
+  }
+
+  if (!source) return { ok: false, error: "The original contract PDF is missing." };
+  const draft = source;
 
   await ensureDocumentsBucket();
   const fileName = signedFileName(text(draft.file_name));
