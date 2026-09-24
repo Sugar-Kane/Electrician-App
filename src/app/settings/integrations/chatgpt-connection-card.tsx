@@ -47,11 +47,11 @@ export function ChatGptConnectionCard({
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <form action={action}>
-          <button disabled={!canManage || pending} className="tap-target min-h-11 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50">
+          <button disabled={pending} className="tap-target min-h-11 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50">
             {pending ? "Creating…" : "Connect ChatGPT"}
           </button>
         </form>
-        <p className="text-xs text-ink-faint">Each connection expires after 180 days and can be revoked immediately.</p>
+        <p className="text-xs text-ink-faint">{canManage ? "Each connection expires after 180 days and can be revoked immediately." : "If your current browser session is not recognized as the owner, this action will explain what to fix. No credential is issued without server-side owner verification."}</p>
       </div>
 
       {connections.length > 0 ? (
