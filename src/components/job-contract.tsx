@@ -2,15 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Download, FileText, LoaderCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, Download, FileText, LoaderCircle, MessageSquare, PenLine, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   generateContract,
   rebuildContractPdf,
+  sendSigningLink,
   type ContractState,
 } from "@/app/jobs/[jobId]/contract-actions";
 import { PdfViewer } from "@/components/pdf-viewer";
+import { SignaturePad } from "@/components/signature-pad";
 import { FormMessage } from "@/components/ui/field";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
 
@@ -52,16 +55,116 @@ function GenerateButton({ existing }: { existing: boolean }) {
   );
 }
 
+function SendLinkButton({ again }: { again: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60"
+    >
+      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <MessageSquare className="h-4 w-4" aria-hidden />}
+      {pending ? "Sending…" : again ? "Text the link again" : "Text signing link"}
+    </button>
+  );
+}
+
+/**
+ * Getting the customer's signature: at the door, or by text.
+ *
+ * Both end in the same place — the one signing action, keyed by the contract's
+ * token — so a signature taken on this phone and one taken from a text are
+ * recorded identically. Only how the customer reached the pad differs.
+ */
+function ContractSigning({
+  contract,
+  jobNumber,
+  customerName,
+}: {
+  contract: JobContractRecord;
+  jobNumber: string;
+  customerName: string;
+}) {
+  const router = useRouter();
+  const [inPerson, setInPerson] = useState(false);
+  const [state, send] = useActionState(sendSigningLink, initialState);
+
+  if (contract.signedLabel) {
+    return (
+      <p className="mt-3 flex items-start gap-2 rounded-control border border-brand/30 bg-brand/10 px-3 py-2 text-sm">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+        <span>
+          Signed by <strong>{contract.signatureName}</strong> · {contract.signedLabel}
+        </span>
+      </p>
+    );
+  }
+
+  // Blanks are already named on the row above; anything else is said here.
+  if (contract.unsignable) {
+    return contract.unfilled.length > 0 ? null : (
+      <p className="mt-3 text-sm text-ink-muted">{contract.unsignable}</p>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {inPerson ? (
+        /*
+          Handed across at the door. The pad is the customer's, on this phone,
+          and the page refreshes once they have signed so the signed copy is
+          the one on screen.
+        */
+        <div className="rounded-control border border-line p-3">
+          <p className="mb-3 text-sm text-ink-muted">Hand the phone to the customer to sign.</p>
+          <SignaturePad token={contract.publicToken} defaultName={customerName} onSigned={() => router.refresh()} />
+          <button
+            type="button"
+            onClick={() => setInPerson(false)}
+            className="tap-target mt-2 inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-ink-muted"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setInPerson(true)}
+            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
+          >
+            <PenLine className="h-4 w-4" aria-hidden />
+            Sign in person
+          </button>
+          <form action={send}>
+            <input type="hidden" name="contractId" value={contract.id} />
+            <input type="hidden" name="jobNumber" value={jobNumber} />
+            <SendLinkButton again={Boolean(contract.sentLabel)} />
+          </form>
+        </div>
+      )}
+
+      {contract.sentLabel && !state.notice ? (
+        <p className="text-xs text-ink-faint">Signing link texted {contract.sentLabel}.</p>
+      ) : null}
+      {state.notice ? <p className="text-sm text-brand">{state.notice}</p> : null}
+      {state.error ? <p className="text-sm text-critical">{state.error}</p> : null}
+    </div>
+  );
+}
+
 /** One draft, with its document behind the row that names it. */
 function ContractRow({
   contract,
   jobNumber,
+  customerName,
   current,
   open,
   onToggle,
 }: {
   contract: JobContractRecord;
   jobNumber: string;
+  customerName: string;
   /** The newest draft. The others are labelled as superseded. */
   current: boolean;
   open: boolean;
@@ -80,7 +183,10 @@ function ContractRow({
       >
         <span className="min-w-0">
           <span className="block text-sm font-semibold">
-            {current ? "Draft" : "Superseded draft"} · {contract.createdLabel}
+            {/* Signed first: an agreement signed before a newer draft existed is
+                still the signed contract, not a superseded draft. */}
+            {contract.signedLabel ? "Signed contract" : current ? "Draft" : "Superseded draft"} ·{" "}
+            {contract.createdLabel}
           </span>
           {contract.unfilled.length > 0 ? (
             <span className="mt-0.5 block text-xs text-caution">
@@ -89,7 +195,13 @@ function ContractRow({
             </span>
           ) : (
             <span className="mt-0.5 block text-xs text-ink-faint">
-              {contract.document ? "Ready to send" : "Complete"}
+              {contract.signedLabel
+                ? `Signed by ${contract.signatureName}`
+                : !current
+                  ? "Can no longer be signed"
+                  : contract.document
+                    ? "Ready to sign"
+                    : "Complete"}
             </span>
           )}
         </span>
@@ -158,6 +270,10 @@ function ContractRow({
             </form>
           )}
 
+          {current ? (
+            <ContractSigning contract={contract} jobNumber={jobNumber} customerName={customerName} />
+          ) : null}
+
           {showText || !contract.document ? (
             <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-control bg-sunken px-3 py-3 text-xs leading-6 text-ink-muted">
               {contract.body}
@@ -172,9 +288,12 @@ function ContractRow({
 export function JobContract({
   jobNumber,
   contracts,
+  customerName = "",
 }: {
   jobNumber: string;
   contracts: JobContractRecord[];
+  /** Pre-fills the name on the signing pad. The customer can correct it. */
+  customerName?: string;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
   // The newest draft is open on arrival. It is the one somebody came here to
@@ -213,6 +332,7 @@ export function JobContract({
               key={contract.id}
               contract={contract}
               jobNumber={jobNumber}
+              customerName={customerName}
               current={index === 0}
               open={open === contract.id}
               onToggle={() => setOpen(open === contract.id ? null : contract.id)}
