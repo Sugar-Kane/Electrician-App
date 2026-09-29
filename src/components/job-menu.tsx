@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Ban, CalendarClock, FileText, FolderOpen, MoreHorizontal, Pencil } from "lucide-react";
 
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
+import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
 
 /**
  * The things a job can have done to it that are not the work.
@@ -47,7 +48,8 @@ export function JobMenu({ jobNumber, hasContract }: { jobNumber: string; hasCont
         </MenuItem>
       </Link>
 
-      <Link href={`/jobs/${jobNumber}#contract`} role="menuitem">
+      {/* Opened before the router scrolls to it: it lives in a closed section. */}
+      <Link href={`/jobs/${jobNumber}#${CONTRACT_ANCHOR}`} role="menuitem" onClick={revealContract}>
         <MenuItem icon={<FileText className="h-[18px] w-[18px]" aria-hidden />}>
           {hasContract ? "View contract" : "Generate contract"}
         </MenuItem>
