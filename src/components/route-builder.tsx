@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { JobMap, type MapStop } from "@/components/job-map";
+import { formatDayLabel } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
 import {
   buildAppleDirectionsUrl,
@@ -36,6 +37,7 @@ import {
   spanInMiles,
   type RouteStopInput,
 } from "@/lib/route-order";
+import { routeDateFor } from "@/lib/route-date";
 import {
   buildRouteKey,
   getRouteProgressServerSnapshot,
@@ -112,7 +114,7 @@ export function RouteBuilder({
   const [skipped, setSkipped] = useState<string[]>([]);
   /** Hand-moved order. Null means "however the ordering came out". */
   const [manualOrder, setManualOrder] = useState<string[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(focusJobId ?? null);
 
   const storedStart = useSyncExternalStore(
     subscribeRouteStart,
@@ -214,15 +216,15 @@ export function RouteBuilder({
   const usingFallbackStart =
     (startMode === "current" && !position) || (startMode === "custom" && !savedStartAddress);
 
+  const routeDate = useMemo(
+    () => routeDateFor({ jobs, today, focusJobId }),
+    [focusJobId, jobs, today],
+  );
+
   /** Every job for the day — no cap. The old three-stop limit lost work. */
   const dayStops = useMemo<Stop[]>(() => {
-    const dayWithWork =
-      jobs.find((job) => job.date === today && job.status !== "Canceled")?.date ??
-      jobs.find((job) => job.date >= today && job.status !== "Canceled")?.date ??
-      today;
-
     const dayJobs = jobs.filter(
-      (job) => job.date === dayWithWork && job.status !== "Canceled",
+      (job) => job.date === routeDate && job.status !== "Canceled",
     );
 
     const supply: Stop = {
@@ -246,7 +248,7 @@ export function RouteBuilder({
         job,
       })),
     ];
-  }, [jobs, supplyStore, today]);
+  }, [jobs, routeDate, supplyStore]);
 
   const ordered = useMemo<Stop[]>(() => {
     const live = dayStops.map((stop) => ({ ...stop, skipped: skipped.includes(stop.id) }));
@@ -424,10 +426,11 @@ export function RouteBuilder({
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">
-                {built ? "Route built" : "Today on the map"}
+                {built ? "Route built" : "Route on the map"}
               </h2>
               <p className="text-sm text-ink-muted">
-                {ordered.length} {ordered.length === 1 ? "stop" : "stops"} ·{" "}
+                {routeDate === today ? "Today" : formatDayLabel(routeDate)} · {ordered.length}{" "}
+                {ordered.length === 1 ? "stop" : "stops"} ·{" "}
                 {miles > 0 ? `about ${miles} mi in a straight line` : "distance unknown"}
               </p>
             </div>
@@ -502,26 +505,26 @@ export function RouteBuilder({
                           onClick={() => move(stop.id, -1)}
                           disabled={index <= 1}
                           aria-label={`Move ${stop.label} earlier`}
-                          className="grid h-8 w-8 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
+                          className="tap-target grid h-11 w-11 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
                         >
-                          <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+                          <ArrowUp className="h-4 w-4" aria-hidden />
                         </button>
                         <button
                           type="button"
                           onClick={() => move(stop.id, 1)}
                           disabled={index >= routeStops.length - 1}
                           aria-label={`Move ${stop.label} later`}
-                          className="grid h-8 w-8 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
+                          className="tap-target grid h-11 w-11 place-items-center rounded-control border border-line text-ink-muted disabled:opacity-30"
                         >
-                          <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+                          <ArrowDown className="h-4 w-4" aria-hidden />
                         </button>
                         <button
                           type="button"
                           onClick={() => toggleSkip(stop.id)}
                           aria-label={`Drop ${stop.label} from the route`}
-                          className="grid h-8 w-8 place-items-center rounded-control border border-line text-ink-faint"
+                          className="tap-target grid h-11 w-11 place-items-center rounded-control border border-line text-ink-faint"
                         >
-                          <X className="h-3.5 w-3.5" aria-hidden />
+                          <X className="h-4 w-4" aria-hidden />
                         </button>
                       </div>
                     ) : null}
@@ -541,7 +544,7 @@ export function RouteBuilder({
                     <button
                       type="button"
                       onClick={() => toggleSkip(stop.id)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-brand"
+                      className="tap-target inline-flex min-h-11 items-center gap-1 px-2 text-xs font-semibold text-brand"
                     >
                       <Undo2 className="h-3 w-3" aria-hidden />
                       Put back

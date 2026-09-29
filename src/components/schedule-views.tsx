@@ -27,12 +27,10 @@ function countable(jobs: PilotJob[]): PilotJob[] {
 export function WeekView({
   days,
   jobs,
-  today,
   onPickDay,
 }: {
   days: CalendarDay[];
   jobs: PilotJob[];
-  today: string;
   /**
    * Opening a day.
    *
