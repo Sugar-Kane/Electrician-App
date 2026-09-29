@@ -41,6 +41,30 @@ create index if not exists sms_booking_requests_deposit_session_idx
   on public.sms_booking_requests(deposit_checkout_session_id)
   where deposit_checkout_session_id is not null;
 
+/*
+ * Replayable from an empty database.
+ *
+ * Added after this migration ran: `create or replace` cannot add return
+ * columns — Postgres refuses rather than guessing — so building a database
+ * from these files stopped here. The first version, from 20260809230000, has
+ * to go before the one below can be created, as 20260905193000 already does for
+ * the next.
+ *
+ * Only that first version, though. A database that already has a later one,
+ * as production does, is left alone: re-running this file against it fails
+ * exactly as it always has, rather than rolling the live function back.
+ * The grants are re-applied below.
+ */
+do $$
+begin
+  if pg_catalog.to_regprocedure('public.get_phone_booking_confirmation(uuid)') is not null
+     and pg_catalog.pg_get_function_result(
+           pg_catalog.to_regprocedure('public.get_phone_booking_confirmation(uuid)')
+         ) not like '%intake_answers%' then
+    drop function public.get_phone_booking_confirmation(uuid);
+  end if;
+end $$;
+
 -- The confirmation page grows the two things the caller now expects to see:
 -- what they were asked, and what they owe.
 create or replace function public.get_phone_booking_confirmation(p_token uuid)
