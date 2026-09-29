@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Download, FileText, LoaderCircle, MessageSquare, PenLine, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import {
 import { PdfViewer } from "@/components/pdf-viewer";
 import { SignaturePad } from "@/components/signature-pad";
 import { FormMessage } from "@/components/ui/field";
+import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
 
 /**
@@ -300,9 +301,18 @@ export function JobContract({
   // look at, and a list of collapsed rows with the document one tap away is the
   // plain-text view again with extra steps.
   const [open, setOpen] = useState<string | null>(contracts[0]?.id ?? null);
+  const section = useRef<HTMLElement>(null);
+
+  // Arriving already pointed here — a new tab, the back button, a link from
+  // another page — the section is still folded away. Open it and go to it.
+  useEffect(() => {
+    if (window.location.hash !== `#${CONTRACT_ANCHOR}`) return;
+    revealContract();
+    section.current?.scrollIntoView({ block: "start" });
+  }, []);
 
   return (
-    <section>
+    <section id={CONTRACT_ANCHOR} ref={section} className="scroll-mt-24">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">Contract</h2>

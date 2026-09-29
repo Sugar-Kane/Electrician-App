@@ -8,6 +8,7 @@ import {
   isPngDataUri,
   readPrintedName,
   readSignature,
+  signingLinkMessage,
   unsignableBecause,
 } from "./contract-signing.ts";
 
@@ -222,4 +223,33 @@ test("nothing is printed unless every part of the signature is there", () => {
       JSON.stringify(missing),
     );
   }
+});
+
+test("the signing text says which job it is for, as the database numbers it", () => {
+  const link = "https://volteira.com/contract/aeb0da97-aadc-45c7-87f5-cd6cfd2152f8";
+  // PostgREST hands job_number back as a number. That is the case that went
+  // missing: every text read as if there were no job number at all.
+  assert.equal(
+    signingLinkMessage({ businessName: "Test Electric Co", jobNumber: 2, link }),
+    `Test Electric Co: here is your contract for job #2 to read and sign: ${link}`,
+  );
+  assert.equal(
+    signingLinkMessage({ businessName: "Test Electric Co", jobNumber: "14", link }),
+    `Test Electric Co: here is your contract for job #14 to read and sign: ${link}`,
+  );
+});
+
+test("the signing text still goes out without a job number or a business name", () => {
+  const link = "https://volteira.com/contract/x";
+  for (const jobNumber of [null, undefined, "", Number.NaN, {}]) {
+    assert.equal(
+      signingLinkMessage({ businessName: "Test Electric Co", jobNumber, link }),
+      `Test Electric Co: here is your contract to read and sign: ${link}`,
+      String(jobNumber),
+    );
+  }
+  assert.equal(
+    signingLinkMessage({ businessName: "  ", jobNumber: 3, link }),
+    `Your electrician: here is your contract for job #3 to read and sign: ${link}`,
+  );
 });

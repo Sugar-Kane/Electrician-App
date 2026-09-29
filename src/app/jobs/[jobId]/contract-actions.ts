@@ -302,7 +302,7 @@ export async function sendSigningLink(
     superseded = Boolean(newest) && text(newest?.id) !== contractId;
   }
 
-  const { unsignableBecause } = await import("@/lib/contract-signing");
+  const { signingLinkMessage, unsignableBecause } = await import("@/lib/contract-signing");
   const blocked = unsignableBecause({
     status: text(contract.status) || "draft",
     unfilled: Array.isArray(contract.unfilled) ? (contract.unfilled as string[]) : [],
@@ -377,11 +377,9 @@ export async function sendSigningLink(
   }
 
   const { sendSms } = await import("@/lib/twilio");
-  const businessName = text(business?.name) || "Your electrician";
-  const number = text(job?.job_number);
   const sent = await sendSms({
     to: phone,
-    body: `${businessName}: here is your contract${number ? ` for job #${number}` : ""} to read and sign: ${link}`,
+    body: signingLinkMessage({ businessName: text(business?.name), jobNumber: job?.job_number, link }),
     messagingServiceSid,
   });
 

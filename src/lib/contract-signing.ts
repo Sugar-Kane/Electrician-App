@@ -234,3 +234,22 @@ export function documentSignature(
     fingerprint: fingerprintOf(hash),
   };
 }
+
+/**
+ * The text that takes a signing link to the customer.
+ *
+ * The job number is whatever the database handed back — a number, not a
+ * string. It used to pass through a helper that keeps strings only, so every
+ * link went out without saying which job it was for, which is the first thing
+ * somebody with two quotes open wants to know.
+ */
+export function signingLinkMessage(input: { businessName: string; jobNumber: unknown; link: string }): string {
+  const business = input.businessName.trim() || "Your electrician";
+  const job =
+    typeof input.jobNumber === "number" && Number.isFinite(input.jobNumber)
+      ? String(input.jobNumber)
+      : typeof input.jobNumber === "string"
+        ? input.jobNumber.trim()
+        : "";
+  return `${business}: here is your contract${job ? ` for job #${job}` : ""} to read and sign: ${input.link}`;
+}
