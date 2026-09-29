@@ -81,6 +81,13 @@ export async function storeGeneratedPdf(input: {
   displayName: string;
   fileName: string;
   element: ReactElement<DocumentProps>;
+  /**
+   * Who produced this version, or empty when nobody signed in did.
+   *
+   * A customer signing from a texted link has no account, and the signed copy
+   * is still a version somebody caused. Empty is stored as null rather than
+   * sent to a uuid column, which would reject it.
+   */
   uploadedBy: string;
   /**
    * The record this was rendered from.
@@ -159,7 +166,7 @@ export async function storeGeneratedPdf(input: {
     size_bytes: pdf.byteLength,
     checksum_sha256: createHash("sha256").update(pdf).digest("hex"),
     version_number: versionNumber,
-    uploaded_by: input.uploadedBy,
+    uploaded_by: input.uploadedBy || null,
     // Null rather than absent when there is none, so a version that predates
     // snapshots is distinguishable from one whose source was not passed.
     source_snapshot: input.sourceSnapshot ?? null,

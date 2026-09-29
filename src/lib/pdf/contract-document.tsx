@@ -1,4 +1,4 @@
-import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import {
@@ -39,6 +39,26 @@ export type ContractDocumentData = {
   body: string;
   /** Placeholders the job could not supply, named so nobody signs around them. */
   unfilled: string[];
+  /** Present once the customer has signed in the app. */
+  signature?: ContractSignature;
+};
+
+export type ContractSignature = {
+  method: "drawn" | "typed";
+  /** The printed name they gave. */
+  name: string;
+  /** A PNG data URI, for a drawn signature only. */
+  image: string;
+  /** When they signed, already in the business's timezone. */
+  signedLabel: string;
+  /**
+   * The start of the SHA-256 of the body they signed.
+   *
+   * Printed on the page so paper and record can be matched: anyone holding a
+   * copy can check it against the stored hash, and a copy whose text was edited
+   * afterwards stops matching.
+   */
+  fingerprint: string;
 };
 
 /**
@@ -84,21 +104,60 @@ function Body({ body }: { body: string }) {
   );
 }
 
-function SignatureLine({ role, name }: { role: string; name?: string }) {
+/**
+ * One party's signing column: signature, printed name, date.
+ *
+ * The three blank spaces above the rules are where a pen goes on a printed copy,
+ * and where an electronic signature goes once there is one — the same
+ * coordinates either way, which is why this is real space rather than a picture
+ * of a form. Unsigned, it is exactly the blank block it always was.
+ */
+function SignatureLine({
+  role,
+  name,
+  signed,
+}: {
+  role: string;
+  name?: string;
+  signed?: ContractSignature;
+}) {
   return (
     <View style={{ width: "46%" }}>
-      <View style={{ height: 34 }} />
+      <View style={{ height: 34, justifyContent: "flex-end" }}>
+        {signed?.method === "drawn" && signed.image ? (
+          // Sized to the space the pen would use, so it sits on the line
+          // rather than floating over the paragraph above.
+          //
+          // The rule below is written for an HTML <img>. This is react-pdf's
+          // Image, which has no alt prop at all; who signed is carried as text
+          // on the same page, in the "signed electronically by" line and the
+          // printed name beneath.
+          // eslint-disable-next-line jsx-a11y/alt-text
+          <Image src={signed.image} style={{ height: 32, objectFit: "contain", objectPosition: "left bottom" }} />
+        ) : signed?.method === "typed" ? (
+          // Tight line height and a lift off the rule: at 18pt the text box
+          // otherwise reaches the bottom of this space, and the rule strikes
+          // straight through the name.
+          <Text style={{ fontFamily: "Times-Italic", fontSize: 18, lineHeight: 1, marginBottom: 4, color: "#0f172a" }}>
+            {signed.name}
+          </Text>
+        ) : null}
+      </View>
       <View style={{ borderTopWidth: 1, borderTopColor: "#0f172a", paddingTop: 4 }}>
         <Text style={sheet.bold}>{role}</Text>
         {name ? <Text style={sheet.muted}>{name}</Text> : null}
       </View>
 
-      <View style={{ height: 26 }} />
+      <View style={{ height: 26, justifyContent: "flex-end" }}>
+        {signed ? <Text>{signed.name}</Text> : null}
+      </View>
       <View style={{ borderTopWidth: 1, borderTopColor: "#0f172a", paddingTop: 4 }}>
         <Text style={sheet.muted}>Printed name</Text>
       </View>
 
-      <View style={{ height: 26 }} />
+      <View style={{ height: 26, justifyContent: "flex-end" }}>
+        {signed ? <Text>{signed.signedLabel}</Text> : null}
+      </View>
       <View style={{ borderTopWidth: 1, borderTopColor: "#0f172a", paddingTop: 4 }}>
         <Text style={sheet.muted}>Date</Text>
       </View>
@@ -166,16 +225,39 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
 
         <Body body={data.body} />
 
-        {ownSignatures ? null : (
+        {/*
+          Unsigned, the block is left out when the business's own text already
+          ends with somewhere to sign — two blank places to sign is a customer
+          signing in the wrong one.
+
+          Signed, it always appears. Otherwise a contract whose template has its
+          own signing lines would come out of an electronic signature looking
+          exactly as unsigned as it went in, while the record says it is signed.
+          It is headed as a record of the signing, not a second place to sign.
+        */}
+        {ownSignatures && !data.signature ? null : (
           <View style={{ marginTop: 30 }} wrap={false}>
-            <Text style={sheet.sectionHeading}>SIGNATURES</Text>
+            <Text style={sheet.sectionHeading}>
+              {data.signature && ownSignatures ? "SIGNED ELECTRONICALLY" : "SIGNATURES"}
+            </Text>
             <Text style={[sheet.muted, { marginBottom: 6 }]}>
-              By signing below both parties agree to the work and the price set out above.
+              {data.signature
+                ? `Signed electronically by ${data.signature.name} on ${data.signature.signedLabel}.`
+                : "By signing below both parties agree to the work and the price set out above."}
             </Text>
             <View style={[sheet.row, { justifyContent: "space-between", marginTop: 6 }]}>
-              <SignatureLine role="Customer signature" name={data.customer.name} />
+              <SignatureLine
+                role="Customer signature"
+                name={data.customer.name}
+                signed={data.signature}
+              />
               <SignatureLine role="Contractor signature" name={business.name} />
             </View>
+            {data.signature ? (
+              <Text style={[sheet.muted, { marginTop: 10, fontSize: 7 }]}>
+                Document fingerprint {data.signature.fingerprint}
+              </Text>
+            ) : null}
           </View>
         )}
 

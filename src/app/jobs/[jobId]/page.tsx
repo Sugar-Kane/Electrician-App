@@ -410,7 +410,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
           {controls ? (
             <div className="py-4">
-              <JobContract jobNumber={controls.jobNumber} contracts={contracts} />
+              <JobContract jobNumber={controls.jobNumber} contracts={contracts} customerName={job.contactName || job.customer} />
             </div>
           ) : null}
         </div>

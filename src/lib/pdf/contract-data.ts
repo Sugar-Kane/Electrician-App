@@ -2,6 +2,7 @@ import "server-only";
 
 import { ContractDocument, contractFileName } from "@/lib/pdf/contract-document";
 import { documentFolderId } from "@/lib/document-folders";
+import { documentSignature } from "@/lib/contract-signing";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
@@ -56,6 +57,8 @@ export async function generateContractPdf(input: {
     .from("contracts")
     .select(
       `id, body, scope, unfilled, created_at,
+       signature_provider, signed_at, signature_method, signature_name,
+       signature_image, signed_body_hash,
        jobs (
          id, job_number, scheduled_start,
          customers ( first_name, last_name, company_name, phone, email ),
@@ -153,6 +156,9 @@ export async function generateContractPdf(input: {
         },
         body: str(contract.body),
         unfilled,
+        // Present only once the customer has signed in the app, and only when
+        // every part of the signature is there.
+        signature: documentSignature(contract, input.timeZone),
       },
     }),
   }).then((result) => ("error" in result ? { error: result.error } : { error: "" as const }));

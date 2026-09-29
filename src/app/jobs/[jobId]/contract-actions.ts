@@ -242,3 +242,166 @@ export async function rebuildContractPdf(
 
   return { error: "", contractId, notice: "Contract PDF ready." };
 }
+
+/**
+ * Text the customer a link to sign the contract on their own phone.
+ *
+ * The claim comes before the text, deliberately. The database already allows
+ * only one contract per job out for signature at a time, and marking this one
+ * `sent` first is what finds a conflict *before* a message has gone to a
+ * customer — a text saying "sign this" for a contract that is then refused
+ * is a customer who has been told the wrong thing. If the text then fails, the
+ * claim is released, so a contract never reads as sent when nothing was sent.
+ *
+ * The link is built from the app's own URL and never the request's host. On a
+ * business's own domain the proxy rewrites every page into its booking page,
+ * so a signing link on that host would open the booking form instead.
+ */
+export async function sendSigningLink(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const contractId = String(formData.get("contractId") ?? "").trim();
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  if (!contractId) return { error: "That contract could not be found." };
+
+  const supabase = asFlexibleClient(await createClient());
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user?.id) return { error: "You are not signed in." };
+
+  // Read through the owner's session, so RLS decides whose contract this is.
+  const { data } = await supabase
+    .from("contracts")
+    .select(
+      "id, organization_id, job_id, status, unfilled, public_token, signed_at, signature_provider, organizations ( name ), jobs ( job_number, customers ( phone ) )",
+    )
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (!data) return { error: "That contract could not be found." };
+
+  const contract = data as Record<string, unknown>;
+  const job = (contract.jobs ?? null) as Record<string, unknown> | null;
+  const customer = (job?.customers ?? null) as Record<string, unknown> | null;
+  const business = (contract.organizations ?? null) as Record<string, unknown> | null;
+  const jobId = text(contract.job_id);
+
+  // Only the job's newest contract can be signed. The button is only offered on
+  // that one; this is what stands behind it.
+  let superseded = false;
+  if (jobId) {
+    const { data: newest } = await supabase
+      .from("contracts")
+      .select("id")
+      .eq("job_id", jobId)
+      .neq("status", "void")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    superseded = Boolean(newest) && text(newest?.id) !== contractId;
+  }
+
+  const { unsignableBecause } = await import("@/lib/contract-signing");
+  const blocked = unsignableBecause({
+    status: text(contract.status) || "draft",
+    unfilled: Array.isArray(contract.unfilled) ? (contract.unfilled as string[]) : [],
+    signatureProvider: text(contract.signature_provider) || null,
+    signedAt: text(contract.signed_at) || null,
+    superseded,
+  });
+  if (blocked) return { error: blocked };
+
+  const { toE164 } = await import("@/lib/phone-format");
+  const phone = toE164(text(customer?.phone));
+  if (!phone) {
+    return {
+      error:
+        "This customer has no mobile number we can text. Add one to the customer, or have them sign here in person.",
+    };
+  }
+
+  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+  const token = text(contract.public_token);
+  if (!origin || !token) return { error: "The signing link could not be built." };
+  const link = `${origin}/contract/${token}`;
+
+  const organizationId = text(contract.organization_id);
+  const { data: messaging } = await supabase
+    .from("messaging_settings")
+    .select("messaging_service_sid")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  const messagingServiceSid = text(messaging?.messaging_service_sid);
+  if (!messagingServiceSid) {
+    return { error: "Texting is not set up for this business yet, so the link could not be sent." };
+  }
+
+  /*
+   * An older contract on this job that is still out for signature has been
+   * replaced by this one. Its link already refuses to sign, since it is no
+   * longer the newest; taking it out of `sent` is what lets the database admit
+   * this one. In-app ones only: a Documenso envelope is Documenso's to withdraw.
+   */
+  if (jobId) {
+    await supabase
+      .from("contracts")
+      .update({ status: "draft" })
+      .eq("job_id", jobId)
+      .eq("status", "sent")
+      .eq("signature_provider", "in_app")
+      .is("signed_at", null)
+      .neq("id", contractId);
+  }
+
+  // The claim. Another contract on this job still out for signature is refused
+  // here by the unique index, before anybody is texted — and a claim that
+  // matched no row, because it was signed a moment ago, texts nobody either.
+  const previousStatus = text(contract.status) || "draft";
+  const previousProvider = text(contract.signature_provider) || null;
+  const { data: claimed, error: claimError } = await supabase
+    .from("contracts")
+    .update({ status: "sent", signature_provider: "in_app" })
+    .eq("id", contractId)
+    .is("signed_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (claimError || !claimed) {
+    return {
+      error:
+        claimError?.code === "23505"
+          ? "Another contract for this job is already out for signature, so this one was not sent."
+          : "That contract could not be sent. Reload the page and try again.",
+    };
+  }
+
+  const { sendSms } = await import("@/lib/twilio");
+  const businessName = text(business?.name) || "Your electrician";
+  const number = text(job?.job_number);
+  const sent = await sendSms({
+    to: phone,
+    body: `${businessName}: here is your contract${number ? ` for job #${number}` : ""} to read and sign: ${link}`,
+    messagingServiceSid,
+  });
+
+  if (!sent.ok) {
+    // Released, so the contract does not read as sent when nothing was.
+    await supabase
+      .from("contracts")
+      .update({ status: previousStatus, signature_provider: previousProvider })
+      .eq("id", contractId)
+      .is("signed_at", null);
+    return { error: `The text could not be sent (${sent.errorDetail || sent.errorCode}).` };
+  }
+
+  await supabase
+    .from("contracts")
+    .update({ signature_sent_at: new Date().toISOString() })
+    .eq("id", contractId);
+
+  if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
+
+  const { formatForDisplay } = await import("@/lib/phone-format");
+  return { error: "", contractId, notice: `Signing link texted to ${formatForDisplay(phone)}.` };
+}

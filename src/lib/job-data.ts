@@ -9,6 +9,7 @@ import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import type { ActivityRow } from "@/lib/activity-timeline";
 import { hasCoordinates } from "@/lib/coordinates";
+import { unsignableBecause } from "@/lib/contract-signing";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
 import { jobCategoryLabel } from "@/lib/new-job-input";
@@ -857,6 +858,21 @@ export type JobContract = {
   unfilled: string[];
   /** The stored PDF, or empty when one has not been built yet. */
   document: { url: string; fileName: string; versionNumber: number } | null;
+  /** The handle in the signing link. */
+  publicToken: string;
+  /** Who signed and when, once somebody has. Empty until then. */
+  signatureName: string;
+  signedLabel: string;
+  /** When the signing link was last texted. Empty if it never was. */
+  sentLabel: string;
+  /**
+   * Why this contract cannot be signed right now, or empty when it can.
+   *
+   * Worked out by the same `unsignableBecause` the customer's page uses, so the
+   * job page and the signing link can never disagree about whether a contract
+   * is ready.
+   */
+  unsignable: string;
 };
 
 /**
@@ -889,7 +905,9 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
 
   const { data } = await context.database
     .from("contracts")
-    .select("id, body, unfilled, created_at")
+    .select(
+      "id, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at",
+    )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false })
@@ -906,9 +924,14 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
     timeZone: context.timeZone,
   });
 
-  return rows.map((row) => {
+  const when = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" } as const;
+
+  return rows.map((row, index) => {
     const id = String(row.id);
     const document = stored.get(id) ?? null;
+    // Newest first, so anything above this row is newer. A voided one does not
+    // count — the same rule `sign_contract_in_app` applies.
+    const superseded = rows.slice(0, index).some((newer) => newer.status !== "void");
 
     return {
       id,
@@ -927,6 +950,19 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
             versionNumber: document.versionNumber,
           }
         : null,
+      publicToken: typeof row.public_token === "string" ? row.public_token : "",
+      signatureName: typeof row.signature_name === "string" ? row.signature_name : "",
+      signedLabel: row.signed_at ? inZone(row.signed_at as string, context.timeZone, when) : "",
+      sentLabel: row.signature_sent_at
+        ? inZone(row.signature_sent_at as string, context.timeZone, when)
+        : "",
+      unsignable: unsignableBecause({
+        status: typeof row.status === "string" ? row.status : "draft",
+        unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
+        signatureProvider: typeof row.signature_provider === "string" ? row.signature_provider : null,
+        signedAt: typeof row.signed_at === "string" ? row.signed_at : null,
+        superseded,
+      }),
     };
   });
 }
