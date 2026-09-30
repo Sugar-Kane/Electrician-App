@@ -124,3 +124,54 @@ export function deliveryStatusApplies(incoming: string, current: string): boolea
   if (incoming !== "sent") return true;
   return (SENT_OVERWRITABLE_STATUSES as readonly string[]).includes(current);
 }
+
+/**
+ * A short string that moves whenever what an open thread shows moves: a
+ * message arriving, or one going from sent to delivered or failed.
+ *
+ * The page renders it, and while the thread is on screen it asks the server for
+ * the current one and refreshes only when the two differ. That is how a reply
+ * shows up without anybody reloading, without re-rendering the page every few
+ * seconds while nothing has happened.
+ *
+ * Order does not count. The page and the check read the same rows with
+ * separate queries, and two messages stamped the same instant can come back in
+ * either order; that is not a change and must not look like one.
+ */
+export function threadFingerprint(messages: readonly { id: string; status: string }[]): string {
+  return fingerprintOf(messages.map((message) => `${message.id}:${message.status}`));
+}
+
+/**
+ * The same for the inbox: which threads are listed and when each last moved.
+ * Every path that adds a message to a conversation stamps its last_message_at,
+ * so this moves whenever a preview would change or a thread would jump to the
+ * top.
+ */
+export function inboxFingerprint(
+  conversations: readonly { id: string; lastMessageAt: string | null; status: string }[],
+): string {
+  return fingerprintOf(
+    conversations.map(
+      (conversation) =>
+        `${conversation.id}:${conversation.lastMessageAt ?? ""}:${conversation.status}`,
+    ),
+  );
+}
+
+/**
+ * FNV-1a over the sorted entries. Not a security measure: it only has to tell
+ * two states of the same list apart, and it keeps a two-hundred-message thread
+ * down to a few characters on every check.
+ */
+function fingerprintOf(entries: string[]): string {
+  let hash = 0x811c9dc5;
+  for (const entry of [...entries].sort()) {
+    for (let index = 0; index < entry.length; index += 1) {
+      hash = Math.imul(hash ^ entry.charCodeAt(index), 0x01000193);
+    }
+    // A separator, so ["ab", "c"] and ["a", "bc"] come out differently.
+    hash = Math.imul(hash ^ 0x0a, 0x01000193);
+  }
+  return `${entries.length}.${(hash >>> 0).toString(36)}`;
+}

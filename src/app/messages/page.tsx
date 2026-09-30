@@ -4,11 +4,9 @@ import { MessagesSquare, PenSquare } from "lucide-react";
 
 import { ConversationRow } from "@/components/conversation-row";
 import { FieldPageShell } from "@/components/field-page-shell";
-import {
-  getMessagingContext,
-  listConversations,
-  type ConversationView,
-} from "@/lib/messaging";
+import { RefreshOnChange } from "@/components/refresh-on-change";
+import { asConversationView, getMessagingContext, listConversations } from "@/lib/messaging";
+import { inboxFingerprint } from "@/lib/messaging-rules";
 
 export const metadata: Metadata = { title: "Messages | Volteira" };
 
@@ -56,9 +54,8 @@ const VIEWS = [
   { value: "deleted", label: "Deleted" },
 ] as const;
 
-function asView(value: string): ConversationView {
-  return VIEWS.some((view) => view.value === value) ? (value as ConversationView) : "active";
-}
+/** How often the inbox asks whether a text has come in. */
+const CHECK_EVERY_MS = 5000;
 
 export default async function MessagesPage({
   searchParams,
@@ -66,7 +63,7 @@ export default async function MessagesPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const [{ view: requested }, context] = await Promise.all([searchParams, getMessagingContext()]);
-  const view = asView(requested ?? "");
+  const view = asConversationView(requested);
   const conversations = context ? await listConversations(context, view) : [];
   const timeZone = context?.timezone ?? "America/Los_Angeles";
 
@@ -76,6 +73,14 @@ export default async function MessagesPage({
       eyebrow="Customer conversations"
       description="Texts with customers about their appointments."
     >
+      {/* A new text moves its thread to the top, or adds one, without a reload. */}
+      {context ? (
+        <RefreshOnChange
+          source={`/api/messages/fingerprint?view=${view}`}
+          fingerprint={inboxFingerprint(conversations)}
+          every={CHECK_EVERY_MS}
+        />
+      ) : null}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         {/*
           Archived and deleted are views of the same table, not fates. A thread

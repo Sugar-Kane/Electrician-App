@@ -5,7 +5,9 @@ import {
   consentIsActive,
   displayNameFor,
   evaluateQuietHours,
+  inboxFingerprint,
   initialsFor,
+  threadFingerprint,
 } from "@/lib/messaging-rules";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -52,6 +54,8 @@ export type ConversationThread = {
   quietHours: { start: string; end: string; timezone: string; currentlyQuiet: boolean };
   canSend: boolean;
   blockedReason: string | null;
+  /** Moves when a message arrives or changes status; see threadFingerprint. */
+  fingerprint: string;
 };
 
 export type ConsentState = {
@@ -173,15 +177,23 @@ async function getMessagingSettings(context: MessagingContext) {
  */
 export type ConversationView = "active" | "archived" | "deleted";
 
-export async function listConversations(
+export function asConversationView(value: string | null | undefined): ConversationView {
+  return value === "archived" || value === "deleted" ? value : "active";
+}
+
+/**
+ * The conversations a view lists, most recent first. The inbox and its
+ * fingerprint both read through here, so they cannot disagree about which
+ * threads are in it.
+ */
+function conversationsInView<Columns extends string>(
   context: MessagingContext,
-  view: ConversationView = "active",
-): Promise<ConversationSummary[]> {
+  view: ConversationView,
+  columns: Columns,
+) {
   const query = context.database
     .from("conversations")
-    .select(
-      "id, customer_id, status, last_message_at, archived_at, deleted_at, job_id, customers(first_name, last_name, company_name, phone)",
-    )
+    .select(columns)
     .eq("organization_id", context.organizationId);
 
   // Deleted outranks archived: a thread that was archived and later deleted
@@ -193,9 +205,20 @@ export async function listConversations(
         ? query.is("deleted_at", null).not("archived_at", "is", null)
         : query.is("deleted_at", null).is("archived_at", null);
 
-  const { data } = await scoped
+  return scoped
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(CONVERSATION_LIMIT);
+}
+
+export async function listConversations(
+  context: MessagingContext,
+  view: ConversationView = "active",
+): Promise<ConversationSummary[]> {
+  const { data } = await conversationsInView(
+    context,
+    view,
+    "id, customer_id, status, last_message_at, archived_at, deleted_at, job_id, customers(first_name, last_name, company_name, phone)",
+  );
 
   const conversations = (data ?? []) as Record<string, unknown>[];
   if (conversations.length === 0) return [];
@@ -289,6 +312,19 @@ export async function getConversationThread(
     hasMessagingService: Boolean(settings.messagingServiceSid),
   });
 
+  const messages = ((messageRows ?? []) as Record<string, unknown>[])
+    .map((row) => ({
+      id: text(row.id),
+      direction: text(row.direction) === "inbound" ? ("inbound" as const) : ("outbound" as const),
+      body: text(row.body),
+      status: text(row.status),
+      createdAt: String(row.created_at),
+      sentAt: row.sent_at ? String(row.sent_at) : null,
+      deliveredAt: row.delivered_at ? String(row.delivered_at) : null,
+      errorDetail: row.error_detail ? String(row.error_detail) : null,
+    }))
+    .reverse();
+
   return {
     id: text(conversation.id),
     customerId,
@@ -296,23 +332,65 @@ export async function getConversationThread(
     initials: initialsFor(customer),
     phone: text(customer.phone),
     status: text(conversation.status),
-    messages: ((messageRows ?? []) as Record<string, unknown>[])
-      .map((row) => ({
-        id: text(row.id),
-        direction: text(row.direction) === "inbound" ? ("inbound" as const) : ("outbound" as const),
-        body: text(row.body),
-        status: text(row.status),
-        createdAt: String(row.created_at),
-        sentAt: row.sent_at ? String(row.sent_at) : null,
-        deliveredAt: row.delivered_at ? String(row.delivered_at) : null,
-        errorDetail: row.error_detail ? String(row.error_detail) : null,
-      }))
-      .reverse(),
+    messages,
     consent,
     quietHours,
     canSend: blockedReason === null,
     blockedReason,
+    fingerprint: threadFingerprint(messages),
   };
+}
+
+/*
+ * The two checks below run every few seconds for as long as somebody has a
+ * thread or the inbox open, so each is one small query. Both return null when
+ * the read fails, and the caller has to treat that as "don't know" rather than
+ * as "empty": an empty answer would look like a change and refresh the page
+ * straight into the same failure.
+ */
+
+/** An open thread's fingerprint as it stands now. */
+export async function getThreadFingerprint(
+  context: MessagingContext,
+  conversationId: string,
+): Promise<string | null> {
+  // The same rows getConversationThread shows: newest first, same limit.
+  const { data, error } = await context.database
+    .from("messages")
+    .select("id, status")
+    .eq("organization_id", context.organizationId)
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(THREAD_MESSAGE_LIMIT);
+
+  if (error) return null;
+  return threadFingerprint(
+    ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: text(row.id),
+      status: text(row.status),
+    })),
+  );
+}
+
+/** The inbox's fingerprint as it stands now. */
+export async function getInboxFingerprint(
+  context: MessagingContext,
+  view: ConversationView,
+): Promise<string | null> {
+  const { data, error } = await conversationsInView(
+    context,
+    view,
+    "id, status, last_message_at",
+  );
+
+  if (error) return null;
+  return inboxFingerprint(
+    ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: text(row.id),
+      status: text(row.status),
+      lastMessageAt: row.last_message_at ? String(row.last_message_at) : null,
+    })),
+  );
 }
 
 /**
