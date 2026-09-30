@@ -204,8 +204,11 @@ function Header({
         <p className="mt-1 pl-10 text-xs text-ink-muted">{dateLabel}</p>
       </div>
       <div className="hidden items-center gap-2 lg:flex">
+        {/* The new-job form, where every other "New job" in the app goes. This
+            was `#new-job`, an anchor to a section the dashboard does not have,
+            so pressing it did nothing at all. */}
         <Link
-          href="#new-job"
+          href="/jobs/new"
           className="tap-target hidden items-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand transition hover:bg-brand-strong sm:flex"
         >
           <Plus className="h-4 w-4" aria-hidden />
