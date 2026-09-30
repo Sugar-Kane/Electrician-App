@@ -7,8 +7,10 @@ import {
   deliveryStatusApplies,
   displayNameFor,
   evaluateQuietHours,
+  inboxFingerprint,
   initialsFor,
   phoneMatches,
+  threadFingerprint,
 } from "./messaging-rules.ts";
 
 // 2026-08-07T18:00:00Z is 11:00 in Los Angeles and 04:00 the next day in Sydney,
@@ -140,4 +142,62 @@ test("delivered and failed always apply", () => {
   assert.equal(deliveryStatusApplies("delivered", "sent"), true);
   assert.equal(deliveryStatusApplies("failed", "sent"), true);
   assert.equal(deliveryStatusApplies("undelivered", "sent"), true);
+});
+
+test("a thread's fingerprint moves when a message arrives or changes status", () => {
+  const sent = [
+    { id: "m1", status: "received" },
+    { id: "m2", status: "sent" },
+  ];
+  const before = threadFingerprint(sent);
+
+  assert.equal(threadFingerprint([...sent]), before, "the same rows are the same state");
+  assert.notEqual(
+    threadFingerprint([...sent, { id: "m3", status: "received" }]),
+    before,
+    "a reply is a change",
+  );
+  assert.notEqual(
+    threadFingerprint([sent[0], { id: "m2", status: "delivered" }]),
+    before,
+    "sent turning into delivered is a change",
+  );
+});
+
+test("a thread's fingerprint ignores the order the rows came back in", () => {
+  const rows = [
+    { id: "m1", status: "received" },
+    { id: "m2", status: "delivered" },
+    { id: "m3", status: "received" },
+  ];
+  assert.equal(threadFingerprint(rows), threadFingerprint([rows[2], rows[0], rows[1]]));
+});
+
+test("a fingerprint cannot be fooled by where one entry ends and the next begins", () => {
+  assert.notEqual(
+    threadFingerprint([{ id: "ab", status: "c" }, { id: "d", status: "e" }]),
+    threadFingerprint([{ id: "a", status: "bc" }, { id: "d", status: "e" }]),
+  );
+  assert.notEqual(threadFingerprint([]), threadFingerprint([{ id: "m1", status: "sent" }]));
+});
+
+test("the inbox fingerprint moves when a thread moves, arrives or leaves", () => {
+  const inbox = [
+    { id: "c1", lastMessageAt: "2026-09-30T00:49:15.792+00:00", status: "open" },
+    { id: "c2", lastMessageAt: null, status: "open" },
+  ];
+  const before = inboxFingerprint(inbox);
+
+  assert.equal(inboxFingerprint([inbox[1], inbox[0]]), before);
+  assert.notEqual(
+    inboxFingerprint([{ ...inbox[0], lastMessageAt: "2026-09-30T00:50:31.744+00:00" }, inbox[1]]),
+    before,
+    "a new text on a thread",
+  );
+  assert.notEqual(
+    inboxFingerprint([{ ...inbox[0], status: "needs_human" }, inbox[1]]),
+    before,
+    "a thread that now wants a person",
+  );
+  assert.notEqual(inboxFingerprint([inbox[0]]), before, "a thread archived elsewhere");
 });

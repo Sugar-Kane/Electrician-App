@@ -21,8 +21,14 @@ import {
 import type { ConversationThread } from "@/lib/messaging";
 import { Banner } from "@/components/ui/banner";
 import { DictateButton } from "@/components/dictate-button";
+import { useRefreshOnChange } from "@/components/refresh-on-change";
 
 const initialState: SendMessageState = { error: "" };
+
+/** How often an open thread asks whether anything has arrived. */
+const CHECK_EVERY_MS = 3000;
+/** Within this many pixels of the bottom counts as reading the newest message. */
+const AT_NEWEST_SLACK_PX = 80;
 
 // Every date here is formatted in the business timezone, explicitly. Left to
 // the ambient zone these render as UTC on the server and local in the browser,
@@ -116,12 +122,18 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
   const [overrideQuietHours, setOverrideQuietHours] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  // Where the reader was as of their last scroll, which is to say before
+  // anything new was added underneath them.
+  const atNewest = useRef(true);
+  const justSent = useRef(false);
 
   const action = sendConversationMessage.bind(null, thread.id);
   // Clearing the box lives in the action rather than an effect: on a failed
   // send the text the user typed has to survive so they can retry it.
-  const [state, formAction] = useActionState(
+  const [state, formAction, sending] = useActionState(
     async (previous: SendMessageState, formData: FormData) => {
+      // Their own message comes into view when it lands, wherever they were.
+      justSent.current = true;
       const result = await action(previous, formData);
       if (result.sent) {
         setBody("");
@@ -132,9 +144,22 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
     initialState,
   );
 
-  // Land at the newest message, the way every messaging app opens.
+  // Replies show up without a reload. Paused while a send is in flight, which
+  // brings the thread up to date on its own when it finishes.
+  useRefreshOnChange(`/api/messages/fingerprint?conversation=${thread.id}`, thread.fingerprint, {
+    every: CHECK_EVERY_MS,
+    paused: sending,
+  });
+
+  // Land at the newest message, the way every messaging app opens, and stay
+  // there as replies arrive. Someone who has scrolled up to read back is left
+  // where they are: a reply turning up must not drag them off what they were
+  // reading.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
+    if (atNewest.current || justSent.current) {
+      endRef.current?.scrollIntoView({ block: "end" });
+    }
+    justSent.current = false;
   }, [thread.messages.length]);
 
   // Day separators are worked out before render rather than by mutating a
@@ -156,7 +181,14 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
      * time somebody read back through a thread.
      */
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-panel border border-line bg-surface">
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 sm:p-5">
+      <div
+        onScroll={(event) => {
+          const list = event.currentTarget;
+          atNewest.current =
+            list.scrollHeight - list.scrollTop - list.clientHeight <= AT_NEWEST_SLACK_PX;
+        }}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 sm:p-5"
+      >
         {thread.messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-ink-faint">
             No messages yet. Anything you send starts the thread.
