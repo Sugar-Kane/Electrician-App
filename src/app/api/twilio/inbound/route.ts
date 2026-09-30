@@ -220,7 +220,11 @@ export async function POST(request: Request) {
   // Read what they asked for and answer it. Deliberately last: the message,
   // the consent, and the conversation are already durable, so a model or
   // carrier failure here costs a reply, never the record of the text.
-  if (body.length > 0 && !OPT_OUT_KEYWORDS.has(keyword) && !OPT_IN_KEYWORDS.has(keyword)) {
+  // YES also confirms an offered appointment. Preserve its consent update
+  // above, but let intake read the conversation and continue the booking.
+  // START/UNSTOP remain consent-only commands.
+  if (body.length > 0 && !OPT_OUT_KEYWORDS.has(keyword) &&
+    (!OPT_IN_KEYWORDS.has(keyword) || keyword === "yes")) {
     await handleInboundText({
       organizationId,
       conversationId,
