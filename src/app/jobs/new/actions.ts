@@ -58,9 +58,11 @@ export async function createJob(
     phone: field(formData, "phone"),
     email: field(formData, "email"),
     addressLine1: field(formData, "addressLine1"),
+    addressLine2: field(formData, "addressLine2"),
     city: field(formData, "city"),
     state: field(formData, "state"),
     postalCode: field(formData, "postalCode"),
+    accessNotes: field(formData, "accessNotes"),
     category: field(formData, "category"),
     description: field(formData, "description"),
     startLocal: field(formData, "startLocal"),
@@ -168,17 +170,33 @@ export async function createJob(
    */
   let propertyId: string | null = null;
   if (job.address) {
-    const { data: existingProperty } = await supabase
+    // The same place means the same street *and* the same unit. A landlord's
+    // Apt 1 and Apt 2 share a street, and a gate code, but not a door.
+    const sameStreet = supabase
       .from("properties")
       .select("id")
       .eq("organization_id", organizationId)
       .eq("customer_id", customerId)
       .eq("address_line_1", job.address.line1)
-      .is("archived_at", null)
+      .is("archived_at", null);
+    const { data: existingProperty } = await (job.address.line2
+      ? sameStreet.eq("address_line_2", job.address.line2)
+      : sameStreet.or("address_line_2.is.null,address_line_2.eq."))
       .limit(1)
       .maybeSingle();
 
     propertyId = text(existingProperty?.id) || null;
+
+    if (propertyId && job.accessNotes) {
+      // The notes typed now are the newest word on the place, so they replace
+      // what was kept. Left blank, the kept notes stand. Not fatal either way:
+      // the job matters more than its notes.
+      const { error } = await supabase
+        .from("properties")
+        .update({ access_notes: job.accessNotes })
+        .eq("id", propertyId);
+      if (error) console.error("new job: the access notes could not be updated", error);
+    }
 
     if (!propertyId) {
       const { data: created } = await supabase
@@ -187,9 +205,11 @@ export async function createJob(
           organization_id: organizationId,
           customer_id: customerId,
           address_line_1: job.address.line1,
+          address_line_2: job.address.line2 || null,
           city: job.address.city,
           state: job.address.state,
           postal_code: job.address.postalCode,
+          access_notes: job.accessNotes || null,
         })
         .select("id")
         .maybeSingle();

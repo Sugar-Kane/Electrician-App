@@ -11,8 +11,10 @@ import { DateTimeField } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import { WorkOrderLines } from "@/components/work-order-lines";
+import { keepPhoneDigits } from "@/lib/digits-input";
 import { keepMoneyCharacters } from "@/lib/money-input";
 import { DIAGNOSTIC_MINUTES, JOB_CATEGORIES } from "@/lib/new-job-input";
+import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
 
 /**
  * Writing a job down.
@@ -61,6 +63,7 @@ export function NewJobForm({
   const [category, setCategory] = useState(kept?.category || "diagnostic");
   const [duration, setDuration] = useState(kept?.durationHours ?? "");
   const [cost, setCost] = useState(kept?.cost ?? "");
+  const [phone, setPhone] = useState(keepPhoneDigits(kept?.phone ?? ""));
 
   /*
    * Which button was pressed.
@@ -97,10 +100,16 @@ export function NewJobForm({
           <TextInput
             name="phone"
             type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            defaultValue={kept?.phone ?? ""}
-            placeholder="805-555-0142"
+            // Digits only, ten of them. A letter used to fail the whole save
+            // after the rest of the form was filled in; now it never appears,
+            // and a pasted "+1 (805) 555-0142" becomes the ten digits.
+            inputMode="numeric"
+            autoComplete="tel-national"
+            value={phone}
+            // No maxLength: it would cut a pasted number short before the filter
+            // had its digits. The filter stops at ten on its own.
+            onChange={(event) => setPhone(keepPhoneDigits(event.target.value))}
+            placeholder="8055550142"
           />
         </Field>
         <Field
@@ -119,13 +128,31 @@ export function NewJobForm({
 
       <Section title="Where the work is">
         <AddressFields
+          withUnit
           defaults={{
             line1: kept?.addressLine1 ?? "",
+            line2: kept?.addressLine2 ?? "",
             city: kept?.city ?? "",
             state: kept?.state ?? "",
             postalCode: kept?.postalCode ?? "",
           }}
         />
+
+        <div className="sm:col-span-2">
+          <Field
+            label="Access notes"
+            hint="Gate codes, pets, which door, where to park. Kept with the address, so every job there shows them."
+          >
+            <textarea
+              name="accessNotes"
+              rows={3}
+              maxLength={MAX_ACCESS_NOTES_LENGTH}
+              defaultValue={kept?.accessNotes ?? ""}
+              placeholder="Gate code 4521. Dog in the backyard. Panel is in the garage."
+              className={`${inputClass} min-h-24 py-3`}
+            />
+          </Field>
+        </div>
       </Section>
 
       <Section title="The work">

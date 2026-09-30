@@ -16,6 +16,8 @@
  */
 
 import { toE164 } from "./phone-format.ts";
+import { readAccessNotes, readUnit } from "./property-details.ts";
+import { isUsStateCode } from "./us-states.ts";
 
 /**
  * The two things a visit can be.
@@ -124,9 +126,13 @@ export type NewJobRaw = {
   phone: string;
   email: string;
   addressLine1: string;
+  /** Apartment, suite or floor. Optional. */
+  addressLine2: string;
   city: string;
   state: string;
   postalCode: string;
+  /** The gate code, the dog, where to park: kept with the address. */
+  accessNotes: string;
   category: string;
   description: string;
   /** Wall clock in the business's zone, from a datetime-local input. */
@@ -146,7 +152,16 @@ export type NewJobParsed = {
   /** E.164, or empty. Never the raw string — a carrier will not take it. */
   phone: string;
   email: string;
-  address: { line1: string; city: string; state: string; postalCode: string } | null;
+  address: {
+    line1: string;
+    /** Empty when there is none. */
+    line2: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  } | null;
+  /** Empty when there are none. They belong to the address, so need one. */
+  accessNotes: string;
   category: JobCategory;
   description: string;
   startLocal: string;
@@ -362,9 +377,11 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   }
 
   const line1 = clean(raw.addressLine1);
+  const line2 = readUnit(raw.addressLine2);
   const city = clean(raw.city);
-  const state = clean(raw.state);
+  const state = clean(raw.state).toUpperCase();
   const postalCode = clean(raw.postalCode);
+  const accessNotes = readAccessNotes(raw.accessNotes);
   const addressParts = [line1, city, state, postalCode];
   const givenParts = addressParts.filter(Boolean);
 
@@ -377,6 +394,28 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
       ok: false,
       error: "An address needs street, city, state, and ZIP — or leave all four blank.",
     };
+  }
+
+  // Both are stored on the property, and there is no property without a
+  // street. Refused rather than dropped, even for a draft: a gate code that
+  // silently went nowhere is found out at the gate.
+  if (!line1 && (line2 || accessNotes)) {
+    return {
+      ok: false,
+      error:
+        "The apartment, floor and access notes are kept with the street address — add it, or clear them.",
+    };
+  }
+
+  // The box is a list now, so this only catches a hand-made request. It is
+  // checked on a draft too: a gap can be filled in later, a wrong state is
+  // simply wrong.
+  if (state && !isUsStateCode(state)) {
+    return { ok: false, error: "Choose the state from the list." };
+  }
+
+  if (!draft && postalCode && !/^\d{5}$/.test(postalCode)) {
+    return { ok: false, error: "A ZIP code is five digits." };
   }
 
   const category = raw.category.trim() || "diagnostic";
@@ -420,7 +459,8 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
       customerName,
       phone,
       email,
-      address: line1 ? { line1, city, state, postalCode } : null,
+      address: line1 ? { line1, line2, city, state, postalCode } : null,
+      accessNotes,
       category,
       description: raw.description.trim(),
       startLocal: raw.startLocal.trim(),

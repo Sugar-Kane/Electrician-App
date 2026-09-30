@@ -164,7 +164,7 @@ export default async function CustomerPage({
                 <span className="min-w-0">
                   <span className="block">{property.address}</span>
                   {property.accessNotes ? (
-                    <span className="block text-xs text-ink-muted">{property.accessNotes}</span>
+                    <span className="block whitespace-pre-line text-xs text-ink-muted">{property.accessNotes}</span>
                   ) : null}
                 </span>
               </li>

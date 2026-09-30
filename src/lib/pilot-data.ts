@@ -37,6 +37,8 @@ export type PilotJob = {
   phone: string;
   email: string;
   address: string;
+  /** Apartment, suite or floor, when the address has one. */
+  unit?: string;
   city: string;
   workType: string;
   summary: string;

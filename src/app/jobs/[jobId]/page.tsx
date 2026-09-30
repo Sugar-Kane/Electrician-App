@@ -16,6 +16,7 @@ import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
+import { streetWithUnit } from "@/lib/property-details";
 import { getJob, getJobContracts, getJobControls, getJobHistory } from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
@@ -113,10 +114,19 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         <p className="mt-2 flex items-start gap-2 text-base font-medium leading-6">
           <MapPin className="mt-1 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
           <span>
-            {job.address}
+            {streetWithUnit(job.address, job.unit ?? "")}
             {job.city ? <span className="block text-ink-muted">{job.city}</span> : null}
           </span>
         </p>
+      ) : null}
+      {/* The gate code gets learned at the gate, so it is one tap from here. */}
+      {controls && hasAddress && !canceled ? (
+        <Link
+          href={`/jobs/${job.id}/edit#place`}
+          className="tap-target mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand"
+        >
+          {job.unit || job.accessNotes ? "Edit apt & access notes" : "Add apt & access notes"}
+        </Link>
       ) : null}
     </div>
   );
@@ -245,7 +255,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               {job.accessNotes ? (
                 <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
-                  {job.accessNotes}
+                  {/* Line breaks kept: the gate code and the dog read as two things. */}
+                  <span className="min-w-0 whitespace-pre-line">{job.accessNotes}</span>
                 </p>
               ) : null}
             </div>

@@ -19,9 +19,11 @@ const raw = (over: Partial<NewJobRaw> = {}): NewJobRaw => ({
   phone: "805-555-0142",
   email: "",
   addressLine1: "123 Main St",
+  addressLine2: "",
   city: "Nipomo",
   state: "CA",
   postalCode: "93444",
+  accessNotes: "",
   // A work order, so the two-hour diagnostic lock does not quietly override
   // whatever duration a test is about.
   category: "work_order",
@@ -45,10 +47,12 @@ test("a whole job is read out of the form", () => {
   assert.equal(result.value.phone, "+18055550142");
   assert.deepEqual(result.value.address, {
     line1: "123 Main St",
+    line2: "",
     city: "Nipomo",
     state: "CA",
     postalCode: "93444",
   });
+  assert.equal(result.value.accessNotes, "");
   assert.equal(result.value.category, "work_order");
   assert.equal(result.value.durationMinutes, 120);
   assert.equal(result.value.costCents, 128_000);
@@ -240,6 +244,7 @@ test("a draft saves what there is so far", () => {
   assert.equal(draft.value.mode, "draft");
   assert.deepEqual(draft.value.address, {
     line1: "123 Main St",
+    line2: "",
     city: "Nipomo",
     state: "CA",
     postalCode: "",
@@ -320,4 +325,57 @@ test("every kind of work a job has ever had still reads as English", () => {
   // Something nobody planned for still reads as words rather than as a column.
   assert.equal(jobCategoryLabel("solar_tie_in"), "solar tie in");
   assert.equal(jobCategoryLabel(""), "Service");
+});
+
+test("an apartment and access notes are read with the address", () => {
+  const result = parseNewJob(
+    raw({
+      addressLine2: "  Apt   4B ",
+      accessNotes: "  Gate code 4521\r\nDog in the backyard  ",
+    }),
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.address?.line2, "Apt 4B");
+  assert.equal(result.value.accessNotes, "Gate code 4521\nDog in the backyard");
+});
+
+test("an apartment is optional and never makes an address incomplete", () => {
+  const result = parseNewJob(raw({ addressLine2: "" }));
+  assert.equal(result.ok, true);
+  assert.equal(result.ok === true ? result.value.address?.line2 : "missing", "");
+});
+
+test("an apartment or access notes without a street are refused, not dropped", () => {
+  const noStreet = { addressLine1: "", city: "", state: "", postalCode: "" };
+  for (const mode of ["save", "draft"]) {
+    for (const extra of [{ addressLine2: "Apt 4B" }, { accessNotes: "Gate code 4521" }]) {
+      const result = parseNewJob(raw({ ...noStreet, ...extra, mode }));
+      assert.equal(result.ok, false, `${mode} ${JSON.stringify(extra)}`);
+      assert.match(result.ok === false ? result.error : "", /street address/);
+    }
+  }
+});
+
+test("the state has to be one from the list", () => {
+  const typed = parseNewJob(raw({ state: "Cali" }));
+  assert.equal(typed.ok, false);
+  assert.match(typed.ok === false ? typed.error : "", /state from the list/);
+
+  // Not even a draft keeps a state that does not exist.
+  assert.equal(parseNewJob(raw({ state: "ZZ", mode: "draft" })).ok, false);
+
+  // Lower case is the same state.
+  const lower = parseNewJob(raw({ state: "ca" }));
+  assert.equal(lower.ok === true ? lower.value.address?.state : "", "CA");
+});
+
+test("a ZIP code is five digits on a real save", () => {
+  for (const postalCode of ["9344", "934445", "93444-1234", "9344a"]) {
+    const result = parseNewJob(raw({ postalCode }));
+    assert.equal(result.ok, false, postalCode);
+    assert.match(result.ok === false ? result.error : "", /five digits/);
+  }
+  // A draft keeps a half-typed ZIP, like the rest of a half-typed address.
+  assert.equal(parseNewJob(raw({ postalCode: "934", mode: "draft" })).ok, true);
 });

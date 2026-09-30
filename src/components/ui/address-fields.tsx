@@ -5,7 +5,11 @@ import { LoaderCircle, MapPin } from "lucide-react";
 
 import { resolveAddress, suggestAddresses } from "@/app/address-actions";
 import { Field, TextInput, inputClass } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 import { shouldSearch, type AddressParts, type AddressSuggestion } from "@/lib/address-search";
+import { keepZipDigits } from "@/lib/digits-input";
+import { MAX_UNIT_LENGTH } from "@/lib/property-details";
+import { isUsStateCode, US_STATES } from "@/lib/us-states";
 
 /**
  * Where the work is, as four boxes that fill themselves.
@@ -18,19 +22,51 @@ import { shouldSearch, type AddressParts, type AddressSuggestion } from "@/lib/a
  * Typing the whole thing by hand still works. The suggestions are an offer, not
  * a gate — plenty of the addresses this business drives to are a gate off a
  * county road that Google has never heard of.
+ *
+ * The state is a list and the ZIP takes five digits, so neither can be posted
+ * as something the rest of the app cannot read. A job also gets a box for the
+ * apartment, suite or floor, which Google's pick leaves alone.
  */
 
 const DEBOUNCE_MS = 300;
 
-export type AddressDefaults = Partial<AddressParts>;
+/** Named in full, posted as the two letters the column holds. */
+const STATE_CHOICES = US_STATES.map((state) => ({ value: state.code, label: state.name }));
 
-export function AddressFields({ defaults }: { defaults?: AddressDefaults }) {
+/**
+ * A state the list can show, or nothing. An old row typed as "ca" is still
+ * California; anything the list has no entry for starts blank, so it is picked
+ * rather than posted back unseen.
+ */
+function listedState(value: string | undefined): string {
+  const code = (value ?? "").trim().toUpperCase();
+  return isUsStateCode(code) ? code : "";
+}
+
+export type AddressDefaults = Partial<AddressParts> & { line2?: string };
+
+export function AddressFields({
+  defaults,
+  withUnit = false,
+}: {
+  defaults?: AddressDefaults;
+  /**
+   * Adds the apartment, suite or floor box, posted as `addressLine2`. Jobs
+   * want it; a supply stop is a counter with a door, and its action would
+   * drop the value.
+   */
+  withUnit?: boolean;
+}) {
   const [parts, setParts] = useState<AddressParts>({
     line1: defaults?.line1 ?? "",
     city: defaults?.city ?? "",
-    state: defaults?.state ?? "",
-    postalCode: defaults?.postalCode ?? "",
+    state: listedState(defaults?.state),
+    postalCode: keepZipDigits(defaults?.postalCode ?? ""),
   });
+
+  // Its own state rather than one of the parts: picking a suggestion replaces
+  // the parts, and a unit typed before the street was picked should survive it.
+  const [unit, setUnit] = useState(defaults?.line2 ?? "");
 
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -141,7 +177,13 @@ export function AddressFields({ defaults }: { defaults?: AddressDefaults }) {
     }
 
     applying.current = true;
-    setParts(result.parts);
+    setParts({
+      ...result.parts,
+      // Google answers in the same two letters the list uses. Anything else (a
+      // territory, say) is left for the person to pick.
+      state: listedState(result.parts.state),
+      postalCode: keepZipDigits(result.parts.postalCode),
+    });
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -253,6 +295,19 @@ export function AddressFields({ defaults }: { defaults?: AddressDefaults }) {
         </Field>
       </div>
 
+      {withUnit ? (
+        <Field label="Apt, suite or floor" hint="Optional.">
+          <TextInput
+            name="addressLine2"
+            value={unit}
+            onChange={(event) => setUnit(event.target.value)}
+            autoComplete="off"
+            maxLength={MAX_UNIT_LENGTH}
+            placeholder="Apt 4B, 2nd floor"
+          />
+        </Field>
+      ) : null}
+
       <Field label="City">
         <TextInput
           name="city"
@@ -263,13 +318,15 @@ export function AddressFields({ defaults }: { defaults?: AddressDefaults }) {
         />
       </Field>
       <Field label="State">
-        <TextInput
+        {/* A list, so only a real state can be posted. Picking an address
+            above still fills it. */}
+        <SelectField
           name="state"
           value={parts.state}
-          onChange={(event) => set("state", event.target.value.toUpperCase())}
-          autoComplete="off"
-          placeholder="CA"
-          maxLength={2}
+          onChange={(value) => set("state", value)}
+          label="State"
+          placeholder="Choose a state"
+          choices={STATE_CHOICES}
         />
       </Field>
       <Field
@@ -279,10 +336,11 @@ export function AddressFields({ defaults }: { defaults?: AddressDefaults }) {
         <TextInput
           name="postalCode"
           value={parts.postalCode}
-          onChange={(event) => set("postalCode", event.target.value)}
+          // Digits only, five of them: letters and a ZIP+4's dash never appear.
+          // No maxLength, which would clip a pasted ZIP before the filter saw it.
+          onChange={(event) => set("postalCode", keepZipDigits(event.target.value))}
           inputMode="numeric"
           autoComplete="postal-code"
-          maxLength={10}
           placeholder="93444"
         />
       </Field>
