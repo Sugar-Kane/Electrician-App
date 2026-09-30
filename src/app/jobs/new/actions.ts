@@ -103,19 +103,41 @@ export async function createJob(
   // called twice is one customer with two jobs, and a second record splits
   // their history in half — which is how a business ends up texting the same
   // person from two threads.
+  //
+  // Matched on the last ten digits, through the same function the phone and
+  // text intake use, because that is how the unique index compares numbers.
+  // Most customers' phones are stored as first written, "(805) 555-0142", so
+  // an exact match on "+18055550142" missed them, and the insert that followed
+  // collided with them: a new job for a returning customer could not be saved.
   let customerId = "";
   if (job.phone) {
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("phone", job.phone)
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle();
-    customerId = text(existing?.id);
+    const { firstName, lastName } = splitName(job.customerName);
+    const { data: found, error } = await supabase.rpc("find_or_create_customer_by_phone", {
+      p_organization_id: organizationId,
+      p_phone: job.phone,
+      p_first_name: firstName || job.customerName,
+      p_last_name: lastName || null,
+      p_preferred_contact: "sms",
+    });
+
+    if (error || !text(found)) {
+      console.error("new job: the customer could not be found or saved", error);
+      return keep("That customer could not be saved. Nothing was created.");
+    }
+    customerId = text(found);
+
+    // The email typed goes on a new customer. A returning one keeps theirs.
+    if (job.email) {
+      const { error: emailError } = await supabase
+        .from("customers")
+        .update({ email: job.email })
+        .eq("id", customerId)
+        .is("email", null);
+      if (emailError) console.error("new job: the email could not be added", emailError);
+    }
   }
 
+  // No phone: a customer reachable by email only, who has nothing to match on.
   if (!customerId) {
     const { firstName, lastName } = splitName(job.customerName);
     const { data: created, error } = await supabase
