@@ -215,6 +215,11 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
                     }`}
                   >
                     {message.body}
+                    {Array.from({ length: message.photoCount ?? 0 }, (_, index) => (
+                      <a key={index} href={`/api/messages/${message.id}/photos/${index}`} target="_blank" rel="noreferrer" className="mt-2 block underline">
+                        View customer photo {index + 1}
+                      </a>
+                    ))}
                   </div>
                   <div className="flex items-center gap-2 px-1">
                     <span className="text-[11px] text-ink-faint">

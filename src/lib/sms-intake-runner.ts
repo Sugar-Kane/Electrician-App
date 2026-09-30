@@ -19,6 +19,7 @@ import {
   buildIntakeSystemPrompt,
   decideIntakeAction,
   splitName,
+  photoInvitation,
   type IntakeAction,
 } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -59,7 +60,7 @@ export async function handleInboundText(input: {
     const [{ data: history }, { data: customer }] = await Promise.all([
       database
         .from("messages")
-        .select("direction, body, created_at")
+        .select("direction, body, created_at, media")
         .eq("conversation_id", input.conversationId)
         .order("created_at", { ascending: false })
         .limit(MAX_HISTORY_TURNS),
@@ -93,7 +94,7 @@ export async function handleInboundText(input: {
       .reverse()
       .map((row) => ({
         role: row.direction === "inbound" ? ("user" as const) : ("assistant" as const),
-        text: text(row.body),
+        text: [text(row.body), Array.isArray(row.media) && row.media.length ? `[Customer attached ${row.media.length} photo(s) for the electrician.]` : ""].filter(Boolean).join(" "),
       }))
       .filter((turn) => turn.text.length > 0);
 
@@ -103,6 +104,10 @@ export async function handleInboundText(input: {
     if (turns.length === 0 || turns[turns.length - 1]!.text !== input.body) {
       turns.push({ role: "user", text: input.body });
     }
+
+    context.intakeBeforeOffer = true;
+    context.photoOfferHandled = turns.some((turn) => turn.role === "assistant" &&
+      (turn.text.includes(photoInvitation("en")) || turn.text.includes(photoInvitation("es"))));
 
     const decision = await readInboundText({
       system: buildIntakeSystemPrompt(context),

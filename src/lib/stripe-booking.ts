@@ -2,6 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 
+import { syncPaidBookingCalendar } from "@/lib/google-booking-calendar";
 import { sendBookingConfirmations } from "@/lib/booking-notifications";
 import { loadIntakeContext } from "@/lib/intake-shared";
 import {
@@ -127,6 +128,8 @@ export async function fulfillPaidBooking(session: Stripe.Checkout.Session) {
       checkoutSessionId: session.id,
       jobId,
     });
+    // A failed calendar write is retryable; deterministic event IDs prevent duplicates.
+    await syncPaidBookingCalendar(bookingToken);
   }
 
   return getPublicBookingConfirmation(bookingToken, session.id);

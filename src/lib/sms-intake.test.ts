@@ -11,6 +11,7 @@ import {
 } from "./sms-intake.ts";
 
 const context = (overrides: Partial<IntakeContext> = {}): IntakeContext => ({
+  intakeBeforeOffer: true,
   businessName: "Pacific Plains Electric",
   businessPhone: "(805) 555-0100",
   offeredSlots: [
@@ -58,6 +59,7 @@ test("a window the model invented is refused", () => {
   // The scheduler is the only source of truth for what is open. A made-up time
   // is a promise the business never agreed to.
   const action = decide("confirm_visit", {
+    ...INTERVIEWED,
     contact_name: "Ada",
     description: "no power in the kitchen",
     address_line_1: "123 Maple St",
@@ -106,6 +108,7 @@ test("a booking without an address is sent back for the address", () => {
 
 test("proposing a window books nothing", () => {
   const action = decide("propose_visit", {
+    ...INTERVIEWED,
     contact_name: "Ada",
     description: "no power in the kitchen",
     address_line_1: "123 Maple St",
@@ -279,17 +282,10 @@ test("an unrecognised delivery preference is not accepted as one", () => {
   assert.match(action.reply, /text, email, or both/i);
 });
 
-test("proposing a window still needs no interview", () => {
-  // The questions are owed before a job exists, not before a time can be
-  // offered. Refusing to quote a window until five questions are answered
-  // would make the assistant unusable.
-  const action = decide("propose_visit", {
-    contact_name: "Ada", description: "no power", address_line_1: "1 A St",
-    city: "Nipomo", postal_code: "93444",
-    slot_start: "2026-08-11T20:00:00.000Z", urgency: "routine",
-  });
-
-  assert.equal(action.kind, "propose");
+test("proposing a window requires basic intake first", () => {
+  const action = decide("propose_visit", { contact_name: "Adam", address_line_1: "123 Main", city: "Santa Maria", slot_start: context().offeredSlots[0]!.start });
+  assert.equal(action.kind, "ask");
+  assert.doesNotMatch(action.reply, /reply YES|we can come/i);
 });
 
 test("the prompt tells the model what it will be held to", () => {
@@ -368,7 +364,7 @@ test("a Spanish customer is offered the window worded in Spanish", () => {
   // which is the tell that nobody read the message before it went out.
   const action = decideIn(
     "propose_visit",
-    {
+    { ...INTERVIEWED,
       contact_name: "Ana", description: "sin luz", address_line_1: "1 A St",
       city: "Nipomo", postal_code: "93444",
       slot_start: "2026-08-11T15:00:00.000Z", urgency: "routine", language: "es",
@@ -436,4 +432,24 @@ test("the prompt tells the model when the language is not its call", () => {
   const guessed = buildIntakeSystemPrompt(context({ language: "es", languageSource: "detected" }));
   assert.match(guessed, /language the customer's latest message is in/i);
   assert.doesNotMatch(guessed, /business has set this customer's language/i);
+});
+
+test("offer optional photos before a time, but do not require an upload", () => {
+  const decision = { tool: "propose_visit", input: { ...INTERVIEWED, contact_name: "Adam", address_line_1: "123 Main", city: "Santa Maria", slot_start: context().offeredSlots[0]!.start } };
+  const ask = decideIntakeAction({ decision, customerText: "text", context: context({ photoOfferHandled: false }) });
+  assert.equal(ask.kind, "ask");
+  assert.match(ask.reply, /photo.*optional/i);
+  const offered = decideIntakeAction({ decision, customerText: "skip", context: context({ photoOfferHandled: true }) });
+  assert.equal(offered.kind, "propose");
+});
+
+test("installation intake asks about planned units instead of breaker faults", () => {
+  const action = decide("propose_visit", { work_type: "installation", contact_name: "Adam", address_line_1: "123 Main", city: "Santa Maria" });
+  assert.equal(action.kind, "ask");
+  assert.match(action.reply, /units or areas/);
+});
+
+test("a model-written question cannot claim the customer is penciled in", () => {
+  const action = decide("ask_for", { missing: ["contact_name"], question: "You're penciled in for Wednesday. What's your name?" });
+  assert.doesNotMatch(action.reply, /penciled in/i);
 });

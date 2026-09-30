@@ -11,6 +11,7 @@
  */
 
 export type BookingFacts = {
+  paid?: boolean;
   businessName: string;
   businessPhone: string;
   contactName: string;
@@ -99,10 +100,10 @@ export function ownerBookingSms(
         ? `Held (unpaid): ${facts.slotLabel}.`
         : state === "needs_review"
           ? `Action needed — booking needs review: ${facts.slotLabel}. Nothing is confirmed.`
-          : `New booking: ${facts.slotLabel}.`,
+          : `${facts.paid ? "Confirmed (paid)" : "New booking"}: ${facts.slotLabel}.`,
       facts.contactName ? ` ${facts.contactName}.` : "",
       address ? ` ${address}.` : "",
-      facts.description ? ` "${clip(facts.description, 120)}"` : "",
+      facts.description ? ` "${clip(facts.description, 75)}"` : "",
     ].join(""),
     SMS_LIMIT,
   );

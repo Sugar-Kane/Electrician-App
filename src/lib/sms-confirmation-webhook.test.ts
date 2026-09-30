@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { readMessagePhotos } from "./message-media.ts";
 
 // Exercise the actual webhook with isolated database/carrier/model adapters.
 // No real customer texts or appointments are created by this test.
@@ -11,7 +12,7 @@ const route = ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
 ).outputText;
 
-async function receive(body: string, consentError = false) {
+async function receive(body: string, consentError = false, media: Record<string, string> = {}) {
   const writes: { table: string; operation: string; value: Record<string, unknown> }[] = [];
   const intake: Record<string, unknown>[] = [];
   const database = {
@@ -37,6 +38,7 @@ async function receive(body: string, consentError = false) {
   runInNewContext(route, {
     exports, console,
     require(name: string) {
+      if (name === "@/lib/message-media") return { readMessagePhotos };
       if (name === "next/server") return { NextResponse: Response };
       if (name === "@/lib/messaging-rules") return { phoneMatches: (a: string, b: string) => a === b };
       if (name === "@/lib/supabase/admin") return { getSupabaseAdmin: () => database };
@@ -47,7 +49,7 @@ async function receive(body: string, consentError = false) {
   });
   const response = await exports.POST!(new Request("https://example.com/api/twilio/inbound", {
     method: "POST",
-    body: new URLSearchParams({ From: "+18055550100", Body: body, MessageSid: "SM-test", MessagingServiceSid: "MG-test" }),
+    body: new URLSearchParams({ From: "+18055550100", Body: body, MessageSid: "SM-test", MessagingServiceSid: "MG-test", ...media }),
   }));
   return { response, writes, intake };
 }
@@ -84,3 +86,12 @@ test("ordinary appointment replies still reach intake", async () => {
   assert.equal(response.status, 200);
   assert.equal(intake.length, 1);
 });
+
+ test("photo-only MMS is saved and sent to intake", async () => {
+  const account = "AC" + "a".repeat(32), message = "MM" + "b".repeat(32);
+  const { writes, intake, response } = await receive("", false, { AccountSid: account, MessageSid: message, NumMedia: "1", MediaContentType0: "image/jpeg", MediaUrl0: `https://api.twilio.com/2010-04-01/Accounts/${account}/Messages/${message}/Media/ME${"c".repeat(32)}` });
+  assert.equal(response.status, 200);
+  assert.equal((writes.find(w => w.table === "messages")!.value.media as unknown[]).length, 1);
+  assert.equal(intake.length, 1);
+  assert.match(String(intake[0].body), /attached 1 photo/);
+ });

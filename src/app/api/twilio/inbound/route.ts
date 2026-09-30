@@ -1,3 +1,4 @@
+import { readMessagePhotos } from "@/lib/message-media";
 import { NextResponse } from "next/server";
 
 import { phoneMatches } from "@/lib/messaging-rules";
@@ -45,7 +46,9 @@ export async function POST(request: Request) {
   }
 
   const from = params.From ?? "";
-  const body = (params.Body ?? "").trim();
+  const rawBody = (params.Body ?? "").trim();
+  const photos = readMessagePhotos(params);
+  const body = rawBody || (photos.length ? `[Customer attached ${photos.length} photo(s) for the electrician.]` : "");
   const providerMessageId = params.MessageSid ?? "";
   const messagingServiceSid = params.MessagingServiceSid ?? "";
 
@@ -197,14 +200,16 @@ export async function POST(request: Request) {
   const conversationId = String(conversation.id);
 
   if (body.length > 0) {
-    await database.from("messages").insert({
+    const { error: messageError } = await database.from("messages").insert({
       organization_id: organizationId,
       conversation_id: conversationId,
       direction: "inbound",
       body: body.slice(0, 1600),
       status: "received",
       provider_message_id: providerMessageId || null,
+      media: photos,
     });
+    if (messageError) return new NextResponse("Could not save message", { status: 500 });
   }
 
   await database
