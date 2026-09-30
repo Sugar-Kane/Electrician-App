@@ -163,6 +163,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
     phone: customer.phone ?? "",
     email: customer.email ?? "",
     address: property.address_line_1 ?? "",
+    unit: property.address_line_2 ?? "",
     city: property.city ?? "",
     // A label, not the column. The list holds `work_order` and, on jobs
     // booked before the kinds of work changed, `panel_breaker` and the rest —
@@ -196,7 +197,7 @@ const JOB_SELECT = `
   id, job_number, status, category, customer_description, ai_summary,
   scheduled_start, scheduled_end,
   customers ( first_name, last_name, company_name, phone, email ),
-  properties ( address_line_1, city, latitude, longitude, access_notes ),
+  properties ( address_line_1, address_line_2, city, latitude, longitude, access_notes ),
   technicians ( display_name ),
   booking_requests ( communication_channel )
 `;
@@ -329,6 +330,11 @@ export async function getJobControls(jobNumber: string): Promise<{
   customerPhone: string;
   customerEmail: string;
   technicianNotes: string;
+  /**
+   * Where the work is, for the details the street does not say: the unit and
+   * the access notes. Null when the job has no address to keep them with.
+   */
+  place: { street: string; unit: string; town: string; accessNotes: string } | null;
 } | null> {
   const context = await resolveContext();
   if (!context) return null;
@@ -341,7 +347,8 @@ export async function getJobControls(jobNumber: string): Promise<{
     .select(
       `job_number, status, canceled_at, cancellation_reason, technician_notes,
        scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
-       customers ( phone, email )`,
+       customers ( phone, email ),
+       properties ( address_line_1, address_line_2, city, state, postal_code, access_notes )`,
     )
     .eq("organization_id", context.organizationId)
     .eq("job_number", numeric)
@@ -351,7 +358,9 @@ export async function getJobControls(jobNumber: string): Promise<{
 
   const row = data as Record<string, unknown>;
   const customer = (row.customers ?? null) as Record<string, unknown> | null;
+  const property = (row.properties ?? null) as Record<string, unknown> | null;
   const str = (value: unknown) => (typeof value === "string" ? value : "");
+  const street = str(property?.address_line_1);
 
   const start = str(row.arrival_window_start) || str(row.scheduled_start);
   const end = str(row.arrival_window_end) || str(row.scheduled_end);
@@ -367,6 +376,19 @@ export async function getJobControls(jobNumber: string): Promise<{
     customerPhone: str(customer?.phone),
     customerEmail: str(customer?.email),
     technicianNotes: str(row.technician_notes),
+    place: street
+      ? {
+          street,
+          unit: str(property?.address_line_2),
+          town: [
+            str(property?.city),
+            [str(property?.state), str(property?.postal_code)].filter(Boolean).join(" "),
+          ]
+            .filter(Boolean)
+            .join(", "),
+          accessNotes: str(property?.access_notes),
+        }
+      : null,
   };
 }
 

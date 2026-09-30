@@ -1,13 +1,19 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CalendarClock, Ban, X } from "lucide-react";
+import { CalendarClock, Ban, MapPin, X } from "lucide-react";
 
-import { cancelJob, updateJob, type JobActionState } from "@/app/jobs/[jobId]/actions";
+import {
+  cancelJob,
+  updateJob,
+  updateJobPlace,
+  type JobActionState,
+} from "@/app/jobs/[jobId]/actions";
 import { Button, SubmitButton } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-time-field";
-import { Field, FormMessage, TextInput } from "@/components/ui/field";
+import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
+import { MAX_ACCESS_NOTES_LENGTH, MAX_UNIT_LENGTH } from "@/lib/property-details";
 
 /**
  * Moving a job, and calling it off.
@@ -24,6 +30,68 @@ import { SelectField } from "@/components/ui/select-field";
  */
 
 const initialState: JobActionState = { error: "" };
+
+export type JobPlaceDetails = { street: string; unit: string; town: string; accessNotes: string };
+
+/**
+ * The unit and the access notes, for after the job is written down: the gate
+ * code usually turns up on the first visit, not on the phone.
+ */
+function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDetails }) {
+  const [state, action] = useActionState(updateJobPlace, initialState);
+
+  return (
+    <form action={action}>
+      <section id="place" className="scroll-mt-24 rounded-panel border border-line bg-surface p-5 sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand/10 text-brand">
+            <MapPin className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold tracking-tight">Where the work is</h2>
+            <p className="text-sm text-ink-muted">
+              {place.street}
+              {place.town ? `, ${place.town}` : ""}
+            </p>
+          </div>
+        </div>
+
+        <input type="hidden" name="jobNumber" value={jobNumber} />
+
+        <div className="mt-5 grid gap-4">
+          <Field label="Apt, suite or floor" hint="Optional.">
+            <TextInput
+              name="addressLine2"
+              defaultValue={place.unit}
+              autoComplete="off"
+              maxLength={MAX_UNIT_LENGTH}
+              placeholder="Apt 4B, 2nd floor"
+            />
+          </Field>
+          <Field
+            label="Access notes"
+            hint="Gate codes, pets, which door, where to park. Kept with the address, so every job there shows them."
+          >
+            <textarea
+              name="accessNotes"
+              rows={4}
+              defaultValue={place.accessNotes}
+              maxLength={MAX_ACCESS_NOTES_LENGTH}
+              placeholder="Gate code 4521. Dog in the backyard. Panel is in the garage."
+              className={`${inputClass} min-h-28 py-3`}
+            />
+          </Field>
+        </div>
+
+        <FormMessage error={state.error} notice={state.notice} />
+
+        <div className="mt-5">
+          <SubmitButton pendingLabel="Saving…">Save address details</SubmitButton>
+        </div>
+      </section>
+    </form>
+  );
+}
 
 const STATUS_OPTIONS = [
   { value: "confirmed", label: "Confirmed" },
@@ -45,6 +113,7 @@ export function JobControls({
   cancellationReason,
   customerPhone,
   customerEmail,
+  place,
 }: {
   jobNumber: string;
   status: string;
@@ -57,6 +126,8 @@ export function JobControls({
   cancellationReason: string;
   customerPhone: string;
   customerEmail: string;
+  /** Null when the job has no address, so nothing to keep a unit or notes with. */
+  place: JobPlaceDetails | null;
 }) {
   const [editState, editAction] = useActionState(updateJob, initialState);
   const [cancelState, cancelAction] = useActionState(cancelJob, initialState);
@@ -149,6 +220,8 @@ export function JobControls({
           </div>
         </section>
       </form>
+
+      {place ? <JobPlace jobNumber={jobNumber} place={place} /> : null}
 
       <section id="cancel" className="rounded-panel border border-line bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold tracking-tight">Cancel this job</h2>

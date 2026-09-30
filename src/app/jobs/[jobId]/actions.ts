@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { changeNeedsCustomerNotice } from "@/lib/job-change-messages";
 import { notifyJobChange } from "@/lib/job-notifications";
+import { readAccessNotes, readUnit } from "@/lib/property-details";
 import { slotLabel, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -60,7 +61,7 @@ async function loadJob(jobNumber: string) {
   const { data } = await supabase
     .from("jobs")
     .select(
-      `id, status, scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
+      `id, status, property_id, scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        organization_id, customers ( first_name, last_name, company_name, phone, email ),
        organizations ( name, phone, timezone )`,
     )
@@ -80,6 +81,7 @@ async function loadJob(jobNumber: string) {
     supabase,
     id: text(row.id),
     organizationId,
+    propertyId: text(row.property_id),
     status: text(row.status),
     start: text(row.arrival_window_start) || text(row.scheduled_start),
     end: text(row.arrival_window_end) || text(row.scheduled_end),
@@ -90,6 +92,46 @@ async function loadJob(jobNumber: string) {
     customerPhone: text(customer?.phone),
     customerEmail: text(customer?.email),
   };
+}
+
+/**
+ * The unit and the access notes, changed after the job was written down.
+ *
+ * They belong to the property, not the job, because the gate code is the same
+ * next month: saving them here changes what every job at this address shows.
+ * Nothing is sent to the customer.
+ */
+export async function updateJobPlace(
+  _previousState: JobActionState,
+  formData: FormData,
+): Promise<JobActionState> {
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  const unit = readUnit(formData.get("addressLine2"));
+  const accessNotes = readAccessNotes(formData.get("accessNotes"));
+
+  const job = await loadJob(jobNumber);
+  if (!job) return { error: "That job could not be found." };
+  if (job.status === "canceled") {
+    return { error: "This job is canceled. Cancelled jobs cannot be edited." };
+  }
+  if (!job.propertyId) {
+    return { error: "This job has no address, so there is nowhere to keep these." };
+  }
+
+  const { data, error } = await job.supabase
+    .from("properties")
+    .update({ address_line_2: unit || null, access_notes: accessNotes || null })
+    .eq("id", job.propertyId)
+    .eq("organization_id", job.organizationId)
+    .select("id");
+
+  if (error || !Array.isArray(data) || data.length === 0) {
+    return { error: "Those details could not be saved." };
+  }
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath(`/jobs/${jobNumber}/edit`);
+  return { error: "", notice: "Saved. Every job at this address shows these." };
 }
 
 /**

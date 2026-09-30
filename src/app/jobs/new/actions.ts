@@ -58,9 +58,11 @@ export async function createJob(
     phone: field(formData, "phone"),
     email: field(formData, "email"),
     addressLine1: field(formData, "addressLine1"),
+    addressLine2: field(formData, "addressLine2"),
     city: field(formData, "city"),
     state: field(formData, "state"),
     postalCode: field(formData, "postalCode"),
+    accessNotes: field(formData, "accessNotes"),
     category: field(formData, "category"),
     description: field(formData, "description"),
     startLocal: field(formData, "startLocal"),
@@ -103,19 +105,41 @@ export async function createJob(
   // called twice is one customer with two jobs, and a second record splits
   // their history in half — which is how a business ends up texting the same
   // person from two threads.
+  //
+  // Matched on the last ten digits, through the same function the phone and
+  // text intake use, because that is how the unique index compares numbers.
+  // Most customers' phones are stored as first written, "(805) 555-0142", so
+  // an exact match on "+18055550142" missed them, and the insert that followed
+  // collided with them: a new job for a returning customer could not be saved.
   let customerId = "";
   if (job.phone) {
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("phone", job.phone)
-      .is("archived_at", null)
-      .limit(1)
-      .maybeSingle();
-    customerId = text(existing?.id);
+    const { firstName, lastName } = splitName(job.customerName);
+    const { data: found, error } = await supabase.rpc("find_or_create_customer_by_phone", {
+      p_organization_id: organizationId,
+      p_phone: job.phone,
+      p_first_name: firstName || job.customerName,
+      p_last_name: lastName || null,
+      p_preferred_contact: "sms",
+    });
+
+    if (error || !text(found)) {
+      console.error("new job: the customer could not be found or saved", error);
+      return keep("That customer could not be saved. Nothing was created.");
+    }
+    customerId = text(found);
+
+    // The email typed goes on a new customer. A returning one keeps theirs.
+    if (job.email) {
+      const { error: emailError } = await supabase
+        .from("customers")
+        .update({ email: job.email })
+        .eq("id", customerId)
+        .is("email", null);
+      if (emailError) console.error("new job: the email could not be added", emailError);
+    }
   }
 
+  // No phone: a customer reachable by email only, who has nothing to match on.
   if (!customerId) {
     const { firstName, lastName } = splitName(job.customerName);
     const { data: created, error } = await supabase
@@ -146,17 +170,33 @@ export async function createJob(
    */
   let propertyId: string | null = null;
   if (job.address) {
-    const { data: existingProperty } = await supabase
+    // The same place means the same street *and* the same unit. A landlord's
+    // Apt 1 and Apt 2 share a street, and a gate code, but not a door.
+    const sameStreet = supabase
       .from("properties")
       .select("id")
       .eq("organization_id", organizationId)
       .eq("customer_id", customerId)
       .eq("address_line_1", job.address.line1)
-      .is("archived_at", null)
+      .is("archived_at", null);
+    const { data: existingProperty } = await (job.address.line2
+      ? sameStreet.eq("address_line_2", job.address.line2)
+      : sameStreet.or("address_line_2.is.null,address_line_2.eq."))
       .limit(1)
       .maybeSingle();
 
     propertyId = text(existingProperty?.id) || null;
+
+    if (propertyId && job.accessNotes) {
+      // The notes typed now are the newest word on the place, so they replace
+      // what was kept. Left blank, the kept notes stand. Not fatal either way:
+      // the job matters more than its notes.
+      const { error } = await supabase
+        .from("properties")
+        .update({ access_notes: job.accessNotes })
+        .eq("id", propertyId);
+      if (error) console.error("new job: the access notes could not be updated", error);
+    }
 
     if (!propertyId) {
       const { data: created } = await supabase
@@ -165,9 +205,11 @@ export async function createJob(
           organization_id: organizationId,
           customer_id: customerId,
           address_line_1: job.address.line1,
+          address_line_2: job.address.line2 || null,
           city: job.address.city,
           state: job.address.state,
           postal_code: job.address.postalCode,
+          access_notes: job.accessNotes || null,
         })
         .select("id")
         .maybeSingle();
