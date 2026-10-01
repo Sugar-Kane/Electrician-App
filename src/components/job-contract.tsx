@@ -4,9 +4,9 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Download, FileText, LoaderCircle, MessageSquare, PenLine, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 import {
+  completeContractDetails,
   generateContract,
   rebuildContractPdf,
   sendSigningLink,
@@ -70,6 +70,29 @@ function SendLinkButton() {
   );
 }
 
+function MissingContractDetails({ contract }: { contract: JobContractRecord }) {
+  const [state, save, pending] = useActionState(completeContractDetails, initialState);
+  return (
+    <form action={save} className="space-y-3 rounded-control border border-line p-3">
+      <input type="hidden" name="contractId" value={contract.id} />
+      <p className="text-sm font-semibold">Complete contract details</p>
+      <p className="text-xs text-ink-muted">These values apply to this contract only. Saving creates a new draft for review.</p>
+      {contract.unfilled.map((field) => (
+        <label key={field} className="block text-sm">
+          <span className="mb-1 block capitalize">{field === "total" ? "Agreed total price" : field.replace(/_/g, " ")}</span>
+          <textarea name={`field:${field}`} required maxLength={5000} rows={field === "scope" ? 4 : 2}
+            placeholder={field === "total" || field === "deposit" ? "e.g. $180.00" : undefined}
+            className="w-full rounded-control border border-line bg-surface px-3 py-2 text-base text-ink" />
+        </label>
+      ))}
+      <button type="submit" disabled={pending} className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60">
+        {pending ? "Saving…" : "Save contract details"}
+      </button>
+      <FormMessage error={state.error} notice={state.notice} />
+    </form>
+  );
+}
+
 /**
  * Getting the customer's signature: at the door, or by text.
  *
@@ -110,14 +133,7 @@ function ContractSigning({
         </button>
         <p className="text-sm text-ink-muted">{contract.unsignable}</p>
         {contract.unfilled.length > 0 ? (
-          <>
-            <p className="text-sm text-caution">Missing: {contract.unfilled.map((field) => field.replace(/_/g, " ")).join(", ")}.</p>
-            <p className="text-sm text-ink-muted">Update the details, then use Options to generate a new draft.</p>
-            <div className="flex flex-wrap gap-4">
-              <Link href={`/jobs/${jobNumber}/edit`} className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand">Edit job</Link>
-              <Link href="/settings/contract" className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand">Edit template</Link>
-            </div>
-          </>
+          <MissingContractDetails contract={contract} />
         ) : null}
       </div>
     );

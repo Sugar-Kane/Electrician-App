@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  completeDraftFields,
   CONTRACT_PLACEHOLDERS,
   fillTemplate,
   placeholdersUsed,
@@ -152,4 +153,14 @@ test("the scope prompt forbids everything that is filled in deterministically", 
   assert.match(prompt, /Never state a price/i);
   assert.match(prompt, /Never promise a completion date/i);
   assert.match(prompt, /Never invent work/i);
+});
+
+test("completing a draft preserves terms and fills repeated and custom fields literally", () => {
+  const result = completeDraftFields("Terms unchanged. {{ total }} / {{total}}. Permit {{permit_number}}", { total: "$180.00", permit_number: "$&-123" });
+  assert.equal(result.body, "Terms unchanged. $180.00 / $180.00. Permit $&-123");
+  assert.deepEqual(result.unfilled, []);
+});
+test("draft completion keeps missing fields blocked and does not use inherited values", () => {
+  const result = completeDraftFields("{{total}} {{scope}} {{constructor}}", { total: "  " });
+  assert.deepEqual(result.unfilled, ["total", "scope", "constructor"]);
 });
