@@ -71,16 +71,12 @@ function SignatureColumn({
       <div className="flex h-14 items-end">
         {signed?.method === "drawn" && signed.image ? (
           // A data URI from the signature pad: there is nothing for next/image
-          // to optimise or fetch. The height is inline because globals.css
-          // gives every img `height: auto` outside any layer, which beats a
-          // height class: without it the signature stands at the size it was
-          // drawn and runs up over the lines above.
+          // to optimise or fetch.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={signed.image}
             alt={`Signature of ${signed.name}`}
-            style={{ height: "3rem" }}
-            className="w-auto max-w-full object-contain object-left-bottom"
+            className="h-12 w-auto max-w-full object-contain object-left-bottom"
           />
         ) : signed?.method === "typed" ? (
           <span className="mb-1 font-serif text-2xl italic leading-none">{signed.name}</span>

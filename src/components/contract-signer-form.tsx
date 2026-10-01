@@ -94,16 +94,9 @@ export function ContractSignerSection({
           <div className="rounded-control border border-line bg-white px-4 pb-3 pt-4 text-slate-900">
             <div className="flex h-16 items-end">
               {saved.method === "drawn" && saved.image ? (
-                // A data URI from the pad: there is nothing for next/image to
-                // fetch. The height is inline because globals.css's unlayered
-                // `img { height: auto }` beats a height class.
+                // A data URI from the pad: there is nothing for next/image to fetch.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={saved.image}
-                  alt={`Your signature, ${saved.name}`}
-                  style={{ height: "3.5rem" }}
-                  className="w-auto max-w-full object-contain object-left-bottom"
-                />
+                <img src={saved.image} alt={`Your signature, ${saved.name}`} className="h-14 w-auto max-w-full object-contain object-left-bottom" />
               ) : (
                 <span className="mb-1 font-serif text-3xl italic leading-none">{saved.name}</span>
               )}
