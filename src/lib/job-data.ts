@@ -12,7 +12,7 @@ import { hasCoordinates } from "@/lib/coordinates";
 import { unsignableBecause } from "@/lib/contract-signing";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
-import { jobCategoryLabel } from "@/lib/new-job-input";
+import { jobCategoryLabel, kindOfWork } from "@/lib/new-job-input";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { currentContext } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -162,6 +162,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
     // booked before the kinds of work changed, `panel_breaker` and the rest —
     // and every screen that shows this shows it to a person.
     workType: jobCategoryLabel(String(row.category ?? "")),
+    kindOfWork: kindOfWork(String(row.category ?? "")),
     summary: row.customer_description ?? row.ai_summary ?? "",
     status: JOB_STATUS[row.status] ?? "Pending",
     technician: technicianName,

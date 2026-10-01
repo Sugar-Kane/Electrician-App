@@ -1,3 +1,5 @@
+import type { KindOfWork } from "./new-job-input.ts";
+
 export type JobStatus = "In progress" | "Scheduled" | "Pending" | "Completed" | "Canceled";
 export type SupplierId = "lowes" | "home-depot";
 
@@ -40,7 +42,13 @@ export type PilotJob = {
   /** Apartment, suite or floor, when the address has one. */
   unit?: string;
   city: string;
+  /** What it was about: the kind of work, or for a booked job the fault. */
   workType: string;
+  /**
+   * Which of the two visits it is (`kindOfWork` in new-job-input.ts). A
+   * different question from `workType`, which on a booked job is the fault.
+   */
+  kindOfWork: KindOfWork;
   summary: string;
   status: JobStatus;
   technician: string;
@@ -110,6 +118,7 @@ export const pilotJobs: PilotJob[] = [
     address: "123 Maple Street",
     city: "Santa Maria, CA 93454",
     workType: "Panel upgrade",
+    kindOfWork: "Work order",
     summary: "Upgrade the existing service panel to 200A and review space for a future EV charger.",
     status: "In progress",
     technician: "Mike Davis",
@@ -142,6 +151,7 @@ export const pilotJobs: PilotJob[] = [
     address: "456 Oak Avenue",
     city: "Arroyo Grande, CA 93420",
     workType: "Lighting retrofit",
+    kindOfWork: "Work order",
     summary: "Replace warehouse fluorescent fixtures with dimmable LED high-bay fixtures.",
     status: "Scheduled",
     technician: "Jordan Ruiz",
@@ -169,6 +179,7 @@ export const pilotJobs: PilotJob[] = [
     address: "789 Pine Road",
     city: "Nipomo, CA 93444",
     workType: "EV charger install",
+    kindOfWork: "Work order",
     summary: "Install a customer-supplied Level 2 EV charger on the garage wall.",
     status: "Scheduled",
     technician: "Maya Stone",
@@ -196,6 +207,7 @@ export const pilotJobs: PilotJob[] = [
     address: "101 Cedar Lane",
     city: "Oceano, CA 93445",
     workType: "Outlet diagnostic",
+    kindOfWork: "Diagnostic",
     summary: "Diagnose two kitchen receptacles that stopped working after a countertop appliance was used.",
     status: "Pending",
     technician: "Alex Brooks",
@@ -223,6 +235,7 @@ export const pilotJobs: PilotJob[] = [
     address: "42 Mesa View Drive",
     city: "San Luis Obispo, CA 93401",
     workType: "Generator estimate",
+    kindOfWork: "Diagnostic",
     summary: "Site walk and load review for a standby generator estimate.",
     status: "Scheduled",
     technician: "Mike Davis",
@@ -247,6 +260,7 @@ export const pilotJobs: PilotJob[] = [
     address: "880 Grand Avenue",
     city: "Grover Beach, CA 93433",
     workType: "Dedicated circuit",
+    kindOfWork: "Work order",
     summary: "Install a dedicated 20A circuit for new sterilization equipment.",
     status: "Scheduled",
     technician: "Jordan Ruiz",

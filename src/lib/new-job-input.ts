@@ -77,6 +77,27 @@ export function jobCategoryLabel(value: string): string {
   return CATEGORY_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
+/** Of the two, the one a job is, as the form names it. */
+export type KindOfWork = (typeof JOB_CATEGORIES)[number]["label"];
+
+/**
+ * Whether a job is a diagnostic or a work order, whatever else its category
+ * holds.
+ *
+ * `jobCategoryLabel` answers "what was it about", which for a booked job is the
+ * fault — "EV charger" — and says nothing about which of the two visits it is.
+ * Only a job booked as a work order is one. Every visit a customer books, by
+ * phone, by text or on the booking page, is a diagnostic with its fee, and the
+ * booking page files the fault it was told about where the kind would go. A job
+ * nobody chose for is a diagnostic as well: that is the column's default.
+ *
+ * Jobs typed in before the form offered the two carry a fault too, and nothing
+ * on them says which they were. They read as diagnostics, for the same reason.
+ */
+export function kindOfWork(category: string): KindOfWork {
+  return (category ?? "").trim() === "work_order" ? "Work order" : "Diagnostic";
+}
+
 /**
  * Which button was pressed.
  *

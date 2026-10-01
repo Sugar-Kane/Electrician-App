@@ -112,6 +112,33 @@ test("the list runs from the most pressing kind, newest first within each", () =
   assert.equal(plain(items[2]!.detail), "Not started · Yesterday, 2:00 PM");
 });
 
+test("every row says whether it is a diagnostic or a work order", () => {
+  const items = followUps({
+    jobs: [
+      job({ id: "25", kindOfWork: "Work order", stage: "in_progress", startsAt: "2026-09-29T17:00:00Z", endsAt: "2026-09-29T19:00:00Z" }),
+      job({ id: "24", kindOfWork: "Diagnostic", startsAt: "2026-09-30T21:00:00Z" }),
+      job({ id: "14", kindOfWork: "Diagnostic", stage: "needs_review", startsAt: "2026-09-30T16:00:00Z" }),
+      job({ id: "18", kindOfWork: "Work order", stage: "completed", startsAt: "2026-09-30T16:00:00Z" }),
+    ],
+    unbilled: { "18": 57_500 },
+    now,
+    timeZone: zone,
+  });
+
+  assert.deepEqual(
+    items.map((item) => `${item.kind} #${item.jobNumber} ${item.kindOfWork}`),
+    [
+      "not_finished #25 Work order",
+      "not_started #24 Diagnostic",
+      "to_complete #14 Diagnostic",
+      "not_invoiced #18 Work order",
+    ],
+  );
+  // Beside the detail, not inside it: the line under the name is still what is
+  // left and when.
+  assert.equal(plain(items[0]!.detail), "Not finished · Tue, Sep 29, 10:00 AM");
+});
+
 test("the late jobs, by number, for the status pills", () => {
   assert.deepEqual(
     lateJobs(

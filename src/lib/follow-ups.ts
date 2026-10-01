@@ -8,9 +8,11 @@
  * jobs the dashboard already has, so the end of the day can be a look at one
  * list rather than a walk through the schedule.
  *
- * Import-free, so every boundary can be tested against a fixed clock without a
- * database.
+ * Imports nothing but a type, so every boundary can be tested against a fixed
+ * clock without a database.
  */
+
+import type { KindOfWork } from "./new-job-input.ts";
 
 /** Committed to and not yet started: the workflow's "scheduled" state. */
 const WAITING = new Set(["confirmed", "assigned", "rescheduled"]);
@@ -39,12 +41,18 @@ export type FollowUpJob = {
   stage?: string;
   startsAt?: string;
   endsAt?: string;
+  kindOfWork?: KindOfWork;
 };
 
 export type FollowUp = {
   kind: FollowUpKind;
   jobNumber: string;
   customer: string;
+  /**
+   * Diagnostic or work order. Following one up is a different job for each: a
+   * missed diagnostic is a visit to rebook, an unbilled work order an invoice.
+   */
+  kindOfWork?: KindOfWork;
   /** The line under the customer: what is left and when it was for. */
   detail: string;
   /** The time it is about, for ordering. */
@@ -184,6 +192,7 @@ export function followUps(input: {
         kind: late,
         jobNumber: job.id,
         customer: job.customer,
+        kindOfWork: job.kindOfWork,
         detail: `${KIND_LABEL[late]} · ${whenLabel(startsAt, now, timeZone)}`,
         at: startsAt,
       });
@@ -199,6 +208,7 @@ export function followUps(input: {
         kind: "to_complete",
         jobNumber: job.id,
         customer: job.customer,
+        kindOfWork: job.kindOfWork,
         detail: `${KIND_LABEL.to_complete} · ${whenLabel(startsAt, now, timeZone)}`,
         at: startsAt,
       });
@@ -211,6 +221,7 @@ export function followUps(input: {
         kind: "not_invoiced",
         jobNumber: job.id,
         customer: job.customer,
+        kindOfWork: job.kindOfWork,
         detail: `${KIND_LABEL.not_invoiced} · ${money(owed)} of work · ${whenLabel(startsAt, now, timeZone)}`,
         at: startsAt,
       });

@@ -58,6 +58,7 @@ export function NextJobCard({
           className="text-xs font-semibold uppercase tracking-[0.14em] text-brand"
         >
           {job.status === "In progress" ? "On this job" : isToday ? "Next job" : "Next job up"}
+          {` · ${job.kindOfWork}`}
         </p>
         <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(status)}`}>
           {status}
@@ -180,12 +181,20 @@ export function TodaysJobs({
                   <span className="block truncate text-sm font-semibold">{job.customer}</span>
                   <span className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
                     <span className="min-w-0 truncate">
-                      {job.workType}
+                      {/* Which of the two visits it is, rather than what it
+                          is about. On a booked job the category is the fault,
+                          so this read "EV charger" and never said whether the
+                          two hours at the house were to find it or to fix it. */}
+                      <span className="font-medium text-ink">{job.kindOfWork}</span>
                       {job.city ? ` · ${job.city}` : ""}
                     </span>
                     {/* Secondary metadata, and kept off the narrowest screens
-                        where the customer and the time are what matter. */}
-                    <JobSource channel={job.channel} className="hidden shrink-0 sm:inline-flex" />
+                        where the customer and the time are what matter.
+                        `max-sm:hidden` rather than `hidden sm:inline-flex`:
+                        JobSource is `inline-flex` itself, and that won over
+                        `hidden`, so on a phone the tag stayed and squeezed the
+                        kind of work down to "Diagno…". */}
+                    <JobSource channel={job.channel} className="shrink-0 max-sm:hidden" />
                   </span>
                 </span>
                 {/*
@@ -245,7 +254,17 @@ function FollowUpRow({ item }: { item: FollowUp }) {
           <span className="block truncate text-sm font-semibold">
             {item.customer} · #{item.jobNumber}
           </span>
-          <span className="mt-0.5 block text-xs text-ink-muted">{item.detail}</span>
+          {/* First, and where Jobs today says it: a missed diagnostic is a
+              visit to rebook, a work order left open is a crew to chase. */}
+          <span className="mt-0.5 block text-xs text-ink-muted">
+            {item.kindOfWork ? (
+              <>
+                <span className="font-medium text-ink">{item.kindOfWork}</span>
+                {" · "}
+              </>
+            ) : null}
+            {item.detail}
+          </span>
         </span>
         <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
       </Link>

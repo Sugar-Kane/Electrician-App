@@ -5,6 +5,7 @@ import {
   isJobCategory,
   jobCategoryLabel,
   JOB_CATEGORIES,
+  kindOfWork,
   MAX_COST_CENTS,
   parseCostToCents,
   parseNewJob,
@@ -325,6 +326,24 @@ test("every kind of work a job has ever had still reads as English", () => {
   // Something nobody planned for still reads as words rather than as a column.
   assert.equal(jobCategoryLabel("solar_tie_in"), "solar tie in");
   assert.equal(jobCategoryLabel(""), "Service");
+});
+
+test("a job is a work order only when it was booked as one", () => {
+  assert.equal(kindOfWork("work_order"), "Work order");
+  assert.equal(kindOfWork(" work_order "), "Work order");
+  assert.equal(kindOfWork("diagnostic"), "Diagnostic");
+  // The booking page files the fault it heard. The visit is still a
+  // diagnostic, paid for when it was booked.
+  for (const fault of ["ev_charger", "panel_breaker", "lighting", "outlet_switch", "power_loss"]) {
+    assert.equal(kindOfWork(fault), "Diagnostic", fault);
+  }
+  // Nothing chosen is the column's default.
+  assert.equal(kindOfWork(""), "Diagnostic");
+  // The two answers are the two the form offers, word for word.
+  assert.deepEqual(
+    JOB_CATEGORIES.map((entry) => kindOfWork(entry.value)),
+    JOB_CATEGORIES.map((entry) => entry.label),
+  );
 });
 
 test("an apartment and access notes are read with the address", () => {
