@@ -128,9 +128,8 @@ export async function raiseInvoice(
     };
   }
 
-  // Existing invoices decide three things: whether this is a follow-up at all,
-  // how much of the diagnostic has already been given back, and whether to ask
-  // before making another.
+  // Existing invoices decide two things: how much of the diagnostic has
+  // already been given back, and whether to ask before making another.
   const { data: existing } = await supabase
     .from("invoices")
     .select("id, invoice_number, total_cents, diagnostic_credit_cents, created_at")
@@ -186,7 +185,6 @@ export async function raiseInvoice(
   const diagnosticPaidCents = diagnosticCreditFor({
     diagnosticPaid: Boolean((job as Record<string, unknown>).diagnostic_paid),
     diagnosticFeeCents: Number((job as Record<string, unknown>).diagnostic_fee_cents ?? 0),
-    existingInvoiceCount: invoices.length,
     alreadyCreditedCents,
   });
 

@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { draftScope } from "@/lib/claude";
-import { fillTemplate, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
+import {
+  contractMoney,
+  fillTemplate,
+  STARTER_TEMPLATE,
+  type ContractFacts,
+} from "@/lib/contract-template";
 import { formatMoney } from "@/lib/invoice-messages";
+import { lineTotalCents } from "@/lib/job-lines";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -63,10 +69,12 @@ export async function generateContract(
     .from("jobs")
     .select(
       `id, job_number, category, customer_description, scheduled_start, diagnostic_fee_cents,
+       diagnostic_paid,
        customers ( first_name, last_name, company_name ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
-       invoices ( total_cents )`,
+       invoices ( total_cents, diagnostic_credit_cents ),
+       job_line_items ( kind, quantity, unit_price_cents )`,
     )
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
@@ -79,6 +87,9 @@ export async function generateContract(
   const property = (row.properties ?? null) as Record<string, unknown> | null;
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
   const invoices = Array.isArray(row.invoices) ? (row.invoices as Record<string, unknown>[]) : [];
+  const lines = Array.isArray(row.job_line_items)
+    ? (row.job_line_items as Record<string, unknown>[])
+    : [];
 
   const { data: template } = await supabase
     .from("contract_templates")
@@ -113,17 +124,34 @@ export async function generateContract(
     .filter(Boolean)
     .join(", ");
 
-  const totalCents = invoices.reduce(
-    (sum, invoice) => sum + Number(invoice.total_cents ?? 0),
-    0,
-  );
-  const depositCents = Number(row.diagnostic_fee_cents ?? 0);
+  const money = contractMoney({
+    category: text(row.category),
+    diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+    diagnosticPaid: row.diagnostic_paid === true,
+    invoices: invoices.map((invoice) => ({
+      totalCents: Number(invoice.total_cents ?? 0),
+      diagnosticCreditCents: Number(invoice.diagnostic_credit_cents ?? 0),
+    })),
+    // numeric arrives as a string over PostgREST, so it is read as a number
+    // before anything multiplies it.
+    pricedLineCount: lines.filter(
+      (line) =>
+        lineTotalCents({
+          quantity: Number(line.quantity ?? 0),
+          unitPriceCents: Number(line.unit_price_cents ?? 0),
+        }) > 0,
+    ).length,
+  });
   const workType = text(row.category).replace(/_/g, " ");
   const description = text(row.customer_description);
 
   // Best effort. A model outage leaves {{scope}} standing in the draft, which
   // is visible and fixable; a paragraph invented to fill the gap is neither.
-  const scope = await draftScope({ description, workType });
+  const scope = await draftScope({
+    description,
+    workType,
+    visitOnly: money.source === "diagnostic",
+  });
 
   const facts: Partial<ContractFacts> = {
     business_name: text(organization?.name),
@@ -133,8 +161,13 @@ export async function generateContract(
     job_number: String(row.job_number ?? jobNumber),
     job_date: formatDate(text(row.scheduled_start)),
     work_type: workType,
-    total: totalCents > 0 ? formatMoney(totalCents / 100) : "",
-    deposit: depositCents > 0 ? formatMoney(depositCents / 100) : "",
+    total: money.totalCents > 0 ? formatMoney(money.totalCents / 100) : "",
+    // "Deposit due before work begins: $180.00 (paid)" — a customer who paid
+    // when they booked is not asked for it again by their own contract.
+    deposit:
+      money.depositCents > 0
+        ? `${formatMoney(money.depositCents / 100)}${money.depositPaid ? " (paid)" : ""}`
+        : "",
     scope: scope ?? "",
     today: formatDate(new Date().toISOString()),
   };

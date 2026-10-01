@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   CONTRACT_PLACEHOLDERS,
+  contractMoney,
   fillTemplate,
   placeholdersUsed,
   scopePrompt,
@@ -152,4 +153,78 @@ test("the scope prompt forbids everything that is filled in deterministically", 
   assert.match(prompt, /Never state a price/i);
   assert.match(prompt, /Never promise a completion date/i);
   assert.match(prompt, /Never invent work/i);
+});
+
+// A diagnostic booked and paid for online, before anybody has looked: the shape
+// of the job whose contract could not be sent because its total was blank.
+const prepaidDiagnostic = {
+  category: "diagnostic",
+  diagnosticFeeCents: 18_000,
+  diagnosticPaid: true,
+  invoices: [],
+  pricedLineCount: 0,
+};
+
+test("a prepaid diagnostic visit is contracted at its fee, already paid", () => {
+  assert.deepEqual(contractMoney(prepaidDiagnostic), {
+    totalCents: 18_000,
+    depositCents: 18_000,
+    depositPaid: true,
+    source: "diagnostic",
+  });
+});
+
+test("a diagnostic that has not been paid is still priced at its fee, not marked paid", () => {
+  const money = contractMoney({ ...prepaidDiagnostic, diagnosticPaid: false });
+  assert.equal(money.totalCents, 18_000);
+  assert.equal(money.depositPaid, false);
+  assert.equal(money.source, "diagnostic");
+});
+
+test("invoices set the total, with a prepaid diagnostic added back", () => {
+  // $1,540 of work, billed with the $180 already paid taken off. The contract
+  // says $1,540 and reports the $180 as paid, rather than reading as $1,360.
+  const money = contractMoney({
+    ...prepaidDiagnostic,
+    invoices: [{ totalCents: 136_000, diagnosticCreditCents: 18_000 }],
+    pricedLineCount: 3,
+  });
+  assert.equal(money.totalCents, 154_000);
+  assert.equal(money.depositPaid, true);
+  assert.equal(money.source, "invoices");
+});
+
+test("a job billed in stages is contracted at the sum of its invoices", () => {
+  const money = contractMoney({
+    ...prepaidDiagnostic,
+    invoices: [
+      { totalCents: 82_000, diagnosticCreditCents: 18_000 },
+      { totalCents: 54_000, diagnosticCreditCents: 0 },
+    ],
+  });
+  assert.equal(money.totalCents, 154_000);
+});
+
+test("itemised but unbilled work does not fall back to the diagnostic fee", () => {
+  // $180 on a contract for work priced at far more is the wrong number, not a
+  // missing one. Blank sends somebody to bill it; $180 sends it to the customer.
+  const money = contractMoney({ ...prepaidDiagnostic, pricedLineCount: 2 });
+  assert.equal(money.totalCents, 0);
+  assert.equal(money.source, "none");
+  assert.equal(money.depositPaid, true, "what was paid is still reported");
+});
+
+test("other work with nothing priced stays blank", () => {
+  const money = contractMoney({ ...prepaidDiagnostic, category: "panel_upgrade" });
+  assert.equal(money.totalCents, 0);
+  assert.equal(money.source, "none");
+});
+
+test("a diagnostic with no fee has nothing to fill either line with", () => {
+  assert.deepEqual(contractMoney({ ...prepaidDiagnostic, diagnosticFeeCents: 0 }), {
+    totalCents: 0,
+    depositCents: 0,
+    depositPaid: false,
+    source: "none",
+  });
 });
