@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Camera, ImageUp, LoaderCircle, TriangleAlert, Trash2 } from "lucide-react";
@@ -66,26 +66,79 @@ function RemoveButton() {
   );
 }
 
+/** "HEIC" for "IMG_0412.HEIC": what kind of file a photo with no preview is. */
+function formatOf(fileName: string): string {
+  return /\.([a-z0-9]{2,4})$/i.exec(fileName)?.[1]?.toUpperCase() ?? "";
+}
+
 function PhotoTile({ jobNumber, photo }: { jobNumber: string; photo: JobPhoto }) {
   const [state, action] = useActionState(removeJobPhoto, initialState);
+  // Saved, but not something this browser can draw: mostly a HEIC anywhere but
+  // Safari, which is what a Samsung phone takes with "High efficiency pictures"
+  // on. Drawn as it was, it is a broken image with its file name spilling over
+  // it, and looks like the upload failed.
+  const [noPreview, setNoPreview] = useState(false);
+  const label = photo.stage === "after" ? "After" : "Before";
+  const format = formatOf(photo.fileName);
+
+  /*
+   * A photo that failed before the page came to life fired its error with
+   * nothing listening, and React does not replay it. That happens whenever the
+   * thumbnail beats the page's JavaScript, which a small one on a slow
+   * connection easily does. Asking for it once more, off to the side, settles
+   * it: one that loaded or is still loading is left alone, and one that failed
+   * fails again, heard.
+   */
+  const hearEarlyFailure = useCallback((img: HTMLImageElement | null) => {
+    if (!img?.complete || img.naturalWidth > 0) return;
+    const probe = new Image();
+    probe.onerror = () => setNoPreview(true);
+    probe.src = img.src;
+  }, []);
 
   return (
     <li className="relative">
+      {/* Still a link with no preview: the phone hands the file to an app that
+          can open it, Gallery or Google Photos. */}
       <a href={photo.url} target="_blank" rel="noreferrer" className="block">
-        {/* Not next/image: these are signed URLs that expire, so there is
-            nothing stable for the optimizer to cache and it would 404 an hour
-            later. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photo.url}
-          alt={`${photo.stage === "after" ? "After" : "Before"} — ${photo.fileName}`}
-          loading="lazy"
-          className="aspect-square w-full rounded-control border border-line object-cover"
-        />
+        {noPreview ? (
+          <span
+            role="img"
+            aria-label={`${label} — ${photo.fileName}, no preview`}
+            className="@container relative block aspect-square w-full rounded-control border border-line bg-sunken"
+          >
+            {/* Between the remove button and the Before/After label. On a
+                320px screen that gap is 12px, too little for a line of text,
+                so there the format alone says what it is. */}
+            <span className="absolute inset-x-1 bottom-6 top-12 hidden place-items-center text-center text-[11px] font-semibold text-ink-muted @min-[6rem]:grid">
+              No preview
+            </span>
+            {format ? (
+              <span className="absolute left-2 top-2 text-[10px] font-semibold tracking-[0.12em] text-ink-faint">
+                {format}
+              </span>
+            ) : null}
+          </span>
+        ) : (
+          <>
+            {/* Not next/image: these are signed URLs that expire, so there is
+                nothing stable for the optimizer to cache and it would 404 an
+                hour later. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={hearEarlyFailure}
+              src={photo.url}
+              alt={`${label} — ${photo.fileName}`}
+              loading="lazy"
+              onError={() => setNoPreview(true)}
+              className="aspect-square w-full rounded-control border border-line object-cover"
+            />
+          </>
+        )}
       </a>
 
       <span className="absolute bottom-1 left-1 rounded-chip bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-        {photo.stage === "after" ? "After" : "Before"}
+        {label}
       </span>
 
       <form action={action}>
