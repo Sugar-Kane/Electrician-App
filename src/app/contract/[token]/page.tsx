@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { CheckCircle2, FileSignature, FileX2, Phone } from "lucide-react";
+import { CheckCircle2, Download, FileSignature, FileX2, Phone } from "lucide-react";
 
 import { ContractSigning } from "@/app/contract/[token]/contract-signing";
+import { PdfViewer } from "@/components/pdf-viewer";
 import { unsignableBecause } from "@/lib/contract-signing";
+import { currentDocument, type StoredDocument } from "@/lib/pdf/store";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -13,8 +17,13 @@ import { createPublicClient } from "@/lib/supabase/public";
  * The token is the only thing between this page and the world, so it shows the
  * one contract behind it and nothing that would help anybody guess at another.
  *
- * What is shown is the stored body verbatim — the same text the signature is
- * hashed against. What they read is what they sign.
+ * What is shown is the contract itself: the PDF the business sees in its
+ * preview and keeps on file, with their letterhead and the signature block,
+ * laid out from the stored body — the same text the signature is hashed
+ * against. Showing the words alone as plain paragraphs looked nothing like the
+ * contract the business sent, and the customer is agreeing to a document, not
+ * to a web page. The words stay one tap away, for a screen reader or a browser
+ * that cannot draw the pages, and they are the whole page when there is no PDF.
  */
 
 export const metadata: Metadata = {
@@ -25,6 +34,7 @@ export const metadata: Metadata = {
 
 type PublicContract = {
   contract_id: string;
+  organization_id: string;
   business_name: string;
   business_phone: string;
   body: string;
@@ -51,6 +61,31 @@ function signedLabel(iso: string, timeZone: string): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+/**
+ * The contract's current PDF — the signed copy, once there is one.
+ *
+ * With the service role, because an anonymous visitor cannot read the
+ * business's documents — but only for the contract the token resolved to,
+ * never for anything taken from the request. Null when there is no PDF yet, or
+ * storage cannot be reached, and the page shows the words instead.
+ */
+async function contractDocument(
+  contract: PublicContract,
+  timeZone: string,
+): Promise<StoredDocument | null> {
+  try {
+    return await currentDocument({
+      database: asFlexibleClient(getSupabaseAdmin()),
+      organizationId: contract.organization_id,
+      contractId: contract.contract_id,
+      timeZone,
+    });
+  } catch (error) {
+    console.error("contract page: could not load the document", error);
+    return null;
+  }
 }
 
 /** The body as paragraphs, split where the template left a blank line. */
@@ -95,6 +130,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
   }
 
   const timeZone = contract.time_zone || "America/Los_Angeles";
+  const document = await contractDocument(contract, timeZone);
   const blocked = unsignableBecause({
     status: contract.status,
     unfilled: contract.unfilled ?? [],
@@ -136,10 +172,34 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           </section>
         ) : null}
 
-        {/* The document, set like paper: long terms read better dark on light. */}
-        <article className="mt-6 rounded-panel bg-white p-5 sm:p-8">
-          <Body text={contract.body} />
-        </article>
+        {document ? (
+          <section className="mt-6" aria-label="The contract">
+            <PdfViewer url={document.url} fileName={document.fileName} />
+
+            <a
+              href={document.url}
+              download={document.fileName}
+              className="tap-target mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              Download a copy
+            </a>
+
+            <details className="mt-2">
+              <summary className="tap-target flex min-h-11 cursor-pointer items-center text-sm font-semibold text-ink-muted">
+                Read it as text
+              </summary>
+              <article className="mt-2 rounded-panel bg-white p-5 sm:p-8">
+                <Body text={contract.body} />
+              </article>
+            </details>
+          </section>
+        ) : (
+          /* The words, set like paper: long terms read better dark on light. */
+          <article className="mt-6 rounded-panel bg-white p-5 sm:p-8">
+            <Body text={contract.body} />
+          </article>
+        )}
 
         {!contract.signed_at && !blocked ? (
           <section className="mt-6 rounded-panel border border-line bg-[#081925] p-5 sm:p-6">
