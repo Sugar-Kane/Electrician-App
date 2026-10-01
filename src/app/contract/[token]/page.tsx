@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CheckCircle2, FileSignature, FileX2, Phone } from "lucide-react";
+import { ArrowDown, CheckCircle2, FileSignature, FileX2, PenLine, Phone } from "lucide-react";
 
 import { ContractPdfPages } from "@/app/contract/[token]/contract-pdf";
 import { ContractSigning } from "@/app/contract/[token]/contract-signing";
@@ -25,9 +25,16 @@ import { createPublicClient } from "@/lib/supabase/public";
  * body is the text the signature is hashed against). Plain paragraphs looked
  * nothing like the contract the business sent; the PDF itself, fitted to a
  * phone, was too small to read. So the copy is real text that wraps to the
- * screen, and the exact PDF pages are one tap away, with a copy to download.
- * When that data cannot be read, the stored words are the page.
+ * screen, drawn the way the PDF is, and the exact PDF pages are one tap away,
+ * with a copy to download. When that data cannot be read, the stored words are
+ * the page.
+ *
+ * On a phone the contract runs to several screens before the place to sign, so
+ * while it can be signed, a button at the top goes straight there.
  */
+
+/** Where the button at the top of the page goes: the Sign section. */
+const SIGN_ANCHOR = "sign";
 
 export const metadata: Metadata = {
   title: "Your contract",
@@ -159,6 +166,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
     signedAt: contract.signed_at,
     superseded: contract.superseded === true,
   });
+  const signable = !contract.signed_at && !blocked;
 
   return (
     <main id="main-content" className="min-h-screen bg-canvas px-4 py-8 text-white sm:py-12">
@@ -175,6 +183,19 @@ export default async function ContractPage({ params }: { params: Promise<{ token
             <p className="mt-1 text-sm text-ink-muted">For {contract.customer_name}</p>
           ) : null}
         </header>
+
+        {signable ? (
+          // A plain link to the section, so it works before the page's
+          // scripts have loaded, and the page scrolls there smoothly.
+          <a
+            href={`#${SIGN_ANCHOR}`}
+            className="tap-target mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-base font-bold text-on-brand sm:inline-flex sm:w-auto"
+          >
+            <PenLine className="h-5 w-5" aria-hidden />
+            Click to sign
+            <ArrowDown className="h-5 w-5" aria-hidden />
+          </a>
+        ) : null}
 
         {contract.signed_at ? (
           <section className="mt-6 flex items-start gap-3 rounded-panel border border-brand/30 bg-brand/10 p-4">
@@ -205,8 +226,11 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           {document ? <ContractPdfPages url={document.url} fileName={document.fileName} /> : null}
         </section>
 
-        {!contract.signed_at && !blocked ? (
-          <section className="mt-6 rounded-panel border border-line bg-[#081925] p-5 sm:p-6">
+        {signable ? (
+          <section
+            id={SIGN_ANCHOR}
+            className="mt-6 scroll-mt-4 rounded-panel border border-line bg-[#081925] p-5 sm:p-6"
+          >
             <h2 className="text-lg font-semibold">Sign</h2>
             <p className="mt-1 text-sm leading-6 text-ink-muted">
               By signing you agree to the work and the price above.
