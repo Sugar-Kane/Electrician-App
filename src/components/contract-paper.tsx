@@ -1,3 +1,4 @@
+import { signatureFont } from "@/components/signature-font";
 import { contractBlocks, signatureSection } from "@/lib/contract-layout";
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import type { ContractDocumentData, ContractSignature } from "@/lib/pdf/contract-document";
@@ -79,7 +80,7 @@ function SignatureColumn({
             className="h-12 w-auto max-w-full object-contain object-left-bottom"
           />
         ) : signed?.method === "typed" ? (
-          <span className="mb-1 font-serif text-2xl italic leading-none">{signed.name}</span>
+          <span className={`${signatureFont.className} mb-1 text-3xl leading-none`}>{signed.name}</span>
         ) : null}
       </div>
       <div className="border-t border-slate-900 pt-1">

@@ -9,6 +9,7 @@ import {
   saveContractSigner,
   type SignerState,
 } from "@/app/settings/contract/actions";
+import { signatureFont } from "@/components/signature-font";
 import { SignatureInput, type SignatureValue } from "@/components/signature-input";
 import { FormMessage, inputClass } from "@/components/ui/field";
 import { readPrintedName } from "@/lib/contract-signing";
@@ -98,7 +99,7 @@ export function ContractSignerSection({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={saved.image} alt={`Your signature, ${saved.name}`} className="h-14 w-auto max-w-full object-contain object-left-bottom" />
               ) : (
-                <span className="mb-1 font-serif text-3xl italic leading-none">{saved.name}</span>
+                <span className={`${signatureFont.className} mb-1 text-4xl leading-none`}>{saved.name}</span>
               )}
             </div>
             <p className="border-t border-slate-900 pt-1 text-sm">

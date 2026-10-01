@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Eraser, PenLine, Type } from "lucide-react";
 
+import { signatureFont } from "@/components/signature-font";
+
 /**
  * Drawing or typing a signature, inside whatever form is collecting it.
  *
@@ -215,7 +217,9 @@ export function SignatureInput({
         </div>
       ) : (
         <div className="rounded-control border border-line bg-white px-4 py-5">
-          <p className="font-serif text-2xl italic text-slate-900">{printedName || "Your name"}</p>
+          <p className={`${signatureFont.className} text-3xl leading-tight text-slate-900`}>
+            {printedName || "Your name"}
+          </p>
           <p className="mt-1 text-xs text-slate-500">Your typed name below will be your signature.</p>
         </div>
       )}
