@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Camera, LoaderCircle, Package } from "lucide-react";
 
 import { attachStockPhoto, createStockPhotoUpload } from "@/app/inventory/actions";
+import { useImageFallback } from "@/components/use-image-fallback";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -22,9 +23,14 @@ import { createClient } from "@/lib/supabase/client";
  * `capture` is deliberately absent from the input. Android reads it as "the
  * camera and nothing else", which shuts the gallery out — and half the time the
  * photo somebody wants is one they took yesterday.
+ *
+ * `image/*` and nothing more specific. Naming HEIC in the list told Safari the
+ * page could take it, so an iPhone sent its photos as HEIC — which Safari draws
+ * and Chrome and Edge do not, so the same part showed a photo on the phone and
+ * a broken box on the office PC. Asked for any image, Safari converts to JPEG.
  */
 
-const ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,image/*";
+const ACCEPT = "image/*";
 
 export function StockPhoto({
   itemId,
@@ -36,6 +42,9 @@ export function StockPhoto({
   name: string;
 }) {
   const [shown, setShown] = useState(photoUrl);
+  // A photo saved before the change above can be a HEIC, which only Safari
+  // draws. Anywhere else it falls back to the part icon, not a broken box.
+  const { failed, imageProps } = useImageFallback(shown);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const picker = useRef<HTMLInputElement>(null);
@@ -106,9 +115,9 @@ export function StockPhoto({
         aria-label={shown ? `Replace the photo of ${name}` : `Add a photo of ${name}`}
         className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-panel border border-line bg-white/5 disabled:opacity-60"
       >
-        {shown ? (
+        {shown && !failed ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={shown} alt="" className="h-full w-full object-cover" />
+          <img {...imageProps} src={shown} alt="" className="h-full w-full object-cover" />
         ) : (
           <Package className="h-8 w-8 text-brand" aria-hidden />
         )}

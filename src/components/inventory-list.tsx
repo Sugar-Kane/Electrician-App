@@ -11,6 +11,7 @@ import {
   type InventoryState,
 } from "@/app/inventory/actions";
 import { FormMessage, inputClass } from "@/components/ui/field";
+import { useImageFallback } from "@/components/use-image-fallback";
 import { normalizeName } from "@/lib/inventory-match";
 
 /**
@@ -36,6 +37,29 @@ export type InventoryRow = {
 };
 
 const initialState: InventoryState = { error: "" };
+
+/** The part's photo, or the part icon when there is none this browser can draw. */
+function ItemThumb({ photoUrl }: { photoUrl: string }) {
+  const { failed, imageProps } = useImageFallback(photoUrl);
+
+  if (!photoUrl || failed) {
+    return (
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5">
+        <Package className="h-5 w-5 text-brand" aria-hidden />
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      {...imageProps}
+      src={photoUrl}
+      alt=""
+      className="h-11 w-11 shrink-0 rounded-control object-cover"
+    />
+  );
+}
 
 function SaveButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -280,18 +304,7 @@ export function InventoryList({ items }: { items: InventoryRow[] }) {
                   prefetch
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                {item.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.photoUrl}
-                    alt=""
-                    className="h-11 w-11 shrink-0 rounded-control object-cover"
-                  />
-                ) : (
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5">
-                    <Package className="h-5 w-5 text-brand" aria-hidden />
-                  </span>
-                )}
+                <ItemThumb photoUrl={item.photoUrl} />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{item.name}</p>

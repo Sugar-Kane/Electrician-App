@@ -364,3 +364,26 @@ export function buildAppleDirectionsUrl(destination: string, origin?: string) {
   if (origin) params.set("saddr", origin);
   return `https://maps.apple.com/?${params.toString()}`;
 }
+
+export type MapsApp = "apple" | "google";
+
+/**
+ * The maps app this phone or computer has: Apple Maps on an iPhone, iPad or
+ * Mac, whichever browser is asking, and Google Maps everywhere else.
+ *
+ * An Apple Maps link on an Android phone opens no app, and on a Windows PC a
+ * web page that may not support the browser — so a route handed out one stop
+ * at a time in Apple Maps was a dead end for anybody not on Apple. An iPad
+ * asking for the desktop site, which is its default, says "Macintosh".
+ */
+export function mapsAppFor(userAgent: string): MapsApp {
+  return /iPhone|iPad|iPod|Macintosh/.test(userAgent) ? "apple" : "google";
+}
+
+/** Directions for one leg of a route, in the given app. */
+export function buildLegDirectionsUrl(app: MapsApp, destination: string, origin?: string) {
+  if (app === "apple") return buildAppleDirectionsUrl(destination, origin);
+  const params = new URLSearchParams({ api: "1", destination, travelmode: "driving" });
+  if (origin) params.set("origin", origin);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
