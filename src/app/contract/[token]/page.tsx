@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import { CheckCircle2, FileSignature, FileX2, Phone } from "lucide-react";
 
+import { ContractPdfPages } from "@/app/contract/[token]/contract-pdf";
 import { ContractSigning } from "@/app/contract/[token]/contract-signing";
+import { ContractPaper } from "@/components/contract-paper";
 import { unsignableBecause } from "@/lib/contract-signing";
+import { loadContractDocument, type LoadedContract } from "@/lib/pdf/contract-data";
+import { currentDocument, type StoredDocument } from "@/lib/pdf/store";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -13,8 +19,14 @@ import { createPublicClient } from "@/lib/supabase/public";
  * The token is the only thing between this page and the world, so it shows the
  * one contract behind it and nothing that would help anybody guess at another.
  *
- * What is shown is the stored body verbatim — the same text the signature is
- * hashed against. What they read is what they sign.
+ * What is shown is the contract as its document lays it out — the letterhead,
+ * the Customer and Job blocks, the terms and the signature block, built from
+ * the same data and the same stored body as the PDF the business files (the
+ * body is the text the signature is hashed against). Plain paragraphs looked
+ * nothing like the contract the business sent; the PDF itself, fitted to a
+ * phone, was too small to read. So the copy is real text that wraps to the
+ * screen, and the exact PDF pages are one tap away, with a copy to download.
+ * When that data cannot be read, the stored words are the page.
  */
 
 export const metadata: Metadata = {
@@ -25,6 +37,7 @@ export const metadata: Metadata = {
 
 type PublicContract = {
   contract_id: string;
+  organization_id: string;
   business_name: string;
   business_phone: string;
   body: string;
@@ -51,6 +64,46 @@ function signedLabel(iso: string, timeZone: string): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+/*
+ * Both of these read with the service role, because an anonymous visitor cannot
+ * read the business's jobs, customers or documents — but only for the contract
+ * the token resolved to, never for anything taken from the request, which is
+ * how the signing action files the signed copy too.
+ */
+
+/** The contract laid out as its document: letterhead, parties, terms, signatures. */
+async function contractCopy(contract: PublicContract, timeZone: string): Promise<LoadedContract | null> {
+  try {
+    return await loadContractDocument({
+      database: asFlexibleClient(getSupabaseAdmin()),
+      organizationId: contract.organization_id,
+      contractId: contract.contract_id,
+      timeZone,
+    });
+  } catch (error) {
+    console.error("contract page: could not load the contract", error);
+    return null;
+  }
+}
+
+/** The contract's current PDF — the signed copy, once there is one. Null when there is none yet. */
+async function contractDocument(
+  contract: PublicContract,
+  timeZone: string,
+): Promise<StoredDocument | null> {
+  try {
+    return await currentDocument({
+      database: asFlexibleClient(getSupabaseAdmin()),
+      organizationId: contract.organization_id,
+      contractId: contract.contract_id,
+      timeZone,
+    });
+  } catch (error) {
+    console.error("contract page: could not load the document", error);
+    return null;
+  }
 }
 
 /** The body as paragraphs, split where the template left a blank line. */
@@ -95,6 +148,10 @@ export default async function ContractPage({ params }: { params: Promise<{ token
   }
 
   const timeZone = contract.time_zone || "America/Los_Angeles";
+  const [copy, document] = await Promise.all([
+    contractCopy(contract, timeZone),
+    contractDocument(contract, timeZone),
+  ]);
   const blocked = unsignableBecause({
     status: contract.status,
     unfilled: contract.unfilled ?? [],
@@ -136,10 +193,17 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           </section>
         ) : null}
 
-        {/* The document, set like paper: long terms read better dark on light. */}
-        <article className="mt-6 rounded-panel bg-white p-5 sm:p-8">
-          <Body text={contract.body} />
-        </article>
+        <section className="mt-6" aria-label="The contract">
+          {copy ? (
+            <ContractPaper data={copy.document} />
+          ) : (
+            /* The words, set like paper: long terms read better dark on light. */
+            <article className="rounded-panel bg-white p-5 sm:p-8">
+              <Body text={contract.body} />
+            </article>
+          )}
+          {document ? <ContractPdfPages url={document.url} fileName={document.fileName} /> : null}
+        </section>
 
         {!contract.signed_at && !blocked ? (
           <section className="mt-6 rounded-panel border border-line bg-[#081925] p-5 sm:p-6">

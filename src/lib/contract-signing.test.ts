@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 import {
   MAX_SIGNATURE_LENGTH,
+  contractorSignature,
   documentSignature,
   fingerprintOf,
   isPngDataUri,
   readPrintedName,
   readSignature,
+  readSignerTitle,
   signingLinkMessage,
   unsignableBecause,
 } from "./contract-signing.ts";
@@ -252,4 +254,55 @@ test("the signing text still goes out without a job number or a business name", 
     signingLinkMessage({ businessName: "  ", jobNumber: 3, link }),
     `Your electrician: here is your contract for job #3 to read and sign: ${link}`,
   );
+});
+
+// The business's signature, as `sign_contract_as_contractor` leaves it on a
+// contract when it is sent.
+const BUSINESS_SIGNED = {
+  contractor_signed_at: "2026-10-01T16:02:00Z",
+  contractor_signature_method: "typed",
+  contractor_signature_name: "Nicholas Kane",
+  contractor_signature_title: "Owner",
+  contractor_signature_image: null,
+};
+
+test("the business's signature is printed with who, their title and when", () => {
+  const printed = contractorSignature(BUSINESS_SIGNED, "America/Los_Angeles")!;
+  assert.equal(printed.method, "typed");
+  assert.equal(printed.name, "Nicholas Kane");
+  assert.equal(printed.title, "Owner");
+  assert.equal(printed.image, "");
+  // In the business's timezone, to the minute, like the customer's.
+  assert.equal(printed.signedLabel, "Oct 1, 2026, 9:02 AM PDT");
+});
+
+test("a drawn business signature carries its image, and only a real PNG", () => {
+  const drawn = { ...BUSINESS_SIGNED, contractor_signature_method: "drawn", contractor_signature_image: PNG };
+  assert.equal(contractorSignature(drawn, "America/Los_Angeles")?.image, PNG);
+  assert.equal(
+    contractorSignature({ ...drawn, contractor_signature_image: GIF_CALLED_PNG }, "America/Los_Angeles"),
+    undefined,
+  );
+});
+
+test("nothing is printed for the business until every part of its signature is there", () => {
+  assert.equal(contractorSignature({}, "America/Los_Angeles"), undefined);
+  for (const missing of [
+    { contractor_signed_at: null },
+    { contractor_signature_name: "  " },
+    { contractor_signature_method: "stamped" },
+  ]) {
+    assert.equal(contractorSignature({ ...BUSINESS_SIGNED, ...missing }, "America/Los_Angeles"), undefined);
+  }
+  // A title is optional; its absence is not a missing part.
+  assert.equal(
+    contractorSignature({ ...BUSINESS_SIGNED, contractor_signature_title: null }, "America/Los_Angeles")?.title,
+    "",
+  );
+});
+
+test("a signer's title is one tidy line, kept short", () => {
+  assert.equal(readSignerTitle("  Owner \n  & Master Electrician "), "Owner & Master Electrician");
+  assert.equal(readSignerTitle(undefined), "");
+  assert.equal(readSignerTitle("x".repeat(200)).length, 80);
 });

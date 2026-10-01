@@ -133,10 +133,16 @@ export async function askAboutBusiness(input: {
  *
  * Returns null on any failure, and the caller leaves {{scope}} unfilled rather
  * than shipping a contract with a made-up paragraph in it.
+ *
+ * `visitOnly` is set when the contract's price is the diagnostic fee. The
+ * paragraph then has to describe the visit and nothing more: "the price above
+ * covers the scope of work described" under a description of the whole
+ * installation would read as the installation for the price of a diagnostic.
  */
 export async function draftScope(input: {
   description: string;
   workType: string;
+  visitOnly?: boolean;
 }): Promise<string | null> {
   const anthropic = getClient();
   if (!anthropic) return null;
@@ -154,6 +160,11 @@ export async function draftScope(input: {
           role: "user",
           content: [
             `Kind of work booked: ${input.workType}`,
+            ...(input.visitOnly
+              ? [
+                  "This agreement covers the diagnostic visit only; any repair or installation will be quoted and agreed separately.",
+                ]
+              : []),
             "",
             "What the customer described:",
             described.slice(0, 2000),

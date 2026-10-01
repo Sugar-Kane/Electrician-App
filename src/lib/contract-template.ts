@@ -107,6 +107,62 @@ export function fillTemplate(template: string, facts: Partial<ContractFacts>): F
   return { body, unfilled };
 }
 
+export type ContractMoney = {
+  /** The agreed price. Zero when the job has none yet, which stays a blank. */
+  totalCents: number;
+  depositCents: number;
+  /** Paid at booking, so the deposit line says so rather than asking again. */
+  depositPaid: boolean;
+  /**
+   * Where the total came from. "diagnostic" means this contract is for the
+   * visit alone, and its scope has to say so: a $180 total under a paragraph
+   * describing a panel replacement reads as $180 for the panel.
+   */
+  source: "invoices" | "diagnostic" | "none";
+};
+
+/**
+ * The two money lines on a contract, from what the job has been priced at.
+ *
+ * Invoices first: they are what the customer is actually being charged. Their
+ * totals already have a prepaid diagnostic taken off, which is added back here
+ * because the deposit line now reports it as paid — leaving it off would make
+ * $1,540 of work read as a $1,360 total with $180 paid on top.
+ *
+ * Without invoices, a diagnostic visit has a price after all: its fee. That is
+ * the whole agreement for a job booked and paid for online and not yet looked
+ * at. Anything else with nothing priced stays blank, and so does a diagnostic
+ * job whose work has been itemised but not billed — falling back to the fee
+ * there would put $180 on a contract for work the electrician has priced at
+ * far more.
+ */
+export function contractMoney(input: {
+  category: string;
+  diagnosticFeeCents: number;
+  diagnosticPaid: boolean;
+  invoices: { totalCents: number; diagnosticCreditCents: number }[];
+  /** Work-and-parts lines that come to more than nothing. */
+  pricedLineCount: number;
+}): ContractMoney {
+  const cents = (value: number) => (Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0);
+  const fee = cents(input.diagnosticFeeCents);
+  const deposit = { depositCents: fee, depositPaid: input.diagnosticPaid && fee > 0 };
+
+  if (input.invoices.length > 0) {
+    const totalCents = input.invoices.reduce(
+      (sum, invoice) => sum + cents(invoice.totalCents) + cents(invoice.diagnosticCreditCents),
+      0,
+    );
+    return { totalCents, ...deposit, source: totalCents > 0 ? "invoices" : "none" };
+  }
+
+  if (input.category === "diagnostic" && input.pricedLineCount === 0 && fee > 0) {
+    return { totalCents: fee, ...deposit, source: "diagnostic" };
+  }
+
+  return { totalCents: 0, ...deposit, source: "none" };
+}
+
 /**
  * A starting template, for a business that has not pasted its own yet.
  *

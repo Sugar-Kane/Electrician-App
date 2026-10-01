@@ -247,14 +247,27 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* Nothing embedded may be wider than what contains it. */
-img,
-svg,
-video,
-canvas,
-iframe {
-  max-width: 100%;
-  height: auto;
+/*
+ * Nothing embedded may be wider than what contains it.
+ *
+ * In `@layer base` for the same reason as the form controls above. Written
+ * bare, `height: auto` beat every height utility on an image and
+ * `max-width: 100%` every max-width one, so `h-11 w-11` drew an inventory
+ * photo 44px wide and only as tall as its shape made it, a booking-page logo
+ * meant to be 32px tall came out at the size it was uploaded, and the
+ * signature pad grew to half its own width — 460px tall on a laptop. In the
+ * layer these are defaults: a picture keeps its shape and its container's
+ * width unless a class says otherwise.
+ */
+@layer base {
+  img,
+  svg,
+  video,
+  canvas,
+  iframe {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 /*

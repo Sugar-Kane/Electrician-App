@@ -887,6 +887,9 @@ export type JobContract = {
   signedLabel: string;
   /** When the signing link was last texted. Empty if it never was. */
   sentLabel: string;
+  /** Who signed for the business and when, which happens as it is sent. Empty until then. */
+  businessSignedBy: string;
+  businessSignedLabel: string;
   /**
    * Why this contract cannot be signed right now, or empty when it can.
    *
@@ -928,7 +931,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const { data } = await context.database
     .from("contracts")
     .select(
-      "id, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at",
+      "id, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name",
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -977,6 +980,11 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
       signedLabel: row.signed_at ? inZone(row.signed_at as string, context.timeZone, when) : "",
       sentLabel: row.signature_sent_at
         ? inZone(row.signature_sent_at as string, context.timeZone, when)
+        : "",
+      businessSignedBy:
+        typeof row.contractor_signature_name === "string" ? row.contractor_signature_name : "",
+      businessSignedLabel: row.contractor_signed_at
+        ? inZone(row.contractor_signed_at as string, context.timeZone, when)
         : "",
       unsignable: unsignableBecause({
         status: typeof row.status === "string" ? row.status : "draft",
