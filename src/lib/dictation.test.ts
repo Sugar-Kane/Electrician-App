@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { joinSpoken, spokenSince } from "./dictation.ts";
+import { joinSpoken, problemFor, spokenSince } from "./dictation.ts";
 
 /** The shape a recogniser hands back: a list of results, each a list of guesses. */
 const heard = (...sentences: string[]) => sentences.map((transcript) => [{ transcript }]);
@@ -59,4 +59,22 @@ test("hearing nothing changes nothing", () => {
   assert.equal(joinSpoken("Found the fault", ""), "Found the fault");
   assert.equal(joinSpoken("Found the fault", "   "), "Found the fault");
   assert.equal(joinSpoken("", ""), "");
+});
+
+test("an error that tapping again will not fix says what to do instead", () => {
+  // Each of these used to end the same way: tap, and nothing happens.
+  for (const error of ["not-allowed", "service-not-allowed", "network", "audio-capture", "language-not-supported"]) {
+    assert.ok(problemFor(error).length > 0, `${error} says something`);
+  }
+  // A refused microphone is a browser setting; a switched-off Dictation is the phone's.
+  assert.match(problemFor("not-allowed"), /browser settings/);
+  assert.match(problemFor("service-not-allowed"), /Settings › General › Keyboard/);
+  // Browsers with the API and no speech service behind it fail this way every time.
+  assert.match(problemFor("network"), /microphone on your keyboard/);
+});
+
+test("a pause or a stop says nothing", () => {
+  assert.equal(problemFor("no-speech"), "");
+  assert.equal(problemFor("aborted"), "");
+  assert.equal(problemFor(undefined), "");
 });

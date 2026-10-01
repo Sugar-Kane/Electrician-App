@@ -51,8 +51,16 @@ export function WeekView({
    */
   onPickDay: (date: string) => void;
 }) {
+  /*
+   * Seven columns only from 1280px. They used to start at 1024, where beside
+   * the sidebar a day is about 90px wide: "10:00 AM" was cut to "10:…" and a
+   * name to its first few letters, so on a laptop or a tablet held sideways the
+   * week could not be read. In between it is four days and then three, read in
+   * order. A day and its count stack rather than breaking mid-word, and a name
+   * takes a second line rather than losing its end.
+   */
   return (
-    <div className="grid gap-2 lg:grid-cols-7">
+    <div className="grid gap-2 lg:grid-cols-4 xl:grid-cols-7">
       {days.map((day) => {
         const dayJobs = jobs.filter((job) => job.date === day.date);
         const active = countable(dayJobs);
@@ -60,19 +68,19 @@ export function WeekView({
         return (
           <section
             key={day.date}
-            className={`rounded-control border p-3 ${
+            className={`min-w-0 rounded-control border p-3 ${
               day.isToday ? "border-brand/50 bg-brand/[0.05]" : "border-line bg-surface"
             }`}
           >
-            <header className="flex items-baseline justify-between gap-2">
+            <header className="flex flex-wrap items-baseline justify-between gap-x-2">
               <button
                 type="button"
                 onClick={() => onPickDay(day.date)}
-                className="text-sm font-semibold hover:text-brand"
+                className="whitespace-nowrap text-sm font-semibold hover:text-brand"
               >
                 {day.weekday} {day.day}
               </button>
-              <span className="text-[10px] text-ink-faint">
+              <span className="whitespace-nowrap text-[10px] text-ink-faint">
                 {active.length || "No"} {active.length === 1 ? "job" : "jobs"}
               </span>
             </header>
@@ -94,7 +102,7 @@ export function WeekView({
                     <span className="truncate text-[11px] font-semibold">{job.time}</span>
                   </span>
                   <span
-                    className={`mt-0.5 block truncate text-[11px] text-ink-muted ${
+                    className={`mt-0.5 line-clamp-2 text-[11px] text-ink-muted [overflow-wrap:anywhere] ${
                       job.status === "Canceled" ? "line-through" : ""
                     }`}
                   >

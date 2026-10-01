@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Camera, ImageUp, LoaderCircle, TriangleAlert, Trash2 } from "lucide-react";
@@ -11,6 +11,7 @@ import {
   removeJobPhoto,
   type PhotoActionState,
 } from "@/app/jobs/[jobId]/photo-actions";
+import { useImageFallback } from "@/components/use-image-fallback";
 import { createClient } from "@/lib/supabase/client";
 import type { JobPhoto } from "@/lib/job-photo-data";
 
@@ -77,24 +78,9 @@ function PhotoTile({ jobNumber, photo }: { jobNumber: string; photo: JobPhoto })
   // Safari, which is what a Samsung phone takes with "High efficiency pictures"
   // on. Drawn as it was, it is a broken image with its file name spilling over
   // it, and looks like the upload failed.
-  const [noPreview, setNoPreview] = useState(false);
+  const { failed: noPreview, imageProps } = useImageFallback(photo.url);
   const label = photo.stage === "after" ? "After" : "Before";
   const format = formatOf(photo.fileName);
-
-  /*
-   * A photo that failed before the page came to life fired its error with
-   * nothing listening, and React does not replay it. That happens whenever the
-   * thumbnail beats the page's JavaScript, which a small one on a slow
-   * connection easily does. Asking for it once more, off to the side, settles
-   * it: one that loaded or is still loading is left alone, and one that failed
-   * fails again, heard.
-   */
-  const hearEarlyFailure = useCallback((img: HTMLImageElement | null) => {
-    if (!img?.complete || img.naturalWidth > 0) return;
-    const probe = new Image();
-    probe.onerror = () => setNoPreview(true);
-    probe.src = img.src;
-  }, []);
 
   return (
     <li className="relative">
@@ -126,11 +112,10 @@ function PhotoTile({ jobNumber, photo }: { jobNumber: string; photo: JobPhoto })
                 hour later. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              ref={hearEarlyFailure}
+              {...imageProps}
               src={photo.url}
               alt={`${label} — ${photo.fileName}`}
               loading="lazy"
-              onError={() => setNoPreview(true)}
               className="aspect-square w-full rounded-control border border-line object-cover"
             />
           </>

@@ -22,9 +22,10 @@ import { JobMap, type MapStop } from "@/components/job-map";
 import { formatDayLabel } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
 import {
-  buildAppleDirectionsUrl,
   buildGoogleDirectionsUrl,
+  buildLegDirectionsUrl,
   getPilotSupplyStore,
+  mapsAppFor,
   serviceBase,
   type PilotJob,
   type SupplierId,
@@ -78,6 +79,11 @@ import {
  */
 
 type Stop = RouteStopInput & { job?: PilotJob };
+
+/** Which maps app this device has. Nothing to subscribe to: it cannot change. */
+const subscribeToNothing = () => () => {};
+const mapsAppOnClient = () => mapsAppFor(navigator.userAgent);
+const mapsAppOnServer = () => "apple" as const;
 
 const startModeOptions: { id: RouteStartMode; label: string; icon: typeof Home }[] = [
   { id: "base", label: "Shop", icon: Store },
@@ -311,7 +317,13 @@ export function RouteBuilder({
   const routeComplete = legIndex >= routeStops.length;
   const legOrigin = routeStops[legIndex - 1] ?? startStop;
   const legDestination = routeStops[legIndex];
-  const appleUrl = buildAppleDirectionsUrl(
+  // Stop by stop in whichever maps app this device has. Only drawn after the
+  // route is locked, which is always after the page has woken up, so the
+  // server's guess is never what anybody sees.
+  const mapsApp = useSyncExternalStore(subscribeToNothing, mapsAppOnClient, mapsAppOnServer);
+  const mapsName = mapsApp === "apple" ? "Apple Maps" : "Google Maps";
+  const legUrl = buildLegDirectionsUrl(
+    mapsApp,
     legDestination?.address ?? startStop.address,
     legOrigin.address,
   );
@@ -628,8 +640,9 @@ export function RouteBuilder({
                 {unplaceable.length > 0
                   ? `, ${unplaceable.length} of which ${unplaceable.length === 1 ? "is" : "are"} not on the map.`
                   : "."}{" "}
-                Google receives the whole order. Apple Maps takes one destination at a time, so it
-                runs the same route leg by leg.
+                {mapsApp === "apple"
+                  ? "Google receives the whole order. Apple Maps takes one destination at a time, so it runs the same route leg by leg."
+                  : "Google Maps takes the whole order at once, or one stop at a time below."}
               </p>
 
               <a
@@ -645,7 +658,7 @@ export function RouteBuilder({
               <div className="mt-5 border-t border-line pt-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                    Apple Maps · stop by stop
+                    {mapsName} · stop by stop
                   </p>
                   <p className="text-[10px] text-ink-faint">
                     Stop {Math.min(legIndex + 1, routeStops.length)} of {routeStops.length}
@@ -672,13 +685,13 @@ export function RouteBuilder({
                     <p className="text-[11px] text-ink-faint">{legDestination.address}</p>
                     <p className="text-[10px] text-ink-faint">Departing from {legOrigin.label}</p>
                     <a
-                      href={appleUrl}
+                      href={legUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="tap-target flex min-h-13 items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
                     >
                       <Navigation className="h-4 w-4" aria-hidden />
-                      Open stop {legIndex + 1} in Apple Maps
+                      Open stop {legIndex + 1} in {mapsName}
                     </a>
                     <div className="grid grid-cols-[auto_1fr] gap-2">
                       <button

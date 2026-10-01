@@ -119,6 +119,30 @@ body {
   }
 }
 
+/*
+ * Scrollbars inside the page: the sidebar, a message thread, a list that opens
+ * over the page.
+ *
+ * On a phone and on a Mac they are overlays that only show while something
+ * scrolls. Chrome and Edge on Windows draw them all the time — 15px wide, with
+ * arrow buttons, in a light grey — so the same sidebar looked finished in
+ * Safari and unfinished on the office PC. Thin and in the app's colours, they
+ * read the same in both.
+ *
+ * The page's own scrollbar keeps the platform's: it is the one people drag.
+ */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(148 163 184 / 0.35) transparent;
+  }
+
+  html {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+}
+
 button,
 input,
 textarea,

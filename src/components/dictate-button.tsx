@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Mic, Square } from "lucide-react";
 
-import { joinSpoken, spokenSince } from "@/lib/dictation";
+import { joinSpoken, problemFor, spokenSince } from "@/lib/dictation";
 
 /**
  * Dictation, wherever there is a box to type into.
@@ -76,7 +76,7 @@ export function DictateButton({
 }) {
   const available = useDictationAvailable();
   const [listening, setListening] = useState(false);
-  const [denied, setDenied] = useState(false);
+  const [problem, setProblem] = useState("");
 
   const engine = useRef<SpeechRecognitionLike | null>(null);
   /** How many results have been folded in already. See `spokenSince`. */
@@ -129,21 +129,18 @@ export function DictateButton({
      * refused microphone fires `onerror` and never `onend`, and a button stuck
      * on "listening" cannot be pressed again.
      *
-     * A refusal is the one worth saying out loud. Everything else — a pause too
-     * long, no network for the recogniser — is noise the person can respond to
-     * by pressing the button again, and a red banner for it would be a lie
-     * about how serious it is.
+     * The ones worth saying out loud are those that pressing the button again
+     * will not fix. A pause too long or a stop is not one of them, and a banner
+     * for it would be a lie about how serious it is.
      */
     next.onerror = (event) => {
       setListening(false);
-      if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
-        setDenied(true);
-      }
+      setProblem(problemFor(event?.error));
     };
     next.onend = () => setListening(false);
 
     engine.current = next;
-    setDenied(false);
+    setProblem("");
 
     // `start()` throws if the browser refuses outright — an insecure origin, or
     // a recogniser already running in another tab. Failing to a silent button
@@ -193,12 +190,7 @@ export function DictateButton({
         {listening ? "Listening" : ""}
       </span>
 
-      {denied ? (
-        <p className="mt-2 w-full text-xs leading-5 text-caution">
-          This browser is not allowed to use the microphone. Turn it on for this site in your
-          browser settings, then tap the microphone again.
-        </p>
-      ) : null}
+      {problem ? <p className="mt-2 w-full text-xs leading-5 text-caution">{problem}</p> : null}
     </>
   );
 }
