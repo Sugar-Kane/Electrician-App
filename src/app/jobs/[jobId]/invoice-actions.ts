@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { formatMoney } from "@/lib/invoice-messages";
-import { diagnosticCreditFor, invoiceTotals } from "@/lib/invoice-math";
+import { invoiceTotals } from "@/lib/invoice-math";
 import { jobLineTotals } from "@/lib/job-lines";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -18,8 +19,10 @@ import { createClient } from "@/lib/supabase/server";
  * collected and then the full repair was billed on top, which is a customer
  * paying twice for the first hour.
  *
- * The credit is applied once per job however many invoices it grows. A panel
- * job billed in three stages must not refund the diagnostic three times.
+ * The credit is applied once however many invoices the work grows. A panel
+ * job billed in three stages must not refund the diagnostic three times — and
+ * neither must a diagnostic and the work order booked from it, which share one
+ * fee between them (diagnostic-credit.ts).
  */
 
 /**
@@ -88,7 +91,7 @@ export async function raiseInvoice(
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, diagnostic_paid, diagnostic_fee_cents")
+    .select("id, diagnostic_paid, diagnostic_fee_cents, follow_up_of")
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
     .maybeSingle();
@@ -128,11 +131,12 @@ export async function raiseInvoice(
     };
   }
 
-  // Existing invoices decide two things: how much of the diagnostic has
-  // already been given back, and whether to ask before making another.
+  // This job's own invoices decide whether to ask before making another. How
+  // much of the diagnostic is left is worked out further down, across every
+  // job that shares it.
   const { data: existing } = await supabase
     .from("invoices")
-    .select("id, invoice_number, total_cents, diagnostic_credit_cents, created_at")
+    .select("id, invoice_number, total_cents, created_at")
     .eq("organization_id", organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false });
@@ -177,15 +181,14 @@ export async function raiseInvoice(
     }
   }
 
-  const alreadyCreditedCents = invoices.reduce(
-    (sum, invoice) => sum + Number(invoice.diagnostic_credit_cents ?? 0),
-    0,
-  );
-
-  const diagnosticPaidCents = diagnosticCreditFor({
+  // Whatever of the diagnostic has not come off yet — this job's own, or, for
+  // a work order booked from one, the diagnostic's — counted across that
+  // diagnostic and everything booked from it.
+  const diagnosticPaidCents = await diagnosticCreditLeft(supabase, organizationId, {
+    id: jobId,
+    followUpOf: text((job as Record<string, unknown>).follow_up_of) || null,
     diagnosticPaid: Boolean((job as Record<string, unknown>).diagnostic_paid),
     diagnosticFeeCents: Number((job as Record<string, unknown>).diagnostic_fee_cents ?? 0),
-    alreadyCreditedCents,
   });
 
   const totals = invoiceTotals({ subtotalCents, taxCents, diagnosticPaidCents });

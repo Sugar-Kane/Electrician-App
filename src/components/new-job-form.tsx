@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useActionState } from "react";
-import { FileText, LoaderCircle, Plus, X } from "lucide-react";
+import { FileText, Link2, LoaderCircle, Plus, X } from "lucide-react";
 
 import { createJob, type NewJobState } from "@/app/jobs/new/actions";
 import { AddressFields } from "@/components/ui/address-fields";
@@ -13,7 +13,8 @@ import { SelectField } from "@/components/ui/select-field";
 import { WorkOrderLines } from "@/components/work-order-lines";
 import { keepPhoneDigits } from "@/lib/digits-input";
 import { keepMoneyCharacters } from "@/lib/money-input";
-import { DIAGNOSTIC_MINUTES, JOB_CATEGORIES } from "@/lib/new-job-input";
+import { formatCents } from "@/lib/job-lines";
+import { DIAGNOSTIC_MINUTES, JOB_CATEGORIES, type NewJobRaw } from "@/lib/new-job-input";
 import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
 
 /**
@@ -50,15 +51,25 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export function NewJobForm({
   timeZone,
   timeZoneLabel,
+  followUp,
 }: {
   /** The IANA zone, so the calendar rings today on the right day. */
   timeZone: string;
   timeZoneLabel: string;
+  /**
+   * Booking the work a diagnostic found: where the form starts, and the
+   * diagnostic it is linked back to.
+   */
+  followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number };
 }) {
   const [state, action, pending] = useActionState(createJob, initialState);
 
-  /** Whatever was last posted, so a rejected save leaves the screen alone. */
-  const kept = state.values;
+  /**
+   * Whatever was last posted, so a rejected save leaves the screen alone —
+   * and before anything has been, the diagnostic this is booked from.
+   */
+  const kept = state.values ?? followUp?.values;
+  const cancelHref = followUp ? `/jobs/${followUp.jobNumber}` : "/schedule";
 
   const [category, setCategory] = useState(kept?.category || "diagnostic");
   const [duration, setDuration] = useState(kept?.durationHours ?? "");
@@ -85,6 +96,26 @@ export function NewJobForm({
   return (
     <form action={action} className="space-y-3">
       <input ref={mode} type="hidden" name="mode" defaultValue="save" />
+
+      {followUp ? (
+        <>
+          <input type="hidden" name="followUpOf" value={followUp.jobNumber} />
+          {/* Says what the link does, once, above the form it changes. */}
+          <p className="flex items-start gap-3 rounded-panel border border-brand/30 bg-brand/[0.06] p-4 text-sm leading-6">
+            <Link2 className="mt-1 h-4 w-4 shrink-0 text-brand" aria-hidden />
+            <span>
+              Booked from diagnostic{" "}
+              <Link href={`/jobs/${followUp.jobNumber}`} className="font-semibold text-brand">
+                #{followUp.jobNumber}
+              </Link>
+              , and linked to it.
+              {followUp.creditCents > 0
+                ? ` The ${formatCents(followUp.creditCents)} the customer paid for the diagnostic comes off this work order's first invoice.`
+                : ""}
+            </span>
+          </p>
+        </>
+      ) : null}
 
       <Section title="Customer">
         <Field label="Name">
@@ -218,7 +249,9 @@ export function NewJobForm({
         </Field>
 
         <div className="sm:col-span-2">
-          <Field label="What the customer said">
+          {/* On a follow-up this starts as what the diagnostic found, which is
+              the work rather than anything the customer said. */}
+          <Field label={followUp ? "What needs doing" : "What the customer said"}>
             <textarea
               ref={description}
               name="description"
@@ -271,7 +304,7 @@ export function NewJobForm({
         </button>
 
         <Link
-          href="/schedule"
+          href={cancelHref}
           className="tap-target inline-flex w-full items-center justify-center gap-2 rounded-control px-5 text-sm font-semibold text-ink-muted sm:w-auto"
         >
           <X className="h-4 w-4" aria-hidden />

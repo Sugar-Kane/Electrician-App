@@ -12,7 +12,9 @@ import { hasCoordinates } from "@/lib/coordinates";
 import { unsignableBecause } from "@/lib/contract-signing";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
-import { jobCategoryLabel } from "@/lib/new-job-input";
+import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
+import { followUpPrefill } from "@/lib/follow-up-jobs";
+import { jobCategoryLabel, kindOfWork, type KindOfWork, type NewJobRaw } from "@/lib/new-job-input";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { currentContext } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -162,6 +164,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
     // booked before the kinds of work changed, `panel_breaker` and the rest —
     // and every screen that shows this shows it to a person.
     workType: jobCategoryLabel(String(row.category ?? "")),
+    kindOfWork: kindOfWork(String(row.category ?? "")),
     summary: row.customer_description ?? row.ai_summary ?? "",
     status: JOB_STATUS[row.status] ?? "Pending",
     technician: technicianName,
@@ -1328,4 +1331,174 @@ export async function getSupplyStops(): Promise<SupplyStopRow[]> {
       ? { lat: Number(row.latitude), lng: Number(row.longitude) }
       : null,
   }));
+}
+
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** A job at the other end of a follow-up, as a job page links to it. */
+export type LinkedJob = {
+  jobNumber: string;
+  kindOfWork: KindOfWork;
+  /** "Tue, Oct 6, 9:00 AM", or empty when it has no time yet. */
+  when: string;
+  status: JobStatus;
+};
+
+export type JobFollowUps = {
+  /** The diagnostic this job was booked from, when it was. */
+  followsUp: LinkedJob | null;
+  /** Work booked from this job, in the order it was booked. */
+  booked: LinkedJob[];
+  /** What the next work order booked from this job would take off, in cents. */
+  creditCents: number;
+};
+
+const NO_FOLLOW_UPS: JobFollowUps = { followsUp: null, booked: [], creditCents: 0 };
+
+/**
+ * Both ends of a follow-up, for the job page.
+ *
+ * A diagnostic lists the work orders booked from it, and a work order names
+ * the diagnostic it came from, so neither page is a dead end for somebody
+ * trying to work out what was found and what was done about it.
+ */
+export async function getJobFollowUps(jobNumber: string): Promise<JobFollowUps> {
+  const context = await resolveContext();
+  if (!context) return NO_FOLLOW_UPS;
+
+  const numeric = Number(jobNumber);
+  if (!Number.isFinite(numeric)) return NO_FOLLOW_UPS;
+
+  const { data } = await context.database
+    .from("jobs")
+    .select("id, follow_up_of, diagnostic_paid, diagnostic_fee_cents")
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  const row = data as Record<string, unknown> | null;
+  if (!row) return NO_FOLLOW_UPS;
+
+  const id = textOf(row.id);
+  const followUpOf = textOf(row.follow_up_of) || null;
+  const linked = (job: Record<string, unknown>): LinkedJob => ({
+    jobNumber: String(job.job_number ?? ""),
+    kindOfWork: kindOfWork(textOf(job.category)),
+    when: inZone(textOf(job.scheduled_start) || null, context.timeZone, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    status: JOB_STATUS[textOf(job.status)] ?? "Pending",
+  });
+
+  const [followed, booked, creditCents] = await Promise.all([
+    followUpOf
+      ? context.database
+          .from("jobs")
+          .select("job_number, category, scheduled_start, status")
+          .eq("organization_id", context.organizationId)
+          .eq("id", followUpOf)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    context.database
+      .from("jobs")
+      .select("job_number, category, scheduled_start, status")
+      .eq("organization_id", context.organizationId)
+      .eq("follow_up_of", id)
+      .is("archived_at", null)
+      .order("created_at", { ascending: true }),
+    // Only a job that follows nothing has a credit of its own to pass on.
+    followUpOf
+      ? Promise.resolve(0)
+      : diagnosticCreditLeft(context.database, context.organizationId, {
+          id,
+          followUpOf: null,
+          diagnosticPaid: row.diagnostic_paid === true,
+          diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+        }),
+  ]);
+
+  const followedRow = followed.data as Record<string, unknown> | null;
+  return {
+    followsUp: followedRow ? linked(followedRow) : null,
+    booked: ((booked.data ?? []) as Record<string, unknown>[]).map(linked),
+    creditCents,
+  };
+}
+
+/** A diagnostic, as the New job form needs it to book the work it found. */
+export type FollowUpStart = {
+  jobNumber: string;
+  customer: string;
+  /** Where the form starts: the same customer and address, as a work order. */
+  values: NewJobRaw;
+  /** What will come off the work order's first invoice, in cents. */
+  creditCents: number;
+};
+
+/**
+ * Booking the work a diagnostic found.
+ *
+ * Null for anything that is not a diagnostic this business can see, and for
+ * one that was called off: there is nothing it found to book.
+ */
+export async function getFollowUpStart(jobNumber: string): Promise<FollowUpStart | null> {
+  const context = await resolveContext();
+  if (!context) return null;
+
+  const numeric = Number(jobNumber);
+  if (!Number.isInteger(numeric) || numeric <= 0) return null;
+
+  const { data } = await context.database
+    .from("jobs")
+    .select(
+      `id, job_number, category, status, customer_description, technician_notes,
+       diagnostic_paid, diagnostic_fee_cents, follow_up_of,
+       customers ( first_name, last_name, company_name, phone, email ),
+       properties ( address_line_1, address_line_2, city, state, postal_code, access_notes )`,
+    )
+    .eq("organization_id", context.organizationId)
+    .eq("job_number", numeric)
+    .is("archived_at", null)
+    .maybeSingle();
+
+  const row = data as Record<string, unknown> | null;
+  if (!row || row.status === "canceled" || kindOfWork(textOf(row.category)) !== "Diagnostic") {
+    return null;
+  }
+
+  const customer = (row.customers ?? {}) as Record<string, unknown>;
+  const property = (row.properties ?? {}) as Record<string, unknown>;
+  const customerName =
+    textOf(customer.company_name) ||
+    [textOf(customer.first_name), textOf(customer.last_name)].filter(Boolean).join(" ");
+
+  return {
+    jobNumber: String(row.job_number ?? numeric),
+    customer: customerName || "Customer",
+    values: followUpPrefill({
+      customerName,
+      phone: textOf(customer.phone),
+      email: textOf(customer.email),
+      addressLine1: textOf(property.address_line_1),
+      addressLine2: textOf(property.address_line_2),
+      city: textOf(property.city),
+      state: textOf(property.state),
+      postalCode: textOf(property.postal_code),
+      accessNotes: textOf(property.access_notes),
+      technicianNotes: textOf(row.technician_notes),
+      customerDescription: textOf(row.customer_description),
+    }),
+    creditCents: await diagnosticCreditLeft(context.database, context.organizationId, {
+      id: textOf(row.id),
+      followUpOf: textOf(row.follow_up_of) || null,
+      diagnosticPaid: row.diagnostic_paid === true,
+      diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+    }),
+  };
 }

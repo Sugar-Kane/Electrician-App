@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Ban, ChevronDown, ChevronRight, MapPin, ShieldAlert } from "lucide-react";
+import { Ban, ChevronDown, ChevronRight, Link2, MapPin, ShieldAlert } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
+import { JobFollowUps } from "@/components/job-follow-ups";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
@@ -17,10 +18,16 @@ import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
 import { streetWithUnit } from "@/lib/property-details";
-import { getJob, getJobContracts, getJobControls, getJobHistory } from "@/lib/job-data";
+import {
+  getJob,
+  getJobContracts,
+  getJobControls,
+  getJobFollowUps,
+  getJobHistory,
+} from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
-import { getJobLines, getStockOptions } from "@/lib/job-line-data";
+import { getJobInvoice, getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { showsWorkspace } from "@/lib/job-workflow";
@@ -67,17 +74,29 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to advance.
-  const [controls, workflow, contracts, { lines, totals }, stock, photos, messaging, history] =
-    await Promise.all([
-      getJobControls(jobId),
-      getJobWorkflow(jobId),
-      getJobContracts(jobId),
-      getJobLines(jobId),
-      getStockOptions(),
-      getJobPhotos(jobId),
-      getMessagingContext(),
-      getJobHistory(jobId),
-    ]);
+  const [
+    controls,
+    workflow,
+    contracts,
+    { lines, totals },
+    invoice,
+    followUps,
+    stock,
+    photos,
+    messaging,
+    history,
+  ] = await Promise.all([
+    getJobControls(jobId),
+    getJobWorkflow(jobId),
+    getJobContracts(jobId),
+    getJobLines(jobId),
+    getJobInvoice(jobId),
+    getJobFollowUps(jobId),
+    getStockOptions(),
+    getJobPhotos(jobId),
+    getMessagingContext(),
+    getJobHistory(jobId),
+  ]);
 
   const [conversations, callRecord] = messaging
     ? await Promise.all([getJobConversation(messaging, jobId), getJobIntake(messaging, jobId)])
@@ -95,6 +114,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   const state = workflow?.state ?? "scheduled";
   const workspaceOpen = showsWorkspace(state) && !canceled;
 
+  /*
+   * Booking the work a diagnostic found.
+   *
+   * Offered once the visit is under way — before that there is nothing found
+   * to book — and shown whenever something has been booked from it, whatever
+   * state the diagnostic is in. Also in the ••• menu, for the owner who knows
+   * from the photos before anybody has driven out.
+   */
+  const diagnostic = Boolean(controls) && job.kindOfWork === "Diagnostic" && !canceled;
+  const showFollowUps = diagnostic && (workspaceOpen || followUps.booked.length > 0);
+
   /**
    * Who, what and where — the first thing read and the least of it.
    *
@@ -107,6 +137,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         {job.workType.replace(/_/g, " ")}
         <JobSource channel={job.channel} className="normal-case" />
       </p>
+      {/* The visit that found this work, one tap back. */}
+      {followUps.followsUp ? (
+        <Link
+          href={`/jobs/${followUps.followsUp.jobNumber}`}
+          className="tap-target mt-0.5 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-brand"
+        >
+          <Link2 className="h-4 w-4" aria-hidden />
+          Follow-up to {followUps.followsUp.kindOfWork.toLowerCase()} #{followUps.followsUp.jobNumber}
+        </Link>
+      ) : null}
       <p className="mt-0.5 text-sm text-ink-muted">
         {job.dateLabel} · {job.time}–{job.endTime}
       </p>
@@ -137,7 +177,15 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       title={job.contactName || job.customer}
       eyebrow={`Job #${job.id}`}
       backHref="/schedule"
-      action={controls ? <JobMenu jobNumber={controls.jobNumber} hasContract={contracts.length > 0} /> : null}
+      action={
+        controls ? (
+          <JobMenu
+            jobNumber={controls.jobNumber}
+            hasContract={contracts.length > 0}
+            canBookWorkOrder={diagnostic}
+          />
+        ) : null
+      }
     >
       {canceled ? (
         <section className="mb-3 rounded-panel border border-critical/30 bg-critical-bg p-4 sm:p-5">
@@ -281,6 +329,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               jobNumber={controls.jobNumber}
               lines={lines}
               totals={totals}
+              invoice={invoice}
               stock={stock}
             />
           </div>
@@ -291,6 +340,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
           </div>
         </section>
+      ) : null}
+
+      {showFollowUps && controls ? (
+        <JobFollowUps
+          jobNumber={controls.jobNumber}
+          booked={followUps.booked}
+          creditCents={followUps.creditCents}
+        />
       ) : null}
 
       {!controls ? (

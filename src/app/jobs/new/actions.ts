@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
 import {
+  kindOfWork,
   parseNewJob,
   splitName,
   workOrderTotalCents,
@@ -101,6 +103,36 @@ export async function createJob(
 
   const timeZone = text(organization?.timezone) || "America/Los_Angeles";
 
+  /*
+   * The diagnostic this is booked from, when it is.
+   *
+   * Looked up through the caller's own client, so it has to be a job of their
+   * business, and it has to be a diagnostic that was not called off — the same
+   * rule as the page that offered to book it. Refused rather than saved
+   * unlinked: a work order that silently lost its diagnostic also loses the
+   * fee the customer was told would come off it.
+   */
+  const followUpNumber = Number(field(formData, "followUpOf").trim() || Number.NaN);
+  let followed: { id: string; customerId: string } | null = null;
+  if (Number.isInteger(followUpNumber) && followUpNumber > 0) {
+    const { data: diagnostic } = await supabase
+      .from("jobs")
+      .select("id, category, status, customer_id")
+      .eq("organization_id", organizationId)
+      .eq("job_number", followUpNumber)
+      .is("archived_at", null)
+      .maybeSingle();
+
+    if (
+      !diagnostic ||
+      diagnostic.status === "canceled" ||
+      kindOfWork(text(diagnostic.category)) !== "Diagnostic"
+    ) {
+      return keep(`Diagnostic #${followUpNumber} could not be found, so nothing was booked from it.`);
+    }
+    followed = { id: text(diagnostic.id), customerId: text(diagnostic.customer_id) };
+  }
+
   // An existing customer is reused rather than duplicated. Somebody who has
   // called twice is one customer with two jobs, and a second record splits
   // their history in half — which is how a business ends up texting the same
@@ -138,6 +170,11 @@ export async function createJob(
       if (emailError) console.error("new job: the email could not be added", emailError);
     }
   }
+
+  // Booked from a diagnostic with no phone on it: the diagnostic's customer.
+  // There is nothing to match an email-only customer on, and a second record
+  // for them would split their history between this job and the last.
+  if (!customerId && !job.phone && followed?.customerId) customerId = followed.customerId;
 
   // No phone: a customer reachable by email only, who has nothing to match on.
   if (!customerId) {
@@ -246,6 +283,9 @@ export async function createJob(
       status: draft || !start ? "draft" : "confirmed",
       ...(start ? { scheduled_start: start, arrival_window_start: start } : {}),
       ...(end ? { scheduled_end: end, arrival_window_end: end } : {}),
+      // A follow-up has no diagnostic fee of its own. The one the customer
+      // paid belongs to the visit it follows, and is credited from there.
+      ...(followed ? { follow_up_of: followed.id, diagnostic_fee_cents: 0 } : {}),
     })
     .select("id, job_number")
     .maybeSingle();
@@ -314,8 +354,19 @@ export async function createJob(
 
   if (subtotalCents > 0) {
     // A job created here has no paid diagnostic behind it — it is being
-    // written down after the fact, and nothing has been collected yet.
-    const totals = invoiceTotals({ subtotalCents });
+    // written down after the fact, and nothing has been collected yet. Unless
+    // it is the work a paid diagnostic found, which is what that fee was
+    // promised against: then whatever of it has not come off yet comes off
+    // this, the work order's first invoice.
+    const diagnosticPaidCents = followed
+      ? await diagnosticCreditLeft(supabase, organizationId, {
+          id: text(createdJob.id),
+          followUpOf: followed.id,
+          diagnosticPaid: false,
+          diagnosticFeeCents: 0,
+        })
+      : 0;
+    const totals = invoiceTotals({ subtotalCents, diagnosticPaidCents });
 
     await supabase.from("invoices").insert({
       organization_id: organizationId,
@@ -335,6 +386,7 @@ export async function createJob(
   revalidatePath("/schedule");
   revalidatePath("/invoices");
   revalidatePath("/");
+  if (followed) revalidatePath(`/jobs/${followUpNumber}`);
 
   redirect(`/jobs/${String(createdJob.job_number ?? "")}`);
 }

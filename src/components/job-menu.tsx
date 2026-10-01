@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Ban, CalendarClock, FileText, FolderOpen, MoreHorizontal, Pencil } from "lucide-react";
+import {
+  Ban,
+  CalendarClock,
+  FileText,
+  FolderOpen,
+  MoreHorizontal,
+  Pencil,
+  Wrench,
+} from "lucide-react";
 
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
@@ -20,7 +28,16 @@ import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
  * action that looks like the others is one somebody taps by accident, and it
  * opens the confirmation rather than doing anything.
  */
-export function JobMenu({ jobNumber, hasContract }: { jobNumber: string; hasContract: boolean }) {
+export function JobMenu({
+  jobNumber,
+  hasContract,
+  canBookWorkOrder = false,
+}: {
+  jobNumber: string;
+  hasContract: boolean;
+  /** A diagnostic that was not called off: the work it finds can be booked. */
+  canBookWorkOrder?: boolean;
+}) {
   const edit = `/jobs/${jobNumber}/edit`;
 
   return (
@@ -47,6 +64,17 @@ export function JobMenu({ jobNumber, hasContract }: { jobNumber: string; hasCont
           Reschedule
         </MenuItem>
       </Link>
+
+      {canBookWorkOrder ? (
+        <Link href={`/jobs/new?from=${jobNumber}`} role="menuitem">
+          <MenuItem
+            icon={<Wrench className="h-[18px] w-[18px]" aria-hidden />}
+            description="For the work this diagnostic found"
+          >
+            Book work order
+          </MenuItem>
+        </Link>
+      ) : null}
 
       {/* Opened before the router scrolls to it: it lives in a closed section. */}
       <Link href={`/jobs/${jobNumber}#${CONTRACT_ANCHOR}`} role="menuitem" onClick={revealContract}>

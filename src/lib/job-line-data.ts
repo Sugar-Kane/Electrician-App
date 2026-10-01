@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { currentContext } from "@/lib/request-context";
+import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
 import { jobLineTotals, type JobLine, type JobLineTotals } from "@/lib/job-lines";
 
 /**
@@ -103,6 +104,60 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
   }));
 
   return { jobId, lines, totals: jobLineTotals(lines) };
+}
+
+/** The invoice a job was last billed on, as the lines panel shows it. */
+export type JobInvoiceSummary = {
+  invoiceId: string;
+  /** "INV-9", as every other screen writes it. */
+  number: string;
+  totalCents: number;
+  /** "Draft", "Void", or what the Invoices list would say: Unpaid, Overdue, Paid. */
+  statusLabel: string;
+};
+
+/**
+ * The job's newest invoice, whatever its status.
+ *
+ * The same one `raiseInvoice` stops and asks about, so the panel and the action
+ * agree on whether a job has been billed. Without it the panel could not tell,
+ * and offered to generate an invoice on a job that already had one.
+ */
+export async function getJobInvoice(jobNumber: string): Promise<JobInvoiceSummary | null> {
+  const context = await resolveContext();
+  if (!context) return null;
+
+  const jobId = await resolveJobId(jobNumber);
+  if (!jobId) return null;
+
+  const { data, error } = await context.database
+    .from("invoices")
+    .select("id, invoice_number, status, total_cents, balance_due_cents, due_at")
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const row = data as Record<string, unknown> | null;
+  if (error || !row) return null;
+
+  const status = str(row.status);
+  return {
+    invoiceId: str(row.id),
+    number: `INV-${String(row.invoice_number ?? "")}`,
+    totalCents: num(row.total_cents),
+    statusLabel:
+      status === "draft"
+        ? "Draft"
+        : status === "void"
+          ? "Void"
+          : invoiceStatusLabel({
+              status,
+              dueAt: str(row.due_at) || null,
+              balanceDueCents: num(row.balance_due_cents ?? row.total_cents),
+            }),
+  };
 }
 
 export type StockOption = {
