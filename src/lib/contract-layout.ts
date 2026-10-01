@@ -42,6 +42,39 @@ export function contractBlocks(body: string): ContractBlock[] {
     .map((text) => ({ text, heading: looksLikeHeading(text) }));
 }
 
+/**
+ * A paragraph without the line breaks its author made only because their line
+ * was full, for a screen whose line is shorter than theirs.
+ *
+ * Templates arrive wrapped by hand at about eighty characters — the starter
+ * template is, and so is every contract made from it. The PDF's line is longer
+ * than that, so it shows those breaks as written and they read as a paragraph.
+ * A phone's is about half as long, and every sentence broke twice, once where
+ * the screen ran out and again where the author's line had, leaving "approval."
+ * on a line of its own.
+ *
+ * A break goes only where the sentence plainly carries on: the next line starts
+ * in lower case, or starts with a number after a line ending in a short word
+ * ("work at" / "48 Pine St"), and the line before is prose long enough to have
+ * been wrapped — not a heading, not a short item in a list, not a lead-in
+ * ending in a colon. A list keeps its lines, and so does anything else. The
+ * words are never changed: a break becomes a space.
+ */
+export function unwrapped(paragraph: string): string {
+  const lines = paragraph.split("\n");
+  let text = lines[0] ?? "";
+  for (let index = 1; index < lines.length; index++) {
+    const before = lines[index - 1].trimEnd();
+    const line = lines[index];
+    const start = line.trimStart();
+    const prose = before.length >= 30 && /\p{Ll}/u.test(before) && !/[:;]$/.test(before);
+    const listItem = /^(?:\p{Ll}{1,3}|\d+)[.)]\s/u.test(start) || /^[-–—•*]\s/.test(start);
+    const carriesOn = /^\p{Ll}/u.test(start) || (/^\d/.test(start) && /(?:^|\s)\p{Ll}{1,4}$/u.test(before));
+    text += prose && carriesOn && !listItem ? ` ${line}` : `\n${line}`;
+  }
+  return text;
+}
+
 export type SignatureSection = {
   /** Whether the block appears at all. */
   show: boolean;

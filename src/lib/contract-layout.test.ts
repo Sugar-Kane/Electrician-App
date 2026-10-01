@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { contractBlocks, looksLikeHeading, signatureSection } from "./contract-layout.ts";
+import { contractBlocks, looksLikeHeading, signatureSection, unwrapped } from "./contract-layout.ts";
 
 test("a short all-caps line is a heading", () => {
   assert.equal(looksLikeHeading("WORK AGREEMENT"), true);
@@ -30,6 +30,52 @@ test("the body splits on blank lines, Windows line endings included", () => {
 test("an empty body has no blocks", () => {
   assert.deepEqual(contractBlocks(""), []);
   assert.deepEqual(contractBlocks("\n\n  \n\n"), []);
+});
+
+test("a paragraph wrapped by hand flows as one", () => {
+  // The starter template's paragraphs, which job #15's contract has.
+  assert.equal(
+    unwrapped(
+      'This agreement is made on Thu, Oct 1, 2026 between Pacific Plains Electric ("the Contractor")\n' +
+        'and Adam ("the Customer") for diagnostic work at\n' +
+        "48 Pine St, Ventura, CA, 93003, booked as job 15 and scheduled for Fri, Oct 2, 2026.",
+    ),
+    'This agreement is made on Thu, Oct 1, 2026 between Pacific Plains Electric ("the Contractor") ' +
+      'and Adam ("the Customer") for diagnostic work at ' +
+      "48 Pine St, Ventura, CA, 93003, booked as job 15 and scheduled for Fri, Oct 2, 2026.",
+  );
+  assert.equal(
+    unwrapped(
+      "The price above covers the scope of work described. Work found to be necessary\n" +
+        "beyond that scope will be quoted separately and will not begin without your\n" +
+        "approval.",
+    ),
+    "The price above covers the scope of work described. Work found to be necessary " +
+      "beyond that scope will be quoted separately and will not begin without your approval.",
+  );
+  assert.equal(
+    unwrapped("Concealed conditions found once work has begun —\nexisting wiring that does not meet code"),
+    "Concealed conditions found once work has begun — existing wiring that does not meet code",
+  );
+});
+
+test("a line that is not a broken sentence keeps its own line", () => {
+  for (const kept of [
+    // A heading leading its paragraph, and lines of figures.
+    "PRICE\nTotal: $180.00\nDeposit due before work begins: $180.00 (paid)",
+    "SCOPE OF WORK\nan on-site diagnostic visit.",
+    // Lists, and the line that leads into one.
+    "The work includes:\nnew panel\ntwo circuits\nthe permit",
+    "The work includes\n- a new panel\n- two circuits",
+    "Steps\na) isolate the circuit\nb) replace the breaker",
+    "Pay in two parts\n1. on booking\n2. on completion",
+    // An address: a number after a name is not a sentence carrying on.
+    "Pacific Plains Electric\n1420 Harvest Rd\nModesto, CA 95350",
+    // A new sentence, or a name, on a line of its own.
+    "The balance is due on completion.\nThe Customer agrees to provide access.",
+  ]) {
+    assert.equal(unwrapped(kept), kept);
+  }
 });
 
 const business = "Pacific Plains Electric";
