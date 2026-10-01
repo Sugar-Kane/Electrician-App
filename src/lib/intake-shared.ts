@@ -69,7 +69,7 @@ export async function loadIntakeContext(input: {
   const [{ data: organization }, { data: settings }, { data: messaging }] = await Promise.all([
     database
       .from("organizations")
-      .select("name, phone, slug, timezone, owner_notification_email, owner_notification_phone")
+      .select("name, phone, slug, timezone, base_city, base_state, owner_notification_email, owner_notification_phone")
       .eq("id", organizationId)
       .maybeSingle(),
     database
@@ -164,7 +164,7 @@ export async function loadIntakeContext(input: {
         typeof settings?.diagnostic_fee_cents === "number"
           ? settings.diagnostic_fee_cents
           : DEFAULT_DIAGNOSTIC_FEE_CENTS,
-      serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of the shop`,
+      serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of ${[text(organization?.base_city), text(organization?.base_state)].filter(Boolean).join(", ") || "the shop"}`,
       nowLabel: nowLabel(nowIso, timeZone),
       isFirstReply: input.isFirstReply,
       language: readLanguage(input.language),

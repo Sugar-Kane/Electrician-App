@@ -98,6 +98,9 @@ export type IntakeContext = {
    * the control entirely.
    */
   languageSource: LanguageSource;
+  /** SMS runner verifies an optional photo invitation was actually sent. */
+  photoOfferHandled?: boolean;
+  intakeBeforeOffer?: boolean;
 };
 
 /**
@@ -161,9 +164,20 @@ export const INTAKE_TOOLS = [
         postal_code: { type: "string", description: "Five digits, or an empty string if not given." },
         slot_start: { type: "string", description: "The exact slot_start value of one of the offered windows. Never invent a time." },
         urgency: { type: "string", enum: ["routine", "urgent"] },
+        work_type: { type: "string", enum: ["repair", "installation", "other"], description: "Installation for new equipment or upgrades; repair for an existing fault." },
+        answer_scope: { type: "string", description: "What the customer said about how much of the property is affected. Empty string if not asked yet." },
+        answer_onset: { type: "string", description: "What the customer said about when it started. Empty string if not asked yet." },
+        answer_breaker: { type: "string", description: "What the customer said about the breaker panel. Empty string if not asked yet." },
+        answer_property: { type: "string", description: "What the customer said about the kind and age of building. Empty string if not asked yet." },
+        answer_access: { type: "string", description: "What the customer said about gate codes, dogs, parking, or being home. Empty string if not asked yet." },
+        delivery_preference: {
+          type: "string",
+          enum: ["text", "email", "both", ""],
+          description: "How the customer asked for their confirmation. Empty string if they have not been asked.",
+        },
         language: LANGUAGE_ARGUMENT,
       },
-      required: ["contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency", "language"],
+      required: ["contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency", "work_type", "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access", "delivery_preference", "language"],
       additionalProperties: false,
     },
   },
@@ -182,6 +196,7 @@ export const INTAKE_TOOLS = [
         postal_code: { type: "string" },
         slot_start: { type: "string", description: "The exact slot_start of the window they accepted." },
         urgency: { type: "string", enum: ["routine", "urgent"] },
+        work_type: { type: "string", enum: ["repair", "installation", "other"], description: "Installation for new equipment or upgrades; repair for an existing fault." },
         answer_scope: { type: "string", description: "What the customer said about how much of the property is affected. Empty string if not asked yet." },
         answer_onset: { type: "string", description: "What the customer said about when it started. Empty string if not asked yet." },
         answer_breaker: { type: "string", description: "What the customer said about the breaker panel. Empty string if not asked yet." },
@@ -196,7 +211,7 @@ export const INTAKE_TOOLS = [
       },
       required: [
         "contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency",
-        "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access",
+        "work_type", "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access",
         "delivery_preference", "language",
       ],
       additionalProperties: false,
@@ -319,7 +334,13 @@ export function nextIntakeQuestion(
   );
 
   if (answered.size < MINIMUM_INTAKE_ANSWERS) {
-    const unanswered = INTAKE_QUESTIONS.find(({ key }) => !answered.has(key));
+    const relevant = args.work_type === "installation"
+      ? INTAKE_QUESTIONS.filter(({ key }) => ["scope", "property", "access"].includes(key))
+      : INTAKE_QUESTIONS;
+    const unanswered = relevant.find(({ key }) => !answered.has(key));
+    if (unanswered?.key === "scope" && args.work_type === "installation") return language === "es"
+      ? "¿Cuántas unidades o áreas quiere añadir o actualizar?"
+      : "How many units or areas would you like to add or upgrade?";
     // The English wording is the fallback rather than a missing question: a
     // translation nobody added is a worse question, not no question at all.
     if (unanswered) return phrases.questions[unanswered.key] ?? unanswered.question;
@@ -411,7 +432,10 @@ export function decideIntakeAction(input: {
     // The model's own words, which it was told to write in the customer's
     // language. This is the one reply it composes; every other one below is
     // written here.
-    const question = text(decision.input.question);
+    const proposedQuestion = text(decision.input.question);
+    const question = /\b(booked|penciled|pencilled|reserved|confirmed|holding|apartad[oa]|reservad[oa]|confirmad[oa])\b/i.test(proposedQuestion)
+      ? (language === "es" ? "Antes de reservar, necesito algunos detalles. ¿Qué trabajo necesita?" : "Before booking, I need a few details. What work do you need?")
+      : proposedQuestion;
     return {
       ...spokenIn,
       kind: "ask",
@@ -444,6 +468,17 @@ export function decideIntakeAction(input: {
   }
 
   if (decision.tool === "propose_visit" || decision.tool === "confirm_visit") {
+    // Enforce intake before either offering or confirming a time.
+    const basicQuestion = !context.intakeBeforeOffer ? null : !contactName
+      ? (language === "es" ? "¿Cómo se llama?" : "What is your name?")
+      : !text(decision.input.address_line_1) || !text(decision.input.city)
+        ? phrases.askAddress(context.businessName)
+        : nextIntakeQuestion(decision.input, language);
+    if (basicQuestion) return { ...spokenIn, kind: "ask", missing: ["description"],
+      reply: composeReply(basicQuestion, context, language) };
+    if (context.photoOfferHandled === false) return { ...spokenIn, kind: "ask", missing: ["description"],
+      reply: composeReply(photoInvitation(language), context, language) };
+
     // The model may only pick from windows the scheduler handed it. A time it
     // invented would be a promise the business cannot keep.
     const slot = context.offeredSlots.find((option) => option.start === text(decision.input.slot_start));
@@ -548,6 +583,12 @@ export function decideIntakeAction(input: {
   };
 }
 
+export function photoInvitation(language: LanguageCode): string {
+  return language === "es"
+    ? "¿Quiere enviar una foto del área o un ejemplo de lo que desea? Es opcional; puede decir 'omitir'. Solo fotos que pueda tomar sin acercarse a un peligro."
+    : "Would you like to text a photo of the area or an example of what you want? Optional - you can say 'skip'. Only take photos from a safe place.";
+}
+
 /** How a language is named to the model, which does not read ISO codes well. */
 function languageName(language: LanguageCode): string {
   return language === "es" ? "Spanish" : "English";
@@ -568,8 +609,8 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     "",
     `The diagnostic visit costs ${context.diagnosticFee}.`,
     "",
-    "Before a visit is booked, ask these — one per message, and carry the answers",
-    `into confirm_visit as answer_<key>. At least ${MINIMUM_INTAKE_ANSWERS} must be answered:`,
+    "BEFORE offering any arrival window or asking to book, collect the name, address, and basic intake below. Ask one question per message and carry the answers",
+    `into propose_visit AND confirm_visit as answer_<key>. At least ${MINIMUM_INTAKE_ANSWERS} must be answered:`,
     ...INTAKE_QUESTIONS.map(({ key, question }) => `- ${key}: ${question}`),
     "",
     "Also ask how they want their confirmation — text, email, or both — and pass it as delivery_preference.",
@@ -583,6 +624,10 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
      * because it is about to be told this customer reads English — and the
      * report is the thing the database is going to believe.
      */
+    "For installation or upgrade requests, ask about desired work/number of units, property, and access; do not ask when a nonexistent fault started. Use answer_scope, answer_property, and answer_access.",
+    "Offer optional photos or inspiration examples before proposing a visit. They may send a photo or decline; never require a photo or delay booking after they decline. Photos are saved for the electrician; you cannot see their contents. Never claim to have inspected a photo.",
+    "Never say booked, penciled in, reserved, held, or confirmed in an ask_for question. Only the application may confirm a successful booking or hold after its tools have completed.",
+    "A customer's yes/ya/okay answers the most recent question; agreement to send photos is not agreement to book.",
     "Language:",
     "- Report the language of the customer's most recent message in the tool's `language` argument: 'en', 'es', or 'und' when it is too short or too neutral to tell. Report what is in front of you, not what an earlier message was in. Report it even when you are not writing in it.",
     /*

@@ -32,6 +32,7 @@ export type ConversationSummary = {
 };
 
 export type ThreadMessage = {
+  photoCount?: number;
   id: string;
   direction: "inbound" | "outbound";
   body: string;
@@ -288,7 +289,7 @@ export async function getConversationThread(
   // everything recent, including the one just sent.
   const { data: messageRows } = await context.database
     .from("messages")
-    .select("id, direction, body, status, created_at, sent_at, delivered_at, error_detail")
+    .select("id, direction, body, status, created_at, sent_at, delivered_at, error_detail, media")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
     .limit(THREAD_MESSAGE_LIMIT);
@@ -317,6 +318,7 @@ export async function getConversationThread(
       id: text(row.id),
       direction: text(row.direction) === "inbound" ? ("inbound" as const) : ("outbound" as const),
       body: text(row.body),
+      photoCount: Array.isArray(row.media) ? row.media.length : 0,
       status: text(row.status),
       createdAt: String(row.created_at),
       sentAt: row.sent_at ? String(row.sent_at) : null,
@@ -502,7 +504,7 @@ export async function getJobConversation(
 
   const { data: messageRows } = await context.database
     .from("messages")
-    .select("id, conversation_id, direction, body, status, created_at, sent_at, delivered_at, error_detail")
+    .select("id, conversation_id, direction, body, status, created_at, sent_at, delivered_at, error_detail, media")
     .in(
       "conversation_id",
       conversations.map((row) => text(row.id)),
@@ -517,6 +519,7 @@ export async function getJobConversation(
       id: text(row.id),
       direction: text(row.direction) === "inbound" ? "inbound" : "outbound",
       body: text(row.body),
+      photoCount: Array.isArray(row.media) ? row.media.length : 0,
       status: text(row.status),
       createdAt: String(row.created_at ?? ""),
       sentAt: row.sent_at ? String(row.sent_at) : null,

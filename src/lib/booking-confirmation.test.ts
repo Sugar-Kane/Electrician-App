@@ -354,3 +354,11 @@ test("the customer's text matches the promise they were just given", () => {
 
   for (const body of [later, now]) assert.ok(body.length <= 320, `${body.length} chars`);
 });
+
+test("owner payment notice clearly differs from the unpaid hold and stays concise", () => {
+  assert.match(ownerBookingSms(FACTS, "held"), /^Held \(unpaid\)/);
+  const paid = ownerBookingSms({ ...FACTS, paid: true, description: "installation ".repeat(100) });
+  assert.match(paid, /^Confirmed \(paid\)/);
+  assert.ok(paid.length <= 320);
+  assert.doesNotMatch(paid, /What Adam said/);
+});

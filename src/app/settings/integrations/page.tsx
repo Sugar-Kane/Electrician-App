@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { calendarConfig } from "@/lib/google-booking-calendar";
+import { saveCalendarAccount, retryCalendarSync, disconnectCalendar } from "./calendar-actions";
 import { Check, ChevronRight, ExternalLink, KeyRound, LockKeyhole, PlugZap, Store, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
@@ -45,11 +48,26 @@ export default async function IntegrationsPage() {
     }));
   }
 
+  const calendar = context && canManage ? await getSupabaseAdmin().from("booking_calendar_connections")
+    .select("account_email,connected_at,last_error").eq("organization_id", context.organizationId).maybeSingle() : null;
+  const calendarReady = Boolean(calendarConfig());
   return (
     <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT and approved supplier programs without exposing business credentials to technicians or customer browsers.">
       <div className="grid gap-4 lg:grid-cols-2">
         <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
 
+        {canManage ? <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
+          <h2 className="text-lg font-semibold">Google Calendar</h2>
+          <p className="mt-2 text-sm text-ink-muted">Add paid, confirmed visits to your Google Calendar. Unpaid holds stay off the calendar. Connecting also adds upcoming paid bookings.</p>
+          <p className="mt-2 text-sm">{calendar?.data?.connected_at ? `Connected: ${calendar.data.account_email}` : "Not connected"}</p>
+          {calendar?.data?.last_error ? <p className="mt-2 text-sm text-caution">{String(calendar.data.last_error)}</p> : null}
+          <form action={saveCalendarAccount} className="mt-4 flex flex-wrap gap-2">
+            <label className="flex-1 text-sm">Google account email<input name="email" type="email" required defaultValue={String(calendar?.data?.account_email ?? "")} className="mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3" /></label>
+            <button className="min-h-12 self-end rounded-control border border-line px-4">Save account</button>
+          </form>
+          {!calendarReady ? <p className="mt-3 text-sm text-caution">Calendar connection setup is still needed before Google authorization is available.</p> : calendar?.data?.account_email ? <a className="mt-3 inline-flex min-h-12 items-center rounded-control bg-brand px-4 text-on-brand" href="/api/integrations/google-calendar/connect">{calendar.data.connected_at ? "Reconnect Google Calendar" : "Connect Google Calendar"}</a> : null}
+          {calendar?.data?.connected_at ? <div className="mt-3 flex gap-3"><form action={retryCalendarSync}><button className="min-h-12 rounded-control border border-line px-4">Sync upcoming paid bookings</button></form><form action={disconnectCalendar}><button className="min-h-12 rounded-control border border-line px-4">Disconnect</button></form></div> : null}
+        </section> : null}
         {suppliers.map((supplier) => {
           const ready = supplier.stage === "configuration_ready";
           return (

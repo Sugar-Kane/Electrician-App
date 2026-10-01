@@ -10,7 +10,6 @@ import {
   ownerBookingSms,
   ownerCallbackEmail,
   ownerCallbackSms,
-  ownerIntakeSms,
   type BookingFacts,
   type BookingMessageState,
   type CallbackFacts,
@@ -102,6 +101,7 @@ function factsFor(input: BookingNotification): BookingFacts {
     : "";
 
   return {
+    paid: input.notificationPhase === "payment",
     businessName: input.context.businessName,
     businessPhone: input.context.businessPhone,
     contactName: input.contactName,
@@ -335,8 +335,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       detail: sent.ok ? sent.status : `${sent.errorCode}: ${sent.errorDetail}`,
     });
 
-    const intake = ownerIntakeSms(facts);
-    if (intake) await sendSms({ to: ownerPhone, body: intake, messagingServiceSid });
+    // Full intake remains in the app/email; send one concise SMS per phase.
   } else if (!ownerPhone) {
     note({
       channel: "sms",
