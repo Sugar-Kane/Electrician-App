@@ -13,9 +13,21 @@
 alter table public.jobs
   add column if not exists follow_up_of uuid references public.jobs (id) on delete set null;
 
-alter table public.jobs drop constraint if exists jobs_follow_up_of_not_self;
-alter table public.jobs
-  add constraint jobs_follow_up_of_not_self check (follow_up_of is null or follow_up_of <> id);
+-- Added only when missing, rather than dropped and added again: running this a
+-- second time changes nothing, and nothing in it removes anything.
+do $guard$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'jobs_follow_up_of_not_self'
+      and conrelid = 'public.jobs'::regclass
+  ) then
+    alter table public.jobs
+      add constraint jobs_follow_up_of_not_self check (follow_up_of is null or follow_up_of <> id);
+  end if;
+end;
+$guard$;
 
 create index if not exists jobs_follow_up_of_idx
   on public.jobs (follow_up_of)
@@ -48,8 +60,7 @@ begin
 end;
 $$;
 
-drop trigger if exists jobs_follow_up_same_business on public.jobs;
-create trigger jobs_follow_up_same_business
+create or replace trigger jobs_follow_up_same_business
   before insert or update of follow_up_of, organization_id on public.jobs
   for each row
   execute function public.jobs_follow_up_same_business();
