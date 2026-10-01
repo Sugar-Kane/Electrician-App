@@ -300,9 +300,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         is the job's record, and it stays here either way.
       */}
       {conversations.length > 0 ? (
-        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <details open className="group mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-semibold">Conversation</span>
+            <ChevronDown className="h-4 w-4 text-ink-muted transition group-open:rotate-180" aria-hidden />
+          </summary>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">Conversation</h2>
             <Link
               href={`/messages/${conversations[0]?.id}`}
               className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
@@ -341,7 +344,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               ) : null}
             </div>
           ))}
-        </section>
+        </details>
       ) : null}
 
       {!controls ? (
