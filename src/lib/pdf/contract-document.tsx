@@ -1,7 +1,8 @@
 import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 
-import { contractBlocks } from "@/lib/contract-layout";
+import { contractBlocks, signatureSection } from "@/lib/contract-layout";
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
+import type { ContractorSignature } from "@/lib/contract-signing";
 import {
   DocumentFooter,
   Labelled,
@@ -42,7 +43,12 @@ export type ContractDocumentData = {
   unfilled: string[];
   /** Present once the customer has signed in the app. */
   signature?: ContractSignature;
+  /** Present once the business has signed, which it does when it sends the contract. */
+  contractorSignature?: ContractorSignature;
 };
+
+/** What a signature line needs, whichever party's it is. */
+type SignedLine = Pick<ContractSignature, "method" | "name" | "image" | "signedLabel">;
 
 export type ContractSignature = {
   method: "drawn" | "typed";
@@ -97,10 +103,13 @@ function SignatureLine({
   role,
   name,
   signed,
+  printedName,
 }: {
   role: string;
   name?: string;
-  signed?: ContractSignature;
+  signed?: SignedLine;
+  /** What goes on the printed-name line, when it is more than the name signed. */
+  printedName?: string;
 }) {
   return (
     <View style={{ width: "46%" }}>
@@ -130,7 +139,7 @@ function SignatureLine({
       </View>
 
       <View style={{ height: 26, justifyContent: "flex-end" }}>
-        {signed ? <Text>{signed.name}</Text> : null}
+        {signed ? <Text>{printedName || signed.name}</Text> : null}
       </View>
       <View style={{ borderTopWidth: 1, borderTopColor: "#0f172a", paddingTop: 4 }}>
         <Text style={sheet.muted}>Printed name</Text>
@@ -149,6 +158,13 @@ function SignatureLine({
 export function ContractDocument({ data }: { data: ContractDocumentData }) {
   const { business } = data;
   const ownSignatures = bodyProvidesSignatures(data.body);
+  const contractor = data.contractorSignature;
+  const section = signatureSection({
+    ownSignatures,
+    businessName: business.name,
+    customer: data.signature,
+    contractor,
+  });
 
   return (
     <Document
@@ -211,28 +227,36 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
           ends with somewhere to sign — two blank places to sign is a customer
           signing in the wrong one.
 
-          Signed, it always appears. Otherwise a contract whose template has its
-          own signing lines would come out of an electronic signature looking
-          exactly as unsigned as it went in, while the record says it is signed.
-          It is headed as a record of the signing, not a second place to sign.
+          Signed by anybody, it always appears. Otherwise a contract whose
+          template has its own signing lines would come out of an electronic
+          signature looking exactly as unsigned as it went in, while the record
+          says it is signed. It is headed as a record of the signing, not a
+          second place to sign. contract-layout.ts decides both, for this and
+          the copy on the signing page.
         */}
-        {ownSignatures && !data.signature ? null : (
+        {section.show ? (
           <View style={{ marginTop: 30 }} wrap={false}>
-            <Text style={sheet.sectionHeading}>
-              {data.signature && ownSignatures ? "SIGNED ELECTRONICALLY" : "SIGNATURES"}
-            </Text>
-            <Text style={[sheet.muted, { marginBottom: 6 }]}>
-              {data.signature
-                ? `Signed electronically by ${data.signature.name} on ${data.signature.signedLabel}.`
-                : "By signing below both parties agree to the work and the price set out above."}
-            </Text>
+            <Text style={sheet.sectionHeading}>{section.heading}</Text>
+            {section.lines.map((line, index) => (
+              <Text
+                key={`signed-${index}`}
+                style={[sheet.muted, { marginBottom: index === section.lines.length - 1 ? 6 : 2 }]}
+              >
+                {line}
+              </Text>
+            ))}
             <View style={[sheet.row, { justifyContent: "space-between", marginTop: 6 }]}>
               <SignatureLine
                 role="Customer signature"
                 name={data.customer.name}
                 signed={data.signature}
               />
-              <SignatureLine role="Contractor signature" name={business.name} />
+              <SignatureLine
+                role="Contractor signature"
+                name={business.name}
+                signed={contractor}
+                printedName={contractor?.title ? `${contractor.name}, ${contractor.title}` : undefined}
+              />
             </View>
             {data.signature ? (
               <Text style={[sheet.muted, { marginTop: 10, fontSize: 7 }]}>
@@ -240,7 +264,7 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
               </Text>
             ) : null}
           </View>
-        )}
+        ) : null}
 
         <DocumentFooter business={business} />
       </Page>

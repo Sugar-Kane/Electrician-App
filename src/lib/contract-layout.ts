@@ -41,3 +41,49 @@ export function contractBlocks(body: string): ContractBlock[] {
     .filter(Boolean)
     .map((text) => ({ text, heading: looksLikeHeading(text) }));
 }
+
+export type SignatureSection = {
+  /** Whether the block appears at all. */
+  show: boolean;
+  heading: string;
+  /** What is said above the signature lines, in order. */
+  lines: string[];
+};
+
+/**
+ * What the signature block says, and whether there is one.
+ *
+ * Unsigned, it is left out when the business's own text already has somewhere
+ * to sign — two blank places to sign is a customer signing in the wrong one.
+ * Once anybody has signed, it always appears, as the record of who signed and
+ * when: the business first, when it sends the contract, then the customer.
+ */
+export function signatureSection(input: {
+  /** The business's template already ends with its own signing lines. */
+  ownSignatures: boolean;
+  businessName: string;
+  customer?: { name: string; signedLabel: string };
+  contractor?: { name: string; title: string; signedLabel: string };
+}): SignatureSection {
+  const { customer, contractor, ownSignatures } = input;
+  const signed = Boolean(customer || contractor);
+  const lines: string[] = [];
+
+  // The invitation to sign, while there is still somebody to sign here.
+  if (!customer && !ownSignatures) {
+    lines.push("By signing below both parties agree to the work and the price set out above.");
+  }
+  if (contractor) {
+    const signer = contractor.title ? `${contractor.name}, ${contractor.title}` : contractor.name;
+    lines.push(`Signed for ${input.businessName || "the business"} by ${signer} on ${contractor.signedLabel}.`);
+  }
+  if (customer) {
+    lines.push(`Signed electronically by ${customer.name} on ${customer.signedLabel}.`);
+  }
+
+  return {
+    show: !ownSignatures || signed,
+    heading: signed && ownSignatures ? "SIGNED ELECTRONICALLY" : "SIGNATURES",
+    lines,
+  };
+}

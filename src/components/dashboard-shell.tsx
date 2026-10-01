@@ -81,6 +81,10 @@ function Sparkline({ values, large = false }: { values: number[]; large?: boolea
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
+      // Stretched to fill the box its classes give it — the large one full
+      // width at 72px — rather than drawn small in the middle of it. The line
+      // keeps its weight however far it is stretched.
+      preserveAspectRatio="none"
       className={large ? "h-[72px] w-full" : "h-11 w-24"}
       role="img"
       aria-label="Positive trend"
@@ -100,6 +104,7 @@ function Sparkline({ values, large = false }: { values: number[]; large?: boolea
         fill="none"
         stroke="var(--color-positive)"
         strokeWidth={large ? 2 : 1.8}
+        vectorEffect="non-scaling-stroke"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

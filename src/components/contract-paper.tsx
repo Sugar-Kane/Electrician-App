@@ -1,6 +1,9 @@
-import { contractBlocks } from "@/lib/contract-layout";
+import { contractBlocks, signatureSection } from "@/lib/contract-layout";
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import type { ContractDocumentData, ContractSignature } from "@/lib/pdf/contract-document";
+
+/** What a signature line needs, whichever party's it is. */
+type SignedLine = Pick<ContractSignature, "method" | "name" | "image" | "signedLabel">;
 
 /**
  * The contract, laid out the way its PDF is, at a size a phone can be read at.
@@ -55,10 +58,13 @@ function SignatureColumn({
   role,
   name,
   signed,
+  printedName,
 }: {
   role: string;
   name?: string;
-  signed?: ContractSignature;
+  signed?: SignedLine;
+  /** What goes on the printed-name line, when it is more than the name signed. */
+  printedName?: string;
 }) {
   return (
     <div className="min-w-0">
@@ -81,7 +87,7 @@ function SignatureColumn({
         {name ? <p className="text-sm text-slate-500">{name}</p> : null}
       </div>
 
-      <div className="flex h-9 items-end">{signed ? signed.name : null}</div>
+      <div className="flex h-9 items-end">{signed ? printedName || signed.name : null}</div>
       <p className="border-t border-slate-900 pt-1 text-sm text-slate-500">Printed name</p>
 
       <div className="flex h-9 items-end">{signed ? signed.signedLabel : null}</div>
@@ -93,7 +99,13 @@ function SignatureColumn({
 export function ContractPaper({ data }: { data: ContractDocumentData }) {
   const { business } = data;
   const cityLine = [business.city, business.state].filter(Boolean).join(", ");
-  const ownSignatures = bodyProvidesSignatures(data.body);
+  const contractor = data.contractorSignature;
+  const section = signatureSection({
+    ownSignatures: bodyProvidesSignatures(data.body),
+    businessName: business.name,
+    customer: data.signature,
+    contractor,
+  });
 
   return (
     <article className="rounded-panel bg-white px-5 py-6 text-[15px] leading-7 text-slate-900 shadow-lg sm:px-8 sm:py-8">
@@ -164,27 +176,32 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
         )}
       </div>
 
-      {/* The PDF's rule: left out when the business's own text already has
-          somewhere to sign, unless it has been signed — then it is the record. */}
-      {ownSignatures && !data.signature ? null : (
+      {/* The PDF's block, decided by the same rule in contract-layout.ts: the
+          record of who signed and when, the business first. */}
+      {section.show ? (
         <section className="mt-10">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
-            {data.signature && ownSignatures ? "Signed electronically" : "Signatures"}
+            {section.heading}
           </p>
-          <p className="mt-1 text-sm text-slate-500">
-            {data.signature
-              ? `Signed electronically by ${data.signature.name} on ${data.signature.signedLabel}.`
-              : "By signing below both parties agree to the work and the price set out above."}
-          </p>
+          {section.lines.map((line, index) => (
+            <p key={`signed-${index}`} className="mt-1 text-sm text-slate-500">
+              {line}
+            </p>
+          ))}
           <div className="mt-4 grid gap-8 sm:grid-cols-2">
             <SignatureColumn role="Customer signature" name={data.customer.name} signed={data.signature} />
-            <SignatureColumn role="Contractor signature" name={business.name} />
+            <SignatureColumn
+              role="Contractor signature"
+              name={business.name}
+              signed={contractor}
+              printedName={contractor?.title ? `${contractor.name}, ${contractor.title}` : undefined}
+            />
           </div>
           {data.signature ? (
             <p className="mt-4 text-xs text-slate-500">Document fingerprint {data.signature.fingerprint}</p>
           ) : null}
         </section>
-      )}
+      ) : null}
 
       <footer className="mt-10 border-t border-slate-300 pt-2 text-xs leading-5 text-slate-500">
         {[business.name, business.phone, business.licenseNumber ? `Lic. ${business.licenseNumber}` : ""]

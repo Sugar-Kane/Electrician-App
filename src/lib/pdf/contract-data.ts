@@ -6,7 +6,7 @@ import {
   type ContractDocumentData,
 } from "@/lib/pdf/contract-document";
 import { documentFolderId } from "@/lib/document-folders";
-import { documentSignature } from "@/lib/contract-signing";
+import { contractorSignature, documentSignature } from "@/lib/contract-signing";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
@@ -71,6 +71,8 @@ export async function loadContractDocument(input: {
       `id, body, scope, unfilled, created_at,
        signature_provider, signed_at, signature_method, signature_name,
        signature_image, signed_body_hash,
+       contractor_signed_at, contractor_signature_method, contractor_signature_name,
+       contractor_signature_title, contractor_signature_image,
        jobs (
          id, job_number, scheduled_start,
          customers ( first_name, last_name, company_name, phone, email ),
@@ -141,6 +143,8 @@ export async function loadContractDocument(input: {
       // Present only once the customer has signed in the app, and only when
       // every part of the signature is there.
       signature: documentSignature(contract, input.timeZone),
+      // The business's, given when the contract was sent or handed over.
+      contractorSignature: contractorSignature(contract, input.timeZone),
     },
     jobId,
     jobNumber,
