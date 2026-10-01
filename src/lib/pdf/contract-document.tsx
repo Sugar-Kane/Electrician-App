@@ -11,7 +11,7 @@ import {
   sheet,
   type BusinessLetterhead,
 } from "@/lib/pdf/letterhead";
-import { SIGNATURE_FONT } from "@/lib/pdf/signature-font";
+import { SIGNATURE_FONT, TEXT_FONT } from "@/lib/pdf/fonts";
 
 /**
  * The contract as the customer signs it.
@@ -128,11 +128,12 @@ function SignatureLine({
         ) : signed?.method === "typed" ? (
           // Tight line height and a lift off the rule: at this size the text
           // box otherwise reaches the bottom of this space, and the rule
-          // strikes straight through the name. Times Italic stands in for any
-          // letter the signature face has no glyph for.
+          // strikes straight through the name. The text face stands in for
+          // any letter the signature face has no glyph for, a Cyrillic or
+          // Greek name say, so it is still written rather than garbled.
           <Text
             style={{
-              fontFamily: [SIGNATURE_FONT, "Times-Italic"],
+              fontFamily: [SIGNATURE_FONT, TEXT_FONT],
               fontSize: 20,
               lineHeight: 1,
               marginBottom: 4,

@@ -9,8 +9,8 @@ import localFont from "next/font/local";
  * slanted font rather than as anybody's signature. This is Dancing Script at
  * SemiBold: cursive enough to look signed, plain enough that the name is never
  * in doubt, and with every glyph the family has, so Nguyễn or Łukasz is written
- * in it too. The contract's PDF embeds the same face (src/lib/pdf/
- * signature-font.ts) from the TTF beside this file.
+ * in it too. The contract's PDF embeds the same face (src/lib/pdf/fonts.ts)
+ * from the TTF beside this file.
  *
  * Inside the files it is called "Volteira Signature". "Dancing Script" is a
  * Reserved Font Name under its licence (src/fonts/DancingScript-OFL.txt), and

@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from "@react-pdf/renderer";
 
+import { TEXT_FONT } from "@/lib/pdf/fonts";
+
 /**
  * What every document this business sends has in common.
  *
@@ -46,21 +48,23 @@ export const sheet = StyleSheet.create({
     // was otherwise empty.
     lineHeight: 1.4,
     color: INK,
-    fontFamily: "Helvetica",
+    fontFamily: TEXT_FONT,
   },
   // Explicit line heights on both. The page's `lineHeight` does not cascade to
   // a Text that sets its own fontSize, so a 20pt heading was given a ~10pt line
   // box and the address underneath was drawn straight through it.
   businessName: {
     fontSize: 20,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: TEXT_FONT,
+    fontWeight: "bold",
     letterSpacing: 0.3,
     lineHeight: 1.25,
     marginBottom: 3,
   },
   documentTitle: {
     fontSize: 20,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: TEXT_FONT,
+    fontWeight: "bold",
     textAlign: "right",
     lineHeight: 1.25,
     marginBottom: 2,
@@ -69,13 +73,14 @@ export const sheet = StyleSheet.create({
   accentRule: { height: 3, backgroundColor: ACCENT, marginTop: 10, marginBottom: 14 },
   sectionHeading: {
     fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: TEXT_FONT,
+    fontWeight: "bold",
     letterSpacing: 1.1,
     color: MUTED,
     marginBottom: 5,
   },
   row: { flexDirection: "row" },
-  bold: { fontFamily: "Helvetica-Bold" },
+  bold: { fontFamily: TEXT_FONT, fontWeight: "bold" },
   divider: { borderBottomWidth: 1, borderBottomColor: RULE },
   /*
    * In the flow, after the content, rather than absolutely positioned and
