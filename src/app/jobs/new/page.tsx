@@ -1,5 +1,6 @@
 import { FieldPageShell } from "@/components/field-page-shell";
 import { NewJobForm } from "@/components/new-job-form";
+import { getFollowUpStart } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import { timezoneLabel } from "@/lib/timezones";
 
@@ -11,18 +12,45 @@ import { timezoneLabel } from "@/lib/timezones";
  * other way — at the door, by email, by a landlord who called the mobile — was
  * written down somewhere else, which is why the schedule was never the whole
  * business.
+ *
+ * `?from=25` books the work diagnostic #25 found: the same form, started from
+ * that customer and address as a work order, and linked back to it so the fee
+ * the customer paid for the diagnostic comes off this one's invoice. A number
+ * that is not a diagnostic of this business's is ignored, and the form starts
+ * empty as it always did.
  */
-export default async function NewJobPage() {
-  const timeZone = await getOrganizationTimezone();
+export default async function NewJobPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const [{ from }, timeZone] = await Promise.all([searchParams, getOrganizationTimezone()]);
+  const followUp = from ? await getFollowUpStart(from) : null;
 
   return (
     <FieldPageShell
-      title="New job"
-      eyebrow="Add work"
-      description="For work booked any way other than through the phone line."
-      backHref="/schedule"
+      title={followUp ? "Book work order" : "New job"}
+      eyebrow={followUp ? `From diagnostic #${followUp.jobNumber}` : "Add work"}
+      description={
+        followUp
+          ? `${followUp.customer} · the work diagnostic #${followUp.jobNumber} found.`
+          : "For work booked any way other than through the phone line."
+      }
+      backHref={followUp ? `/jobs/${followUp.jobNumber}` : "/schedule"}
     >
-      <NewJobForm timeZone={timeZone} timeZoneLabel={timezoneLabel(timeZone)} />
+      <NewJobForm
+        timeZone={timeZone}
+        timeZoneLabel={timezoneLabel(timeZone)}
+        followUp={
+          followUp
+            ? {
+                jobNumber: followUp.jobNumber,
+                values: followUp.values,
+                creditCents: followUp.creditCents,
+              }
+            : undefined
+        }
+      />
     </FieldPageShell>
   );
 }

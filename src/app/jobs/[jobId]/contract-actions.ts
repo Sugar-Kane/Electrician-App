@@ -11,6 +11,7 @@ import {
   STARTER_TEMPLATE,
   type ContractFacts,
 } from "@/lib/contract-template";
+import { creditSource } from "@/lib/follow-up-jobs";
 import { formatMoney } from "@/lib/invoice-messages";
 import { lineTotalCents } from "@/lib/job-lines";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
@@ -201,7 +202,7 @@ export async function generateContract(
     .from("jobs")
     .select(
       `id, job_number, category, customer_description, scheduled_start, diagnostic_fee_cents,
-       diagnostic_paid,
+       diagnostic_paid, follow_up_of,
        customers ( first_name, last_name, company_name ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
@@ -256,10 +257,42 @@ export async function generateContract(
     .filter(Boolean)
     .join(", ");
 
+  /*
+   * Whose diagnostic the deposit line is about.
+   *
+   * A work order booked from a diagnostic has no fee of its own; the customer
+   * paid it for the visit before, and it comes off this work. Without this the
+   * work order's contract had no deposit line at all, and its invoice — which
+   * does take the fee off — would not have matched it.
+   */
+  const followUpOf = text(row.follow_up_of);
+  const { data: followedRow } = followUpOf
+    ? await supabase
+        .from("jobs")
+        .select("diagnostic_paid, diagnostic_fee_cents")
+        .eq("organization_id", organizationId)
+        .eq("id", followUpOf)
+        .maybeSingle()
+    : { data: null };
+  const followed = followedRow as Record<string, unknown> | null;
+  const fee = creditSource(
+    {
+      diagnosticPaid: row.diagnostic_paid === true,
+      diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+      followUpOf: followUpOf || null,
+    },
+    followed
+      ? {
+          diagnosticPaid: followed.diagnostic_paid === true,
+          diagnosticFeeCents: Number(followed.diagnostic_fee_cents ?? 0),
+        }
+      : null,
+  );
+
   const money = contractMoney({
     category: text(row.category),
-    diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
-    diagnosticPaid: row.diagnostic_paid === true,
+    diagnosticFeeCents: fee.diagnosticFeeCents,
+    diagnosticPaid: fee.diagnosticPaid,
     invoices: invoices.map((invoice) => ({
       totalCents: Number(invoice.total_cents ?? 0),
       diagnosticCreditCents: Number(invoice.diagnostic_credit_cents ?? 0),
