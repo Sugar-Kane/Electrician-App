@@ -213,7 +213,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             <details className="group">
               <summary className="tap-target flex cursor-pointer list-none items-start justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold">What the customer said</span>
+                  <span className="block text-sm font-semibold">Customer request</span>
                   {job.summary ? (
                     <span className="mt-2 block text-sm leading-6 text-ink-muted">
                       {job.summary}
@@ -221,7 +221,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
                   ) : null}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-brand">
-                  <span className="group-open:hidden">Read it</span>
+                  <span className="group-open:hidden">Intake</span>
                   <span className="hidden group-open:inline">Close</span>
                   <ChevronDown
                     className="h-4 w-4 shrink-0 transition group-open:rotate-180"
@@ -238,7 +238,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             // Nothing to open — a job typed in by hand has no call behind it,
             // and a disclosure onto an empty box is worse than none.
             <div className="p-4 sm:p-5">
-              <h2 className="text-sm font-semibold">What the customer said</h2>
+              <h2 className="text-sm font-semibold">Customer request</h2>
               {job.summary ? (
                 <p className="mt-2 text-sm leading-6 text-ink-muted">{job.summary}</p>
               ) : null}
@@ -293,6 +293,84 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
+      {!controls ? (
+        // The signed-out demo view has no job to add lines to, and a form that
+        // silently fails is worse than a sentence saying why it is not there.
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Materials</h2>
+            <Link
+              href={`/materials?job=${job.id}`}
+              className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
+            >
+              {needsStop ? "Buy what is short" : "Check stock"}
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          {job.materials.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">Nothing listed for this job yet.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {job.materials.map((material) => (
+                <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate">{material.name}</span>
+                  <span className="shrink-0 text-ink-muted">
+                    {material.quantity} {material.unit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {/* Job details are visible on arrival and can still be collapsed. */}
+      <details open className="group mt-3 rounded-panel border border-line bg-surface">
+        <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+          <span className="text-sm font-semibold">Job details</span>
+          <ChevronDown
+            className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180"
+            aria-hidden
+          />
+        </summary>
+
+        <div className="divide-y divide-line border-t border-line px-4 sm:px-5">
+          <div className="flex items-center justify-between gap-3 py-4">
+            <p className="text-sm text-ink-muted">Assigned to</p>
+            {controls ? (
+              <AssignTechnician jobNumber={controls.jobNumber} technician={job.technician} />
+            ) : (
+              <span className="text-sm">{job.technician}</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 py-4">
+            <p className="text-sm text-ink-muted">Attachments</p>
+            <Link
+              href={`/files?job=${job.id}`}
+              className="tap-target inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-brand"
+            >
+              View files
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+
+          {job.phone || job.email ? (
+            <div className="py-4">
+              <h3 className="text-sm font-semibold">Contact</h3>
+              {job.phone ? <p className="text-sm text-ink-muted">{job.phone}</p> : null}
+              {job.email ? <p className="text-sm text-ink-muted">{job.email}</p> : null}
+            </div>
+          ) : null}
+
+          {controls ? (
+            <div className="py-4">
+              <JobContract jobNumber={controls.jobNumber} contracts={contracts} customerName={job.contactName || job.customer} />
+            </div>
+          ) : null}
+        </div>
+      </details>
+
       {/*
         The texts that belong to this job, read straight from the conversation
         rather than through the inbox. Clearing a thread out of Messages is one
@@ -300,7 +378,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         is the job's record, and it stays here either way.
       */}
       {conversations.length > 0 ? (
-        <details open className="group mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <details className="group mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
           <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-semibold">Conversation</span>
             <ChevronDown className="h-4 w-4 text-ink-muted transition group-open:rotate-180" aria-hidden />
@@ -347,93 +425,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </details>
       ) : null}
 
-      {!controls ? (
-        // The signed-out demo view has no job to add lines to, and a form that
-        // silently fails is worse than a sentence saying why it is not there.
-        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">Materials</h2>
-            <Link
-              href={`/materials?job=${job.id}`}
-              className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
-            >
-              {needsStop ? "Buy what is short" : "Check stock"}
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-          {job.materials.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-muted">Nothing listed for this job yet.</p>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {job.materials.map((material) => (
-                <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate">{material.name}</span>
-                  <span className="shrink-0 text-ink-muted">
-                    {material.quantity} {material.unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
-
-      {/* Job details are visible on arrival and can still be collapsed. */}
-      <details open className="group mt-3 rounded-panel border border-line bg-surface">
-        <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-5 [&::-webkit-details-marker]:hidden">
-          <span className="text-sm font-semibold">More job details</span>
-          <ChevronDown
-            className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180"
-            aria-hidden
-          />
-        </summary>
-
-        <div className="divide-y divide-line border-t border-line px-4 sm:px-5">
-          <div className="flex items-center justify-between gap-3 py-4">
-            <p className="text-sm text-ink-muted">On this job</p>
-            {controls ? (
-              <AssignTechnician jobNumber={controls.jobNumber} technician={job.technician} />
-            ) : (
-              <span className="text-sm">{job.technician}</span>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-3 py-4">
-            <p className="text-sm text-ink-muted">Documents and photos</p>
-            <Link
-              href={`/files?job=${job.id}`}
-              className="tap-target inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-brand"
-            >
-              Files
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-
-          {job.phone || job.email ? (
-            <div className="py-4">
-              <h3 className="text-sm font-semibold">Customer</h3>
-              <p className="mt-1 text-sm text-ink-muted">{job.customer}</p>
-              {job.phone ? <p className="text-sm text-ink-muted">{job.phone}</p> : null}
-              {job.email ? <p className="text-sm text-ink-muted">{job.email}</p> : null}
-            </div>
-          ) : null}
-
-          {controls ? (
-            <div className="py-4">
-              <JobContract jobNumber={controls.jobNumber} contracts={contracts} customerName={job.contactName || job.customer} />
-            </div>
-          ) : null}
-        </div>
-      </details>
-
       {/*
         What has happened on this job, recorded as it happened. Below the
         details, because the details are what somebody standing at the door
         needs and this is what somebody asked "when did we tell them" needs.
       */}
       {history.rows.length > 0 ? (
-        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <h2 className="text-sm font-semibold">History</h2>
+        <details className="group mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-semibold">History</span>
+            <ChevronDown className="h-4 w-4 text-ink-muted transition group-open:rotate-180" aria-hidden />
+          </summary>
           <div className="mt-3">
             <ActivityTimeline
               rows={history.rows}
@@ -441,7 +443,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               today={todayInZone(history.timeZone)}
             />
           </div>
-        </section>
+        </details>
       ) : null}
 
       {/*

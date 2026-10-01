@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Download, FileText, LoaderCircle, MessageSquare, PenLine, RefreshCw } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
@@ -206,14 +205,14 @@ function ContractRow({
             </span>
           )}
         </span>
-        <span className="shrink-0 text-xs font-semibold text-brand">{open ? "Hide" : "Open"}</span>
+        <span className="shrink-0 text-xs font-semibold text-brand">{open ? "Hide preview" : "Preview"}</span>
       </button>
 
       {current ? (
         <div className="border-t border-line px-3 pb-3">
           <ContractSigning contract={contract} jobNumber={jobNumber} customerName={customerName} />
           {!contract.signedLabel && !contract.unsignable ? (
-            <p className="mt-2 text-xs text-ink-muted">Send for signing texts the signing link to the customer’s mobile number.</p>
+            <p className="mt-2 text-xs text-ink-muted">Sends the signing link by text.</p>
           ) : null}
         </div>
       ) : null}
@@ -302,10 +301,8 @@ export function JobContract({
   customerName?: string;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
-  // The newest draft is open on arrival. It is the one somebody came here to
-  // look at, and a list of collapsed rows with the document one tap away is the
-  // plain-text view again with extra steps.
-  const [open, setOpen] = useState<string | null>(contracts[0]?.id ?? null);
+  // Keep the document preview optional while signing actions stay visible.
+  const [open, setOpen] = useState<string | null>(null);
   const section = useRef<HTMLElement>(null);
 
   // Arriving already pointed here — a new tab, the back button, a link from
@@ -321,19 +318,23 @@ export function JobContract({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">Contract</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Built from{" "}
-            <Link href="/settings/contract" className="font-semibold text-brand">
-              your own contract
-            </Link>
-            , with this job&rsquo;s details filled in.
-          </p>
+
         </div>
 
-        <form action={action}>
-          <input type="hidden" name="jobNumber" value={jobNumber} />
-          <GenerateButton existing={contracts.length > 0} />
-        </form>
+        {contracts.length === 0 ? (
+          <form action={action}>
+            <input type="hidden" name="jobNumber" value={jobNumber} />
+            <GenerateButton existing={false} />
+          </form>
+        ) : (
+          <details className="text-sm">
+            <summary className="tap-target flex min-h-11 cursor-pointer items-center text-ink-muted">Options</summary>
+            <form action={action} className="mt-2">
+              <input type="hidden" name="jobNumber" value={jobNumber} />
+              <GenerateButton existing />
+            </form>
+          </details>
+        )}
       </div>
 
       <div className="mt-3">
