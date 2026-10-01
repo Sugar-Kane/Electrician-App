@@ -20,7 +20,7 @@ import {
   type JobLine,
   type JobLineTotals,
 } from "@/lib/job-lines";
-import type { StockOption } from "@/lib/job-line-data";
+import type { JobInvoiceSummary, StockOption } from "@/lib/job-line-data";
 
 /**
  * What the job is made of, and what it comes to.
@@ -204,7 +204,14 @@ function AddLineForm({
  * lines. Now there is, so the amount is left out of the form entirely and the
  * action sums the job itself. One number, derived once, on the server.
  */
-function RaiseInvoiceForm({ jobNumber, subtotalCents }: { jobNumber: string; subtotalCents: number }) {
+function RaiseInvoiceForm({
+  jobNumber,
+  invoice,
+}: {
+  jobNumber: string;
+  /** The job's newest invoice when the page was drawn, or null for none. */
+  invoice: JobInvoiceSummary | null;
+}) {
   const [state, action] = useActionState(raiseInvoice, invoiceInitialState);
 
   /*
@@ -244,6 +251,43 @@ function RaiseInvoiceForm({ jobNumber, subtotalCents }: { jobNumber: string; sub
     );
   }
 
+  /*
+   * Already billed, and nothing created on this screen since.
+   *
+   * "Generate invoice" is for a job that has none. Reopening a job that has one
+   * offered to generate it all over again, and the only way to the invoice was
+   * to press that and be told it existed. Now the way to it comes first.
+   *
+   * A second invoice is still one tap — a deposit and a balance are two for
+   * one job — and it goes straight through, because the invoice it would
+   * duplicate is the one on screen above it. The question the action asks
+   * before making another has been answered by looking.
+   */
+  if (invoice && !state.invoiceId) {
+    return (
+      <div className="mt-3 border-t border-line pt-3">
+        {state.error ? <p className="mb-2 text-xs text-critical">{state.error}</p> : null}
+
+        <Link
+          href={`/invoices/${invoice.invoiceId}`}
+          className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand text-sm font-semibold text-brand"
+        >
+          <ReceiptText className="h-4 w-4" aria-hidden />
+          Open invoice {invoice.number}
+        </Link>
+        <p className="mt-1.5 text-center text-xs text-ink-muted">
+          {formatCents(invoice.totalCents)} · {invoice.statusLabel}
+        </p>
+
+        <form action={action} className="mt-2">
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <input type="hidden" name="confirmDuplicate" value="yes" />
+          <SecondInvoiceButton />
+        </form>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="mt-3 border-t border-line pt-3">
       <input type="hidden" name="jobNumber" value={jobNumber} />
@@ -260,7 +304,7 @@ function RaiseInvoiceForm({ jobNumber, subtotalCents }: { jobNumber: string; sub
           Open the invoice
         </Link>
       ) : (
-        <InvoiceButton subtotalCents={subtotalCents} />
+        <InvoiceButton />
       )}
 
       {state.invoiceId ? null : (
@@ -272,7 +316,7 @@ function RaiseInvoiceForm({ jobNumber, subtotalCents }: { jobNumber: string; sub
   );
 }
 
-function InvoiceButton({ subtotalCents }: { subtotalCents: number }) {
+function InvoiceButton() {
   const { pending } = useFormStatus();
 
   return (
@@ -288,8 +332,10 @@ function InvoiceButton({ subtotalCents }: { subtotalCents: number }) {
       )}
       {/* The button says what it is doing while it does it. A slow response
           that looks like nothing happened is what makes people tap twice, and
-          the second tap is what used to make a second invoice. */}
-      {pending ? "Creating invoice…" : `Invoice ${formatCents(subtotalCents)}`}
+          the second tap is what used to make a second invoice. The amount is
+          not repeated here: it is the total at the top of the panel, and
+          "Invoice $125.00" read as an invoice that already existed. */}
+      {pending ? "Generating invoice…" : "Generate invoice"}
     </button>
   );
 }
@@ -305,7 +351,7 @@ function SecondInvoiceButton() {
       className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold disabled:opacity-60"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-      {pending ? "Creating…" : "Create another invoice"}
+      {pending ? "Generating…" : "Generate another invoice"}
     </button>
   );
 }
@@ -338,11 +384,14 @@ export function JobLinesPanel({
   jobNumber,
   lines,
   totals,
+  invoice = null,
   stock,
 }: {
   jobNumber: string;
   lines: JobLine[];
   totals: JobLineTotals;
+  /** The job's newest invoice, so the panel can tell billed from not. */
+  invoice?: JobInvoiceSummary | null;
   stock: StockOption[];
 }) {
   const [adding, setAdding] = useState<"labor" | "material" | null>(null);
@@ -389,7 +438,7 @@ export function JobLinesPanel({
       {/* Only once there is something to bill. A button offering to invoice
           $0.00 is a button that creates a draft nobody wanted. */}
       {totals.subtotalCents > 0 ? (
-        <RaiseInvoiceForm jobNumber={jobNumber} subtotalCents={totals.subtotalCents} />
+        <RaiseInvoiceForm jobNumber={jobNumber} invoice={invoice} />
       ) : null}
 
       {adding ? (

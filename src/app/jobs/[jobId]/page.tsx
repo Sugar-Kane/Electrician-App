@@ -20,7 +20,7 @@ import { streetWithUnit } from "@/lib/property-details";
 import { getJob, getJobContracts, getJobControls, getJobHistory } from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
-import { getJobLines, getStockOptions } from "@/lib/job-line-data";
+import { getJobInvoice, getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { showsWorkspace } from "@/lib/job-workflow";
@@ -67,12 +67,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   if (!job) notFound();
 
   // Null for the signed-out demo view, where there is nothing real to advance.
-  const [controls, workflow, contracts, { lines, totals }, stock, photos, messaging, history] =
+  const [controls, workflow, contracts, { lines, totals }, invoice, stock, photos, messaging, history] =
     await Promise.all([
       getJobControls(jobId),
       getJobWorkflow(jobId),
       getJobContracts(jobId),
       getJobLines(jobId),
+      getJobInvoice(jobId),
       getStockOptions(),
       getJobPhotos(jobId),
       getMessagingContext(),
@@ -281,6 +282,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               jobNumber={controls.jobNumber}
               lines={lines}
               totals={totals}
+              invoice={invoice}
               stock={stock}
             />
           </div>
