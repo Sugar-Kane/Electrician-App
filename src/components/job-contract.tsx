@@ -56,7 +56,7 @@ function GenerateButton({ existing }: { existing: boolean }) {
   );
 }
 
-function SendLinkButton({ again }: { again: boolean }) {
+function SendLinkButton() {
   const { pending } = useFormStatus();
   return (
     <button
@@ -65,7 +65,7 @@ function SendLinkButton({ again }: { again: boolean }) {
       className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <MessageSquare className="h-4 w-4" aria-hidden />}
-      {pending ? "Sending…" : again ? "Text the link again" : "Text signing link"}
+      {pending ? "Sending…" : "Send for signing"}
     </button>
   );
 }
@@ -140,7 +140,7 @@ function ContractSigning({
           <form action={send}>
             <input type="hidden" name="contractId" value={contract.id} />
             <input type="hidden" name="jobNumber" value={jobNumber} />
-            <SendLinkButton again={Boolean(contract.sentLabel)} />
+            <SendLinkButton />
           </form>
         </div>
       )}
@@ -209,6 +209,15 @@ function ContractRow({
         <span className="shrink-0 text-xs font-semibold text-brand">{open ? "Hide" : "Open"}</span>
       </button>
 
+      {current ? (
+        <div className="border-t border-line px-3 pb-3">
+          <ContractSigning contract={contract} jobNumber={jobNumber} customerName={customerName} />
+          {!contract.signedLabel && !contract.unsignable ? (
+            <p className="mt-2 text-xs text-ink-muted">Send for signing texts the signing link to the customer’s mobile number.</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {open ? (
         <div className="border-t border-line p-3">
           {contract.document ? (
@@ -270,10 +279,6 @@ function ContractRow({
               {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
             </form>
           )}
-
-          {current ? (
-            <ContractSigning contract={contract} jobNumber={jobNumber} customerName={customerName} />
-          ) : null}
 
           {showText || !contract.document ? (
             <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-control bg-sunken px-3 py-3 text-xs leading-6 text-ink-muted">
