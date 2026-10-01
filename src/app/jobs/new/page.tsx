@@ -1,6 +1,6 @@
 import { FieldPageShell } from "@/components/field-page-shell";
 import { NewJobForm } from "@/components/new-job-form";
-import { getFollowUpStart } from "@/lib/job-data";
+import { getCustomerChoices, getFollowUpStart } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import { timezoneLabel } from "@/lib/timezones";
 
@@ -13,6 +13,9 @@ import { timezoneLabel } from "@/lib/timezones";
  * written down somewhere else, which is why the schedule was never the whole
  * business.
  *
+ * Everybody the business already has is offered under Returning customer, so
+ * somebody booked before is a pick rather than their details typed again.
+ *
  * `?from=25` books the work diagnostic #25 found: the same form, started from
  * that customer and address as a work order, and linked back to it so the fee
  * the customer paid for the diagnostic comes off this one's invoice. A number
@@ -24,7 +27,11 @@ export default async function NewJobPage({
 }: {
   searchParams: Promise<{ from?: string }>;
 }) {
-  const [{ from }, timeZone] = await Promise.all([searchParams, getOrganizationTimezone()]);
+  const [{ from }, timeZone, customers] = await Promise.all([
+    searchParams,
+    getOrganizationTimezone(),
+    getCustomerChoices(),
+  ]);
   const followUp = from ? await getFollowUpStart(from) : null;
 
   return (
@@ -41,6 +48,7 @@ export default async function NewJobPage({
       <NewJobForm
         timeZone={timeZone}
         timeZoneLabel={timezoneLabel(timeZone)}
+        customers={customers}
         followUp={
           followUp
             ? {

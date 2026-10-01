@@ -172,9 +172,26 @@ export async function createJob(
   }
 
   // Booked from a diagnostic with no phone on it: the diagnostic's customer.
-  // There is nothing to match an email-only customer on, and a second record
-  // for them would split their history between this job and the last.
+  // A second record for them would split their history between this job and
+  // the last.
   if (!customerId && !job.phone && followed?.customerId) customerId = followed.customerId;
+
+  // No phone, but an email the business already has: that customer. Without
+  // this, picking an email-only customer under Returning customer saved them a
+  // second time — the number is what everything else is matched on, and they
+  // have none.
+  if (!customerId && !job.phone && job.email) {
+    const { data: known } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .ilike("email", job.email.replace(/[\\%_]/g, "\\$&"))
+      .is("archived_at", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    customerId = text(known?.id);
+  }
 
   // No phone: a customer reachable by email only, who has nothing to match on.
   if (!customerId) {

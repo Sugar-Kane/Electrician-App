@@ -12,6 +12,7 @@ import { hasCoordinates } from "@/lib/coordinates";
 import { unsignableBecause } from "@/lib/contract-signing";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
+import type { CustomerChoice } from "@/lib/customer-choices";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { followUpPrefill } from "@/lib/follow-up-jobs";
 import { jobCategoryLabel, kindOfWork, type KindOfWork, type NewJobRaw } from "@/lib/new-job-input";
@@ -1501,4 +1502,77 @@ export async function getFollowUpStart(jobNumber: string): Promise<FollowUpStart
       diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
     }),
   };
+}
+
+/**
+ * Everybody the business has, at each address they have been seen at, for New
+ * job to offer instead of having them typed in again.
+ *
+ * Most recently active first: the customers somebody is likely to be booking
+ * again are the ones who had work done lately. Archived customers and
+ * addresses are left out, and so is anything past the most recent few hundred
+ * people — the list is searched as it is typed into, so it has to arrive with
+ * the page.
+ */
+export async function getCustomerChoices(): Promise<CustomerChoice[]> {
+  const context = await resolveContext();
+  if (!context) return [];
+
+  const { data, error } = await context.database
+    .from("customers")
+    .select(
+      `id, first_name, last_name, company_name, phone, email, created_at,
+       properties ( id, address_line_1, address_line_2, city, state, postal_code, access_notes, archived_at ),
+       jobs ( scheduled_start, created_at )`,
+    )
+    .eq("organization_id", context.organizationId)
+    .is("archived_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(300);
+
+  if (error || !data) return [];
+
+  const choices: CustomerChoice[] = [];
+  for (const row of data as Record<string, unknown>[]) {
+    const customerId = textOf(row.id);
+    const name =
+      textOf(row.company_name) ||
+      [textOf(row.first_name), textOf(row.last_name)].filter(Boolean).join(" ");
+    if (!customerId || !name) continue;
+
+    const jobs = Array.isArray(row.jobs) ? (row.jobs as Record<string, unknown>[]) : [];
+    const lastSeen = [textOf(row.created_at), ...jobs.flatMap((job) => [textOf(job.scheduled_start), textOf(job.created_at)])]
+      .filter(Boolean)
+      .reduce((latest, at) => (Date.parse(at) > Date.parse(latest) ? at : latest), textOf(row.created_at));
+
+    const base = {
+      customerId,
+      name,
+      phone: textOf(row.phone),
+      email: textOf(row.email),
+      lastSeen,
+    };
+    const properties = (Array.isArray(row.properties) ? (row.properties as Record<string, unknown>[]) : [])
+      .filter((property) => !property.archived_at && textOf(property.address_line_1));
+
+    if (properties.length === 0) {
+      choices.push({ ...base, key: customerId, address: null });
+      continue;
+    }
+    for (const property of properties) {
+      choices.push({
+        ...base,
+        key: `${customerId}:${textOf(property.id)}`,
+        address: {
+          line1: textOf(property.address_line_1),
+          line2: textOf(property.address_line_2),
+          city: textOf(property.city),
+          state: textOf(property.state),
+          postalCode: textOf(property.postal_code),
+          accessNotes: textOf(property.access_notes),
+        },
+      });
+    }
+  }
+  return choices;
 }
