@@ -13,6 +13,10 @@ export function statusTone(status: string): string {
     case "Completed":
       return "bg-positive-bg text-positive";
     case "Canceled":
+    // A visit whose time went by untouched, or one left open (follow-ups.ts):
+    // the two states that need somebody to do something about them.
+    case "Not started":
+    case "Not finished":
       return "bg-critical-bg text-critical";
     case "Scheduled":
       return "bg-caution-bg text-caution";
@@ -38,6 +42,8 @@ export function statusDot(status: string): string {
     case "Completed":
       return "bg-positive";
     case "Canceled":
+    case "Not started":
+    case "Not finished":
       return "bg-critical";
     case "Scheduled":
       return "bg-caution";
@@ -60,6 +66,8 @@ export function statusChip(status: string): string {
     case "Completed":
       return "border-positive/30 bg-positive-bg text-positive";
     case "Canceled":
+    case "Not started":
+    case "Not finished":
       return "border-critical/30 bg-critical-bg text-critical";
     case "Scheduled":
       return "border-caution/30 bg-caution-bg text-caution";

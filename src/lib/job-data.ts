@@ -18,6 +18,8 @@ import { currentContext } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
+import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
+import { jobLineTotals } from "@/lib/job-lines";
 import {
   pilotInvoices,
   pilotJobs,
@@ -62,15 +64,6 @@ const JOB_STATUS: Record<string, JobStatus> = {
   // is indistinguishable from work still to come.
   canceled: "Canceled",
   no_show: "Pending",
-};
-
-const INVOICE_STATUS: Record<string, PilotInvoice["status"]> = {
-  paid: "Paid",
-  overdue: "Overdue",
-  draft: "Unpaid",
-  sent: "Unpaid",
-  partially_paid: "Unpaid",
-  void: "Unpaid",
 };
 
 function initialsOf(name: string): string {
@@ -186,6 +179,9 @@ function mapJob(row: any, timeZone: string): PilotJob {
     })
       ? { lat: Number(property.latitude), lng: Number(property.longitude) }
       : null,
+    startsAt: row.scheduled_start ?? undefined,
+    endsAt: row.scheduled_end ?? undefined,
+    stage: row.status ?? undefined,
     // No documents or job_materials tables yet — empty beats showing mock
     // attachments that belong to a different job.
     documents: [],
@@ -288,7 +284,12 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
       customer: name,
       // Cents in the database; the UI renders dollars.
       amount: Number(row.total_cents ?? 0) / 100,
-      status: INVOICE_STATUS[String(row.status)] ?? "Unpaid",
+      // From the due date as well as the status: nothing stores `overdue`.
+      status: invoiceStatusLabel({
+        status: String(row.status ?? ""),
+        dueAt: (row.due_at as string | null) ?? null,
+        balanceDueCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),
+      }),
       due: inZone(row.due_at as string | null, context.timeZone, {
         month: "short", day: "numeric", year: "numeric",
       }),
@@ -308,6 +309,58 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   });
 
   return { invoices, source: "supabase" };
+}
+
+/** How far back finished work is checked for a missing invoice. */
+const UNBILLED_WINDOW_DAYS = 30;
+
+/**
+ * Finished work from the last month with nothing billed for it: the cents of
+ * recorded hours and parts on each, by job number.
+ *
+ * Only jobs with work on them count. A prepaid diagnostic that found nothing
+ * more to do has nothing to bill, and listing it as a follow-up would be a
+ * reminder nobody could ever clear. A voided invoice bills nothing, so a job
+ * whose only invoice was voided counts as unbilled.
+ */
+export async function getUnbilledWork(): Promise<Record<string, number>> {
+  const context = await resolveContext();
+  if (!context) return {};
+
+  const since = new Date(Date.now() - UNBILLED_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data, error } = await context.database
+    .from("jobs")
+    .select("job_number, invoices ( status ), job_line_items ( kind, quantity, unit_price_cents )")
+    .eq("organization_id", context.organizationId)
+    .eq("status", "completed")
+    .is("archived_at", null)
+    .gte("scheduled_start", since);
+
+  if (error || !data) return {};
+
+  const unbilled: Record<string, number> = {};
+  for (const raw of data) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = raw as any;
+    const invoices: { status?: string }[] = Array.isArray(row.invoices) ? row.invoices : [];
+    if (invoices.some((invoice) => invoice.status !== "void")) continue;
+
+    const lines: Record<string, unknown>[] = Array.isArray(row.job_line_items) ? row.job_line_items : [];
+    const { subtotalCents } = jobLineTotals(
+      lines.map((line, index) => ({
+        id: String(index),
+        kind: line.kind === "labor" ? ("labor" as const) : ("material" as const),
+        description: "",
+        // numeric arrives as a string over PostgREST.
+        quantity: Number(line.quantity ?? 0),
+        unit: "each",
+        unitPriceCents: Number(line.unit_price_cents ?? 0),
+      })),
+    );
+    if (subtotalCents > 0) unbilled[String(row.job_number)] = subtotalCents;
+  }
+
+  return unbilled;
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   shiftMonths,
   workWeekLabel,
 } from "@/lib/calendar";
+import type { Lateness } from "@/lib/follow-ups";
 import type { PilotJob } from "@/lib/pilot-data";
 import {
   SCHEDULE_VIEWS,
@@ -44,6 +45,7 @@ export function ScheduleBoard({
   initialDate,
   initialView,
   crew,
+  late = {},
 }: {
   jobs: PilotJob[];
   /** Today in the business's zone, worked out on the server. */
@@ -52,6 +54,12 @@ export function ScheduleBoard({
   initialView: ScheduleView;
   /** The crew tab, rendered on the server, or null on the other three. */
   crew: ReactNode;
+  /**
+   * Jobs whose time went by without them being started or finished, worked out
+   * on the server — against its clock, so the page a browser draws over it
+   * says the same thing.
+   */
+  late?: Record<string, Lateness>;
 }) {
   const [view, setView] = useState<ScheduleView>(initialView);
   const [date, setDate] = useState(initialDate);
@@ -267,7 +275,7 @@ export function ScheduleBoard({
 
       <div className="mt-4">
         {view === "day" ? (
-          <DayView jobs={jobs.filter((job) => job.date === date)} date={date} />
+          <DayView jobs={jobs.filter((job) => job.date === date)} date={date} late={late} />
         ) : view === "week" ? (
           <WeekView days={week} jobs={jobs} onPickDay={(day) => go(day, "day")} />
         ) : view === "crew" ? (

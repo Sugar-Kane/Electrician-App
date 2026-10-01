@@ -12,7 +12,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { AccountMenu } from "@/components/account-menu";
 import type { DashboardMetric, DashboardSnapshot } from "@/lib/dashboard";
-import { NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
+import { FollowUps, NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
 import { todayInZone } from "@/lib/calendar";
 import {
   canceledToday,
@@ -22,6 +22,7 @@ import {
   todaysJobs,
   type AttentionItem,
 } from "@/lib/dashboard-focus";
+import type { FollowUp, Lateness } from "@/lib/follow-ups";
 import type { PilotJob } from "@/lib/pilot-data";
 
 /**
@@ -346,6 +347,8 @@ export function DashboardShell({
   snapshot,
   jobs,
   attention,
+  followUps = [],
+  late = {},
 }: {
   snapshot: DashboardSnapshot;
   /** Real jobs. The snapshot's own `schedule` is never populated for a live
@@ -353,6 +356,10 @@ export function DashboardShell({
    *  empty outside the demo. */
   jobs: PilotJob[];
   attention: AttentionItem[];
+  /** What the day left undone (follow-ups.ts), most pressing first. */
+  followUps?: FollowUp[];
+  /** Jobs whose time went by without them being started or finished. */
+  late?: Record<string, Lateness>;
 }) {
   const today = todayInZone(snapshot.timezone);
   const nextUp = nextJob(jobs, today);
@@ -386,11 +393,13 @@ export function DashboardShell({
           */}
           {nextUp ? (
             <div className="mt-5">
-              <NextJobCard job={nextUp} isToday={nextUp.date === today} />
+              <NextJobCard job={nextUp} isToday={nextUp.date === today} late={late[nextUp.id]} />
             </div>
           ) : null}
 
-          <TodaysJobs jobs={activeToday} canceledCount={canceled.length} />
+          <TodaysJobs jobs={activeToday} canceledCount={canceled.length} late={late} />
+
+          <FollowUps items={followUps} />
 
           <NeedsAttention items={attention} />
 

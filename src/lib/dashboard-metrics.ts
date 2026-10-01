@@ -143,6 +143,24 @@ export function isOverdue(
 }
 
 /**
+ * The word an invoice is listed under, as of now.
+ *
+ * The list read the stored status alone, and nothing ever stores `overdue`: a
+ * bill a month past due read "Unpaid" while Home counted it overdue, and the
+ * Overdue tab and Home's "overdue invoices" were always empty. Late is a fact
+ * about the due date, so it is worked out from the due date, by the same rule
+ * as Home's count.
+ */
+export function invoiceStatusLabel(
+  invoice: { status: string; dueAt: string | null; balanceDueCents: number },
+  now: Date = new Date(),
+): "Paid" | "Unpaid" | "Overdue" {
+  if (invoice.status === "paid") return "Paid";
+  if (invoice.status === "overdue" || isOverdue(invoice, now)) return "Overdue";
+  return "Unpaid";
+}
+
+/**
  * Money collected this month against the same stretch of last month.
  *
  * Compared like-for-like — the first eleven days of this month against the

@@ -4,20 +4,25 @@ import { todayInZone } from "@/lib/calendar";
 import { getDashboardSnapshot } from "@/lib/dashboard";
 import { attentionItems, openBookingRequests, unassignedToday } from "@/lib/dashboard-focus";
 import { getBookingRequests } from "@/lib/booking-requests";
-import { getInventory, getInvoices, getJobs } from "@/lib/job-data";
+import { followUps, lateJobs } from "@/lib/follow-ups";
+import { getInventory, getInvoices, getJobs, getUnbilledWork } from "@/lib/job-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [snapshot, { jobs }, { invoices }, stock, bookings] = await Promise.all([
+  const [snapshot, { jobs }, { invoices }, stock, bookings, unbilled] = await Promise.all([
     getDashboardSnapshot(),
     getJobs(),
     getInvoices(),
     getInventory(),
     getBookingRequests(),
+    getUnbilledWork(),
   ]);
 
   const today = todayInZone(snapshot.timezone);
+  // One clock for the page, so the list and the status pills agree about
+  // what is late.
+  const now = new Date();
 
   // Counted here rather than inside the shell so the component stays a
   // rendering concern and the arithmetic stays testable.
@@ -38,7 +43,13 @@ export default async function Page() {
   return (
     <>
       <StartAtTop />
-      <DashboardShell snapshot={snapshot} jobs={jobs} attention={attention} />
+      <DashboardShell
+        snapshot={snapshot}
+        jobs={jobs}
+        attention={attention}
+        followUps={followUps({ jobs, unbilled, now, timeZone: snapshot.timezone })}
+        late={lateJobs(jobs, now)}
+      />
     </>
   );
 }

@@ -1,17 +1,22 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronRight,
+  Clock3,
+  Hourglass,
   MapPin,
   Navigation,
   Phone,
   Plus,
+  Receipt,
 } from "lucide-react";
 
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { statusTone } from "@/components/ui/status-badge";
 import { needsTechnician, type AttentionItem } from "@/lib/dashboard-focus";
+import { lateLabel, type FollowUp, type FollowUpKind, type Lateness } from "@/lib/follow-ups";
 import type { PilotJob } from "@/lib/pilot-data";
 
 /**
@@ -29,8 +34,18 @@ function directionsHref(job: PilotJob): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 
-export function NextJobCard({ job, isToday }: { job: PilotJob; isToday: boolean }) {
+export function NextJobCard({
+  job,
+  isToday,
+  late,
+}: {
+  job: PilotJob;
+  isToday: boolean;
+  /** Set when its time has gone by without it being started or finished. */
+  late?: Lateness;
+}) {
   const address = [job.address, job.city].filter(Boolean).join(", ");
+  const status = late ? lateLabel(late) : job.status;
 
   return (
     <section
@@ -44,8 +59,8 @@ export function NextJobCard({ job, isToday }: { job: PilotJob; isToday: boolean 
         >
           {job.status === "In progress" ? "On this job" : isToday ? "Next job" : "Next job up"}
         </p>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(job.status)}`}>
-          {job.status}
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(status)}`}>
+          {status}
         </span>
       </div>
 
@@ -101,10 +116,15 @@ export function NextJobCard({ job, isToday }: { job: PilotJob; isToday: boolean 
 export function TodaysJobs({
   jobs,
   canceledCount,
+  late = {},
 }: {
   jobs: PilotJob[];
   canceledCount: number;
+  /** Today's jobs whose time has gone by untouched, by job number. */
+  late?: Record<string, Lateness>;
 }) {
+  const statusOf = (job: PilotJob) => (late[job.id] ? lateLabel(late[job.id]!) : job.status);
+
   return (
     <section aria-labelledby="today-heading" className="mt-3">
       <div className="mb-2 flex items-end justify-between px-1">
@@ -175,9 +195,9 @@ export function TodaysJobs({
                 */}
                 {needsTechnician(job) ? null : (
                   <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(job.status)}`}
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTone(statusOf(job))}`}
                   >
-                    {job.status}
+                    {statusOf(job)}
                   </span>
                 )}
               </Link>
@@ -197,6 +217,83 @@ export function TodaysJobs({
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+const FOLLOW_UP_LOOK: Record<FollowUpKind, { icon: typeof Clock3; row: string; iconTone: string }> = {
+  not_finished: { icon: Hourglass, row: "border-critical/30 bg-critical-bg", iconTone: "text-critical" },
+  not_started: { icon: Clock3, row: "border-critical/30 bg-critical-bg", iconTone: "text-critical" },
+  to_complete: { icon: CheckCircle2, row: "border-line bg-surface", iconTone: "text-info" },
+  not_invoiced: { icon: Receipt, row: "border-line bg-surface", iconTone: "text-brand" },
+};
+
+/** How many show before the rest fold away. */
+const FOLLOW_UPS_SHOWN = 6;
+
+function FollowUpRow({ item }: { item: FollowUp }) {
+  const look = FOLLOW_UP_LOOK[item.kind];
+  const Icon = look.icon;
+  return (
+    <li>
+      <Link
+        href={`/jobs/${item.jobNumber}`}
+        className={`tap-row flex min-h-13 items-center gap-3 rounded-control border px-4 py-3 ${look.row}`}
+      >
+        <Icon className={`h-4 w-4 shrink-0 ${look.iconTone}`} aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">
+            {item.customer} · #{item.jobNumber}
+          </span>
+          <span className="mt-0.5 block text-xs text-ink-muted">{item.detail}</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * The loose ends: visits nobody started, work left open, work done and not
+ * signed off, and finished work nobody has billed.
+ *
+ * Each row is the job it is about, because every way of clearing one — starting
+ * it, finishing it, rescheduling, canceling, invoicing — is on the job. It is
+ * there all day, and it is what is left when the day is over. Nothing at all
+ * when there is nothing to follow up, like Needs attention.
+ */
+export function FollowUps({ items }: { items: FollowUp[] }) {
+  if (items.length === 0) return null;
+
+  const shown = items.slice(0, FOLLOW_UPS_SHOWN);
+  const folded = items.slice(FOLLOW_UPS_SHOWN);
+
+  return (
+    <section aria-labelledby="follow-up-heading" className="mt-3">
+      <div className="mb-2 flex items-end justify-between px-1">
+        <h2 id="follow-up-heading" className="text-sm font-semibold">
+          To follow up
+        </h2>
+        <span className="text-xs text-ink-muted">{items.length}</span>
+      </div>
+      <ul className="space-y-2">
+        {shown.map((item) => (
+          <FollowUpRow key={`${item.kind}-${item.jobNumber}`} item={item} />
+        ))}
+      </ul>
+      {folded.length > 0 ? (
+        <details className="group mt-2">
+          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center px-1 text-sm font-semibold text-brand [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">Show {folded.length} more</span>
+            <span className="hidden group-open:inline">Show fewer</span>
+          </summary>
+          <ul className="mt-2 space-y-2">
+            {folded.map((item) => (
+              <FollowUpRow key={`${item.kind}-${item.jobNumber}`} item={item} />
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </section>
   );
 }
