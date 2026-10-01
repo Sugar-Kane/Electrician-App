@@ -2,16 +2,16 @@
 export const CONTRACT_ANCHOR = "contract";
 
 /**
- * Open whatever the contract is folded into, so a link to it lands on it.
+ * Open the job's contracts, so a link to them lands on them.
  *
- * The job page keeps the contract inside the collapsible "More job details"
- * section, and a fragment pointing into a closed `<details>` goes nowhere: the
- * contract has no layout to scroll to, and neither Next's scroll-to-hash nor
- * every browser opens the section on the way. So it is opened first.
+ * The job page folds a job's contracts away under the Contract heading, and a
+ * link that lands on that heading with the drafts still folded has landed on
+ * nothing. Neither Next's scroll-to-hash nor every browser opens a `<details>`
+ * on the way, so it is opened first.
  *
  * Browser-only: called from a tap and from an effect, never while rendering.
  */
 export function revealContract() {
-  const details = document.getElementById(CONTRACT_ANCHOR)?.closest("details");
-  if (details && !details.open) details.open = true;
+  const details = document.getElementById(CONTRACT_ANCHOR)?.querySelector(":scope > details");
+  if (details instanceof HTMLDetailsElement && !details.open) details.open = true;
 }
