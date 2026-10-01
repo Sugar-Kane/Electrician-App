@@ -2,7 +2,16 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, Download, FileText, LoaderCircle, MessageSquare, PenLine, RefreshCw } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Download,
+  FileText,
+  LoaderCircle,
+  MessageSquare,
+  PenLine,
+  RefreshCw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -240,6 +249,17 @@ function ContractSigning({
   );
 }
 
+/** Where the newest contract stands, in the one line the folded section shows. */
+function contractStatus(contract: JobContractRecord): string {
+  if (contract.signedLabel) return `Signed by ${contract.signatureName} · ${contract.signedLabel}`;
+  if (contract.unfilled.length > 0) {
+    const count = contract.unfilled.length;
+    return `Draft · ${count} ${count === 1 ? "blank" : "blanks"} left to fill in`;
+  }
+  if (contract.sentLabel) return `Signing link texted ${contract.sentLabel}`;
+  return contract.document && !contract.unsignable ? "Draft · ready to sign" : `Draft · ${contract.createdLabel}`;
+}
+
 /** One draft, with its document behind the row that names it. */
 function ContractRow({
   contract,
@@ -391,6 +411,7 @@ export function JobContract({
   // Keep the document preview optional while signing actions stay visible.
   const [open, setOpen] = useState<string | null>(null);
   const section = useRef<HTMLElement>(null);
+  const drafts = useRef<HTMLDetailsElement>(null);
 
   // Arriving already pointed here — a new tab, the back button, a link from
   // another page — the section is still folded away. Open it and go to it.
@@ -400,48 +421,58 @@ export function JobContract({
     section.current?.scrollIntoView({ block: "start" });
   }, []);
 
+  // A draft just written is the next thing to read and send, so the list
+  // opens onto it rather than leaving it folded under a status line.
+  useEffect(() => {
+    if (state.contractId && drafts.current) drafts.current.open = true;
+  }, [state.contractId]);
+
   return (
     <section id={CONTRACT_ANCHOR} ref={section} className="scroll-mt-24">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold">Contract</h2>
+      {/* Generating stays in reach whether or not the drafts are open: it was
+          tucked under "Options" once a contract existed, which hid the one
+          thing somebody comes back to this card to do. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Contract</h2>
+        <form action={action}>
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <GenerateButton existing={contracts.length > 0} />
+        </form>
+      </div>
 
+      {state.error || state.notice ? (
+        <div className="mt-3">
+          <FormMessage error={state.error} notice={state.notice} />
         </div>
+      ) : null}
 
-        {contracts.length === 0 ? (
-          <form action={action}>
-            <input type="hidden" name="jobNumber" value={jobNumber} />
-            <GenerateButton existing={false} />
-          </form>
-        ) : (
-          <details className="text-sm">
-            <summary className="tap-target flex min-h-11 cursor-pointer items-center text-ink-muted">Options</summary>
-            <form action={action} className="mt-2">
-              <input type="hidden" name="jobNumber" value={jobNumber} />
-              <GenerateButton existing />
-            </form>
-          </details>
-        )}
-      </div>
-
-      <div className="mt-3">
-        <FormMessage error={state.error} notice={state.notice} />
-      </div>
-
+      {/*
+        Folded by default, like Job details and History. On most visits the
+        contract is settled, signed or already out, and its drafts are the
+        longest thing on the page; the line it folds to says where it stands.
+        A `<details>` so it opens before any JavaScript has arrived.
+      */}
       {contracts.length > 0 ? (
-        <ul className="mt-3 space-y-2">
-          {contracts.map((contract, index) => (
-            <ContractRow
-              key={contract.id}
-              contract={contract}
-              jobNumber={jobNumber}
-              customerName={customerName}
-              current={index === 0}
-              open={open === contract.id}
-              onToggle={() => setOpen(open === contract.id ? null : contract.id)}
-            />
-          ))}
-        </ul>
+        <details ref={drafts} className="group mt-2">
+          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm text-ink-muted [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0">{contractStatus(contracts[0])}</span>
+            <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" aria-hidden />
+          </summary>
+
+          <ul className="mt-2 space-y-2">
+            {contracts.map((contract, index) => (
+              <ContractRow
+                key={contract.id}
+                contract={contract}
+                jobNumber={jobNumber}
+                customerName={customerName}
+                current={index === 0}
+                open={open === contract.id}
+                onToggle={() => setOpen(open === contract.id ? null : contract.id)}
+              />
+            ))}
+          </ul>
+        </details>
       ) : null}
     </section>
   );
