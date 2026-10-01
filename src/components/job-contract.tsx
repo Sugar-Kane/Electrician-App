@@ -427,24 +427,27 @@ export function JobContract({
     if (state.contractId && drafts.current) drafts.current.open = true;
   }, [state.contractId]);
 
+  const generate = (
+    <form action={action}>
+      <input type="hidden" name="jobNumber" value={jobNumber} />
+      <GenerateButton existing={contracts.length > 0} />
+    </form>
+  );
+  const message =
+    state.error || state.notice ? (
+      <div className="mt-3">
+        <FormMessage error={state.error} notice={state.notice} />
+      </div>
+    ) : null;
+
   return (
     <section id={CONTRACT_ANCHOR} ref={section} className="scroll-mt-24">
-      {/* Generating stays in reach whether or not the drafts are open: it was
-          tucked under "Options" once a contract existed, which hid the one
-          thing somebody comes back to this card to do. */}
+      {/* The first contract is generated from here, there being no drafts
+          yet to keep the button with. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Contract</h2>
-        <form action={action}>
-          <input type="hidden" name="jobNumber" value={jobNumber} />
-          <GenerateButton existing={contracts.length > 0} />
-        </form>
+        {contracts.length === 0 ? generate : null}
       </div>
-
-      {state.error || state.notice ? (
-        <div className="mt-3">
-          <FormMessage error={state.error} notice={state.notice} />
-        </div>
-      ) : null}
 
       {/*
         Folded by default, like Job details and History. On most visits the
@@ -452,14 +455,22 @@ export function JobContract({
         longest thing on the page; the line it folds to says where it stands.
         A `<details>` so it opens before any JavaScript has arrived.
       */}
-      {contracts.length > 0 ? (
+      {contracts.length === 0 ? (
+        message
+      ) : (
         <details ref={drafts} className="group mt-2">
           <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm text-ink-muted [&::-webkit-details-marker]:hidden">
             <span className="min-w-0">{contractStatus(contracts[0])}</span>
             <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" aria-hidden />
           </summary>
 
-          <ul className="mt-2 space-y-2">
+          {/* Another draft is made from among the drafts, folded away with
+              them. On the title row it showed on every visit to the job,
+              however settled the contract was. */}
+          <div className="mt-2">{generate}</div>
+          {message}
+
+          <ul className="mt-3 space-y-2">
             {contracts.map((contract, index) => (
               <ContractRow
                 key={contract.id}
@@ -473,7 +484,7 @@ export function JobContract({
             ))}
           </ul>
         </details>
-      ) : null}
+      )}
     </section>
   );
 }
