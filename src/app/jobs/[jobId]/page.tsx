@@ -375,17 +375,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
-      {/*
-        Everything that is true about the job and is nobody's next action.
-        Closed by default and open in one tap — the contract in particular was
-        four hundred pixels of a page that gets opened at the top of a driveway.
-
-        The job menu's View contract links to #contract, and that anchor is on
-        the contract inside, not on this. Pointed at the closed disclosure, the
-        link scrolled to a row still reading "More job details" and looked like
-        it had done nothing. The contract opens this on its way in.
-      */}
-      <details className="group mt-3 rounded-panel border border-line bg-surface">
+      {/* Job details are visible on arrival and can still be collapsed. */}
+      <details open className="group mt-3 rounded-panel border border-line bg-surface">
         <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-5 [&::-webkit-details-marker]:hidden">
           <span className="text-sm font-semibold">More job details</span>
           <ChevronDown

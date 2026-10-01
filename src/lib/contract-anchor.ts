@@ -4,7 +4,7 @@ export const CONTRACT_ANCHOR = "contract";
 /**
  * Open whatever the contract is folded into, so a link to it lands on it.
  *
- * The job page keeps the contract inside the closed "More job details"
+ * The job page keeps the contract inside the collapsible "More job details"
  * section, and a fragment pointing into a closed `<details>` goes nowhere: the
  * contract has no layout to scroll to, and neither Next's scroll-to-hash nor
  * every browser opens the section on the way. So it is opened first.
