@@ -420,7 +420,7 @@ export async function completeContractDetails(
   const source = sourceData as Record<string, unknown>;
   if (source.status !== "draft" || source.signed_at) return { error: "Only an unsigned draft can be completed. Reload the job." };
   const { data: newest } = await supabase.from("contracts").select("id")
-    .eq("job_id", source.job_id).neq("status", "void")
+    .eq("job_id", text(source.job_id)).neq("status", "void")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (newest?.id !== contractId) return { error: "A newer draft exists. Reload the job to complete it." };
   const body = text(source.body);
