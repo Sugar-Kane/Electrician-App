@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Download, FileText, LoaderCircle, MessageSquare, PenLine, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import {
   generateContract,
@@ -100,10 +101,25 @@ function ContractSigning({
     );
   }
 
-  // Blanks are already named on the row above; anything else is said here.
   if (contract.unsignable) {
-    return contract.unfilled.length > 0 ? null : (
-      <p className="mt-3 text-sm text-ink-muted">{contract.unsignable}</p>
+    return (
+      <div className="mt-3 space-y-2">
+        <button type="button" disabled className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold opacity-60">
+          <MessageSquare className="h-4 w-4" aria-hidden />
+          Send for signing
+        </button>
+        <p className="text-sm text-ink-muted">{contract.unsignable}</p>
+        {contract.unfilled.length > 0 ? (
+          <>
+            <p className="text-sm text-caution">Missing: {contract.unfilled.map((field) => field.replace(/_/g, " ")).join(", ")}.</p>
+            <p className="text-sm text-ink-muted">Update the details, then use Options to generate a new draft.</p>
+            <div className="flex flex-wrap gap-4">
+              <Link href={`/jobs/${jobNumber}/edit`} className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand">Edit job</Link>
+              <Link href="/settings/contract" className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand">Edit template</Link>
+            </div>
+          </>
+        ) : null}
+      </div>
     );
   }
 
