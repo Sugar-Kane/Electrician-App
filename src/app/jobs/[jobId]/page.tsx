@@ -363,13 +363,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             </div>
           ) : null}
 
-          {controls ? (
-            <div className="py-4">
-              <JobContract jobNumber={controls.jobNumber} contracts={contracts} customerName={job.contactName || job.customer} />
-            </div>
-          ) : null}
         </div>
       </details>
+
+      {controls ? (
+        <div className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <JobContract jobNumber={controls.jobNumber} contracts={contracts} customerName={job.contactName || job.customer} />
+        </div>
+      ) : null}
 
       {/*
         The texts that belong to this job, read straight from the conversation
