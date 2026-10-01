@@ -3,6 +3,7 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { ScheduleBoard } from "@/components/schedule-board";
 import { crewWeek } from "@/lib/crew-week";
 import { fullWeekOf, isIsoDate, todayInZone } from "@/lib/calendar";
+import { lateJobs } from "@/lib/follow-ups";
 import { getCrewWeek, getJobs } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import { asScheduleView } from "@/lib/schedule-view";
@@ -50,6 +51,7 @@ export default async function SchedulePage({
         today={today}
         initialDate={selectedDate}
         initialView={view}
+        late={lateJobs(allJobs, new Date())}
         crew={
           crew ? (
             <CrewWeekView

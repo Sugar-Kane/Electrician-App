@@ -54,6 +54,17 @@ export type PilotJob = {
   channel: "phone" | "sms" | "web" | "manual";
   /** Null until the address has been geocoded. Never 0,0. */
   coordinates: { lat: number; lng: number } | null;
+  /**
+   * When the visit starts and ends, as instants, and the status as stored.
+   *
+   * `date`, `time` and `status` are labels for reading, and `status` folds
+   * confirmed, assigned and rescheduled into "Scheduled" and everything under
+   * way into "In progress". Telling a job nobody went to from one still
+   * coming takes the real clock and the real status (follow-ups.ts).
+   */
+  startsAt?: string;
+  endsAt?: string;
+  stage?: string;
   documents: JobDocument[];
   materials: JobMaterial[];
 };

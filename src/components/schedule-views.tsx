@@ -12,6 +12,7 @@ import {
 
 import type { CalendarDay, MonthCell } from "@/lib/calendar";
 import { formatDayLabel } from "@/lib/calendar";
+import { lateLabel, type Lateness } from "@/lib/follow-ups";
 import type { PilotJob } from "@/lib/pilot-data";
 import { statusChip, statusDot } from "@/components/ui/status-badge";
 
@@ -197,7 +198,17 @@ function dialable(job: PilotJob): string {
   return job.phone.replace(/[^\d+]/g, "");
 }
 
-export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
+export function DayView({
+  jobs,
+  date,
+  late = {},
+}: {
+  jobs: PilotJob[];
+  date: string;
+  /** Jobs whose time went by untouched read as that, not as still to come. */
+  late?: Record<string, Lateness>;
+}) {
+  const statusOf = (job: PilotJob) => (late[job.id] ? lateLabel(late[job.id]!) : job.status);
   // Canceled work is listed but never counted. A day that reads "3 jobs" when
   // one is called off is a day somebody plans around wrongly — and the driver
   // treats this list as the route.
@@ -252,9 +263,9 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
                 </span>
               </div>
               <span
-                className={`mt-3 inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold ${statusChip(job.status)}`}
+                className={`mt-3 inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-semibold ${statusChip(statusOf(job))}`}
               >
-                {job.status}
+                {statusOf(job)}
               </span>
             </div>
           </div>

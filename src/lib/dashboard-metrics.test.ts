@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   estimatesDetail,
   invoiceAging,
+  invoiceStatusLabel,
   invoicesDetail,
   isOverdue,
   jobsDetail,
@@ -228,4 +229,22 @@ test("a cancellation alongside live work is mentioned, not hidden", () => {
     jobsDetail({ inProgress: 1, total: 2, canceled: 1 }).detail,
     "1 in progress, 1 canceled",
   );
+});
+
+test("an invoice past its due date is listed as overdue, whatever its stored status", () => {
+  // Nothing ever stores `overdue`: a sent bill a month late read "Unpaid".
+  const now = new Date("2026-10-01T15:00:00Z");
+  const row = (status: string, dueAt: string | null, balanceDueCents: number) =>
+    invoiceStatusLabel({ status, dueAt, balanceDueCents }, now);
+
+  assert.equal(row("sent", "2026-09-17T00:00:00Z", 14_300), "Overdue");
+  assert.equal(row("partially_paid", "2026-09-17T00:00:00Z", 5_000), "Overdue");
+  assert.equal(row("sent", "2026-10-13T00:00:00Z", 22_550), "Unpaid");
+  assert.equal(row("draft", null, 22_550), "Unpaid");
+  assert.equal(row("paid", "2026-09-17T00:00:00Z", 0), "Paid");
+  // Nothing left owing is not late, and neither is a voided bill.
+  assert.equal(row("sent", "2026-09-17T00:00:00Z", 0), "Unpaid");
+  assert.equal(row("void", "2026-09-17T00:00:00Z", 14_300), "Unpaid");
+  // A row that was stored as overdue stays overdue.
+  assert.equal(row("overdue", "2026-09-17T00:00:00Z", 14_300), "Overdue");
 });
