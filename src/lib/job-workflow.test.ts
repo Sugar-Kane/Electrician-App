@@ -6,6 +6,7 @@ import {
   isClosed,
   jobStatusFor,
   nextStep,
+  showsWorkAndMaterials,
   showsWorkspace,
   stateLabel,
   watchesForArrival,
@@ -138,6 +139,21 @@ test("the workspace appears once somebody is at the property", () => {
   assert.equal(showsWorkspace("working"), true);
   assert.equal(showsWorkspace("review"), true);
   assert.equal(showsWorkspace("completed"), true);
+});
+
+test("a work order has hours, parts and the invoice from the moment it is booked", () => {
+  // Before, the only way to them on a scheduled job was "Start work", which
+  // texts the customer that somebody has arrived.
+  for (const state of ["scheduled", "en_route", "arrived", "working", "review", "completed", "no_show"] as const) {
+    assert.equal(showsWorkAndMaterials(state, true), true, state);
+  }
+  assert.equal(showsWorkAndMaterials("canceled", true), false);
+});
+
+test("a diagnostic has them with the workspace, from arrival", () => {
+  for (const state of WORKFLOW_STATES) {
+    assert.equal(showsWorkAndMaterials(state, false), showsWorkspace(state), state);
+  }
 });
 
 test("every state says its name in words an electrician uses", () => {
