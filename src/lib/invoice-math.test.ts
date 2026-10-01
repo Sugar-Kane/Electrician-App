@@ -95,28 +95,15 @@ test("a fractional cent is rounded rather than carried", () => {
   assert.equal(Number.isInteger(totals.applicationFeeCents), true);
 });
 
-test("the diagnostic invoice itself is not credited", () => {
-  // Crediting the fee against the invoice that charges it nets to nothing, and
-  // every diagnostic visit becomes free.
-  assert.equal(
-    diagnosticCreditFor({
-      diagnosticPaid: true,
-      diagnosticFeeCents: 10_000,
-      existingInvoiceCount: 0,
-    }),
-    0,
-  );
-});
+test("a diagnostic paid at booking comes off the job's first invoice", () => {
+  // Paying for the visit when booking raises no invoice, so the first one the
+  // job gets is the work — and it used to charge the $180 a second time.
+  const credit = diagnosticCreditFor({ diagnosticPaid: true, diagnosticFeeCents: 18_000 });
+  assert.equal(credit, 18_000);
 
-test("a follow-up invoice is credited once", () => {
-  assert.equal(
-    diagnosticCreditFor({
-      diagnosticPaid: true,
-      diagnosticFeeCents: 10_000,
-      existingInvoiceCount: 1,
-    }),
-    10_000,
-  );
+  const totals = invoiceTotals({ subtotalCents: 154_000, diagnosticPaidCents: credit });
+  assert.equal(totals.diagnosticCreditCents, 18_000);
+  assert.equal(totals.totalCents, 136_000);
 });
 
 test("a job invoiced in stages does not refund the diagnostic three times", () => {
@@ -126,7 +113,6 @@ test("a job invoiced in stages does not refund the diagnostic three times", () =
     diagnosticCreditFor({
       diagnosticPaid: true,
       diagnosticFeeCents: 10_000,
-      existingInvoiceCount: 2,
       alreadyCreditedCents: 10_000,
     }),
     0,
@@ -138,7 +124,6 @@ test("a job invoiced in stages does not refund the diagnostic three times", () =
     diagnosticCreditFor({
       diagnosticPaid: true,
       diagnosticFeeCents: 10_000,
-      existingInvoiceCount: 2,
       alreadyCreditedCents: 4_000,
     }),
     6_000,
@@ -151,7 +136,6 @@ test("an unpaid diagnostic is never credited", () => {
     diagnosticCreditFor({
       diagnosticPaid: false,
       diagnosticFeeCents: 10_000,
-      existingInvoiceCount: 3,
     }),
     0,
   );

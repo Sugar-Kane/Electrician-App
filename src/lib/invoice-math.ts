@@ -21,11 +21,8 @@ export type InvoiceInput = {
   subtotalCents: number;
   taxCents?: number;
   /**
-   * The diagnostic fee this customer has already paid for this job.
-   *
-   * Zero when they have not paid one, or when this *is* the diagnostic
-   * invoice — crediting a fee against the invoice that charges it would make
-   * every diagnostic visit free.
+   * The diagnostic fee this customer has already paid for this job, and that
+   * no earlier invoice has taken off yet. Zero when they have not paid one.
    */
   diagnosticPaidCents?: number;
   /** Overridable so a business on different terms is a data change. */
@@ -105,22 +102,21 @@ export function invoiceTotals(input: InvoiceInput): InvoiceTotals {
 }
 
 /**
- * Whether this job's already-paid diagnostic should be credited here.
+ * How much of this job's already-paid diagnostic to take off this invoice.
  *
- * Only against a *later* invoice. The diagnostic invoice itself charges the
- * fee, so crediting it there would net to nothing and every diagnostic visit
- * would be free.
+ * From the job's first invoice on. This used to skip the first one, on the
+ * theory that the first invoice *was* the diagnostic — but a job is only ever
+ * marked `diagnostic_paid` by the customer paying for the visit when they
+ * booked, which raises no invoice at all. Skipping the first one billed every
+ * customer who paid up front for the diagnostic a second time.
  */
 export function diagnosticCreditFor(input: {
   diagnosticPaid: boolean;
   diagnosticFeeCents: number;
-  /** How many invoices this job already has. */
-  existingInvoiceCount: number;
   /** Already credited on an earlier invoice for this job, in cents. */
   alreadyCreditedCents?: number;
 }): number {
   if (!input.diagnosticPaid) return 0;
-  if (input.existingInvoiceCount < 1) return 0;
 
   const fee = Math.max(0, whole(input.diagnosticFeeCents));
   const used = Math.max(0, whole(input.alreadyCreditedCents));
