@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { FileText, Link2, LoaderCircle, Plus, X } from "lucide-react";
 
 import { createJob, type NewJobState } from "@/app/jobs/new/actions";
+import { CustomerPicker } from "@/components/customer-picker";
 import { AddressFields } from "@/components/ui/address-fields";
 import { DateTimeField } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
@@ -13,6 +14,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { WorkOrderLines } from "@/components/work-order-lines";
 import { keepPhoneDigits } from "@/lib/digits-input";
 import { keepMoneyCharacters } from "@/lib/money-input";
+import { choiceFill, type CustomerChoice } from "@/lib/customer-choices";
 import { formatCents } from "@/lib/job-lines";
 import { DIAGNOSTIC_MINUTES, JOB_CATEGORIES, type NewJobRaw } from "@/lib/new-job-input";
 import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
@@ -37,6 +39,19 @@ import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
 
 const initialState: NewJobState = { error: "" };
 
+/** What Clear leaves: a new customer, typed in from nothing. */
+const EMPTY_CUSTOMER: ReturnType<typeof choiceFill> = {
+  customerName: "",
+  phone: "",
+  email: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  state: "",
+  postalCode: "",
+  accessNotes: "",
+};
+
 const DIAGNOSTIC_HOURS = String(DIAGNOSTIC_MINUTES / 60);
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -52,6 +67,7 @@ export function NewJobForm({
   timeZone,
   timeZoneLabel,
   followUp,
+  customers = [],
 }: {
   /** The IANA zone, so the calendar rings today on the right day. */
   timeZone: string;
@@ -61,15 +77,43 @@ export function NewJobForm({
    * diagnostic it is linked back to.
    */
   followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number };
+  /** The business's customers, at each address, for Returning customer. */
+  customers?: CustomerChoice[];
 }) {
   const [state, action, pending] = useActionState(createJob, initialState);
 
+  /*
+   * A returning customer, picked.
+   *
+   * It fills the customer and address boxes until the next save comes back —
+   * by then what was posted already includes it — and `version` remounts
+   * those boxes, because they are uncontrolled and only read where they start
+   * when they are created. `after` is the save it followed, so a pick made
+   * after a rejected save still wins over what that save posted.
+   */
+  const [pick, setPick] = useState<{
+    choice: CustomerChoice | null;
+    values: ReturnType<typeof choiceFill>;
+    after: NewJobState;
+    version: number;
+  } | null>(null);
+  const picking = pick && pick.after === state ? pick : null;
+  const version = pick?.version ?? 0;
+
   /**
    * Whatever was last posted, so a rejected save leaves the screen alone —
-   * and before anything has been, the diagnostic this is booked from.
+   * and before anything has been, the diagnostic this is booked from. A pick
+   * made since lays its customer over either.
    */
-  const kept = state.values ?? followUp?.values;
+  const posted = state.values ?? followUp?.values;
+  const kept: Partial<NewJobRaw> | undefined = picking ? { ...posted, ...picking.values } : posted;
   const cancelHref = followUp ? `/jobs/${followUp.jobNumber}` : "/schedule";
+
+  function pickCustomer(choice: CustomerChoice | null) {
+    const values = choice ? choiceFill(choice) : EMPTY_CUSTOMER;
+    setPick({ choice, values, after: state, version: version + 1 });
+    setPhone(values.phone);
+  }
 
   const [category, setCategory] = useState(kept?.category || "diagnostic");
   const [duration, setDuration] = useState(kept?.durationHours ?? "");
@@ -118,8 +162,18 @@ export function NewJobForm({
       ) : null}
 
       <Section title="Customer">
+        {customers.length > 0 ? (
+          <CustomerPicker
+            choices={customers}
+            picked={picking?.choice ?? null}
+            onPick={pickCustomer}
+            onClear={() => pickCustomer(null)}
+          />
+        ) : null}
+
         <Field label="Name">
           <TextInput
+            key={`name-${version}`}
             name="customerName"
             required
             autoComplete="off"
@@ -148,6 +202,7 @@ export function NewJobForm({
           hint="Either a mobile number or an email is needed, so the customer can be reached."
         >
           <TextInput
+            key={`email-${version}`}
             name="email"
             type="email"
             autoComplete="off"
@@ -159,6 +214,7 @@ export function NewJobForm({
 
       <Section title="Where the work is">
         <AddressFields
+          key={`address-${version}`}
           withUnit
           defaults={{
             line1: kept?.addressLine1 ?? "",
@@ -175,6 +231,7 @@ export function NewJobForm({
             hint="Gate codes, pets, which door, where to park. Kept with the address, so every job there shows them."
           >
             <textarea
+              key={`notes-${version}`}
               name="accessNotes"
               rows={3}
               maxLength={MAX_ACCESS_NOTES_LENGTH}
