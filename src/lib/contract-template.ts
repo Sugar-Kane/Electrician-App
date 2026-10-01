@@ -224,3 +224,12 @@ export function scopePrompt(): string {
     "- Write it for the customer to read, not for another electrician.",
   ].join("\n");
 }
+
+/** Fill only unresolved fields in a saved draft, including custom template fields. */
+export function completeDraftFields(body: string, values: Record<string, string>): FilledContract {
+  const completed = body.replace(PLACEHOLDER_PATTERN, (whole, key: string) => {
+    const value = Object.hasOwn(values, key) ? values[key]?.trim() : "";
+    return value || whole;
+  });
+  return { body: completed, unfilled: placeholdersUsed(completed) };
+}

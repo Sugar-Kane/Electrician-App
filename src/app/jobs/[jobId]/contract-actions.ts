@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { draftScope } from "@/lib/claude";
 import {
+  completeDraftFields,
+  placeholdersUsed,
   contractMoney,
   fillTemplate,
   STARTER_TEMPLATE,
@@ -543,6 +545,56 @@ export async function sendSigningLink(
 
   const { formatForDisplay } = await import("@/lib/phone-format");
   return { error: "", contractId, notice: `Signing link texted to ${formatForDisplay(phone)}.` };
+}
+
+/** Complete missing fields as a new draft; never alter an existing agreement. */
+export async function completeContractDetails(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const supabase = asFlexibleClient(await createClient());
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user?.id) return { error: "You are not signed in." };
+  const contractId = String(formData.get("contractId") ?? "");
+  const { data: sourceData } = await supabase.from("contracts")
+    .select("id, organization_id, job_id, body, scope, status, signed_at, organizations ( timezone ), jobs ( job_number )")
+    .eq("id", contractId).maybeSingle();
+  if (!sourceData) return { error: "That contract could not be found." };
+  const source = sourceData as Record<string, unknown>;
+  if (source.status !== "draft" || source.signed_at) return { error: "Only an unsigned draft can be completed. Reload the job." };
+  const { data: newest } = await supabase.from("contracts").select("id")
+    .eq("job_id", text(source.job_id)).neq("status", "void")
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (newest?.id !== contractId) return { error: "A newer draft exists. Reload the job to complete it." };
+  const body = text(source.body);
+  const fields = placeholdersUsed(body);
+  if (!fields.length) return { error: "This draft has no missing information." };
+  const values: Record<string, string> = Object.create(null);
+  for (const field of fields) {
+    const value = String(formData.get(`field:${field}`) ?? "").trim();
+    if (!value || value.length > 5000 || value.includes("{{") || value.includes("}}")) {
+      return { error: `Enter ${field.replace(/_/g, " ")} (up to 5,000 characters, without template brackets).` };
+    }
+    values[field] = value;
+  }
+  const filled = completeDraftFields(body, values);
+  if (filled.unfilled.length) return { error: "Complete all missing information before saving." };
+  const { data: created, error } = await supabase.from("contracts").insert({
+    organization_id: source.organization_id, job_id: source.job_id,
+    body: filled.body, scope: values.scope ?? text(source.scope), unfilled: [], status: "draft",
+  }).select("id").maybeSingle();
+  if (error || !created) return { error: "The completed draft could not be saved. Try again." };
+  const organization = source.organizations as Record<string, unknown> | null;
+  const job = source.jobs as Record<string, unknown> | null;
+  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+  const document = await generateContractPdf({
+    database: supabase, organizationId: text(source.organization_id), contractId: text(created.id),
+    timeZone: text(organization?.timezone) || "America/Los_Angeles", uploadedBy: auth.user.id,
+  });
+  revalidatePath(`/jobs/${job?.job_number}`);
+  return { error: "", contractId: text(created.id), notice: document.error
+    ? "Details saved. Open Preview and choose Build the PDF to retry the document."
+    : "Details saved. Preview the completed contract, then send it for signing." };
 }
 
 /**
