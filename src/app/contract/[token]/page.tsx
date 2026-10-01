@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { CheckCircle2, Download, FileSignature, FileX2, Phone } from "lucide-react";
+import { CheckCircle2, FileSignature, FileX2, Phone } from "lucide-react";
 
+import { ContractPdfPages } from "@/app/contract/[token]/contract-pdf";
 import { ContractSigning } from "@/app/contract/[token]/contract-signing";
-import { PdfViewer } from "@/components/pdf-viewer";
+import { ContractPaper } from "@/components/contract-paper";
 import { unsignableBecause } from "@/lib/contract-signing";
+import { loadContractDocument, type LoadedContract } from "@/lib/pdf/contract-data";
 import { currentDocument, type StoredDocument } from "@/lib/pdf/store";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -17,13 +19,14 @@ import { createPublicClient } from "@/lib/supabase/public";
  * The token is the only thing between this page and the world, so it shows the
  * one contract behind it and nothing that would help anybody guess at another.
  *
- * What is shown is the contract itself: the PDF the business sees in its
- * preview and keeps on file, with their letterhead and the signature block,
- * laid out from the stored body — the same text the signature is hashed
- * against. Showing the words alone as plain paragraphs looked nothing like the
- * contract the business sent, and the customer is agreeing to a document, not
- * to a web page. The words stay one tap away, for a screen reader or a browser
- * that cannot draw the pages, and they are the whole page when there is no PDF.
+ * What is shown is the contract as its document lays it out — the letterhead,
+ * the Customer and Job blocks, the terms and the signature block, built from
+ * the same data and the same stored body as the PDF the business files (the
+ * body is the text the signature is hashed against). Plain paragraphs looked
+ * nothing like the contract the business sent; the PDF itself, fitted to a
+ * phone, was too small to read. So the copy is real text that wraps to the
+ * screen, and the exact PDF pages are one tap away, with a copy to download.
+ * When that data cannot be read, the stored words are the page.
  */
 
 export const metadata: Metadata = {
@@ -63,14 +66,29 @@ function signedLabel(iso: string, timeZone: string): string {
   }).format(new Date(iso));
 }
 
-/**
- * The contract's current PDF — the signed copy, once there is one.
- *
- * With the service role, because an anonymous visitor cannot read the
- * business's documents — but only for the contract the token resolved to,
- * never for anything taken from the request. Null when there is no PDF yet, or
- * storage cannot be reached, and the page shows the words instead.
+/*
+ * Both of these read with the service role, because an anonymous visitor cannot
+ * read the business's jobs, customers or documents — but only for the contract
+ * the token resolved to, never for anything taken from the request, which is
+ * how the signing action files the signed copy too.
  */
+
+/** The contract laid out as its document: letterhead, parties, terms, signatures. */
+async function contractCopy(contract: PublicContract, timeZone: string): Promise<LoadedContract | null> {
+  try {
+    return await loadContractDocument({
+      database: asFlexibleClient(getSupabaseAdmin()),
+      organizationId: contract.organization_id,
+      contractId: contract.contract_id,
+      timeZone,
+    });
+  } catch (error) {
+    console.error("contract page: could not load the contract", error);
+    return null;
+  }
+}
+
+/** The contract's current PDF — the signed copy, once there is one. Null when there is none yet. */
 async function contractDocument(
   contract: PublicContract,
   timeZone: string,
@@ -130,7 +148,10 @@ export default async function ContractPage({ params }: { params: Promise<{ token
   }
 
   const timeZone = contract.time_zone || "America/Los_Angeles";
-  const document = await contractDocument(contract, timeZone);
+  const [copy, document] = await Promise.all([
+    contractCopy(contract, timeZone),
+    contractDocument(contract, timeZone),
+  ]);
   const blocked = unsignableBecause({
     status: contract.status,
     unfilled: contract.unfilled ?? [],
@@ -172,34 +193,17 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           </section>
         ) : null}
 
-        {document ? (
-          <section className="mt-6" aria-label="The contract">
-            <PdfViewer url={document.url} fileName={document.fileName} />
-
-            <a
-              href={document.url}
-              download={document.fileName}
-              className="tap-target mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand"
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              Download a copy
-            </a>
-
-            <details className="mt-2">
-              <summary className="tap-target flex min-h-11 cursor-pointer items-center text-sm font-semibold text-ink-muted">
-                Read it as text
-              </summary>
-              <article className="mt-2 rounded-panel bg-white p-5 sm:p-8">
-                <Body text={contract.body} />
-              </article>
-            </details>
-          </section>
-        ) : (
-          /* The words, set like paper: long terms read better dark on light. */
-          <article className="mt-6 rounded-panel bg-white p-5 sm:p-8">
-            <Body text={contract.body} />
-          </article>
-        )}
+        <section className="mt-6" aria-label="The contract">
+          {copy ? (
+            <ContractPaper data={copy.document} />
+          ) : (
+            /* The words, set like paper: long terms read better dark on light. */
+            <article className="rounded-panel bg-white p-5 sm:p-8">
+              <Body text={contract.body} />
+            </article>
+          )}
+          {document ? <ContractPdfPages url={document.url} fileName={document.fileName} /> : null}
+        </section>
 
         {!contract.signed_at && !blocked ? (
           <section className="mt-6 rounded-panel border border-line bg-[#081925] p-5 sm:p-6">

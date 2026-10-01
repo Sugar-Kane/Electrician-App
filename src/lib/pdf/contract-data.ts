@@ -1,6 +1,10 @@
 import "server-only";
 
-import { ContractDocument, contractFileName } from "@/lib/pdf/contract-document";
+import {
+  ContractDocument,
+  contractFileName,
+  type ContractDocumentData,
+} from "@/lib/pdf/contract-document";
 import { documentFolderId } from "@/lib/document-folders";
 import { documentSignature } from "@/lib/contract-signing";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
@@ -38,21 +42,29 @@ function dateLabel(iso: unknown, timeZone: string): string {
   }).format(at);
 }
 
+export type LoadedContract = {
+  /** Exactly what the PDF is drawn from, and what the signing page shows. */
+  document: ContractDocumentData;
+  jobId: string;
+  jobNumber: string;
+  /** For the version snapshot: the scope as stored, and the blanks as keys. */
+  scope: string;
+  unfilledKeys: unknown[];
+};
+
 /**
- * Build and file the PDF for a contract that already exists.
+ * A contract and everything printed around it, read once for every rendering.
  *
- * Returns the error rather than throwing, for the same reason the invoice
- * version does: a contract that could not be turned into a nice copy is still a
- * contract, and losing the drafted text because the renderer had a bad day
- * would be worse than having no PDF for a minute.
+ * The PDF the business files and the copy the customer reads on the signing
+ * page are both built from this, so they cannot show different names,
+ * addresses or signatures.
  */
-export async function generateContractPdf(input: {
+export async function loadContractDocument(input: {
   database: FlexibleSupabaseClient;
   organizationId: string;
   contractId: string;
   timeZone: string;
-  uploadedBy: string;
-}): Promise<{ error: string } | { error: "" }> {
+}): Promise<LoadedContract | null> {
   const { data } = await input.database
     .from("contracts")
     .select(
@@ -69,7 +81,7 @@ export async function generateContractPdf(input: {
     .eq("id", input.contractId)
     .maybeSingle();
 
-  if (!data) return { error: "That contract could not be found." };
+  if (!data) return null;
 
   const contract = data as Record<string, unknown>;
   const job = (contract.jobs ?? null) as Record<string, unknown> | null;
@@ -108,6 +120,55 @@ export async function generateContractPdf(input: {
   // file name both.
   const reference = jobNumber ? `Job #${jobNumber}` : "Draft";
 
+  return {
+    document: {
+      business,
+      reference,
+      createdLabel: dateLabel(contract.created_at, input.timeZone),
+      customer: {
+        name: customerName,
+        addressLines,
+        phone: str(customer?.phone),
+        email: str(customer?.email),
+      },
+      job: {
+        number: jobNumber,
+        addressLines,
+        scheduledLabel: scheduled ? `Scheduled ${scheduled}` : "",
+      },
+      body: str(contract.body),
+      unfilled,
+      // Present only once the customer has signed in the app, and only when
+      // every part of the signature is there.
+      signature: documentSignature(contract, input.timeZone),
+    },
+    jobId,
+    jobNumber,
+    scope: str(contract.scope),
+    unfilledKeys: Array.isArray(contract.unfilled) ? contract.unfilled : [],
+  };
+}
+
+/**
+ * Build and file the PDF for a contract that already exists.
+ *
+ * Returns the error rather than throwing, for the same reason the invoice
+ * version does: a contract that could not be turned into a nice copy is still a
+ * contract, and losing the drafted text because the renderer had a bad day
+ * would be worse than having no PDF for a minute.
+ */
+export async function generateContractPdf(input: {
+  database: FlexibleSupabaseClient;
+  organizationId: string;
+  contractId: string;
+  timeZone: string;
+  uploadedBy: string;
+}): Promise<{ error: string } | { error: "" }> {
+  const loaded = await loadContractDocument(input);
+  if (!loaded) return { error: "That contract could not be found." };
+
+  const { document, jobId, jobNumber } = loaded;
+
   return storeGeneratedPdf({
     database: input.database,
     organizationId: input.organizationId,
@@ -131,35 +192,13 @@ export async function generateContractPdf(input: {
      * passage the scope is.
      */
     sourceSnapshot: {
-      body: str(contract.body),
-      scope: str(contract.scope),
-      unfilled: Array.isArray(contract.unfilled) ? contract.unfilled : [],
+      body: document.body,
+      scope: loaded.scope,
+      unfilled: loaded.unfilledKeys,
     },
     displayName: jobNumber ? `Contract for job #${jobNumber}` : "Contract",
-    fileName: contractFileName(jobNumber ? `job-${jobNumber}` : "", business.name),
+    fileName: contractFileName(jobNumber ? `job-${jobNumber}` : "", document.business.name),
     uploadedBy: input.uploadedBy,
-    element: ContractDocument({
-      data: {
-        business,
-        reference,
-        createdLabel: dateLabel(contract.created_at, input.timeZone),
-        customer: {
-          name: customerName,
-          addressLines,
-          phone: str(customer?.phone),
-          email: str(customer?.email),
-        },
-        job: {
-          number: jobNumber,
-          addressLines,
-          scheduledLabel: scheduled ? `Scheduled ${scheduled}` : "",
-        },
-        body: str(contract.body),
-        unfilled,
-        // Present only once the customer has signed in the app, and only when
-        // every part of the signature is there.
-        signature: documentSignature(contract, input.timeZone),
-      },
-    }),
+    element: ContractDocument({ data: document }),
   }).then((result) => ("error" in result ? { error: result.error } : { error: "" as const }));
 }

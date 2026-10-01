@@ -1,5 +1,6 @@
 import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 
+import { contractBlocks } from "@/lib/contract-layout";
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import {
   DocumentFooter,
@@ -61,45 +62,25 @@ export type ContractSignature = {
   fingerprint: string;
 };
 
-/**
- * A line that is acting as a heading.
- *
- * Short, no trailing full stop, and either all caps or title case followed by a
- * colon — which is how every contract template in the wild writes one. Guessing
- * wrong only changes a weight, never the words.
- */
-function looksLikeHeading(line: string): boolean {
-  const trimmed = line.trim();
-  if (trimmed.length === 0 || trimmed.length > 60) return false;
-  if (/[.,;]$/.test(trimmed)) return false;
-  return trimmed === trimmed.toUpperCase() || /^[A-Z][^.!?]*:$/.test(trimmed);
-}
-
+// Paragraphs and headings are decided in contract-layout.ts, which the copy on
+// the customer's signing page reads too.
 function Body({ body }: { body: string }) {
-  // Blank lines separate paragraphs, which is how the template is written and
-  // how it has always been shown. Collapsing runs of them keeps a template with
-  // generous spacing from producing a mostly-empty second page.
-  const blocks = body.replace(/\r\n/g, "\n").split(/\n{2,}/).map((block) => block.trim());
-
   return (
     <View>
-      {blocks.filter(Boolean).map((block, index) => {
-        const heading = looksLikeHeading(block);
-        return (
-          <Text
-            key={`block-${index}`}
-            style={[
-              heading ? sheet.bold : {},
-              {
-                marginTop: heading ? 14 : 8,
-                fontSize: heading ? 11 : 10,
-              },
-            ]}
-          >
-            {block}
-          </Text>
-        );
-      })}
+      {contractBlocks(body).map((block, index) => (
+        <Text
+          key={`block-${index}`}
+          style={[
+            block.heading ? sheet.bold : {},
+            {
+              marginTop: block.heading ? 14 : 8,
+              fontSize: block.heading ? 11 : 10,
+            },
+          ]}
+        >
+          {block.text}
+        </Text>
+      ))}
     </View>
   );
 }
