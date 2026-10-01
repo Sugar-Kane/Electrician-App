@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { contractBlocks, looksLikeHeading } from "./contract-layout.ts";
+import { contractBlocks, looksLikeHeading, signatureSection } from "./contract-layout.ts";
 
 test("a short all-caps line is a heading", () => {
   assert.equal(looksLikeHeading("WORK AGREEMENT"), true);
@@ -30,4 +30,55 @@ test("the body splits on blank lines, Windows line endings included", () => {
 test("an empty body has no blocks", () => {
   assert.deepEqual(contractBlocks(""), []);
   assert.deepEqual(contractBlocks("\n\n  \n\n"), []);
+});
+
+const business = "Pacific Plains Electric";
+const owner = { name: "Nicholas Kane", title: "Owner", signedLabel: "Oct 1, 2026, 9:02 AM PDT" };
+const customer = { name: "Adam", signedLabel: "Oct 1, 2026, 6:40 PM PDT" };
+
+test("an unsigned contract invites both parties to sign", () => {
+  assert.deepEqual(signatureSection({ ownSignatures: false, businessName: business }), {
+    show: true,
+    heading: "SIGNATURES",
+    lines: ["By signing below both parties agree to the work and the price set out above."],
+  });
+});
+
+test("once the business has signed, it says who signed for it and when", () => {
+  const section = signatureSection({ ownSignatures: false, businessName: business, contractor: owner });
+  assert.equal(section.show, true);
+  assert.deepEqual(section.lines, [
+    "By signing below both parties agree to the work and the price set out above.",
+    "Signed for Pacific Plains Electric by Nicholas Kane, Owner on Oct 1, 2026, 9:02 AM PDT.",
+  ]);
+});
+
+test("signed by both, it is the record of both, business first", () => {
+  const section = signatureSection({ ownSignatures: false, businessName: business, contractor: owner, customer });
+  assert.deepEqual(section.lines, [
+    "Signed for Pacific Plains Electric by Nicholas Kane, Owner on Oct 1, 2026, 9:02 AM PDT.",
+    "Signed electronically by Adam on Oct 1, 2026, 6:40 PM PDT.",
+  ]);
+});
+
+test("a signer with no title is named without one", () => {
+  const section = signatureSection({
+    ownSignatures: false,
+    businessName: business,
+    contractor: { ...owner, title: "" },
+  });
+  assert.equal(section.lines[1], "Signed for Pacific Plains Electric by Nicholas Kane on Oct 1, 2026, 9:02 AM PDT.");
+});
+
+test("a template with its own signing lines gets no second block until somebody signs", () => {
+  assert.equal(signatureSection({ ownSignatures: true, businessName: business }).show, false);
+
+  // Signed by the business, it is the record of that — and does not offer the
+  // customer a second place to sign.
+  const signed = signatureSection({ ownSignatures: true, businessName: business, contractor: owner });
+  assert.equal(signed.show, true);
+  assert.equal(signed.heading, "SIGNED ELECTRONICALLY");
+  assert.deepEqual(signed.lines, [
+    "Signed for Pacific Plains Electric by Nicholas Kane, Owner on Oct 1, 2026, 9:02 AM PDT.",
+  ]);
 });

@@ -11,7 +11,7 @@ import {
 } from "@/lib/contract-template";
 import { formatMoney } from "@/lib/invoice-messages";
 import { lineTotalCents } from "@/lib/job-lines";
-import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -36,7 +36,137 @@ export type ContractState = {
   notice?: string;
   /** The draft just written, so the screen can open it without a round trip. */
   contractId?: string;
+  /** The person sending has not adopted a signature yet; the screen links to where they can. */
+  needsSignature?: boolean;
+  /** Signed for the business, so the customer can be handed the pad. */
+  signedForBusiness?: boolean;
 };
+
+type Signable = {
+  contract: Record<string, unknown>;
+  job: Record<string, unknown> | null;
+  customer: Record<string, unknown> | null;
+  business: Record<string, unknown> | null;
+  jobId: string;
+  /** Why it cannot be signed right now, or empty when it can. */
+  blocked: string;
+};
+
+/**
+ * A contract about to be put in front of its customer, and whether it can be.
+ *
+ * Read through the member's session, so RLS decides whose contract this is,
+ * with the same refusals the customer's page makes. Only the job's newest
+ * contract can be signed: the buttons are only offered on that one, and this
+ * is what stands behind them.
+ */
+async function loadSignable(supabase: FlexibleSupabaseClient, contractId: string): Promise<Signable | null> {
+  const { data } = await supabase
+    .from("contracts")
+    .select(
+      "id, organization_id, job_id, status, unfilled, public_token, signed_at, signature_provider, organizations ( name, timezone ), jobs ( job_number, customers ( phone ) )",
+    )
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const contract = data as Record<string, unknown>;
+  const job = (contract.jobs ?? null) as Record<string, unknown> | null;
+  const jobId = text(contract.job_id);
+
+  let superseded = false;
+  if (jobId) {
+    const { data: newest } = await supabase
+      .from("contracts")
+      .select("id")
+      .eq("job_id", jobId)
+      .neq("status", "void")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    superseded = Boolean(newest) && text(newest?.id) !== contractId;
+  }
+
+  const { unsignableBecause } = await import("@/lib/contract-signing");
+  return {
+    contract,
+    job,
+    customer: (job?.customers ?? null) as Record<string, unknown> | null,
+    business: (contract.organizations ?? null) as Record<string, unknown> | null,
+    jobId,
+    blocked: unsignableBecause({
+      status: text(contract.status) || "draft",
+      unfilled: Array.isArray(contract.unfilled) ? (contract.unfilled as string[]) : [],
+      signatureProvider: text(contract.signature_provider) || null,
+      signedAt: text(contract.signed_at) || null,
+      superseded,
+    }),
+  };
+}
+
+const NEEDS_SIGNATURE =
+  "Save your signature first, under Settings → Contract. It goes on the contract for the business before the customer sees it.";
+
+/**
+ * Sign the contract for the business, as the person sending it, if nobody has.
+ *
+ * Through `sign_contract_as_contractor`, which uses the caller's own adopted
+ * signature and nothing else — the only way the business's signature gets on
+ * a contract. Signed once: a contract sent again keeps the signature it went
+ * out with the first time, whoever sends it again.
+ *
+ * The PDF is rebuilt straight afterwards, so the copy the customer opens or
+ * downloads carries the business's signature too. A failed rebuild does not
+ * undo the signature; the job page can build the PDF again.
+ */
+async function signForBusinessFirst(input: {
+  supabase: FlexibleSupabaseClient;
+  contractId: string;
+  organizationId: string;
+  userId: string;
+  timeZone: string;
+}): Promise<{ ok: true } | { ok: false; error: string; needsSignature?: boolean }> {
+  const { supabase, contractId, organizationId, userId } = input;
+
+  const { data: current } = await supabase
+    .from("contracts")
+    .select("contractor_signed_at")
+    .eq("id", contractId)
+    .maybeSingle();
+  if (current?.contractor_signed_at) return { ok: true };
+
+  const { data: signer } = await supabase
+    .from("contract_signers")
+    .select("user_id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!signer) return { ok: false, error: NEEDS_SIGNATURE, needsSignature: true };
+
+  const { data: signedAt, error } = await supabase.rpc("sign_contract_as_contractor", {
+    p_contract_id: contractId,
+  });
+  if (error || !signedAt) {
+    return { ok: false, error: "The contract could not be signed for the business. Reload the page and try again." };
+  }
+
+  try {
+    const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+    const result = await generateContractPdf({
+      database: supabase,
+      organizationId,
+      contractId,
+      timeZone: input.timeZone,
+      uploadedBy: userId,
+    });
+    if (result.error) console.error("business-signed contract PDF failed", { contractId, error: result.error });
+  } catch (error) {
+    console.error("business-signed contract PDF failed", { contractId, error });
+  }
+
+  return { ok: true };
+}
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -303,47 +433,12 @@ export async function sendSigningLink(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user?.id) return { error: "You are not signed in." };
 
-  // Read through the owner's session, so RLS decides whose contract this is.
-  const { data } = await supabase
-    .from("contracts")
-    .select(
-      "id, organization_id, job_id, status, unfilled, public_token, signed_at, signature_provider, organizations ( name ), jobs ( job_number, customers ( phone ) )",
-    )
-    .eq("id", contractId)
-    .maybeSingle();
-
-  if (!data) return { error: "That contract could not be found." };
-
-  const contract = data as Record<string, unknown>;
-  const job = (contract.jobs ?? null) as Record<string, unknown> | null;
-  const customer = (job?.customers ?? null) as Record<string, unknown> | null;
-  const business = (contract.organizations ?? null) as Record<string, unknown> | null;
-  const jobId = text(contract.job_id);
-
-  // Only the job's newest contract can be signed. The button is only offered on
-  // that one; this is what stands behind it.
-  let superseded = false;
-  if (jobId) {
-    const { data: newest } = await supabase
-      .from("contracts")
-      .select("id")
-      .eq("job_id", jobId)
-      .neq("status", "void")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    superseded = Boolean(newest) && text(newest?.id) !== contractId;
-  }
-
-  const { signingLinkMessage, unsignableBecause } = await import("@/lib/contract-signing");
-  const blocked = unsignableBecause({
-    status: text(contract.status) || "draft",
-    unfilled: Array.isArray(contract.unfilled) ? (contract.unfilled as string[]) : [],
-    signatureProvider: text(contract.signature_provider) || null,
-    signedAt: text(contract.signed_at) || null,
-    superseded,
-  });
+  const signable = await loadSignable(supabase, contractId);
+  if (!signable) return { error: "That contract could not be found." };
+  const { contract, job, customer, business, jobId, blocked } = signable;
   if (blocked) return { error: blocked };
+
+  const { signingLinkMessage } = await import("@/lib/contract-signing");
 
   const { toE164 } = await import("@/lib/phone-format");
   const phone = toE164(text(customer?.phone));
@@ -368,6 +463,19 @@ export async function sendSigningLink(
   const messagingServiceSid = text(messaging?.messaging_service_sid);
   if (!messagingServiceSid) {
     return { error: "Texting is not set up for this business yet, so the link could not be sent." };
+  }
+
+  // The business signs before the customer is asked to: the contract they open
+  // already carries the sender's signature.
+  const signedForBusiness = await signForBusinessFirst({
+    supabase,
+    contractId,
+    organizationId,
+    userId: auth.user.id,
+    timeZone: text(business?.timezone) || "America/Los_Angeles",
+  });
+  if (!signedForBusiness.ok) {
+    return { error: signedForBusiness.error, needsSignature: signedForBusiness.needsSignature };
   }
 
   /*
@@ -435,4 +543,41 @@ export async function sendSigningLink(
 
   const { formatForDisplay } = await import("@/lib/phone-format");
   return { error: "", contractId, notice: `Signing link texted to ${formatForDisplay(phone)}.` };
+}
+
+/**
+ * Before the customer signs on this phone, the business signs.
+ *
+ * The in-person sheet hands the pad to the customer; this is what runs first,
+ * so the contract in front of them already carries the signature of the person
+ * holding the phone out — the same as a contract sent by text.
+ */
+export async function signForBusiness(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const contractId = String(formData.get("contractId") ?? "").trim();
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  if (!contractId) return { error: "That contract could not be found." };
+
+  const supabase = asFlexibleClient(await createClient());
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user?.id) return { error: "You are not signed in." };
+
+  const signable = await loadSignable(supabase, contractId);
+  if (!signable) return { error: "That contract could not be found." };
+  if (signable.blocked) return { error: signable.blocked };
+
+  const signed = await signForBusinessFirst({
+    supabase,
+    contractId,
+    organizationId: text(signable.contract.organization_id),
+    userId: auth.user.id,
+    timeZone: text(signable.business?.timezone) || "America/Los_Angeles",
+  });
+  if (!signed.ok) return { error: signed.error, needsSignature: signed.needsSignature };
+
+  if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
+  return { error: "", contractId, signedForBusiness: true };
 }

@@ -220,19 +220,83 @@ export function documentSignature(
     method,
     name,
     image: method === "drawn" ? image : "",
-    // The time as well as the day. A contract date is a day; a signature is a
-    // moment, and "which came first" is exactly the question it answers.
-    signedLabel: new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-    }).format(at),
+    signedLabel: signatureMoment(at, timeZone),
     fingerprint: fingerprintOf(hash),
   };
+}
+
+/**
+ * When a signature was given, in the business's timezone.
+ *
+ * The time as well as the day. A contract date is a day; a signature is a
+ * moment, and "which came first" is exactly the question it answers — which
+ * is the business's signature and the customer's, on the same page.
+ */
+function signatureMoment(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(at);
+}
+
+export type ContractorSignature = {
+  method: SignatureMethod;
+  name: string;
+  /** "Owner", say. Empty when they gave none. */
+  title: string;
+  image: string;
+  signedLabel: string;
+};
+
+/**
+ * The business's signature on a contract, if it has been given.
+ *
+ * Signed by whoever sent the contract or handed it over, with the signature
+ * they adopted, through `sign_contract_as_contractor` — the only way these
+ * columns get written. As with the customer's, nothing is printed unless
+ * every part is there.
+ */
+export function contractorSignature(
+  row: {
+    contractor_signed_at?: unknown;
+    contractor_signature_method?: unknown;
+    contractor_signature_name?: unknown;
+    contractor_signature_title?: unknown;
+    contractor_signature_image?: unknown;
+  },
+  timeZone: string,
+): ContractorSignature | undefined {
+  const method = row.contractor_signature_method;
+  if (method !== "drawn" && method !== "typed") return undefined;
+
+  const name =
+    typeof row.contractor_signature_name === "string" ? row.contractor_signature_name.trim() : "";
+  const title =
+    typeof row.contractor_signature_title === "string" ? row.contractor_signature_title.trim() : "";
+  const image =
+    typeof row.contractor_signature_image === "string" ? row.contractor_signature_image : "";
+  const at = typeof row.contractor_signed_at === "string" ? new Date(row.contractor_signed_at) : null;
+
+  if (!name || !at || Number.isNaN(at.getTime())) return undefined;
+  if (method === "drawn" && !isPngDataUri(image)) return undefined;
+
+  return {
+    method,
+    name,
+    title,
+    image: method === "drawn" ? image : "",
+    signedLabel: signatureMoment(at, timeZone),
+  };
+}
+
+/** A signer's title, tidied: one line, and short enough for a signature line. */
+export function readSignerTitle(value: unknown): string {
+  return squash(typeof value === "string" ? value : "").slice(0, 80);
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   generateContract,
   rebuildContractPdf,
   sendSigningLink,
+  signForBusiness,
   type ContractState,
 } from "@/app/jobs/[jobId]/contract-actions";
 import { PdfViewer } from "@/components/pdf-viewer";
@@ -70,12 +71,43 @@ function SendLinkButton() {
   );
 }
 
+function SignInPersonButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
+    >
+      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <PenLine className="h-4 w-4" aria-hidden />}
+      Sign in person
+    </button>
+  );
+}
+
+/** Who signed for the business, once somebody has — it happens as the contract goes out. */
+function BusinessSigned({ contract }: { contract: JobContractRecord }) {
+  if (!contract.businessSignedLabel) return null;
+  return (
+    <p className="flex items-start gap-2 text-xs text-ink-muted">
+      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-positive" aria-hidden />
+      <span>
+        Signed for the business by {contract.businessSignedBy} · {contract.businessSignedLabel}
+      </span>
+    </p>
+  );
+}
+
 /**
  * Getting the customer's signature: at the door, or by text.
  *
  * Both end in the same place — the one signing action, keyed by the contract's
  * token — so a signature taken on this phone and one taken from a text are
  * recorded identically. Only how the customer reached the pad differs.
+ *
+ * Either way the business signs first, with the signature of whoever is
+ * sending it or holding out the phone, so the contract the customer sees
+ * already carries it.
  */
 function ContractSigning({
   contract,
@@ -89,17 +121,32 @@ function ContractSigning({
   const router = useRouter();
   const [inPerson, setInPerson] = useState(false);
   const [state, send] = useActionState(sendSigningLink, initialState);
+  // The pad opens only once the business has signed.
+  const [businessState, signBusiness] = useActionState(
+    async (previous: ContractState, formData: FormData) => {
+      const result = await signForBusiness(previous, formData);
+      if (result.signedForBusiness) setInPerson(true);
+      return result;
+    },
+    initialState,
+  );
 
   if (contract.signedLabel) {
     return (
-      <p className="mt-3 flex items-start gap-2 rounded-control border border-brand/30 bg-brand/10 px-3 py-2 text-sm">
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
-        <span>
-          Signed by <strong>{contract.signatureName}</strong> · {contract.signedLabel}
-        </span>
-      </p>
+      <div className="mt-3 space-y-2">
+        <p className="flex items-start gap-2 rounded-control border border-brand/30 bg-brand/10 px-3 py-2 text-sm">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+          <span>
+            Signed by <strong>{contract.signatureName}</strong> · {contract.signedLabel}
+          </span>
+        </p>
+        <BusinessSigned contract={contract} />
+      </div>
     );
   }
+
+  const error = state.error || businessState.error;
+  const needsSignature = Boolean(state.needsSignature || businessState.needsSignature);
 
   if (contract.unsignable) {
     return (
@@ -144,14 +191,11 @@ function ContractSigning({
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => setInPerson(true)}
-            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
-          >
-            <PenLine className="h-4 w-4" aria-hidden />
-            Sign in person
-          </button>
+          <form action={signBusiness}>
+            <input type="hidden" name="contractId" value={contract.id} />
+            <input type="hidden" name="jobNumber" value={jobNumber} />
+            <SignInPersonButton />
+          </form>
           <form action={send}>
             <input type="hidden" name="contractId" value={contract.id} />
             <input type="hidden" name="jobNumber" value={jobNumber} />
@@ -160,11 +204,21 @@ function ContractSigning({
         </div>
       )}
 
+      <BusinessSigned contract={contract} />
       {contract.sentLabel && !state.notice ? (
         <p className="text-xs text-ink-faint">Signing link texted {contract.sentLabel}.</p>
       ) : null}
       {state.notice ? <p className="text-sm text-brand">{state.notice}</p> : null}
-      {state.error ? <p className="text-sm text-critical">{state.error}</p> : null}
+      {error ? <p className="text-sm text-critical">{error}</p> : null}
+      {needsSignature ? (
+        <Link
+          href="/settings/contract#signature"
+          className="tap-target inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand"
+        >
+          <PenLine className="h-4 w-4" aria-hidden />
+          Add your signature
+        </Link>
+      ) : null}
     </div>
   );
 }
