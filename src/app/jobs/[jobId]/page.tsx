@@ -324,8 +324,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
-      {/* Job details are visible on arrival and can still be collapsed. */}
-      <details open className="group mt-3 rounded-panel border border-line bg-surface">
+      {/* Job details are collapsed on arrival and expand on demand. */}
+      <details className="group mt-3 rounded-panel border border-line bg-surface">
         <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-5 [&::-webkit-details-marker]:hidden">
           <span className="text-sm font-semibold">Job details</span>
           <ChevronDown
