@@ -11,6 +11,7 @@ import {
   sheet,
   type BusinessLetterhead,
 } from "@/lib/pdf/letterhead";
+import { SIGNATURE_FONT } from "@/lib/pdf/signature-font";
 
 /**
  * The contract as the customer signs it.
@@ -125,10 +126,19 @@ function SignatureLine({
           // eslint-disable-next-line jsx-a11y/alt-text
           <Image src={signed.image} style={{ height: 32, objectFit: "contain", objectPosition: "left bottom" }} />
         ) : signed?.method === "typed" ? (
-          // Tight line height and a lift off the rule: at 18pt the text box
-          // otherwise reaches the bottom of this space, and the rule strikes
-          // straight through the name.
-          <Text style={{ fontFamily: "Times-Italic", fontSize: 18, lineHeight: 1, marginBottom: 4, color: "#0f172a" }}>
+          // Tight line height and a lift off the rule: at this size the text
+          // box otherwise reaches the bottom of this space, and the rule
+          // strikes straight through the name. Times Italic stands in for any
+          // letter the signature face has no glyph for.
+          <Text
+            style={{
+              fontFamily: [SIGNATURE_FONT, "Times-Italic"],
+              fontSize: 20,
+              lineHeight: 1,
+              marginBottom: 4,
+              color: "#0f172a",
+            }}
+          >
             {signed.name}
           </Text>
         ) : null}
