@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { ChevronRight, Clock3, MapPin, Navigation, Phone, Plus, UserRound } from "lucide-react";
+import {
+  ChevronRight,
+  Clock3,
+  MapPin,
+  MessageSquare,
+  Navigation,
+  Phone,
+  Plus,
+  UserRound,
+} from "lucide-react";
 
 import type { CalendarDay, MonthCell } from "@/lib/calendar";
 import { formatDayLabel } from "@/lib/calendar";
@@ -183,6 +192,11 @@ function directionsHref(job: PilotJob): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 
+/** The customer's number as the phone's dialler and messages app want it. */
+function dialable(job: PilotJob): string {
+  return job.phone.replace(/[^\d+]/g, "");
+}
+
 export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
   // Canceled work is listed but never counted. A day that reads "3 jobs" when
   // one is called off is a day somebody plans around wrongly — and the driver
@@ -247,30 +261,40 @@ export function DayView({ jobs, date }: { jobs: PilotJob[]; date: string }) {
         </Link>
 
         {/* Outside the link, because a button inside an anchor is not something
-            a browser or a screen reader can make sense of. Navigate and Call
-            are the two things done most, and going through the job first to
-            reach them is a tap that buys nothing. */}
-        {job.address || job.phone ? (
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            a browser or a screen reader can make sense of. Navigate, Call and
+            Text are the things done most, and going through the job first to
+            reach them is a tap that buys nothing. One row of equal buttons, as
+            on the job page, rather than a stack of them down the card. */}
+        {job.address || dialable(job) ? (
+          <div className="mt-2 flex gap-2">
             {job.address ? (
               <a
                 href={directionsHref(job)}
                 target="_blank"
                 rel="noreferrer"
-                className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+                className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
               >
                 <Navigation className="h-4 w-4" aria-hidden />
                 Navigate
               </a>
             ) : null}
-            {job.phone ? (
-              <a
-                href={`tel:${job.phone.replace(/[^\d+]/g, "")}`}
-                className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
-              >
-                <Phone className="h-4 w-4" aria-hidden />
-                Call
-              </a>
+            {dialable(job) ? (
+              <>
+                <a
+                  href={`tel:${dialable(job)}`}
+                  className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+                >
+                  <Phone className="h-4 w-4" aria-hidden />
+                  Call
+                </a>
+                <a
+                  href={`sms:${dialable(job)}`}
+                  className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+                >
+                  <MessageSquare className="h-4 w-4" aria-hidden />
+                  Text
+                </a>
+              </>
             ) : null}
           </div>
         ) : null}
