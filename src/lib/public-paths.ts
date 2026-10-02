@@ -29,9 +29,20 @@ const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "invite",
  *
  * The demo is another: a sample job a visitor can walk through before they
  * have an account, which is the whole point of it. It reads and writes
- * nothing, so there is nothing behind it to protect.
+ * nothing, so there is nothing behind it to protect. So is /welcome, the front
+ * page built ahead of time, which the proxy serves to a visitor asking for `/`.
  */
-const PUBLIC_PAGES = new Set(["/", "/demo", "/login", "/signup", "/robots.txt", "/sitemap.xml", "/icon.svg", "/favicon.ico"]);
+const PUBLIC_PAGES = new Set([
+  "/",
+  "/welcome",
+  "/demo",
+  "/login",
+  "/signup",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/icon.svg",
+  "/favicon.ico",
+]);
 
 export function isPublicPath(pathname: string): boolean {
   const path = (pathname || "/").replace(/\/+$/, "") || "/";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   ArrowRight,
   Boxes,
@@ -233,7 +234,20 @@ function FieldPreview() {
   );
 }
 
-export function FrontPage({ videos, preview = false }: { videos: SiteVideo[]; preview?: boolean }) {
+/**
+ * The walkthrough videos once support has added some, and the job itself until
+ * then: a picture of the product either way, never a promise of one.
+ *
+ * Waited for here, inside its own Suspense, rather than before the page: the
+ * rest of the page does not depend on it, and the sample job stands in while
+ * it loads. With no videos, what arrives is what was already there.
+ */
+async function DemoMedia({ videos }: { videos: Promise<SiteVideo[]> }) {
+  const list = await videos;
+  return list.length > 0 ? <VideoCarousel videos={list} /> : <FieldPreview />;
+}
+
+export function FrontPage({ videos, preview = false }: { videos: Promise<SiteVideo[]>; preview?: boolean }) {
   return (
     <div className="min-h-screen bg-canvas text-ink">
       {preview ? (
@@ -415,10 +429,11 @@ export function FrontPage({ videos, preview = false }: { videos: SiteVideo[]; pr
                 Try the demo <ArrowRight className="h-4 w-4" aria-hidden />
               </ButtonLink>
             </div>
-            {/* The walkthrough videos once support has added some, and the
-                job itself until then: a picture of the product either way,
-                never a promise of one. */}
-            <div className="min-w-0">{videos.length > 0 ? <VideoCarousel videos={videos} /> : <FieldPreview />}</div>
+            <div className="min-w-0">
+              <Suspense fallback={<FieldPreview />}>
+                <DemoMedia videos={videos} />
+              </Suspense>
+            </div>
           </div>
         </section>
 

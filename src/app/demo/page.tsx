@@ -9,9 +9,12 @@ export const metadata: Metadata = {
     "Walk a sample electrical job through Volteira, from the estimate to the invoice. No account needed, and nothing is saved.",
 };
 
-// Rendered per request, like every page here, so the sample job's dates are
-// counted from today rather than from the day the site was built.
-export const dynamic = "force-dynamic";
+// Built ahead of time and served whole, like the front page (app/welcome), so
+// it arrives complete rather than behind the app's loading skeleton. Nothing in
+// it depends on who is asking. Rebuilt hourly, so the sample job's dates are
+// counted from today rather than from the day the site was deployed.
+export const dynamic = "force-static";
+export const revalidate = 3600;
 
 /**
  * The demo: open to anybody (public-paths.ts), and reading and writing
