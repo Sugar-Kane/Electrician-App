@@ -6,6 +6,7 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  ChevronDown,
   ChevronLeft,
   Crosshair,
   Home,
@@ -21,6 +22,7 @@ import {
 import { JobMap, type MapStop } from "@/components/job-map";
 import { formatDayLabel } from "@/lib/calendar";
 import { hasCoordinates } from "@/lib/coordinates";
+import type { PlacingReport } from "@/lib/geocode-answer";
 import {
   buildGoogleDirectionsUrl,
   buildLegDirectionsUrl,
@@ -95,7 +97,7 @@ export function RouteBuilder({
   jobs,
   today,
   apiKey,
-  unplaced,
+  placing,
   focusJobId,
   initialSupplier = "lowes",
   initialSupplyStore,
@@ -103,8 +105,12 @@ export function RouteBuilder({
   jobs: PilotJob[];
   today: string;
   apiKey: string;
-  /** Addresses the geocoder could not place, each with Google's own reason. */
-  unplaced: { address: string; reason: string }[];
+  /**
+   * What placing the business's saved addresses turned up: the ones Google
+   * could not place and why, and — when the key or Google itself stopped the
+   * lookups — that, said once.
+   */
+  placing: PlacingReport;
   focusJobId?: string;
   initialSupplier?: SupplierId;
   initialSupplyStore?: SupplyStore;
@@ -448,6 +454,10 @@ export function RouteBuilder({
             </div>
           </div>
 
+          {placing.problem ? (
+            <PlacingProblemNotice problem={placing.problem} waiting={placing.waiting} />
+          ) : null}
+
           <JobMap
             apiKey={apiKey}
             stops={mapStops}
@@ -497,7 +507,11 @@ export function RouteBuilder({
                       </p>
                       {!hasCoordinates(stop.point) && !isStart ? (
                         <p className="mt-1 text-xs text-caution">
-                          Not on the map — this address could not be placed.
+                          {/* When the lookups were stopped, the address is
+                              not what is wrong, and the note above says what is. */}
+                          {placing.problem
+                            ? "Not on the map yet."
+                            : "Not on the map — this address could not be placed."}
                         </p>
                       ) : null}
                       {stop.job ? (
@@ -567,17 +581,18 @@ export function RouteBuilder({
             </div>
           ) : null}
 
-          {unplaced.length > 0 ? (
+          {placing.unplaced.length > 0 ? (
             <div className="mt-3 rounded-control border border-caution/25 bg-caution-bg p-3 text-xs leading-5 text-caution">
               <p className="font-semibold">
-                {unplaced.length === 1 ? "One address" : `${unplaced.length} addresses`} could not be
-                placed
+                {placing.unplaced.length === 1
+                  ? "Google couldn't place one saved address"
+                  : `Google couldn't place ${placing.unplaced.length} saved addresses`}
               </p>
-              <ul className="mt-1.5 space-y-1">
-                {unplaced.map((entry) => (
-                  <li key={entry.address}>
-                    <span className="font-medium">{entry.address}</span>
-                    <span className="block opacity-90">Google said: {entry.reason}</span>
+              <ul className="mt-1.5 space-y-1.5">
+                {placing.unplaced.map((entry) => (
+                  <li key={entry.id}>
+                    <span className="block break-words font-medium">{entry.address}</span>
+                    <span className="block break-words opacity-90">{entry.reason}</span>
                   </li>
                 ))}
               </ul>
@@ -722,3 +737,50 @@ export function RouteBuilder({
     </div>
     );
   }
+
+/**
+ * Why nothing new is on the map, said once.
+ *
+ * It used to be Google's paragraph under every waiting address — eleven
+ * copies of "This API key is not authorized to use this service or API" on a
+ * tablet, about a setting in Google's console that none of those addresses
+ * could change. The person at the map gets what it means for their day;
+ * Google's own words stay one tap away for whoever fixes the setting.
+ */
+function PlacingProblemNotice({
+  problem,
+  waiting,
+}: {
+  problem: NonNullable<PlacingReport["problem"]>;
+  waiting: number;
+}) {
+  const setup = problem.kind === "setup";
+  const count = waiting === 1 ? "1 saved address is" : `${waiting} saved addresses are`;
+
+  return (
+    <div className="mb-3 rounded-control border border-caution/25 bg-caution-bg p-3 text-xs leading-5 text-caution">
+      <p className="font-semibold">
+        {setup ? "New addresses can't be put on the map right now" : "Google's address lookup isn't answering"}
+      </p>
+      <p className="mt-1">
+        {problem.reason}
+        {waiting > 0
+          ? setup
+            ? ` ${count} waiting for a pin. Nothing is wrong with them.`
+            : ` ${count} waiting for a pin. The map tries again each time this page opens.`
+          : null}
+      </p>
+      <p className="mt-1">
+        Stops without a pin aren&apos;t put in driving order, but each one still opens in your maps app by its
+        address.
+      </p>
+      <details className="group mt-1">
+        <summary className="tap-target inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 font-semibold [&::-webkit-details-marker]:hidden">
+          What Google said
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-180" aria-hidden />
+        </summary>
+        <p className="break-words pb-1 opacity-90">{problem.detail}</p>
+      </details>
+    </div>
+  );
+}

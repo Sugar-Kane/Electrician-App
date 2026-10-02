@@ -23,6 +23,17 @@ function cleanValue(value: string | string[] | undefined, maximumLength: number)
 export const dynamic = "force-dynamic";
 
 export default async function RoutePage({ searchParams }: { searchParams: Promise<RouteSearchParams> }) {
+  // Addresses arrive from phone calls with no coordinates. Placing them here,
+  // once, is what puts the day on a map at all — and what is returned is the
+  // ones that could not be placed and why, so the page can say so rather than
+  // quietly drawing a shorter route than the day actually has.
+  //
+  // Before the jobs are read, not beside them. Read first, the jobs carried
+  // the coordinates from before this lookup, so the load that placed an
+  // address still showed its stop as "not on the map" — on exactly the visit
+  // somebody makes to see whether fixing the key worked.
+  const placing = await placeTodaysStops();
+
   const [query, timeZone, { jobs }, stops] = await Promise.all([
     searchParams,
     getOrganizationTimezone(),
@@ -30,11 +41,6 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
     getSupplyStops(),
   ]);
 
-  // Addresses arrive from phone calls with no coordinates. Placing them here,
-  // once, is what puts the day on a map at all — and what is returned is the
-  // ones that could not be placed, so the page can say so rather than quietly
-  // drawing a shorter route than the day actually has.
-  const geocoded = await placeTodaysStops();
   const job = cleanValue(query.job, 40);
   const supplier = cleanValue(query.supplier, 24);
   const initialSupplier: SupplierId = supplier === "home-depot" ? "home-depot" : "lowes";
@@ -82,7 +88,7 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
         jobs={jobs}
         today={todayInZone(timeZone)}
         apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
-        unplaced={geocoded.unplaced}
+        placing={placing}
         focusJobId={job || undefined}
         initialSupplier={initialSupplier}
         initialSupplyStore={initialSupplyStore ?? ownStore}
