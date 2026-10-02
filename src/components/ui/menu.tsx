@@ -75,7 +75,12 @@ export function Menu({
           id={menuId}
           role="menu"
           aria-label={label}
-          onClick={() => setOpen(false)}
+          // Closed once the click has done what it was for, not during it.
+          // Closing during it took the item off the page before the browser
+          // acted on it: links survived, because they navigate in their own
+          // click handler, but Sign out is a form, and a form that is no
+          // longer on the page cannot submit — so it silently did nothing.
+          onClick={() => window.setTimeout(() => setOpen(false), 0)}
           className={`absolute top-[calc(100%+8px)] z-[65] w-[min(320px,calc(100vw-24px))] overflow-hidden rounded-control border border-line bg-sunken p-2 shadow-2xl shadow-black/40 ${
             align === "right" ? "right-0" : "left-0"
           }`}

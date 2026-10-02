@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { DashboardShell } from "@/components/dashboard-shell";
 import { StartAtTop } from "@/components/start-at-top";
 import { todayInZone } from "@/lib/calendar";
@@ -18,6 +20,11 @@ export default async function Page() {
     getBookingRequests(),
     getUnbilledWork(),
   ]);
+
+  // Signed in, with no business yet: part-way through signing up. The demo
+  // figures this would otherwise show — somebody else's name and business —
+  // read as another person's account, so they finish setting up instead.
+  if (snapshot.requiresOnboarding) redirect("/onboarding");
 
   const today = todayInZone(snapshot.timezone);
   // One clock for the page, so the list and the status pills agree about
