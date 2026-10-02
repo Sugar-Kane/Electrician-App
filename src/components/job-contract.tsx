@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import {
   completeContractDetails,
+  generateChangeOrder,
   generateContract,
   rebuildContractPdf,
   sendSigningLink,
@@ -28,6 +29,7 @@ import { SignaturePad } from "@/components/signature-pad";
 import { FormMessage } from "@/components/ui/field";
 import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
+import { formatCents } from "@/lib/job-lines";
 
 /**
  * The contract for this job.
@@ -66,6 +68,38 @@ function GenerateButton({ existing }: { existing: boolean }) {
     </button>
   );
 }
+
+function ChangeOrderButton({ again }: { again: boolean }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="tap-target mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60 sm:w-auto"
+    >
+      {pending ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <FileText className="h-4 w-4" aria-hidden />
+      )}
+      {pending ? "Writing" : again ? "Generate a new change order" : "Generate change order"}
+    </button>
+  );
+}
+
+/** What has been written on the job since the customer last signed. */
+export type AgreementChangeSummary = {
+  /** Something on the job has been signed. */
+  signed: boolean;
+  /** Lines written after the newest signed contract or change order was drawn up. */
+  addedCount: number;
+  addedCents: number;
+  /** An unsigned change order newer than all of them is waiting to be signed. */
+  waiting: boolean;
+  /** The newest contract is unsigned and older than some of the lines. */
+  behind: boolean;
+};
 
 function SendLinkButton() {
   const { pending } = useFormStatus();
@@ -206,7 +240,12 @@ function ContractSigning({
         */
         <div className="rounded-control border border-line p-3">
           <p className="mb-3 text-sm text-ink-muted">Hand the phone to the customer to sign.</p>
-          <SignaturePad token={contract.publicToken} defaultName={customerName} onSigned={() => router.refresh()} />
+          <SignaturePad
+            token={contract.publicToken}
+            defaultName={customerName}
+            onSigned={() => router.refresh()}
+            kind={contract.kind}
+          />
           <button
             type="button"
             onClick={() => setInPerson(false)}
@@ -251,13 +290,27 @@ function ContractSigning({
 
 /** Where the newest contract stands, in the one line the folded section shows. */
 function contractStatus(contract: JobContractRecord): string {
-  if (contract.signedLabel) return `Signed by ${contract.signatureName} · ${contract.signedLabel}`;
+  const order = contract.kind === "change_order";
+  if (contract.signedLabel) {
+    return `${order ? "Change order signed" : "Signed"} by ${contract.signatureName} · ${contract.signedLabel}`;
+  }
+  const draft = order ? "Change order" : "Draft";
   if (contract.unfilled.length > 0) {
     const count = contract.unfilled.length;
-    return `Draft · ${count} ${count === 1 ? "blank" : "blanks"} left to fill in`;
+    return `${draft} · ${count} ${count === 1 ? "blank" : "blanks"} left to fill in`;
   }
-  if (contract.sentLabel) return `Signing link texted ${contract.sentLabel}`;
-  return contract.document && !contract.unsignable ? "Draft · ready to sign" : `Draft · ${contract.createdLabel}`;
+  if (contract.sentLabel) return `${order ? "Change order link" : "Signing link"} texted ${contract.sentLabel}`;
+  return contract.document && !contract.unsignable ? `${draft} · ready to sign` : `${draft} · ${contract.createdLabel}`;
+}
+
+/** What a row calls its contract: signed, the one to sign, or one a newer draft replaced. */
+function rowTitle(contract: JobContractRecord, current: boolean): string {
+  const order = contract.kind === "change_order";
+  // Signed first: an agreement signed before a newer draft existed is still
+  // the signed contract, not a superseded draft.
+  if (contract.signedLabel) return order ? "Signed change order" : "Signed contract";
+  if (current) return order ? "Change order" : "Draft";
+  return order ? "Superseded change order" : "Superseded draft";
 }
 
 /** One draft, with its document behind the row that names it. */
@@ -290,10 +343,7 @@ function ContractRow({
       >
         <span className="min-w-0">
           <span className="block text-sm font-semibold">
-            {/* Signed first: an agreement signed before a newer draft existed is
-                still the signed contract, not a superseded draft. */}
-            {contract.signedLabel ? "Signed contract" : current ? "Draft" : "Superseded draft"} ·{" "}
-            {contract.createdLabel}
+            {rowTitle(contract, current)} · {contract.createdLabel}
           </span>
           {contract.unfilled.length > 0 ? (
             <span className="mt-0.5 block text-xs text-caution">
@@ -401,13 +451,17 @@ export function JobContract({
   jobNumber,
   contracts,
   customerName = "",
+  changes,
 }: {
   jobNumber: string;
   contracts: JobContractRecord[];
   /** Pre-fills the name on the signing pad. The customer can correct it. */
   customerName?: string;
+  /** What has been written on the job since the customer last signed. */
+  changes?: AgreementChangeSummary;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
+  const [orderState, orderAction] = useActionState(generateChangeOrder, initialState);
   // Keep the document preview optional while signing actions stay visible.
   const [open, setOpen] = useState<string | null>(null);
   const section = useRef<HTMLElement>(null);
@@ -426,6 +480,9 @@ export function JobContract({
   useEffect(() => {
     if (state.contractId && drafts.current) drafts.current.open = true;
   }, [state.contractId]);
+  useEffect(() => {
+    if (orderState.contractId && drafts.current) drafts.current.open = true;
+  }, [orderState.contractId]);
 
   const generate = (
     <form action={action}>
@@ -440,6 +497,52 @@ export function JobContract({
       </div>
     ) : null;
 
+  const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
+
+  /*
+   * Work written on the job after the customer signed.
+   *
+   * A signed contract is amended in writing, not edited, so the additions go on
+   * a change order: a document of their own, signed the same way. Shown above
+   * the folded drafts, because it is the one thing on the card that needs doing.
+   */
+  const asking = Boolean(changes?.signed && changes.addedCount > 0 && !changes.waiting);
+  const changeOrder =
+    asking && changes ? (
+      <div className="mt-3 rounded-control border border-caution/30 bg-caution-bg p-4">
+        <h3 className="text-sm font-semibold">Added since the customer signed</h3>
+        <p className="mt-1 text-sm leading-6 text-ink-muted">
+          {items(changes.addedCount)} · {formatCents(changes.addedCents)}.{" "}
+          {changes.behind
+            ? "The change order waiting to be signed does not include all of them. A new one replaces it."
+            : "The signed contract stays as it was signed. The additions go on a change order for the customer to sign."}
+        </p>
+        <form action={orderAction}>
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <ChangeOrderButton again={changes.behind} />
+        </form>
+        {orderState.error || orderState.notice ? (
+          <div className="mt-3">
+            <FormMessage error={orderState.error} notice={orderState.notice} />
+          </div>
+        ) : null}
+      </div>
+    ) : changes?.waiting ? (
+      <p className="mt-2 text-sm leading-6 text-ink-muted">
+        A change order for the {items(changes.addedCount)} added since they signed (
+        {formatCents(changes.addedCents)}) is waiting to be signed.
+      </p>
+    ) : !changes?.signed && changes?.behind ? (
+      <div className="mt-3 rounded-control border border-caution/30 bg-caution-bg p-4">
+        <p className="text-sm leading-6 text-ink-muted">
+          Items were added after this draft was made, so it does not include them. Generate another draft
+          before it is signed.
+        </p>
+        <div className="mt-3">{generate}</div>
+        {message}
+      </div>
+    ) : null;
+
   return (
     <section id={CONTRACT_ANCHOR} ref={section} className="scroll-mt-24">
       {/* The first contract is generated from here, there being no drafts
@@ -448,6 +551,15 @@ export function JobContract({
         <h2 className="text-sm font-semibold">Contract</h2>
         {contracts.length === 0 ? generate : null}
       </div>
+
+      {/* After a change order is written the request above gives way to it,
+          so what the action said is kept on screen here instead. */}
+      {!asking && orderState.notice ? (
+        <div className="mt-3">
+          <FormMessage error="" notice={orderState.notice} />
+        </div>
+      ) : null}
+      {changeOrder}
 
       {/*
         Folded by default, like Job details and History. On most visits the

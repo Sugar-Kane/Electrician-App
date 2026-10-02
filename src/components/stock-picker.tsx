@@ -25,12 +25,15 @@ export function StockPicker<T extends StockChoice>({
   picked,
   onPick,
   onClear,
+  hint = "Pick a part you stock and it fills in below, and comes off the count when added. Anything else, type below.",
 }: {
   stock: readonly T[];
   /** The stock item the part below came from, when one was picked. */
   picked: T | null;
   onPick: (item: T) => void;
   onClear: () => void;
+  /** What picking does, said under the box until something is picked. */
+  hint?: string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -174,10 +177,7 @@ export function StockPicker<T extends StockChoice>({
           </button>
         </p>
       ) : showing ? null : (
-        <p className="mt-1.5 text-xs leading-5 text-ink-muted">
-          Pick a part you stock and it fills in below, and comes off the count when added. Anything else,
-          type below.
-        </p>
+        <p className="mt-1.5 text-xs leading-5 text-ink-muted">{hint}</p>
       )}
     </div>
   );

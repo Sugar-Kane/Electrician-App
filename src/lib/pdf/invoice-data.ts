@@ -88,14 +88,16 @@ export async function generateInvoicePdf(input: {
   const jobId = str(job?.id);
 
   const [{ data: lineRows }, business, { data: organization }] = await Promise.all([
-    jobId
-      ? input.database
-          .from("job_line_items")
-          .select("kind, description, quantity, unit, unit_price_cents")
-          .eq("organization_id", input.organizationId)
-          .eq("job_id", jobId)
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    // The lines this invoice billed, not every line on the job. A part added
+    // after the invoice went out is on the invoice that billed it; listed here
+    // too, this copy would print a different bill from the one the customer
+    // already holds.
+    input.database
+      .from("job_line_items")
+      .select("kind, description, quantity, unit, unit_price_cents")
+      .eq("organization_id", input.organizationId)
+      .eq("invoice_id", input.invoiceId)
+      .order("created_at", { ascending: true }),
     businessLetterhead(input.database, input.organizationId),
     input.database
       .from("organizations")

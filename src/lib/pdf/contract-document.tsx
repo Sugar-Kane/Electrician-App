@@ -34,6 +34,11 @@ import { SIGNATURE_FONT, TEXT_FONT } from "@/lib/pdf/fonts";
 
 export type ContractDocumentData = {
   business: BusinessLetterhead;
+  /**
+   * An agreement, or a change order adding to one. Only the title differs: a
+   * change order is signed exactly the way the agreement was.
+   */
+  kind?: "agreement" | "change_order";
   reference: string;
   createdLabel: string;
   customer: { name: string; addressLines: string[]; phone: string; email: string };
@@ -179,12 +184,12 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
 
   return (
     <Document
-      title={`Contract ${data.reference} — ${business.name}`}
+      title={`${documentWord(data.kind)} ${data.reference} — ${business.name}`}
       author={business.name}
-      subject={`Contract for job #${data.job.number}`}
+      subject={`${documentWord(data.kind)} for job #${data.job.number}`}
     >
       <Page size="LETTER" style={sheet.page}>
-        <Letterhead business={business} title="CONTRACT" reference={data.reference} />
+        <Letterhead business={business} title={documentWord(data.kind).toUpperCase()} reference={data.reference} />
 
         <View style={[sheet.row, { justifyContent: "space-between", marginBottom: 8 }]}>
           <Labelled
@@ -283,8 +288,18 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
   );
 }
 
-export function contractFileName(reference: string, businessName: string): string {
+/** What the document calls itself: "Contract", or "Change order". */
+export function documentWord(kind: ContractDocumentData["kind"]): string {
+  return kind === "change_order" ? "Change order" : "Contract";
+}
+
+export function contractFileName(
+  reference: string,
+  businessName: string,
+  kind: ContractDocumentData["kind"] = "agreement",
+): string {
   const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const safe = reference.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `contract-${safe || "draft"}${slug ? `-${slug}` : ""}.pdf`;
+  const word = kind === "change_order" ? "change-order" : "contract";
+  return `${word}-${safe || "draft"}${slug ? `-${slug}` : ""}.pdf`;
 }

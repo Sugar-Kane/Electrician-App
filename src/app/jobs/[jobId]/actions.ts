@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { returnStock } from "@/lib/job-billing-server";
 import { changeNeedsCustomerNotice } from "@/lib/job-change-messages";
 import { notifyJobChange } from "@/lib/job-notifications";
 import { readAccessNotes, readUnit } from "@/lib/property-details";
@@ -258,6 +259,31 @@ export async function cancelJob(
     return { error: "That job could not be canceled." };
   }
 
+  /*
+   * Parts taken from inventory for a job that is not happening go back on the
+   * count. They were written down against this job — at booking, or on the
+   * job page — and left out they would sit "used" on a job that never ran,
+   * with the job's page, where they could be removed, now closed.
+   */
+  const { data: stockLines } = await job.supabase
+    .from("job_line_items")
+    .select("id")
+    .eq("organization_id", job.organizationId)
+    .eq("job_id", job.id)
+    .not("inventory_item_id", "is", null);
+  const returned = await returnStock(job.supabase, {
+    organizationId: job.organizationId,
+    jobId: job.id,
+    lineIds: ((stockLines ?? []) as Record<string, unknown>[]).map((line) => String(line.id)),
+    note: "The job was canceled.",
+  });
+  if (returned > 0) {
+    revalidatePath("/inventory");
+    revalidatePath("/materials");
+  }
+  const restocked =
+    returned > 0 ? ` ${returned} ${returned === 1 ? "part" : "parts"} went back into inventory.` : "";
+
   const attempts = await notifyJobChange({
     jobId: job.id,
     organizationId: job.organizationId,
@@ -278,7 +304,7 @@ export async function cancelJob(
   revalidatePath("/schedule");
   revalidatePath("/");
 
-  return { error: "", notice: `Job canceled. ${describe(attempts)}` };
+  return { error: "", notice: `Job canceled. ${describe(attempts)}${restocked}` };
 }
 
 /**

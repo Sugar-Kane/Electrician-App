@@ -297,6 +297,23 @@ test("a half-typed line is dropped rather than losing the other eight", () => {
   assert.equal(lines[1]?.unitPriceCents, 0);
 });
 
+test("a part picked from inventory keeps its stock item; hours and junk ids do not", () => {
+  const item = "7088d778-81ca-475e-b7d0-c42ca9f86106";
+  const lines = parseWorkOrderLines(
+    JSON.stringify([
+      { kind: "material", description: "Square D QO 20A breaker", quantity: 2, unitPriceCents: 1_149, inventoryItemId: item },
+      { kind: "labor", description: "Swap breakers", quantity: 1, unitPriceCents: 12_500, inventoryItemId: item },
+      { kind: "material", description: "Wire nuts", quantity: 1, unitPriceCents: 625, inventoryItemId: "1; drop table jobs" },
+      { kind: "material", description: "Typed by hand", quantity: 1, unitPriceCents: 4_850 },
+    ]),
+  );
+
+  assert.deepEqual(
+    lines.map((line) => line.inventoryItemId ?? null),
+    [item, null, null, null],
+  );
+});
+
 test("nothing usable in the lines field comes back as no lines", () => {
   for (const raw of ["", "   ", "not json", "{}", "[]", '"a string"']) {
     assert.deepEqual(parseWorkOrderLines(raw), []);

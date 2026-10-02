@@ -12,6 +12,7 @@ import { DateTimeField } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import { WorkOrderLines } from "@/components/work-order-lines";
+import type { StockOption } from "@/lib/job-line-data";
 import { keepPhoneDigits } from "@/lib/digits-input";
 import { keepMoneyCharacters } from "@/lib/money-input";
 import { choiceFill, type CustomerChoice } from "@/lib/customer-choices";
@@ -68,6 +69,7 @@ export function NewJobForm({
   timeZoneLabel,
   followUp,
   customers = [],
+  stock = [],
 }: {
   /** The IANA zone, so the calendar rings today on the right day. */
   timeZone: string;
@@ -79,6 +81,8 @@ export function NewJobForm({
   followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number };
   /** The business's customers, at each address, for Returning customer. */
   customers?: CustomerChoice[];
+  /** What is on the shelf, so a work order's parts can be picked from it. */
+  stock?: StockOption[];
 }) {
   const [state, action, pending] = useActionState(createJob, initialState);
 
@@ -324,6 +328,7 @@ export function NewJobForm({
           <WorkOrderLines
             describedBy={() => description.current?.value ?? ""}
             defaultValue={kept?.workOrderLines ?? ""}
+            stock={stock}
           />
         )}
       </Section>

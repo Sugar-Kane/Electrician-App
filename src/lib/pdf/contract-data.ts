@@ -3,6 +3,7 @@ import "server-only";
 import {
   ContractDocument,
   contractFileName,
+  documentWord,
   type ContractDocumentData,
 } from "@/lib/pdf/contract-document";
 import { documentFolderId } from "@/lib/document-folders";
@@ -68,7 +69,7 @@ export async function loadContractDocument(input: {
   const { data } = await input.database
     .from("contracts")
     .select(
-      `id, body, scope, unfilled, created_at,
+      `id, kind, body, scope, unfilled, created_at,
        signature_provider, signed_at, signature_method, signature_name,
        signature_image, signed_body_hash,
        contractor_signed_at, contractor_signature_method, contractor_signature_name,
@@ -125,6 +126,7 @@ export async function loadContractDocument(input: {
   return {
     document: {
       business,
+      kind: contract.kind === "change_order" ? "change_order" : "agreement",
       reference,
       createdLabel: dateLabel(contract.created_at, input.timeZone),
       customer: {
@@ -200,8 +202,8 @@ export async function generateContractPdf(input: {
       scope: loaded.scope,
       unfilled: loaded.unfilledKeys,
     },
-    displayName: jobNumber ? `Contract for job #${jobNumber}` : "Contract",
-    fileName: contractFileName(jobNumber ? `job-${jobNumber}` : "", document.business.name),
+    displayName: jobNumber ? `${documentWord(document.kind)} for job #${jobNumber}` : documentWord(document.kind),
+    fileName: contractFileName(jobNumber ? `job-${jobNumber}` : "", document.business.name, document.kind),
     uploadedBy: input.uploadedBy,
     element: ContractDocument({ data: document }),
   }).then((result) => ("error" in result ? { error: result.error } : { error: "" as const }));

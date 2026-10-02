@@ -129,7 +129,15 @@ export type WorkOrderLine = {
   quantity: number;
   unit: string;
   unitPriceCents: number;
+  /**
+   * The stock item a part was picked from, so saving the job takes it off the
+   * count. Only ever on a part, and only ever an id: whether it is this
+   * business's item is the database's to say when the job is saved.
+   */
+  inventoryItemId?: string;
 };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Long enough for a real job, short enough that a runaway paste is refused.
@@ -346,6 +354,8 @@ export function parseWorkOrderLines(raw: string): WorkOrderLine[] {
     const unitPriceCents =
       Number.isFinite(price) && price >= 0 ? Math.min(Math.round(price), MAX_COST_CENTS) : 0;
 
+    const stockId = typeof row.inventoryItemId === "string" ? row.inventoryItemId.trim() : "";
+
     lines.push({
       kind,
       description,
@@ -354,6 +364,8 @@ export function parseWorkOrderLines(raw: string): WorkOrderLine[] {
       quantity: Math.round(quantity * 1000) / 1000,
       unit,
       unitPriceCents,
+      // Hours never come off a shelf, and anything that is not an id is not one.
+      ...(kind === "material" && UUID.test(stockId) ? { inventoryItemId: stockId } : {}),
     });
   }
 

@@ -216,13 +216,28 @@ test("a job billed in stages is contracted at the sum of its invoices", () => {
   assert.equal(money.totalCents, 154_000);
 });
 
-test("itemised but unbilled work does not fall back to the diagnostic fee", () => {
-  // $180 on a contract for work priced at far more is the wrong number, not a
-  // missing one. Blank sends somebody to bill it; $180 sends it to the customer.
-  const money = contractMoney({ ...prepaidDiagnostic, pricedLineCount: 2 });
-  assert.equal(money.totalCents, 0);
-  assert.equal(money.source, "none");
+test("itemised but unbilled work is priced at its lines, not the diagnostic fee", () => {
+  // $180 on a contract for work priced at far more is the wrong number.
+  const money = contractMoney({ ...prepaidDiagnostic, pricedLineCount: 2, unbilledCents: 64_500 });
+  assert.equal(money.totalCents, 64_500);
+  assert.equal(money.source, "lines");
   assert.equal(money.depositPaid, true, "what was paid is still reported");
+});
+
+test("lines no invoice has billed yet are part of the price", () => {
+  // Billed $1,000 with nothing off, then a $160 part written afterwards. The
+  // contract drawn up now covers both, so the part is not left out of the
+  // price and also not on any change order.
+  const money = contractMoney({
+    category: "work_order",
+    diagnosticFeeCents: 0,
+    diagnosticPaid: false,
+    invoices: [{ totalCents: 100_000, diagnosticCreditCents: 0 }],
+    pricedLineCount: 3,
+    unbilledCents: 16_000,
+  });
+  assert.equal(money.totalCents, 116_000);
+  assert.equal(money.source, "invoices");
 });
 
 test("other work with nothing priced stays blank", () => {

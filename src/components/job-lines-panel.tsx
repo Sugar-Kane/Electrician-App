@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Clock, LoaderCircle, Package, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { Clock, LoaderCircle, Lock, Package, Plus, ReceiptText, Trash2 } from "lucide-react";
 
 import {
   addJobLine,
@@ -21,6 +21,7 @@ import {
   type JobLine,
   type JobLineTotals,
 } from "@/lib/job-lines";
+import { invoiceIsLive, lineLockedBecause, nextBillingStep } from "@/lib/job-billing";
 import type { JobInvoiceSummary, StockOption } from "@/lib/job-line-data";
 import { stockLeft, stockShortfall } from "@/lib/stock-choices";
 
@@ -250,168 +251,149 @@ function AddLineForm({
 }
 
 /**
- * Billing what the lines add up to.
+ * Billing what the lines add up to, and only what has not been billed.
  *
- * `raiseInvoice` has existed since the diagnostic-credit work and no component
- * ever called it — there was no honest number to send it, because a job had no
- * lines. Now there is, so the amount is left out of the form entirely and the
- * action sums the job itself. One number, derived once, on the server.
+ * Every line remembers the invoice that billed it. So this section names the
+ * job's invoices, and offers one thing to do with whatever is left over — and
+ * what that is depends on where the newest invoice stands:
+ *
+ * - none yet: generate the first, for everything;
+ * - a draft the customer has never seen: add the new lines to it;
+ * - sent or paid: an invoice of their own, for the difference. A bill the
+ *   customer already holds is never changed underneath them.
+ *
+ * The amount is never typed here. The action sums the lines itself, on the
+ * server, from the same rows this was drawn from.
  */
-function RaiseInvoiceForm({
+function BillingSection({
   jobNumber,
-  invoice,
+  lines,
+  invoices,
 }: {
   jobNumber: string;
-  /** The job's newest invoice when the page was drawn, or null for none. */
-  invoice: JobInvoiceSummary | null;
+  lines: JobLine[];
+  invoices: JobInvoiceSummary[];
 }) {
   const [state, action] = useActionState(raiseInvoice, invoiceInitialState);
 
-  /*
-   * The job already has an invoice and nobody has said they meant it.
-   *
-   * Asked rather than blocked: a deposit and a balance are two invoices for one
-   * job and that is ordinary. What is not ordinary is finding out from the
-   * customer that they were billed twice, which is what silently creating a
-   * second one produces.
-   */
-  if (state.existing) {
-    return (
-      <div className="mt-3 rounded-control border border-caution/30 bg-caution-bg p-4">
-        <h3 className="text-sm font-semibold">This job already has an invoice</h3>
-        <p className="mt-1 text-sm leading-6 text-ink-muted">
-          Invoice {state.existing.number} for {state.existing.totalLabel}.
-        </p>
+  const live = invoices.filter(invoiceIsLive);
+  const step = nextBillingStep(
+    lines.map((line) => ({ invoiceId: line.invoiceId ?? null, quantity: line.quantity, unitPriceCents: line.unitPriceCents })),
+    invoices,
+  );
 
-        <div className="mt-4 grid gap-2">
-          <Link
-            href={`/invoices/${state.existing.invoiceId}`}
-            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
-          >
-            <ReceiptText className="h-4 w-4" aria-hidden />
-            View that invoice
-          </Link>
+  // A button offering to invoice $0.00 is a button that creates a draft nobody
+  // wanted, and a job with nothing billed has no invoices to list.
+  if (live.length === 0 && step.kind === "nothing") return null;
 
-          <form action={action}>
-            <input type="hidden" name="jobNumber" value={jobNumber} />
-            {/* The one thing that lets a second invoice be made. Nothing else
-                in the app sets it. */}
-            <input type="hidden" name="confirmDuplicate" value="yes" />
-            <SecondInvoiceButton />
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-   * Already billed, and nothing created on this screen since.
-   *
-   * "Generate invoice" is for a job that has none. Reopening a job that has one
-   * offered to generate it all over again, and the only way to the invoice was
-   * to press that and be told it existed. Now the way to it comes first.
-   *
-   * A second invoice is still one tap — a deposit and a balance are two for
-   * one job — and it goes straight through, because the invoice it would
-   * duplicate is the one on screen above it. The question the action asks
-   * before making another has been answered by looking.
-   */
-  if (invoice && !state.invoiceId) {
-    return (
-      <div className="mt-3 border-t border-line pt-3">
-        {state.error ? <p className="mb-2 text-xs text-critical">{state.error}</p> : null}
-
-        <Link
-          href={`/invoices/${invoice.invoiceId}`}
-          className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand text-sm font-semibold text-brand"
-        >
-          <ReceiptText className="h-4 w-4" aria-hidden />
-          Open invoice {invoice.number}
-        </Link>
-        <p className="mt-1.5 text-center text-xs text-ink-muted">
-          {formatCents(invoice.totalCents)} · {invoice.statusLabel}
-        </p>
-
-        <form action={action} className="mt-2">
-          <input type="hidden" name="jobNumber" value={jobNumber} />
-          <input type="hidden" name="confirmDuplicate" value="yes" />
-          <SecondInvoiceButton />
-        </form>
-      </div>
-    );
-  }
+  const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
 
   return (
-    <form action={action} className="mt-3 border-t border-line pt-3">
-      <input type="hidden" name="jobNumber" value={jobNumber} />
-
+    <div className="mt-3 border-t border-line pt-3">
       {state.error ? <p className="mb-2 text-xs text-critical">{state.error}</p> : null}
-      {state.notice ? <p className="mb-2 text-xs text-positive">{state.notice}</p> : null}
-
-      {state.invoiceId ? (
-        <Link
-          href={`/invoices/${state.invoiceId}`}
-          className="tap-target mb-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand text-sm font-bold text-on-brand"
-        >
-          <ReceiptText className="h-4 w-4" aria-hidden />
-          Open the invoice
-        </Link>
-      ) : (
-        <InvoiceButton />
-      )}
-
-      {state.invoiceId ? null : (
-        <p className="mt-1.5 text-center text-xs text-ink-muted">
-          Makes the PDF. Nothing is sent to the customer until you send it.
+      {state.notice ? (
+        <p className="mb-2 text-xs text-positive" role="status">
+          {state.notice}
         </p>
+      ) : null}
+
+      {live.length > 0 ? (
+        <ul className="space-y-2">
+          {live.map((invoice) => (
+            <li key={invoice.id}>
+              <Link
+                href={`/invoices/${invoice.id}`}
+                className="tap-target flex min-h-12 items-center justify-between gap-3 rounded-control border border-line px-3 text-sm"
+              >
+                <span className="inline-flex min-w-0 items-center gap-2 font-semibold text-brand">
+                  <ReceiptText className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="truncate">Open invoice {invoice.label}</span>
+                </span>
+                <span className="shrink-0 text-xs text-ink-muted">
+                  {formatCents(invoice.totalCents)} · {invoice.statusLabel}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {step.kind === "nothing" ? null : (
+        <form action={action} className={live.length > 0 ? "mt-3" : ""}>
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+
+          {step.kind === "add_to_draft" ? (
+            <p className="mb-2 text-xs leading-5 text-ink-muted">
+              {items(step.count)} not on an invoice yet. {`INV-${step.invoice.number}`} has not been sent, so
+              they go on it.
+            </p>
+          ) : step.kind === "bill_difference" ? (
+            <p className="mb-2 text-xs leading-5 text-ink-muted">
+              {items(step.count)} added after {`INV-${step.after.number}`}{" "}
+              {step.after.paidAt || step.after.status === "paid" ? "was paid" : "went to the customer"}. They go
+              on an invoice of their own; {`INV-${step.after.number}`} stays as it is.
+            </p>
+          ) : null}
+
+          <InvoiceButton
+            label={
+              step.kind === "add_to_draft"
+                ? `Add ${formatCents(step.cents)} to INV-${step.invoice.number}`
+                : step.kind === "bill_difference"
+                  ? `Invoice the ${formatCents(step.cents)} added since`
+                  : "Generate invoice"
+            }
+            pendingLabel={step.kind === "add_to_draft" ? "Adding…" : "Generating invoice…"}
+          />
+
+          {step.kind === "first" ? (
+            <p className="mt-1.5 text-center text-xs text-ink-muted">
+              Makes the PDF. Nothing is sent to the customer until you send it.
+            </p>
+          ) : null}
+        </form>
       )}
-    </form>
+    </div>
   );
 }
 
-function InvoiceButton() {
+function InvoiceButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
       disabled={pending}
-      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand text-sm font-semibold text-brand disabled:opacity-60"
+      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand px-3 text-sm font-semibold text-brand disabled:opacity-60"
     >
       {pending ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+        <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
       ) : (
-        <ReceiptText className="h-4 w-4" aria-hidden />
+        <ReceiptText className="h-4 w-4 shrink-0" aria-hidden />
       )}
       {/* The button says what it is doing while it does it. A slow response
-          that looks like nothing happened is what makes people tap twice, and
-          the second tap is what used to make a second invoice. The amount is
-          not repeated here: it is the total at the top of the panel, and
-          "Invoice $125.00" read as an invoice that already existed. */}
-      {pending ? "Generating invoice…" : "Generate invoice"}
+          that looks like nothing happened is what makes people tap twice. */}
+      {pending ? pendingLabel : label}
     </button>
   );
 }
 
-/** Deliberately quieter than the first one, and it says what it does. */
-function SecondInvoiceButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold disabled:opacity-60"
-    >
-      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-      {pending ? "Generating…" : "Generate another invoice"}
-    </button>
-  );
-}
-
-function LineRow({ jobNumber, line }: { jobNumber: string; line: JobLine }) {
+function LineRow({
+  jobNumber,
+  line,
+  invoices,
+}: {
+  jobNumber: string;
+  line: JobLine;
+  invoices: JobInvoiceSummary[];
+}) {
   const [state, action] = useActionState(removeJobLine, initialState);
   const Icon = line.kind === "labor" ? Clock : Package;
+
+  const billedOn = invoices.find((invoice) => invoice.id === line.invoiceId && invoiceIsLive(invoice));
+  // On an invoice the customer has been sent or has paid: part of that bill,
+  // so it stays. Said, rather than a remove button that refuses when tapped.
+  const locked = lineLockedBecause({ invoiceId: line.invoiceId ?? null }, invoices);
 
   return (
     <li className="flex items-center gap-2 border-b border-line py-2 last:border-b-0">
@@ -423,15 +405,23 @@ function LineRow({ jobNumber, line }: { jobNumber: string; line: JobLine }) {
           {/* Which of the two ways it went in. Removing one of these puts it
               back on the shelf; a part typed in was never on it. */}
           {line.inventoryItemId ? " · from inventory" : null}
+          {billedOn ? ` · ${billedOn.label}` : null}
           {state.error ? <span className="text-critical"> · {state.error}</span> : null}
         </span>
       </span>
       <span className="shrink-0 text-sm font-semibold">{formatCents(lineTotalCents(line))}</span>
-      <form action={action}>
-        <input type="hidden" name="jobNumber" value={jobNumber} />
-        <input type="hidden" name="lineId" value={line.id} />
-        <RemoveButton />
-      </form>
+      {locked ? (
+        <span title={locked} className="grid h-11 w-11 shrink-0 place-items-center text-ink-faint">
+          <Lock className="h-4 w-4" aria-hidden />
+          <span className="sr-only">{locked}</span>
+        </span>
+      ) : (
+        <form action={action}>
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <input type="hidden" name="lineId" value={line.id} />
+          <RemoveButton />
+        </form>
+      )}
     </li>
   );
 }
@@ -440,14 +430,14 @@ export function JobLinesPanel({
   jobNumber,
   lines,
   totals,
-  invoice = null,
+  invoices = [],
   stock,
 }: {
   jobNumber: string;
   lines: JobLine[];
   totals: JobLineTotals;
-  /** The job's newest invoice, so the panel can tell billed from not. */
-  invoice?: JobInvoiceSummary | null;
+  /** The job's invoices, newest first, so the panel can tell billed from not. */
+  invoices?: JobInvoiceSummary[];
   stock: StockOption[];
 }) {
   const [adding, setAdding] = useState<"labor" | "material" | null>(null);
@@ -470,7 +460,7 @@ export function JobLinesPanel({
         <>
           <ul className="mt-2">
             {lines.map((line) => (
-              <LineRow key={line.id} jobNumber={jobNumber} line={line} />
+              <LineRow key={line.id} jobNumber={jobNumber} line={line} invoices={invoices} />
             ))}
           </ul>
 
@@ -491,11 +481,7 @@ export function JobLinesPanel({
         </>
       )}
 
-      {/* Only once there is something to bill. A button offering to invoice
-          $0.00 is a button that creates a draft nobody wanted. */}
-      {totals.subtotalCents > 0 ? (
-        <RaiseInvoiceForm jobNumber={jobNumber} invoice={invoice} />
-      ) : null}
+      <BillingSection jobNumber={jobNumber} lines={lines} invoices={invoices} />
 
       {adding ? (
         <AddLineForm

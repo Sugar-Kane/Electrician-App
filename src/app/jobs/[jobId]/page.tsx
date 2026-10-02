@@ -27,9 +27,10 @@ import {
 } from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
-import { getJobInvoice, getJobLines, getStockOptions } from "@/lib/job-line-data";
+import { getJobInvoices, getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
+import { agreementChanges } from "@/lib/job-billing";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 
 /**
@@ -79,7 +80,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
     workflow,
     contracts,
     { lines, totals },
-    invoice,
+    invoices,
     followUps,
     stock,
     photos,
@@ -90,7 +91,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
     getJobWorkflow(jobId),
     getJobContracts(jobId),
     getJobLines(jobId),
-    getJobInvoice(jobId),
+    getJobInvoices(jobId),
     getJobFollowUps(jobId),
     getStockOptions(),
     getJobPhotos(jobId),
@@ -109,6 +110,26 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   // route-builder URL names the shop as the origin, which is right for planning
   // a day and wrong for a technician already standing somewhere else.
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`;
+
+  // What has been written on the job since the customer last signed, for the
+  // contract card to offer a change order for.
+  const changes = agreementChanges(
+    lines.map((line) => ({ createdAt: line.createdAt ?? "", quantity: line.quantity, unitPriceCents: line.unitPriceCents })),
+    contracts.map((contract) => ({
+      id: contract.id,
+      kind: contract.kind,
+      status: contract.status,
+      createdAt: contract.createdAt,
+      signedAt: contract.signedAt,
+    })),
+  );
+  const agreement = {
+    signed: Boolean(changes.signed),
+    addedCount: changes.added.length,
+    addedCents: changes.addedCents,
+    waiting: Boolean(changes.waiting),
+    behind: changes.behind,
+  };
 
   const canceled = controls?.canceled ?? job.status === "Canceled";
   const state = workflow?.state ?? "scheduled";
@@ -335,7 +356,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               jobNumber={controls.jobNumber}
               lines={lines}
               totals={totals}
-              invoice={invoice}
+              invoices={invoices}
               stock={stock}
             />
           </div>
@@ -435,7 +456,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
       {controls ? (
         <div className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <JobContract jobNumber={controls.jobNumber} contracts={contracts} customerName={job.contactName || job.customer} />
+          <JobContract
+            jobNumber={controls.jobNumber}
+            contracts={contracts}
+            customerName={job.contactName || job.customer}
+            changes={agreement}
+          />
         </div>
       ) : null}
 

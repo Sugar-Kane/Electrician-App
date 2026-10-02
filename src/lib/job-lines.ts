@@ -24,6 +24,10 @@ export type JobLine = {
   unitPriceCents: number;
   /** Set when the line was filled from stock the business already owns. */
   inventoryItemId?: string | null;
+  /** The invoice that billed it. Null until one does. */
+  invoiceId?: string | null;
+  /** When it was written, as an ISO timestamp — what a signed contract is measured against. */
+  createdAt?: string;
   notes?: string;
 };
 

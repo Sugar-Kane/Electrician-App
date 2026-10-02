@@ -1,6 +1,7 @@
 import { FieldPageShell } from "@/components/field-page-shell";
 import { NewJobForm } from "@/components/new-job-form";
 import { getCustomerChoices, getFollowUpStart } from "@/lib/job-data";
+import { getStockOptions } from "@/lib/job-line-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import { timezoneLabel } from "@/lib/timezones";
 
@@ -27,10 +28,11 @@ export default async function NewJobPage({
 }: {
   searchParams: Promise<{ from?: string }>;
 }) {
-  const [{ from }, timeZone, customers] = await Promise.all([
+  const [{ from }, timeZone, customers, stock] = await Promise.all([
     searchParams,
     getOrganizationTimezone(),
     getCustomerChoices(),
+    getStockOptions(),
   ]);
   const followUp = from ? await getFollowUpStart(from) : null;
 
@@ -49,6 +51,7 @@ export default async function NewJobPage({
         timeZone={timeZone}
         timeZoneLabel={timezoneLabel(timeZone)}
         customers={customers}
+        stock={stock}
         followUp={
           followUp
             ? {

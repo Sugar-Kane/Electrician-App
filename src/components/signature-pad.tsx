@@ -17,7 +17,7 @@ import { readPrintedName } from "@/lib/contract-signing";
  * is adopted with too.
  */
 
-function SubmitButton({ ready }: { ready: boolean }) {
+function SubmitButton({ ready, what }: { ready: boolean; what: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -26,7 +26,7 @@ function SubmitButton({ ready }: { ready: boolean }) {
       className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-bold text-on-brand disabled:opacity-50"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-      {pending ? "Signing…" : "Sign contract"}
+      {pending ? "Signing…" : `Sign ${what}`}
     </button>
   );
 }
@@ -35,6 +35,7 @@ export function SignaturePad({
   token,
   defaultName,
   onSigned,
+  kind = "agreement",
 }: {
   /**
    * The contract's public token, which is the whole of the signing authority.
@@ -47,7 +48,10 @@ export function SignaturePad({
   /** Pre-filled for convenience; the signer can and should correct it. */
   defaultName: string;
   onSigned?: () => void;
+  /** What is being signed, so a change order is never called the contract. */
+  kind?: "agreement" | "change_order";
 }) {
+  const what = kind === "change_order" ? "change order" : "contract";
   const [state, formAction] = useActionState(signContract.bind(null, token), { error: "" });
   const [name, setName] = useState(defaultName);
   const [consent, setConsent] = useState(false);
@@ -86,7 +90,7 @@ export function SignaturePad({
           className="mt-1 h-5 w-5 shrink-0"
         />
         <span>
-          I agree to sign this contract electronically, and that my electronic signature counts the
+          I agree to sign this {what} electronically, and that my electronic signature counts the
           same as signing it by hand.
         </span>
       </label>
@@ -97,7 +101,7 @@ export function SignaturePad({
         </p>
       ) : null}
 
-      <SubmitButton ready={ready} />
+      <SubmitButton ready={ready} what={what} />
     </form>
   );
 }

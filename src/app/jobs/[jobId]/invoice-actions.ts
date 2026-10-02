@@ -5,24 +5,37 @@ import { revalidatePath } from "next/cache";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { formatMoney } from "@/lib/invoice-messages";
 import { invoiceTotals } from "@/lib/invoice-math";
-import { jobLineTotals } from "@/lib/job-lines";
+import { invoiceIsLive, nextBillingStep } from "@/lib/job-billing";
+import {
+  claimUnbilledLines,
+  jobInvoices,
+  rebuildInvoiceDocument,
+  retotalInvoice,
+  type BilledJob,
+  type InvoiceFigures,
+} from "@/lib/job-billing-server";
 import { parseCostToCents } from "@/lib/new-job-input";
-import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Raising an invoice against a job that has already happened.
+ * Billing what a job has not billed yet.
  *
- * This is where the diagnostic credit matters. A customer pays a fee to have
- * somebody look at the problem; when the repair is invoiced afterwards, that
- * fee counts toward it. Previously nothing did this — the diagnostic was
- * collected and then the full repair was billed on top, which is a customer
- * paying twice for the first hour.
+ * Each line remembers the invoice that billed it, so this never bills a line
+ * twice and never bills the whole job again because one part was remembered
+ * late. Where the unbilled lines go is the rule in job-billing.ts:
  *
- * The credit is applied once however many invoices the work grows. A panel
- * job billed in three stages must not refund the diagnostic three times — and
- * neither must a diagnostic and the work order booked from it, which share one
- * fee between them (diagnostic-credit.ts).
+ * - no invoice yet: the first one, for everything;
+ * - the newest invoice is a draft the customer has never seen: onto that
+ *   draft, which is recounted and laid out again;
+ * - the newest invoice has gone out or been paid: a new invoice for the
+ *   difference. A sent or paid invoice's figures never move.
+ *
+ * This is also where the diagnostic credit matters. A customer pays a fee to
+ * have somebody look at the problem; when the repair is invoiced afterwards,
+ * that fee counts toward it — once, however many invoices the work grows to,
+ * and once across a diagnostic and the work order booked from it
+ * (diagnostic-credit.ts).
  */
 
 /**
@@ -30,20 +43,13 @@ import { createClient } from "@/lib/supabase/server";
  * the same tap arriving twice rather than a decision.
  *
  * Ten seconds is longer than any round trip and far shorter than the time it
- * takes somebody to decide they want a second invoice, walk through the
- * confirmation and press again.
+ * takes somebody to add a forgotten part and bill it.
  */
 const DOUBLE_TAP_SECONDS = 10;
 
 export type RaiseInvoiceState = {
   error: string;
   notice?: string;
-  /**
-   * Set when the job already has an invoice and the caller has not said they
-   * meant it. The screen asks before a second one is created rather than
-   * silently making one — a job billed twice is a customer who pays twice.
-   */
-  existing?: { number: string; totalLabel: string; invoiceId: string };
   /** Where to send somebody once there is a document to look at. */
   invoiceId?: string;
 };
@@ -70,9 +76,6 @@ export async function raiseInvoice(
   }
 
   const taxCents = parseCostToCents(String(formData.get("tax") ?? "")) ?? 0;
-  // Set by the second screen, after somebody has been shown the invoice that
-  // already exists and said they want another anyway.
-  const confirmed = String(formData.get("confirmDuplicate") ?? "") === "yes";
 
   const supabase = asFlexibleClient(await createClient());
 
@@ -98,106 +101,83 @@ export async function raiseInvoice(
 
   if (!job) return { error: "That job could not be found." };
 
-  const jobId = text((job as Record<string, unknown>).id);
+  const row = job as Record<string, unknown>;
+  const billedJob: BilledJob = {
+    id: text(row.id),
+    followUpOf: text(row.follow_up_of) || null,
+    diagnosticPaid: Boolean(row.diagnostic_paid),
+    diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+  };
 
-  let subtotalCents = typedCents ?? 0;
-
-  if (typedCents === null) {
-    const { data: lineRows } = await supabase
-      .from("job_line_items")
-      .select("kind, quantity, unit_price_cents")
-      .eq("organization_id", organizationId)
-      .eq("job_id", jobId);
-
-    subtotalCents = jobLineTotals(
-      (lineRows ?? []).map((row: Record<string, unknown>, index: number) => ({
-        id: String(index),
-        kind: row.kind === "labor" ? ("labor" as const) : ("material" as const),
-        description: "",
-        // numeric arrives as a string over PostgREST, so this would concatenate
-        // rather than multiply if it were passed through untouched.
-        quantity: Number(row.quantity ?? 0),
-        unit: "each",
-        unitPriceCents: Number(row.unit_price_cents ?? 0),
-      })),
-    ).subtotalCents;
-  }
-
-  if (subtotalCents <= 0) {
-    return {
-      error: typedCents === null
-        ? "This job has no work or parts on it yet, so there is nothing to bill."
-        : "An invoice needs an amount.",
-    };
-  }
-
-  // This job's own invoices decide whether to ask before making another. How
-  // much of the diagnostic is left is worked out further down, across every
-  // job that shares it.
-  const { data: existing } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, total_cents, created_at")
-    .eq("organization_id", organizationId)
-    .eq("job_id", jobId)
-    .order("created_at", { ascending: false });
-
-  const invoices = (existing ?? []) as Record<string, unknown>[];
+  const invoices = await jobInvoices(supabase, organizationId, billedJob.id);
   const latest = invoices[0];
 
-  if (latest) {
-    const createdAt = Date.parse(text(latest.created_at));
-    const secondsOld = Number.isFinite(createdAt) ? (Date.now() - createdAt) / 1000 : Infinity;
+  /*
+   * The accidental double tap: on a phone, a slow response looks like a button
+   * that did nothing, so people press it again. Billing by claiming lines
+   * already makes a second tap harmless — it finds nothing left to bill — so
+   * this only decides what it is told: an invoice raised seconds ago is that
+   * same tap, said as such rather than as "nothing to bill".
+   *
+   * Never a reason to refuse. A part remembered a moment after the invoice was
+   * raised is work to bill, however fresh the invoice is.
+   */
+  const createdAt = latest ? Date.parse(latest.createdAt) : NaN;
+  const justRaised = Number.isFinite(createdAt) && (Date.now() - createdAt) / 1000 < DOUBLE_TAP_SECONDS;
+  if (typedCents !== null && justRaised && latest) {
+    return { error: "", notice: "That invoice was already created.", invoiceId: latest.id };
+  }
 
-    /*
-     * Two guards, and they are different problems.
-     *
-     * The second is the accidental double tap: on a phone, a slow response
-     * looks like a button that did nothing, so people press it again. The
-     * screen disables the button, but a request already in flight when the
-     * second tap lands is not something the screen can catch — so an invoice
-     * raised seconds ago is treated as this same tap arriving twice and is
-     * refused outright, whatever the caller says.
-     */
-    if (secondsOld < DOUBLE_TAP_SECONDS) {
+  const { data: lineRows } = await supabase
+    .from("job_line_items")
+    .select("quantity, unit_price_cents, invoice_id")
+    .eq("organization_id", organizationId)
+    .eq("job_id", billedJob.id);
+
+  const lines = ((lineRows ?? []) as Record<string, unknown>[]).map((line) => ({
+    // numeric arrives as a string over PostgREST, so this would concatenate
+    // rather than multiply if it were passed through untouched.
+    quantity: Number(line.quantity ?? 0),
+    unitPriceCents: Number(line.unit_price_cents ?? 0),
+    invoiceId: text(line.invoice_id) || null,
+  }));
+
+  const step = nextBillingStep(lines, invoices);
+  const voidInvoiceIds = invoices.filter((invoice) => !invoiceIsLive(invoice)).map((invoice) => invoice.id);
+
+  if (typedCents === null) {
+    if (step.kind === "nothing") {
+      if (justRaised && latest) {
+        return { error: "", notice: "That invoice was already created.", invoiceId: latest.id };
+      }
       return {
-        error: "",
-        notice: "That invoice was already created.",
-        invoiceId: text(latest.id),
+        error:
+          lines.length === 0
+            ? "This job has no work or parts on it yet, so there is nothing to bill."
+            : "Everything on this job is already on an invoice.",
       };
     }
 
-    // The other is somebody genuinely invoicing a job twice, which is a real
-    // thing to do — a deposit and a balance — and is asked about rather than
-    // blocked or done silently.
-    if (!confirmed) {
-      return {
-        error: "",
-        existing: {
-          number: String(latest.invoice_number ?? ""),
-          totalLabel: formatMoney(Number(latest.total_cents ?? 0) / 100),
-          invoiceId: text(latest.id),
-        },
-      };
+    if (step.kind === "add_to_draft") {
+      const draft = invoices.find((invoice) => invoice.id === step.invoice.id)!;
+      return addToDraft({ supabase, organizationId, userId, jobNumber, job: billedJob, draft, voidInvoiceIds });
     }
   }
 
-  // Whatever of the diagnostic has not come off yet — this job's own, or, for
-  // a work order booked from one, the diagnostic's — counted across that
-  // diagnostic and everything booked from it.
-  const diagnosticPaidCents = await diagnosticCreditLeft(supabase, organizationId, {
-    id: jobId,
-    followUpOf: text((job as Record<string, unknown>).follow_up_of) || null,
-    diagnosticPaid: Boolean((job as Record<string, unknown>).diagnostic_paid),
-    diagnosticFeeCents: Number((job as Record<string, unknown>).diagnostic_fee_cents ?? 0),
-  });
+  const expectedCents = typedCents ?? (step.kind === "nothing" ? 0 : step.cents);
+  if (expectedCents <= 0) return { error: "An invoice needs an amount." };
 
-  const totals = invoiceTotals({ subtotalCents, taxCents, diagnosticPaidCents });
+  const totals = invoiceTotals({
+    subtotalCents: expectedCents,
+    taxCents,
+    diagnosticPaidCents: await diagnosticCreditLeft(supabase, organizationId, billedJob),
+  });
 
   const { data: created, error } = await supabase
     .from("invoices")
     .insert({
       organization_id: organizationId,
-      job_id: jobId,
+      job_id: billedJob.id,
       status: "draft",
       subtotal_cents: totals.subtotalCents,
       diagnostic_credit_cents: totals.diagnosticCreditCents,
@@ -206,59 +186,137 @@ export async function raiseInvoice(
       balance_due_cents: totals.totalCents,
       stripe_application_fee_cents: totals.applicationFeeCents,
     })
-    .select("id")
+    .select("id, invoice_number")
     .maybeSingle();
 
   if (error || !created) return { error: "That invoice could not be saved." };
 
   const invoiceId = text(created.id);
+  const number = String(created.invoice_number ?? "");
+
+  // The lines this invoice bills: everything unbilled, claimed in one go. A
+  // typed amount claims them too — it is the price of those lines, and leaving
+  // them unbilled would offer to bill them a second time.
+  const claimed = await claimUnbilledLines(supabase, {
+    organizationId,
+    jobId: billedJob.id,
+    invoiceId,
+    voidInvoiceIds,
+  });
+
+  let totalCents = totals.totalCents;
+  if (typedCents === null && claimed && claimed.cents !== expectedCents) {
+    // Another tap or another phone billed some of them in between. What this
+    // invoice actually holds is what it bills.
+    if (claimed.cents <= 0) {
+      await supabase.from("invoices").delete().eq("id", invoiceId).eq("organization_id", organizationId);
+      return { error: "", notice: "Those lines were already billed." };
+    }
+    const recounted = await retotalInvoice(supabase, {
+      organizationId,
+      invoice: { id: invoiceId, taxCents: totals.taxCents, diagnosticCreditCents: totals.diagnosticCreditCents },
+      job: billedJob,
+      subtotalCents: claimed.cents,
+    });
+    if (recounted) totalCents = recounted.totalCents;
+  }
 
   // The document is made now rather than when somebody asks to look at it, so
   // the invoice the customer is sent and the one on screen are the same file
   // rather than two renders that could drift. A failure here is reported and
   // does not undo the invoice: money owed is a fact whether or not there is a
   // nice copy of it yet.
-  const { generateInvoicePdf } = await import("@/lib/pdf/invoice-data");
-  const document = await generateInvoicePdf({
-    database: supabase,
-    organizationId,
-    invoiceId,
-    timeZone: await organizationTimeZone(supabase, organizationId),
-    uploadedBy: userId,
-  });
+  const document = await rebuildInvoiceDocument(supabase, { organizationId, invoiceId, uploadedBy: userId });
 
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/invoices");
+  revalidatePath("/");
+
+  if (!document) {
+    return {
+      error: "",
+      invoiceId,
+      notice: `Invoice for ${formatMoney(totalCents / 100)} created, but the PDF could not be produced. Open it to try again.`,
+    };
+  }
+
+  if (step.kind === "bill_difference" && typedCents === null) {
+    return {
+      error: "",
+      invoiceId,
+      notice: `INV-${number} for ${formatMoney(totalCents / 100)} ready — what was added after INV-${step.after.number}.`,
+    };
+  }
 
   const credited = totals.diagnosticCreditCents > 0
     ? ` The ${formatMoney(totals.diagnosticCreditCents / 100)} diagnostic they already paid has been taken off.`
     : "";
 
-  if (document.error) {
-    return {
-      error: "",
-      invoiceId,
-      notice: `Invoice for ${formatMoney(totals.totalCents / 100)} created, but the PDF could not be produced. Open it to try again.`,
-    };
-  }
-
   return {
     error: "",
     invoiceId,
-    notice: `Invoice for ${formatMoney(totals.totalCents / 100)} ready.${credited}`,
+    notice: `Invoice for ${formatMoney(totalCents / 100)} ready.${credited}`,
   };
 }
 
-/** The business's own clock, which every date on the document is read in. */
-async function organizationTimeZone(
-  supabase: ReturnType<typeof asFlexibleClient>,
-  organizationId: string,
-): Promise<string> {
-  const { data } = await supabase
-    .from("organizations")
-    .select("timezone")
-    .eq("id", organizationId)
-    .maybeSingle();
+/**
+ * Put the unbilled lines on a draft nobody has seen, and recount it.
+ *
+ * The subtotal moves by what the added lines come to rather than being summed
+ * again from scratch, so a price typed onto the draft when it was raised is
+ * kept and the added parts go on top of it.
+ */
+async function addToDraft(input: {
+  supabase: FlexibleSupabaseClient;
+  organizationId: string;
+  userId: string;
+  jobNumber: string;
+  job: BilledJob;
+  draft: InvoiceFigures;
+  voidInvoiceIds: string[];
+}): Promise<RaiseInvoiceState> {
+  const { supabase, organizationId, draft } = input;
 
-  return text(data?.timezone) || "America/Los_Angeles";
+  const claimed = await claimUnbilledLines(supabase, {
+    organizationId,
+    jobId: input.job.id,
+    invoiceId: draft.id,
+    voidInvoiceIds: input.voidInvoiceIds,
+  });
+
+  if (!claimed) return { error: `Those lines could not be added to INV-${draft.number}.` };
+  if (claimed.count === 0) {
+    return { error: "", notice: `Everything is already on INV-${draft.number}.`, invoiceId: draft.id };
+  }
+
+  const recounted = await retotalInvoice(supabase, {
+    organizationId,
+    invoice: draft,
+    job: input.job,
+    subtotalCents: draft.subtotalCents + claimed.cents,
+  });
+
+  revalidatePath(`/jobs/${input.jobNumber}`);
+  revalidatePath("/invoices");
+  revalidatePath("/");
+
+  if (!recounted) {
+    return {
+      error: `The lines are on INV-${draft.number}, but its total could not be updated. Open the invoice before sending it.`,
+      invoiceId: draft.id,
+    };
+  }
+
+  const document = await rebuildInvoiceDocument(supabase, {
+    organizationId,
+    invoiceId: draft.id,
+    uploadedBy: input.userId,
+  });
+
+  const added = `Added ${formatMoney(claimed.cents / 100)} to INV-${draft.number}, which now comes to ${formatMoney(recounted.totalCents / 100)}.`;
+  return {
+    error: "",
+    invoiceId: draft.id,
+    notice: document ? added : `${added} The PDF could not be rebuilt — open the invoice to try again.`,
+  };
 }

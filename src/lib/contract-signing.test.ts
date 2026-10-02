@@ -306,3 +306,15 @@ test("a signer's title is one tidy line, kept short", () => {
   assert.equal(readSignerTitle(undefined), "");
   assert.equal(readSignerTitle("x".repeat(200)).length, 80);
 });
+
+test("a change order's link says it is a change order, not the contract", () => {
+  const link = "https://example.test/contract/abc";
+  assert.equal(
+    signingLinkMessage({ businessName: "Test Electric Co", jobNumber: 15, link, kind: "change_order" }),
+    `Test Electric Co: here is a change order for job #15 to read and sign: ${link}`,
+  );
+  assert.equal(
+    signingLinkMessage({ businessName: "Test Electric Co", jobNumber: 15, link, kind: "agreement" }),
+    `Test Electric Co: here is your contract for job #15 to read and sign: ${link}`,
+  );
+});
