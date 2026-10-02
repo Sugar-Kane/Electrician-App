@@ -41,10 +41,32 @@ export type GeocodePayload = {
   error_message?: string;
   results?: {
     formatted_address?: string;
+    /** What the match is: "street_address", or an area such as "locality". */
+    types?: string[];
     geometry?: { location?: { lat?: number; lng?: number } };
     address_components?: { long_name?: string; short_name?: string; types?: string[] }[];
   }[];
 };
+
+/**
+ * Matches somebody can drive to.
+ *
+ * Anything else Google answers with is an area — a city, a county, a whole
+ * state — and the point it gives is the area's middle. Production's first
+ * working lookup placed a job saved as "Midland, CA" with a Texas ZIP at the
+ * centre of California, 150 miles from any of the business's work, because
+ * Google could match nothing finer than the state.
+ */
+const STREET_LEVEL = new Set([
+  "street_address",
+  "premise",
+  "subpremise",
+  "route",
+  "intersection",
+  "establishment",
+  "point_of_interest",
+  "plus_code",
+]);
 
 /** An address Google answered for but could not put on the map. */
 export type UnplacedAddress = { id: string; address: string; reason: string };
@@ -112,6 +134,7 @@ function googleWords(payload: GeocodePayload, httpStatus?: number): string {
  * placed: Google answering "100 W Wall St, Midland, CA, 79701" with the
  * Midland in Texas would put a stop a thousand miles from the rest of the day
  * and draw the route to it, and the job's address is what needs fixing.
+ * Neither is a match that is only an area (STREET_LEVEL above).
  */
 export function readGeocodeAnswer(
   payload: GeocodePayload | null | undefined,
@@ -149,6 +172,18 @@ export function readGeocodeAnswer(
         reason:
           `Google's closest match is in ${stateName(foundCode)}, but the job says ${stateName(saved)}` +
           `${formatted ? ` (${formatted})` : ""}. Check the address on the job.`,
+      };
+    }
+
+    // An area's middle is not the address. A result that says nothing about
+    // what it is keeps the benefit of the doubt.
+    const types = best.types ?? [];
+    if (types.length > 0 && !types.some((type) => STREET_LEVEL.has(type))) {
+      return {
+        kind: "missed",
+        reason:
+          `Google could only find ${formatted || "the area"} as a whole, not this street address. ` +
+          "Check the address on the job.",
       };
     }
 
