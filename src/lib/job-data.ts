@@ -9,6 +9,7 @@ import type { DateHours } from "@/lib/date-hours";
 import { formatDayLabel, isoDateInZone, shiftDays, todayInZone, workWeekStart } from "@/lib/calendar";
 import type { ActivityRow } from "@/lib/activity-timeline";
 import { hasCoordinates } from "@/lib/coordinates";
+import { NOTHING_TO_PLACE, type PlacingReport } from "@/lib/geocode-answer";
 import { unsignableBecause } from "@/lib/contract-signing";
 import type { CrewBusiness, CrewMember, CrewTimeOff } from "@/lib/crew-week";
 import type { DayHours } from "@/lib/electrician-hours";
@@ -925,12 +926,9 @@ function blackoutLabel(startsAt: string, endsAt: string, timeZone: string): stri
  * free when there is nothing to do, which is the usual case after the first
  * time an address is seen.
  */
-export async function placeTodaysStops(): Promise<{
-  placed: number;
-  unplaced: { address: string; reason: string }[];
-}> {
+export async function placeTodaysStops(): Promise<PlacingReport> {
   const context = await resolveContext();
-  if (!context) return { placed: 0, unplaced: [] };
+  if (!context) return NOTHING_TO_PLACE;
 
   const { ensurePropertiesGeocoded } = await import("@/lib/geocoding");
   const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
