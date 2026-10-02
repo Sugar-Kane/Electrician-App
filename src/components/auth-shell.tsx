@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { CalendarCheck2, Check, PhoneCall, ReceiptText, ShieldCheck, Zap } from "lucide-react";
+import { CalendarCheck2, Check, FileSignature, ReceiptText, ShieldCheck, Zap } from "lucide-react";
 
-// The same three the front page leads with, so the page that says what Volteira
-// does and the page you sign in on do not tell two different stories.
+// The front page's story in four lines — one job, carried from the price to
+// the bill — so the page that says what Volteira does and the page you sign in
+// on do not tell two different stories.
 const benefits = [
-  { icon: PhoneCall, label: "An AI receptionist that answers every call" },
-  { icon: CalendarCheck2, label: "Diagnostics and work orders booked into your schedule" },
-  { icon: ReceiptText, label: "Invoices built from the work on each job" },
+  { icon: ReceiptText, label: "Price a job once: the contract and invoice use the same lines" },
+  { icon: FileSignature, label: "Contracts customers sign on their phone" },
+  { icon: CalendarCheck2, label: "Schedule, materials, photos and notes on every job" },
   { icon: ShieldCheck, label: "Each company’s data kept separate and secure" },
 ];
 

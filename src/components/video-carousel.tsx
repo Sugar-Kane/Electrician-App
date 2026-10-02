@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import { ChevronLeft, ChevronRight, Clapperboard, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 
 import { durationLabel, frameRatio, type SiteVideo } from "@/lib/site-videos";
 
@@ -18,6 +18,9 @@ import { durationLabel, frameRatio, type SiteVideo } from "@/lib/site-videos";
  *
  * It never moves on its own. A video that is playing keeps playing until the
  * visitor moves on, and moving on stops it.
+ *
+ * With no videos it draws nothing: the front page shows the sample job in their
+ * place rather than a box promising videos to come.
  */
 export function VideoCarousel({ videos }: { videos: SiteVideo[] }) {
   const [index, setIndex] = useState(0);
@@ -26,7 +29,7 @@ export function VideoCarousel({ videos }: { videos: SiteVideo[] }) {
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
 
-  if (videos.length === 0) return <VideosComingSoon />;
+  if (videos.length === 0) return null;
 
   const count = videos.length;
   const at = Math.min(index, count - 1);
@@ -206,28 +209,5 @@ export function VideoCarousel({ videos }: { videos: SiteVideo[] }) {
         </ul>
       ) : null}
     </section>
-  );
-}
-
-/**
- * The space kept for the videos before there are any.
- *
- * Shaped like the player it will become, so adding the first video changes what
- * is in the frame rather than the layout of the page around it.
- */
-function VideosComingSoon() {
-  return (
-    <div className="relative grid aspect-video place-items-center overflow-hidden rounded-panel border border-dashed border-line-strong bg-surface px-6 text-center">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,191,24,.10),transparent_45%),radial-gradient(circle_at_80%_90%,rgba(25,105,145,.22),transparent_50%)]" />
-      <div className="relative max-w-md">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-line bg-white/5 text-brand">
-          <Clapperboard className="h-6 w-6" aria-hidden />
-        </span>
-        <p className="mt-4 text-lg font-semibold text-ink">Walkthrough videos are on the way</p>
-        <p className="mt-2 text-sm leading-6 text-ink-muted">
-          Short videos of Volteira on a real day: a call answered, a diagnostic booked, an invoice sent.
-        </p>
-      </div>
-    </div>
   );
 }
