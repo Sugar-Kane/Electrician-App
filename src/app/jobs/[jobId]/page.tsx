@@ -30,7 +30,7 @@ import { getJobConversation, getMessagingContext } from "@/lib/messaging";
 import { getJobInvoice, getJobLines, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
-import { showsWorkspace } from "@/lib/job-workflow";
+import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 
 /**
  * One job, in the order somebody standing outside a house needs it.
@@ -113,6 +113,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
   const canceled = controls?.canceled ?? job.status === "Canceled";
   const state = workflow?.state ?? "scheduled";
   const workspaceOpen = showsWorkspace(state) && !canceled;
+  // Hours, parts and the invoice: with the workspace, and on a work order from
+  // the moment it is booked, without starting it or texting anybody.
+  const workAndMaterialsOpen =
+    showsWorkAndMaterials(state, job.kindOfWork === "Work order") && !canceled;
 
   /*
    * Booking the work a diagnostic found.
@@ -320,9 +324,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
         It appears on arrival. Before that none of it can be filled in from a
         van, and four empty forms between the address and the next step is
-        exactly the pile this redesign is against.
+        exactly the pile this redesign is against. The exception is a work
+        order's hours and parts, which are known before the visit or typed in
+        after it: those are there from the start, on their own until arrival.
       */}
-      {controls && workspaceOpen ? (
+      {controls && workAndMaterialsOpen ? (
         <section className="mt-3 divide-y divide-line rounded-panel border border-line bg-surface px-4 sm:px-5">
           <div className="py-4">
             <JobLinesPanel
@@ -333,12 +339,16 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               stock={stock}
             />
           </div>
-          <div className="py-4">
-            <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
-          </div>
-          <div className="py-4">
-            <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
-          </div>
+          {workspaceOpen ? (
+            <>
+              <div className="py-4">
+                <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
+              </div>
+              <div className="py-4">
+                <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
+              </div>
+            </>
+          ) : null}
         </section>
       ) : null}
 

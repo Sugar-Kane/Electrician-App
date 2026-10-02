@@ -219,6 +219,24 @@ export function showsWorkspace(state: WorkflowState): boolean {
 }
 
 /**
+ * Whether hours, parts and the invoice are on screen: with the workspace, and
+ * on a work order from the moment it is booked.
+ *
+ * A work order is agreed work, and its hours and parts are often known before
+ * anybody drives out — or typed in at the office after the visit by somebody
+ * who never tapped Start. Hidden until arrival, the only way to them was
+ * "Already on site? Start work", which texts the customer that somebody has
+ * just arrived.
+ *
+ * A diagnostic keeps to the workspace: what it bills for is found on site.
+ * Nothing is added to a canceled job, of either kind.
+ */
+export function showsWorkAndMaterials(state: WorkflowState, workOrder: boolean): boolean {
+  if (state === "canceled") return false;
+  return showsWorkspace(state) || workOrder;
+}
+
+/**
  * Whether arrival is still being watched for.
  *
  * The only state that runs the device's location, and the reason this is a
