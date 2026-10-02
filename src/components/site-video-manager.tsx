@@ -495,7 +495,7 @@ export function SiteVideoManager({ videos, connected }: { videos: SiteVideo[]; c
         </div>
         {videos.length === 0 ? (
           <p className="mt-3 rounded-panel border border-dashed border-line-strong p-5 text-sm leading-6 text-ink-muted">
-            No videos yet. Until there is one, the front page says walkthrough videos are on the way.
+            No videos yet. Until there is one, the front page shows the sample job in their place.
           </p>
         ) : (
           <ol className="mt-3 space-y-3">

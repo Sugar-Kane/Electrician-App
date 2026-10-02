@@ -35,7 +35,8 @@ A field-first business operating system for small electrical contractors. The in
 - Private Supabase document metadata and Storage policies isolated by organization
 - Google Drive folder mirroring with narrow per-file OAuth access and encrypted refresh-token storage
 - Top-right user menu and account center for profiles, preferences, Premium billing, security, and Square information
-- Public front page for signed-out visitors: the headline features, and walkthrough videos that Volteira support uploads from the console to Vercel Blob
+- Public front page for signed-out visitors: one job from estimate to paid, and walkthrough videos that Volteira support uploads from the console to Vercel Blob
+- Public demo at `/demo`: a sample job worked through every stage on the app's own screens, with nothing saved
 
 ## Stack
 
@@ -75,7 +76,7 @@ A field-first business operating system for small electrical contractors. The in
    npm run dev
    ```
 
-Signed out, `/` is the public front page and every page of the business itself asks the visitor to sign in. A signed-in user with no business yet is sent to onboarding, and one who belongs to an organization gets the dashboard, reading that organization's records from Supabase. Only without Supabase configured at all does the dashboard show realistic pilot data, so the app can be explored with nothing set up.
+Signed out, `/` is the public front page, `/demo` is a sample job anybody can work through, and every page of the business itself asks the visitor to sign in. A signed-in user with no business yet is sent to onboarding, and one who belongs to an organization gets the dashboard, reading that organization's records from Supabase. Only without Supabase configured at all does the dashboard show realistic pilot data, so the app can be explored with nothing set up.
 
 ## Pilot integration notes
 

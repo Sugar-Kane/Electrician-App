@@ -54,5 +54,22 @@ export async function updateSession(request: NextRequest) {
     return redirect;
   }
 
+  /*
+   * Nobody signed in, asking for the home page: the front page, built ahead
+   * of time (app/welcome/page.tsx), under the same address.
+   *
+   * The home page itself is the dashboard for anybody signed in, so it is
+   * drawn per request, behind the app's loading skeleton. A visitor has
+   * nothing per request about them, and was being shown that skeleton for a
+   * moment before the front page arrived.
+   */
+  if (!data?.claims && fetchingPage && request.nextUrl.pathname === "/") {
+    const front = request.nextUrl.clone();
+    front.pathname = "/welcome";
+    const rewrite = NextResponse.rewrite(front);
+    response.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie));
+    return rewrite;
+  }
+
   return response;
 }

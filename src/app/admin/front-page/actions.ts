@@ -41,6 +41,8 @@ const NOT_ADMIN = "Only Volteira support can change the front page.";
 
 function refresh() {
   revalidatePath("/");
+  // The front page visitors are actually served, built ahead of time.
+  revalidatePath("/welcome");
   revalidatePath("/admin/front-page");
 }
 

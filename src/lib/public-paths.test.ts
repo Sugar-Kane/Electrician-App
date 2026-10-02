@@ -27,6 +27,16 @@ test("the home page opens for anybody, and decides for itself what to show", () 
   assert.equal(isPublicPath("/jobs"), false);
 });
 
+test("the demo and the prebuilt front page open without an account, and only those pages", () => {
+  assert.equal(isPublicPath("/demo"), true);
+  assert.equal(isPublicPath("/demo/"), true);
+  assert.equal(isPublicPath("/welcome"), true);
+  assert.equal(isPublicPath("/welcome/anything"), false);
+  // A single page, not a section: nothing else may hide under its name.
+  assert.equal(isPublicPath("/demo/anything"), false);
+  assert.equal(isPublicPath("/demonstration"), false);
+});
+
 test("a public word inside a private page does not open it", () => {
   // "/booking-requests" is the business's inbox, not the customer's booking page.
   assert.equal(isPublicPath("/booking-requests"), false);

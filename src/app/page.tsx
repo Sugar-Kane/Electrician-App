@@ -28,10 +28,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
   // A visitor gets the front page, which says what Volteira does and how to
   // get in. Somebody signed in can see it too, from the support console's
   // link, with a way back to their own dashboard.
+  //
+  // Most visitors never reach this: the proxy serves them the same page built
+  // ahead of time (app/welcome). This is for that preview, and for a session
+  // the proxy still saw that has since gone.
   const visitor = await signedOut();
   const { view } = await searchParams;
   if (visitor || view === "front") {
-    return <FrontPage videos={await listSiteVideos()} preview={!visitor} />;
+    // Handed over unwaited, so the page is drawn at once and the videos arrive
+    // into their own section.
+    return <FrontPage videos={listSiteVideos()} preview={!visitor} />;
   }
 
   const [snapshot, { jobs }, { invoices }, stock, bookings, unbilled] = await Promise.all([

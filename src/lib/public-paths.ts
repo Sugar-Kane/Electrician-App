@@ -10,10 +10,10 @@
  * had not worked.
  *
  * The public pages are the ones a customer or a stranger is sent to: the front
- * page, booking, paying the booking deposit, signing a contract, accepting an
- * invitation, the journal, a business's terms and privacy pages, signing in and
- * up, and the routes Twilio, Stripe and Google call. Everything else is the
- * business's own work and needs somebody signed in to see it.
+ * page, the demo, booking, paying the booking deposit, signing a contract,
+ * accepting an invitation, the journal, a business's terms and privacy pages,
+ * signing in and up, and the routes Twilio, Stripe and Google call. Everything
+ * else is the business's own work and needs somebody signed in to see it.
  *
  * Import-free, so the rule can be tested without a request.
  */
@@ -26,8 +26,23 @@ const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "invite",
  *
  * The home page is one of them, because it is two pages: the front page for a
  * visitor, and the dashboard for somebody signed in. The page decides which.
+ *
+ * The demo is another: a sample job a visitor can walk through before they
+ * have an account, which is the whole point of it. It reads and writes
+ * nothing, so there is nothing behind it to protect. So is /welcome, the front
+ * page built ahead of time, which the proxy serves to a visitor asking for `/`.
  */
-const PUBLIC_PAGES = new Set(["/", "/login", "/signup", "/robots.txt", "/sitemap.xml", "/icon.svg", "/favicon.ico"]);
+const PUBLIC_PAGES = new Set([
+  "/",
+  "/welcome",
+  "/demo",
+  "/login",
+  "/signup",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/icon.svg",
+  "/favicon.ico",
+]);
 
 export function isPublicPath(pathname: string): boolean {
   const path = (pathname || "/").replace(/\/+$/, "") || "/";

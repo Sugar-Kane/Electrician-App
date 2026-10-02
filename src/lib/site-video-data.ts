@@ -17,8 +17,9 @@ function number(value: unknown): number {
  *
  * Read as nobody in particular, because the front page is shown to visitors and
  * anybody may read these rows. Empty when there are none yet, or when they
- * cannot be read: the front page then shows the videos as coming soon, which is
- * better than not showing the front page.
+ * cannot be read: the front page then shows the sample job in their place,
+ * which is better than not showing the front page. Never rejects, because the
+ * front page streams it into a section of its own.
  */
 export async function listSiteVideos(): Promise<SiteVideo[]> {
   try {
