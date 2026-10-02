@@ -38,11 +38,6 @@ export default async function JobSettingsPage({ params }: { params: Promise<{ jo
     >
       {controls ? (
         <JobControls
-          // Remounted when the status changes, so the form's uncontrolled
-          // select picks up the new defaultValue. Without this, advancing the
-          // job on the field screen and then saving an arrival window here
-          // submits the stale status and silently reverts it.
-          key={controls.status}
           jobNumber={controls.jobNumber}
           status={controls.status}
           startLocal={controls.startLocal}

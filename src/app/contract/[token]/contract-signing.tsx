@@ -12,8 +12,16 @@ import { SignaturePad } from "@/components/signature-pad";
  * for the "Signed" confirmation without the customer having to reload and
  * wonder whether it worked.
  */
-export function ContractSigning({ token, defaultName }: { token: string; defaultName: string }) {
+export function ContractSigning({
+  token,
+  defaultName,
+  kind,
+}: {
+  token: string;
+  defaultName: string;
+  kind?: "agreement" | "change_order";
+}) {
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
-  return <SignaturePad token={token} defaultName={defaultName} onSigned={refresh} />;
+  return <SignaturePad token={token} defaultName={defaultName} onSigned={refresh} kind={kind} />;
 }

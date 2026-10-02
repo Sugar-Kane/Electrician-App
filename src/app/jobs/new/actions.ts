@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
+import { claimUnbilledLines, takeFromStock } from "@/lib/job-billing-server";
 import {
   kindOfWork,
   parseNewJob,
@@ -345,19 +346,47 @@ export async function createJob(
    * retyped on the job page, where it also lives.
    */
   if (job.lines.length > 0) {
-    const { error: lineError } = await supabase.from("job_line_items").insert(
-      job.lines.map((line) => ({
-        organization_id: organizationId,
-        job_id: text(createdJob.id),
-        kind: line.kind,
-        description: line.description,
-        quantity: line.quantity,
-        unit: line.unit,
-        unit_price_cents: line.unitPriceCents,
-      })),
-    );
+    const { data: savedLines, error: lineError } = await supabase
+      .from("job_line_items")
+      .insert(
+        job.lines.map((line) => ({
+          organization_id: organizationId,
+          job_id: text(createdJob.id),
+          kind: line.kind,
+          description: line.description,
+          quantity: line.quantity,
+          unit: line.unit,
+          unit_price_cents: line.unitPriceCents,
+          // Only when it was picked from the stock list. A part typed by hand
+          // was bought for this job, not taken off the shelf.
+          inventory_item_id: line.inventoryItemId ?? null,
+        })),
+      )
+      .select("id, inventory_item_id, quantity");
 
     if (lineError) console.error("new job: the work order lines could not be saved", lineError);
+
+    /*
+     * Parts picked from inventory come off the count now, the same as a part
+     * written on the job page: the count has to say what is spoken for, or the
+     * next job is booked against breakers already promised to this one. If
+     * the job is canceled they go back.
+     */
+    const fromStock = ((savedLines ?? []) as Record<string, unknown>[])
+      .filter((line) => text(line.inventory_item_id))
+      .map((line) => ({
+        lineId: text(line.id),
+        itemId: text(line.inventory_item_id),
+        quantity: Number(line.quantity ?? 0),
+      }));
+    if (fromStock.length > 0) {
+      const moved = await takeFromStock(supabase, {
+        organizationId,
+        jobId: text(createdJob.id),
+        lines: fromStock,
+      });
+      if (!moved) console.error("new job: stock was not taken off the shelf", { jobId: createdJob.id });
+    }
   }
 
   /*
@@ -385,19 +414,35 @@ export async function createJob(
       : 0;
     const totals = invoiceTotals({ subtotalCents, diagnosticPaidCents });
 
-    await supabase.from("invoices").insert({
-      organization_id: organizationId,
-      job_id: text(createdJob.id),
-      // Draft, not sent: raising an invoice and telling the customer about it
-      // are two decisions, and the second one has its own button.
-      status: "draft",
-      subtotal_cents: totals.subtotalCents,
-      diagnostic_credit_cents: totals.diagnosticCreditCents,
-      tax_cents: totals.taxCents,
-      total_cents: totals.totalCents,
-      balance_due_cents: totals.totalCents,
-      stripe_application_fee_cents: totals.applicationFeeCents,
-    });
+    const { data: invoice } = await supabase
+      .from("invoices")
+      .insert({
+        organization_id: organizationId,
+        job_id: text(createdJob.id),
+        // Draft, not sent: raising an invoice and telling the customer about it
+        // are two decisions, and the second one has its own button.
+        status: "draft",
+        subtotal_cents: totals.subtotalCents,
+        diagnostic_credit_cents: totals.diagnosticCreditCents,
+        tax_cents: totals.taxCents,
+        total_cents: totals.totalCents,
+        balance_due_cents: totals.totalCents,
+        stripe_application_fee_cents: totals.applicationFeeCents,
+      })
+      .select("id")
+      .maybeSingle();
+
+    // The lines this invoice bills, so a part added on the job page later goes
+    // onto this draft — or onto an invoice of its own once this one is sent —
+    // rather than billing the work order a second time.
+    if (invoice?.id) {
+      await claimUnbilledLines(supabase, {
+        organizationId,
+        jobId: text(createdJob.id),
+        invoiceId: text(invoice.id),
+        voidInvoiceIds: [],
+      });
+    }
   }
 
   revalidatePath("/schedule");

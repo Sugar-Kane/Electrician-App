@@ -4,8 +4,11 @@ import { useState } from "react";
 import { LoaderCircle, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { estimateWorkOrder } from "@/app/jobs/new/estimate-actions";
+import { StockPicker } from "@/components/stock-picker";
 import { Field, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
+import type { StockOption } from "@/lib/job-line-data";
+import { stockShortfall } from "@/lib/stock-choices";
 import { centsToInput, keepMoneyCharacters, keepQuantityCharacters } from "@/lib/money-input";
 import { parseCostToCents, MAX_WORK_ORDER_LINES } from "@/lib/new-job-input";
 
@@ -34,6 +37,8 @@ type Line = {
   quantity: string;
   unit: string;
   price: string;
+  /** The stock item a part was picked from. Saving the job takes it off the count. */
+  inventoryItemId?: string;
 };
 
 const KINDS = [
@@ -66,10 +71,13 @@ export function WorkOrderLines({
   /** How to read the job, so the draft is about this job and not about jobs. */
   describedBy,
   defaultValue = "",
+  stock = [],
 }: {
   describedBy: () => string;
   /** The JSON posted last time, when a rejected save is being restored. */
   defaultValue?: string;
+  /** What is on the shelf. A part can be picked from it, or typed as ever. */
+  stock?: readonly StockOption[];
 }) {
   const [lines, setLines] = useState<Line[]>(() => restore(defaultValue));
   const [drafting, setDrafting] = useState(false);
@@ -129,6 +137,9 @@ export function WorkOrderLines({
         quantity: Number(line.quantity) || 0,
         unit: line.unit,
         unitPriceCents: parseCostToCents(line.price) ?? 0,
+        // Only a part, and only when it was picked. Undefined drops out of the
+        // JSON, which is how a typed part says it came from nowhere.
+        inventoryItemId: line.kind === "material" ? line.inventoryItemId : undefined,
       })),
   );
 
@@ -164,6 +175,25 @@ export function WorkOrderLines({
         <ul className="mt-3 space-y-3">
           {lines.map((line) => (
             <li key={line.key} className="rounded-control border border-line bg-surface p-3">
+              {line.kind === "material" && stock.length > 0 ? (
+                <div className="mb-3">
+                  <StockPicker
+                    stock={stock}
+                    picked={stock.find((item) => item.id === line.inventoryItemId) ?? null}
+                    onPick={(item) =>
+                      edit(line.key, {
+                        inventoryItemId: item.id,
+                        description: item.name,
+                        unit: item.unit || "each",
+                        price: item.unitPriceCents > 0 ? centsToInput(item.unitPriceCents) : line.price,
+                      })
+                    }
+                    onClear={() => edit(line.key, { inventoryItemId: undefined })}
+                    hint="Pick a part you stock and it fills in below, and comes off the count when the job is saved. Anything else, type below."
+                  />
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-[1fr_auto] gap-3">
                 <Field label="What it is">
                   <TextInput
@@ -195,6 +225,8 @@ export function WorkOrderLines({
                     onChange={(next) =>
                       edit(line.key, {
                         kind: next === "material" ? "material" : "labor",
+                        // Hours never come off a shelf.
+                        ...(next === "material" ? {} : { inventoryItemId: undefined }),
                         // The unit follows the kind unless it has been changed.
                         unit:
                           line.unit === "hour" || line.unit === "each"
@@ -238,6 +270,8 @@ export function WorkOrderLines({
                   />
                 </Field>
               </div>
+
+              <Shortfall stock={stock} line={line} />
             </li>
           ))}
         </ul>
@@ -268,6 +302,18 @@ export function WorkOrderLines({
  * malformed reads as an empty list and the owner starts from a blank row rather
  * than from a crash.
  */
+/** Said when a picked part takes more than the shelf holds. A warning, never a refusal. */
+function Shortfall({ stock, line }: { stock: readonly StockOption[]; line: Line }) {
+  const picked = line.kind === "material" ? stock.find((item) => item.id === line.inventoryItemId) : undefined;
+  const quantity = Number(line.quantity);
+  const said = picked ? stockShortfall(picked, Number.isFinite(quantity) && quantity > 0 ? quantity : null) : "";
+  return said ? (
+    <p className="mt-2 text-xs leading-5 text-caution" role="status">
+      {said}
+    </p>
+  ) : null;
+}
+
 function restore(value: string): Line[] {
   if (!value.trim()) return [blankLine()];
 
@@ -287,6 +333,9 @@ function restore(value: string): Line[] {
         quantity: String(Number(row.quantity) || 1),
         unit: typeof row.unit === "string" && row.unit ? row.unit : kind === "labor" ? "hour" : "each",
         price: centsToInput(Number.isFinite(price) ? price : 0),
+        ...(kind === "material" && typeof row.inventoryItemId === "string" && row.inventoryItemId
+          ? { inventoryItemId: row.inventoryItemId }
+          : {}),
       };
     });
   } catch {

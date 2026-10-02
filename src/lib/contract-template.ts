@@ -118,7 +118,7 @@ export type ContractMoney = {
    * visit alone, and its scope has to say so: a $180 total under a paragraph
    * describing a panel replacement reads as $180 for the panel.
    */
-  source: "invoices" | "diagnostic" | "none";
+  source: "invoices" | "lines" | "diagnostic" | "none";
 };
 
 /**
@@ -129,32 +129,47 @@ export type ContractMoney = {
  * because the deposit line now reports it as paid — leaving it off would make
  * $1,540 of work read as a $1,360 total with $180 paid on top.
  *
- * Without invoices, a diagnostic visit has a price after all: its fee. That is
- * the whole agreement for a job booked and paid for online and not yet looked
- * at. Anything else with nothing priced stays blank, and so does a diagnostic
- * job whose work has been itemised but not billed — falling back to the fee
- * there would put $180 on a contract for work the electrician has priced at
- * far more.
+ * Then whatever is on the job that no invoice has billed yet. A contract covers
+ * every line on the job when it is drawn up, and a line written after the
+ * customer signs goes on a change order — so a line that existed beforehand
+ * and was left out of the price would be in neither.
+ *
+ * With nothing billed or itemised, a diagnostic visit has a price after all:
+ * its fee. That is the whole agreement for a job booked and paid for online and
+ * not yet looked at. Anything else with nothing priced stays blank. An
+ * itemised diagnostic is priced at its lines, never the fee — $180 on a
+ * contract for work the electrician has priced at far more is the wrong number.
  */
 export function contractMoney(input: {
   category: string;
   diagnosticFeeCents: number;
   diagnosticPaid: boolean;
+  /** The job's live invoices. A voided one billed nothing. */
   invoices: { totalCents: number; diagnosticCreditCents: number }[];
   /** Work-and-parts lines that come to more than nothing. */
   pricedLineCount: number;
+  /** What the lines no invoice has billed yet come to. */
+  unbilledCents?: number;
 }): ContractMoney {
   const cents = (value: number) => (Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0);
   const fee = cents(input.diagnosticFeeCents);
   const deposit = { depositCents: fee, depositPaid: input.diagnosticPaid && fee > 0 };
 
-  if (input.invoices.length > 0) {
-    const totalCents = input.invoices.reduce(
-      (sum, invoice) => sum + cents(invoice.totalCents) + cents(invoice.diagnosticCreditCents),
-      0,
-    );
-    return { totalCents, ...deposit, source: totalCents > 0 ? "invoices" : "none" };
+  const billed = input.invoices.reduce(
+    (sum, invoice) => sum + cents(invoice.totalCents) + cents(invoice.diagnosticCreditCents),
+    0,
+  );
+  const unbilled = cents(input.unbilledCents ?? 0);
+
+  if (billed + unbilled > 0) {
+    return {
+      totalCents: billed + unbilled,
+      ...deposit,
+      source: input.invoices.length > 0 ? "invoices" : "lines",
+    };
   }
+
+  if (input.invoices.length > 0) return { totalCents: 0, ...deposit, source: "none" };
 
   if (input.category === "diagnostic" && input.pricedLineCount === 0 && fee > 0) {
     return { totalCents: fee, ...deposit, source: "diagnostic" };

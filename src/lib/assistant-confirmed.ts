@@ -12,6 +12,7 @@ import {
 } from "@/lib/document-edit";
 import { adjustmentTo, isMovementReason, signedQuantity } from "@/lib/inventory-movement";
 import { invoiceTotals } from "@/lib/invoice-math";
+import { claimUnbilledLines, jobInvoices, returnStock } from "@/lib/job-billing-server";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { currentContext } from "@/lib/request-context";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
@@ -364,20 +365,39 @@ export async function runConfirmedTool(
 
       if (!job) return `Job #${jobNumber} could not be found.`;
 
+      const jobId = text((job as Record<string, unknown>).id);
       const totals = invoiceTotals({ subtotalCents: cents });
-      const { error } = await supabase.from("invoices").insert({
-        organization_id: organizationId,
-        job_id: text((job as Record<string, unknown>).id),
-        status: "draft",
-        subtotal_cents: totals.subtotalCents,
-        diagnostic_credit_cents: totals.diagnosticCreditCents,
-        tax_cents: totals.taxCents,
-        total_cents: totals.totalCents,
-        balance_due_cents: totals.totalCents,
-        stripe_application_fee_cents: totals.applicationFeeCents,
+      const { data: created, error } = await supabase
+        .from("invoices")
+        .insert({
+          organization_id: organizationId,
+          job_id: jobId,
+          status: "draft",
+          subtotal_cents: totals.subtotalCents,
+          diagnostic_credit_cents: totals.diagnosticCreditCents,
+          tax_cents: totals.taxCents,
+          total_cents: totals.totalCents,
+          balance_due_cents: totals.totalCents,
+          stripe_application_fee_cents: totals.applicationFeeCents,
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (error || !created) return "That invoice could not be created.";
+
+      // The amount is the price of whatever is on the job unbilled, so those
+      // lines are this invoice's. Left unbilled, the job page would offer to
+      // bill them a second time.
+      const voided = (await jobInvoices(supabase, organizationId, jobId))
+        .filter((invoice) => invoice.status === "void")
+        .map((invoice) => invoice.id);
+      await claimUnbilledLines(supabase, {
+        organizationId,
+        jobId,
+        invoiceId: text((created as Record<string, unknown>).id),
+        voidInvoiceIds: voided,
       });
 
-      if (error) return "That invoice could not be created.";
       return `Draft invoice for ${formatMoney(totals.totalCents / 100)} created on job #${jobNumber}. It has not been sent.`;
     }
 
@@ -508,14 +528,28 @@ export async function runConfirmedTool(
         taxCents: Number(invoice.tax_cents ?? 0),
       });
 
-      // The list replaces what is there, so the old rows go first. Scoped to
-      // the job and the organization both, because one of those is a uuid that
+      // The list replaces this invoice's lines — not the job's. A part added
+      // after this invoice, and billed on another, is that invoice's business.
+      // Any stock the old lines took goes back first; the new lines are typed
+      // and take none. Scoped to the organization too, because the invoice id
       // arrived in a payload.
+      const { data: previous } = await supabase
+        .from("job_line_items")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("invoice_id", text(invoice.id));
+      await returnStock(supabase, {
+        organizationId,
+        jobId,
+        lineIds: ((previous ?? []) as Record<string, unknown>[]).map((row) => text(row.id)),
+        note: "Its invoice's lines were rewritten through the assistant.",
+      });
+
       const { error: cleared } = await supabase
         .from("job_line_items")
         .delete()
         .eq("organization_id", organizationId)
-        .eq("job_id", jobId);
+        .eq("invoice_id", text(invoice.id));
 
       if (cleared) {
         console.error("assistant: invoice lines could not be cleared", cleared);
@@ -526,6 +560,7 @@ export async function runConfirmedTool(
         lines.map((line) => ({
           organization_id: organizationId,
           job_id: jobId,
+          invoice_id: text(invoice.id),
           kind: line.kind,
           description: line.description,
           quantity: line.quantity,

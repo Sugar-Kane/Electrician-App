@@ -2,8 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 
-import { parsePriceCents, parseQuantity } from "@/lib/job-lines";
-import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { formatMoney } from "@/lib/invoice-messages";
+import { invoiceIsLive, invoiceIsOpenDraft, lineLockedBecause } from "@/lib/job-billing";
+import {
+  jobInvoices,
+  rebuildInvoiceDocument,
+  retotalInvoice,
+  returnStock,
+  takeFromStock,
+} from "@/lib/job-billing-server";
+import { lineTotalCents, parsePriceCents, parseQuantity } from "@/lib/job-lines";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -35,7 +44,8 @@ async function callerContext() {
     typeof data?.organization_id === "string" ? data.organization_id : "";
   if (!organizationId) return null;
 
-  return { supabase, organizationId };
+  const { data: auth } = await supabase.auth.getUser();
+  return { supabase, organizationId, userId: auth.user?.id ?? "" };
 }
 
 async function findJob(jobNumber: string) {
@@ -47,7 +57,7 @@ async function findJob(jobNumber: string) {
 
   const { data } = await context.supabase
     .from("jobs")
-    .select("id")
+    .select("id, diagnostic_paid, diagnostic_fee_cents, follow_up_of")
     .eq("organization_id", context.organizationId)
     .eq("job_number", numeric)
     .maybeSingle();
@@ -55,7 +65,17 @@ async function findJob(jobNumber: string) {
   const id = typeof data?.id === "string" ? data.id : "";
   if (!id) return null;
 
-  return { ...context, jobId: id };
+  return {
+    ...context,
+    jobId: id,
+    // What a draft invoice's recount needs to give the diagnostic credit once.
+    billedJob: {
+      id,
+      followUpOf: typeof data?.follow_up_of === "string" ? data.follow_up_of : null,
+      diagnosticPaid: data?.diagnostic_paid === true,
+      diagnosticFeeCents: Number(data?.diagnostic_fee_cents ?? 0),
+    },
+  };
 }
 
 export async function addJobLine(
@@ -124,13 +144,10 @@ export async function addJobLine(
    * that never moved.
    */
   if (inventoryItemId) {
-    const moved = await recordStockUse({
-      supabase: context.supabase,
+    const moved = await takeFromStock(context.supabase, {
       organizationId: context.organizationId,
       jobId: context.jobId,
-      lineId: String(created.id),
-      itemId: inventoryItemId,
-      quantity,
+      lines: [{ lineId: String(created.id), itemId: inventoryItemId, quantity }],
     });
     if (!moved) console.error("job line: stock was not deducted", { lineId: created.id });
   }
@@ -139,44 +156,6 @@ export async function addJobLine(
   revalidatePath("/inventory");
   revalidatePath("/materials");
   return { error: "", notice: "Added." };
-}
-
-/**
- * Taking the parts off the shelf.
- *
- * The cost is read off the item now and written onto the movement, because what
- * a breaker cost the day it was fitted is the expense — not what the same
- * breaker costs when somebody runs a report in April.
- */
-async function recordStockUse(input: {
-  supabase: FlexibleSupabaseClient;
-  organizationId: string;
-  jobId: string;
-  lineId: string;
-  itemId: string;
-  quantity: number;
-}): Promise<boolean> {
-  const { data: item } = await input.supabase
-    .from("inventory_items")
-    .select("unit_cost_cents")
-    .eq("id", input.itemId)
-    .eq("organization_id", input.organizationId)
-    .maybeSingle();
-
-  // An item id that is not this organization's is not an item. Nothing moves.
-  if (!item) return false;
-
-  const { error } = await input.supabase.from("inventory_movements").insert({
-    organization_id: input.organizationId,
-    item_id: input.itemId,
-    quantity: -Math.abs(input.quantity),
-    reason: "used_on_job",
-    job_id: input.jobId,
-    job_line_item_id: input.lineId,
-    unit_cost_cents: Number(item.unit_cost_cents ?? 0),
-  });
-
-  return !error;
 }
 
 export async function removeJobLine(
@@ -190,23 +169,43 @@ export async function removeJobLine(
   const context = await findJob(jobNumber);
   if (!context) return { error: "That job could not be found." };
 
-  /*
-   * What this line took off the shelf, before the line goes.
-   *
-   * `job_line_item_id` is `on delete set null`, so the movement survives the
-   * line and would otherwise leave the stock permanently short by a part that
-   * was never used.
-   */
-  const { data: used } = await context.supabase
-    .from("inventory_movements")
-    .select("item_id, quantity, unit_cost_cents")
-    .eq("job_line_item_id", lineId)
+  // Scoped to the job as well as the id, so a stale form from another job
+  // cannot reach a line by guessing a uuid.
+  const { data: found } = await context.supabase
+    .from("job_line_items")
+    .select("id, invoice_id, quantity, unit_price_cents")
+    .eq("id", lineId)
+    .eq("job_id", context.jobId)
     .eq("organization_id", context.organizationId)
-    .eq("reason", "used_on_job")
     .maybeSingle();
 
-  // Scoped to the job as well as the id, so a stale form from another job
-  // cannot delete a line by guessing a uuid.
+  if (!found) return { error: "That line could not be found." };
+  const line = found as Record<string, unknown>;
+  const invoiceId = typeof line.invoice_id === "string" ? line.invoice_id : null;
+
+  /*
+   * A line on an invoice the customer has been sent, or has paid, is part of
+   * that bill. Taking it off the job would leave the invoice charging for a
+   * line that no longer exists, and the next copy of its PDF printing a
+   * different bill from the one in their hands.
+   */
+  const invoices = invoiceId ? await jobInvoices(context.supabase, context.organizationId, context.jobId) : [];
+  const locked = lineLockedBecause({ invoiceId }, invoices);
+  if (locked) return { error: locked };
+
+  /*
+   * Put the parts back before the line goes: the movement names the line it
+   * returns, and a line that is already gone cannot be named. If the delete
+   * then fails, asking again finds nothing more owed rather than returning the
+   * same parts twice.
+   */
+  await returnStock(context.supabase, {
+    organizationId: context.organizationId,
+    jobId: context.jobId,
+    lineIds: [lineId],
+    note: "The job line it was used on was removed.",
+  });
+
   const { error } = await context.supabase
     .from("job_line_items")
     .delete()
@@ -216,30 +215,43 @@ export async function removeJobLine(
 
   if (error) return { error: "That line could not be removed." };
 
-  /*
-   * Put the parts back, by writing the opposite movement.
-   *
-   * Not by deleting the original: a ledger is corrected by saying what happened
-   * next, and "three breakers came back" is what happened. The history then
-   * explains the count instead of quietly agreeing with it.
-   */
-  if (used?.item_id) {
-    const { error: returnError } = await context.supabase.from("inventory_movements").insert({
-      organization_id: context.organizationId,
-      item_id: used.item_id,
-      quantity: Math.abs(Number(used.quantity ?? 0)),
-      reason: "returned",
-      job_id: context.jobId,
-      unit_cost_cents: Number(used.unit_cost_cents ?? 0),
-      note: "The job line it was used on was removed.",
-    });
-    if (returnError) console.error("job line: stock was not returned", returnError);
-  }
-
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/inventory");
   revalidatePath("/materials");
-  return { error: "", notice: "Removed." };
+
+  // On a draft nobody has seen, the draft follows: its total comes down by
+  // what the line came to, and its PDF is laid out again without it.
+  const draft = invoices.find((invoice) => invoice.id === invoiceId);
+  if (!draft || !invoiceIsLive(draft) || !invoiceIsOpenDraft(draft)) {
+    return { error: "", notice: "Removed." };
+  }
+
+  const recounted = await retotalInvoice(context.supabase, {
+    organizationId: context.organizationId,
+    invoice: draft,
+    job: context.billedJob,
+    subtotalCents:
+      draft.subtotalCents -
+      lineTotalCents({ quantity: Number(line.quantity ?? 0), unitPriceCents: Number(line.unit_price_cents ?? 0) }),
+  });
+
+  revalidatePath("/invoices");
+  if (!recounted) {
+    return {
+      error: `Removed, but INV-${draft.number}'s total could not be updated. Open the invoice before sending it.`,
+    };
+  }
+
+  await rebuildInvoiceDocument(context.supabase, {
+    organizationId: context.organizationId,
+    invoiceId: draft.id,
+    uploadedBy: context.userId,
+  });
+
+  return {
+    error: "",
+    notice: `Removed. INV-${draft.number} now comes to ${formatMoney(recounted.totalCents / 100)}.`,
+  };
 }
 
 /**

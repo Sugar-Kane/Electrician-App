@@ -149,6 +149,14 @@ export function JobControls({
               A canceled job cannot be edited. Book a new visit instead, so the customer gets a
               fresh confirmation.
             </p>
+            {/* What canceling just did — who was told, and what went back on
+                the shelf. The form that reported it is gone with the job's
+                edit controls, so it is said here rather than lost. */}
+            {cancelState.notice ? (
+              <p className="mt-3 text-sm leading-6 text-ink" role="status">
+                {cancelState.notice}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -157,7 +165,16 @@ export function JobControls({
 
   return (
     <div className="space-y-4">
-      <form action={editAction}>
+      <form
+        action={editAction}
+        // Remounted when the status changes, so its uncontrolled select picks
+        // up the new defaultValue. Without this, advancing the job on the
+        // field screen and then saving an arrival window here submits the
+        // stale status and silently reverts it. The form, not the whole
+        // component: remounting that threw away what canceling had just
+        // reported — who was told, and what went back on the shelf.
+        key={status}
+      >
         <section id="window" className="rounded-panel border border-line bg-surface p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand/10 text-brand">

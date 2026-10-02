@@ -13,6 +13,7 @@ import {
 } from "@/lib/contract-template";
 import { creditSource } from "@/lib/follow-up-jobs";
 import { formatMoney } from "@/lib/invoice-messages";
+import { agreementChanges, changeOrderBody, unbilledLines, type ContractStanding } from "@/lib/job-billing";
 import { lineTotalCents } from "@/lib/job-lines";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -67,7 +68,7 @@ async function loadSignable(supabase: FlexibleSupabaseClient, contractId: string
   const { data } = await supabase
     .from("contracts")
     .select(
-      "id, organization_id, job_id, status, unfilled, public_token, signed_at, signature_provider, organizations ( name, timezone ), jobs ( job_number, customers ( phone ) )",
+      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, organizations ( name, timezone ), jobs ( job_number, customers ( phone ) )",
     )
     .eq("id", contractId)
     .maybeSingle();
@@ -206,8 +207,8 @@ export async function generateContract(
        customers ( first_name, last_name, company_name ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
-       invoices ( total_cents, diagnostic_credit_cents ),
-       job_line_items ( kind, quantity, unit_price_cents )`,
+       invoices ( id, status, total_cents, diagnostic_credit_cents ),
+       job_line_items ( kind, quantity, unit_price_cents, invoice_id )`,
     )
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
@@ -219,7 +220,10 @@ export async function generateContract(
   const customer = (row.customers ?? null) as Record<string, unknown> | null;
   const property = (row.properties ?? null) as Record<string, unknown> | null;
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
-  const invoices = Array.isArray(row.invoices) ? (row.invoices as Record<string, unknown>[]) : [];
+  // A voided invoice billed nothing, so it is not part of the price.
+  const invoices = (Array.isArray(row.invoices) ? (row.invoices as Record<string, unknown>[]) : []).filter(
+    (invoice) => invoice.status !== "void",
+  );
   const lines = Array.isArray(row.job_line_items)
     ? (row.job_line_items as Record<string, unknown>[])
     : [];
@@ -306,6 +310,21 @@ export async function generateContract(
           unitPriceCents: Number(line.unit_price_cents ?? 0),
         }) > 0,
     ).length,
+    // Lines no live invoice has billed yet. The contract covers everything on
+    // the job as it stands, and anything written after the customer signs
+    // goes on a change order instead.
+    unbilledCents: unbilledLines(
+      lines.map((line) => ({ invoiceId: text(line.invoice_id) || null, line })),
+      invoices.map((invoice) => ({ id: text(invoice.id), status: text(invoice.status) })),
+    ).reduce(
+      (sum, { line }) =>
+        sum +
+        lineTotalCents({
+          quantity: Number(line.quantity ?? 0),
+          unitPriceCents: Number(line.unit_price_cents ?? 0),
+        }),
+      0,
+    ),
   });
   const workType = text(row.category).replace(/_/g, " ");
   const description = text(row.customer_description);
@@ -385,6 +404,161 @@ export async function generateContract(
     notice: document.error
       ? `${blanks} The PDF could not be produced — open the draft to try again.`
       : blanks,
+  };
+}
+
+/**
+ * A change order for what was added after the customer signed.
+ *
+ * A signed agreement is amended in writing, not edited. Everything written on
+ * the job after the newest signed contract or change order was drawn up is
+ * listed and priced in a document of its own, signed the same way the contract
+ * was — the texted link, or the pad on the job page. The contract it adds to is
+ * left exactly as the customer signed it.
+ */
+export async function generateChangeOrder(
+  _previous: ContractState,
+  formData: FormData,
+): Promise<ContractState> {
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  const numeric = Number(jobNumber);
+  if (!Number.isFinite(numeric)) return { error: "That job could not be found." };
+
+  const supabase = asFlexibleClient(await createClient());
+
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id ?? "";
+  if (!userId) return { error: "You are not signed in." };
+
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .limit(1)
+    .maybeSingle();
+
+  const organizationId = text(membership?.organization_id);
+  if (!organizationId) return { error: "You are not a member of a business." };
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select(
+      `id, job_number,
+       customers ( first_name, last_name, company_name ),
+       properties ( address_line_1, city, state, postal_code ),
+       organizations ( name, phone, timezone ),
+       contracts ( id, kind, status, created_at, signed_at ),
+       job_line_items ( description, quantity, unit, unit_price_cents, created_at )`,
+    )
+    .eq("organization_id", organizationId)
+    .eq("job_number", numeric)
+    .maybeSingle();
+
+  if (!job) return { error: "That job could not be found." };
+
+  const row = job as Record<string, unknown>;
+  const customer = (row.customers ?? null) as Record<string, unknown> | null;
+  const property = (row.properties ?? null) as Record<string, unknown> | null;
+  const organization = (row.organizations ?? null) as Record<string, unknown> | null;
+
+  const contracts: ContractStanding[] = (Array.isArray(row.contracts) ? (row.contracts as Record<string, unknown>[]) : []).map(
+    (contract) => ({
+      id: text(contract.id),
+      kind: contract.kind === "change_order" ? "change_order" : "agreement",
+      status: text(contract.status) || "draft",
+      createdAt: text(contract.created_at),
+      signedAt: text(contract.signed_at) || null,
+    }),
+  );
+  const lines = (Array.isArray(row.job_line_items) ? (row.job_line_items as Record<string, unknown>[]) : []).map(
+    (line) => ({
+      description: text(line.description),
+      // numeric arrives as a string over PostgREST.
+      quantity: Number(line.quantity ?? 0),
+      unit: text(line.unit),
+      unitPriceCents: Number(line.unit_price_cents ?? 0),
+      createdAt: text(line.created_at),
+    }),
+  );
+
+  const changes = agreementChanges(lines, contracts);
+  if (!changes.signed) {
+    return { error: "Nothing on this job has been signed yet, so there is nothing to change. Generate the contract instead." };
+  }
+  if (changes.added.length === 0) return { error: "Nothing has been added since the customer signed." };
+  if (changes.waiting) {
+    return { error: "", notice: "A change order for these is already waiting to be signed.", contractId: changes.waiting.id };
+  }
+
+  const timeZone = text(organization?.timezone) || "America/Los_Angeles";
+  const formatDate = (iso: string, weekday: boolean) =>
+    iso
+      ? new Intl.DateTimeFormat("en-US", {
+          timeZone,
+          ...(weekday ? { weekday: "short" as const } : {}),
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }).format(new Date(iso))
+      : "";
+
+  const filled = changeOrderBody({
+    facts: {
+      business_name: text(organization?.name),
+      business_phone: text(organization?.phone),
+      customer_name:
+        text(customer?.company_name) ||
+        [text(customer?.first_name), text(customer?.last_name)].filter(Boolean).join(" "),
+      service_address: [
+        text(property?.address_line_1),
+        text(property?.city),
+        text(property?.state),
+        text(property?.postal_code),
+      ]
+        .filter(Boolean)
+        .join(", "),
+      job_number: String(row.job_number ?? jobNumber),
+      today: formatDate(new Date().toISOString(), true),
+    },
+    signedOn: formatDate(changes.signed.signedAt ?? "", false),
+    lines: changes.added,
+  });
+
+  const { data: created, error } = await supabase
+    .from("contracts")
+    .insert({
+      organization_id: organizationId,
+      job_id: text(row.id),
+      kind: "change_order",
+      body: filled.body,
+      // A change order has no drafted passage: it is the list of additions,
+      // written from the lines themselves.
+      scope: "",
+      unfilled: filled.unfilled,
+      status: "draft",
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error || !created) return { error: "That change order could not be saved." };
+
+  const contractId = text(created.id);
+  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+  const document = await generateContractPdf({
+    database: supabase,
+    organizationId,
+    contractId,
+    timeZone,
+    uploadedBy: userId,
+  });
+
+  revalidatePath(`/jobs/${jobNumber}`);
+
+  const count = changes.added.length;
+  const said = `Change order drafted for ${count} ${count === 1 ? "addition" : "additions"} (${formatMoney(changes.addedCents / 100)}). Read it, then have the customer sign it.`;
+  return {
+    error: "",
+    contractId,
+    notice: document.error ? `${said} The PDF could not be produced — open the draft to try again.` : said,
   };
 }
 
@@ -555,7 +729,12 @@ export async function sendSigningLink(
   const { sendSms } = await import("@/lib/twilio");
   const sent = await sendSms({
     to: phone,
-    body: signingLinkMessage({ businessName: text(business?.name), jobNumber: job?.job_number, link }),
+    body: signingLinkMessage({
+      businessName: text(business?.name),
+      jobNumber: job?.job_number,
+      link,
+      kind: contract.kind,
+    }),
     messagingServiceSid,
   });
 
@@ -590,7 +769,7 @@ export async function completeContractDetails(
   if (!auth.user?.id) return { error: "You are not signed in." };
   const contractId = String(formData.get("contractId") ?? "");
   const { data: sourceData } = await supabase.from("contracts")
-    .select("id, organization_id, job_id, body, scope, status, signed_at, organizations ( timezone ), jobs ( job_number )")
+    .select("id, organization_id, job_id, kind, body, scope, status, signed_at, created_at, organizations ( timezone ), jobs ( job_number )")
     .eq("id", contractId).maybeSingle();
   if (!sourceData) return { error: "That contract could not be found." };
   const source = sourceData as Record<string, unknown>;
@@ -599,6 +778,20 @@ export async function completeContractDetails(
     .eq("job_id", text(source.job_id)).neq("status", "void")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (newest?.id !== contractId) return { error: "A newer draft exists. Reload the job to complete it." };
+  // The completed copy keeps this draft's wording, so it must not be dated
+  // after work this draft never listed: a line written since would read as
+  // covered by a document that does not mention it.
+  const { count: writtenSince } = await supabase.from("job_line_items")
+    .select("id", { count: "exact", head: true })
+    .eq("job_id", text(source.job_id))
+    .gt("created_at", text(source.created_at));
+  if (writtenSince) {
+    return {
+      error: source.kind === "change_order"
+        ? "Items were added after this change order was made. Generate a new change order so it includes them."
+        : "Items were added after this draft was made. Generate another draft so it includes them.",
+    };
+  }
   const body = text(source.body);
   const fields = placeholdersUsed(body);
   if (!fields.length) return { error: "This draft has no missing information." };
@@ -614,6 +807,8 @@ export async function completeContractDetails(
   if (filled.unfilled.length) return { error: "Complete all missing information before saving." };
   const { data: created, error } = await supabase.from("contracts").insert({
     organization_id: source.organization_id, job_id: source.job_id,
+    // A change order completed is still a change order.
+    kind: source.kind === "change_order" ? "change_order" : "agreement",
     body: filled.body, scope: values.scope ?? text(source.scope), unfilled: [], status: "draft",
   }).select("id").maybeSingle();
   if (error || !created) return { error: "The completed draft could not be saved. Try again." };

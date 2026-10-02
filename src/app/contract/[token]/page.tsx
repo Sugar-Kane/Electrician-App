@@ -177,7 +177,13 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           </p>
           <h1 className="mt-2 flex items-center gap-2 text-2xl font-bold">
             <FileSignature className="h-6 w-6 shrink-0 text-brand" aria-hidden />
-            {contract.job_number ? `Contract for job #${contract.job_number}` : "Your contract"}
+            {copy?.document.kind === "change_order"
+              ? contract.job_number
+                ? `Change order for job #${contract.job_number}`
+                : "Your change order"
+              : contract.job_number
+                ? `Contract for job #${contract.job_number}`
+                : "Your contract"}
           </h1>
           {contract.customer_name ? (
             <p className="mt-1 text-sm text-ink-muted">For {contract.customer_name}</p>
@@ -236,7 +242,11 @@ export default async function ContractPage({ params }: { params: Promise<{ token
               By signing you agree to the work and the price above.
             </p>
             <div className="mt-4">
-              <ContractSigning token={token} defaultName={contract.customer_name ?? ""} />
+              <ContractSigning
+                token={token}
+                defaultName={contract.customer_name ?? ""}
+                kind={copy?.document.kind}
+              />
             </div>
           </section>
         ) : null}

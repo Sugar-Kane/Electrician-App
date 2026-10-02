@@ -22,6 +22,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
+import { unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
 import {
   pilotInvoices,
@@ -334,7 +335,7 @@ export async function getUnbilledWork(): Promise<Record<string, number>> {
   const since = new Date(Date.now() - UNBILLED_WINDOW_DAYS * 86_400_000).toISOString();
   const { data, error } = await context.database
     .from("jobs")
-    .select("job_number, invoices ( status ), job_line_items ( kind, quantity, unit_price_cents )")
+    .select("job_number, invoices ( id, status ), job_line_items ( kind, quantity, unit_price_cents, invoice_id )")
     .eq("organization_id", context.organizationId)
     .eq("status", "completed")
     .is("archived_at", null)
@@ -346,10 +347,20 @@ export async function getUnbilledWork(): Promise<Record<string, number>> {
   for (const raw of data) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = raw as any;
-    const invoices: { status?: string }[] = Array.isArray(row.invoices) ? row.invoices : [];
-    if (invoices.some((invoice) => invoice.status !== "void")) continue;
+    const invoices: { id?: string; status?: string }[] = Array.isArray(row.invoices) ? row.invoices : [];
 
-    const lines: Record<string, unknown>[] = Array.isArray(row.job_line_items) ? row.job_line_items : [];
+    // What no live invoice has billed — the whole job when nothing has been
+    // invoiced, and a part added after the invoice went out when it has. The
+    // second is the one nobody remembers.
+    const lines = unbilledLines(
+      (Array.isArray(row.job_line_items) ? (row.job_line_items as Record<string, unknown>[]) : []).map(
+        (line): Record<string, unknown> & { invoiceId: string | null } => ({
+          ...line,
+          invoiceId: typeof line.invoice_id === "string" ? line.invoice_id : null,
+        }),
+      ),
+      invoices.map((invoice) => ({ id: String(invoice.id ?? ""), status: String(invoice.status ?? "") })),
+    );
     const { subtotalCents } = jobLineTotals(
       lines.map((line, index) => ({
         id: String(index),
@@ -932,6 +943,12 @@ export async function placeTodaysStops(): Promise<{
 
 export type JobContract = {
   id: string;
+  /** An agreement, or a change order adding to one the customer signed. */
+  kind: "agreement" | "change_order";
+  /** Machine-readable, for measuring the job's lines against what was signed. */
+  createdAt: string;
+  signedAt: string | null;
+  status: string;
   createdLabel: string;
   body: string;
   unfilled: string[];
@@ -988,7 +1005,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const { data } = await context.database
     .from("contracts")
     .select(
-      "id, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name",
+      "id, kind, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name",
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -1017,6 +1034,10 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
 
     return {
       id,
+      kind: row.kind === "change_order" ? "change_order" : "agreement",
+      createdAt: typeof row.created_at === "string" ? row.created_at : "",
+      signedAt: typeof row.signed_at === "string" ? row.signed_at : null,
+      status: typeof row.status === "string" ? row.status : "draft",
       body: typeof row.body === "string" ? row.body : "",
       unfilled: Array.isArray(row.unfilled) ? (row.unfilled as string[]) : [],
       createdLabel: inZone(row.created_at as string | null, context.timeZone, {

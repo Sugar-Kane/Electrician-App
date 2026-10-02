@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { currentContext } from "@/lib/request-context";
 import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
+import type { InvoiceStanding } from "@/lib/job-billing";
 import { jobLineTotals, type JobLine, type JobLineTotals } from "@/lib/job-lines";
 
 /**
@@ -82,7 +83,7 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
 
   const { data, error } = await context.database
     .from("job_line_items")
-    .select("id, kind, description, quantity, unit, unit_price_cents, inventory_item_id, notes")
+    .select("id, kind, description, quantity, unit, unit_price_cents, inventory_item_id, invoice_id, created_at, notes")
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: true });
@@ -100,69 +101,78 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
     unit: str(row.unit) || "each",
     unitPriceCents: num(row.unit_price_cents),
     inventoryItemId: str(row.inventory_item_id) || null,
+    invoiceId: str(row.invoice_id) || null,
+    createdAt: str(row.created_at),
     notes: str(row.notes),
   }));
 
   return { jobId, lines, totals: jobLineTotals(lines) };
 }
 
-/** The invoice a job was last billed on, as the lines panel shows it. */
-export type JobInvoiceSummary = {
-  invoiceId: string;
+/** One of a job's invoices, as the lines panel shows it and the billing rules read it. */
+export type JobInvoiceSummary = InvoiceStanding & {
   /** "INV-9", as every other screen writes it. */
-  number: string;
-  totalCents: number;
+  label: string;
   /** "Draft", "Void", or what the Invoices list would say: Unpaid, Overdue, Paid. */
   statusLabel: string;
 };
 
 /**
- * The job's newest invoice, whatever its status.
+ * Every invoice on the job, newest first, whatever its status.
  *
- * The same one `raiseInvoice` stops and asks about, so the panel and the action
- * agree on whether a job has been billed. Without it the panel could not tell,
- * and offered to generate an invoice on a job that already had one.
+ * All of them rather than the newest: each line now says which invoice billed
+ * it, and a job billed twice — the work, then a part remembered afterwards —
+ * has two invoices the panel has to be able to name. The same rows
+ * `raiseInvoice` decides from, so the panel and the action agree on where the
+ * next line goes.
  */
-export async function getJobInvoice(jobNumber: string): Promise<JobInvoiceSummary | null> {
+export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSummary[]> {
   const context = await resolveContext();
-  if (!context) return null;
+  if (!context) return [];
 
   const jobId = await resolveJobId(jobNumber);
-  if (!jobId) return null;
+  if (!jobId) return [];
 
   const { data, error } = await context.database
     .from("invoices")
-    .select("id, invoice_number, status, total_cents, balance_due_cents, due_at")
+    .select("id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, created_at")
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
-  const row = data as Record<string, unknown> | null;
-  if (error || !row) return null;
+  if (error || !data) return [];
 
-  const status = str(row.status);
-  return {
-    invoiceId: str(row.id),
-    number: `INV-${String(row.invoice_number ?? "")}`,
-    totalCents: num(row.total_cents),
-    statusLabel:
-      status === "draft"
-        ? "Draft"
-        : status === "void"
-          ? "Void"
-          : invoiceStatusLabel({
-              status,
-              dueAt: str(row.due_at) || null,
-              balanceDueCents: num(row.balance_due_cents ?? row.total_cents),
-            }),
-  };
+  return (data as Record<string, unknown>[]).map((row) => {
+    const status = str(row.status) || "draft";
+    const number = String(row.invoice_number ?? "");
+    return {
+      id: str(row.id),
+      number,
+      label: `INV-${number}`,
+      status,
+      totalCents: num(row.total_cents),
+      lastSentAt: str(row.last_sent_at) || null,
+      paidAt: str(row.paid_at) || null,
+      createdAt: str(row.created_at),
+      statusLabel:
+        status === "draft"
+          ? "Draft"
+          : status === "void"
+            ? "Void"
+            : invoiceStatusLabel({
+                status,
+                dueAt: str(row.due_at) || null,
+                balanceDueCents: num(row.balance_due_cents ?? row.total_cents),
+              }),
+    };
+  });
 }
 
 export type StockOption = {
   id: string;
   name: string;
+  /** The SKU or catalogue number, so a part can be found by it. */
+  partNumber: string;
   unit: string;
   unitPriceCents: number;
   quantityOnHand: number;
@@ -181,7 +191,7 @@ export async function getStockOptions(): Promise<StockOption[]> {
 
   const { data, error } = await context.database
     .from("inventory_items")
-    .select("id, name, unit, unit_cost_cents, quantity_on_hand, location")
+    .select("id, name, sku, unit, unit_cost_cents, quantity_on_hand, location")
     .eq("organization_id", context.organizationId)
     .is("archived_at", null)
     .order("name", { ascending: true })
@@ -192,6 +202,7 @@ export async function getStockOptions(): Promise<StockOption[]> {
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: str(row.id),
     name: str(row.name),
+    partNumber: str(row.sku),
     unit: str(row.unit) || "each",
     unitPriceCents: num(row.unit_cost_cents),
     quantityOnHand: num(row.quantity_on_hand),

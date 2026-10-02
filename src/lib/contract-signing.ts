@@ -307,7 +307,13 @@ export function readSignerTitle(value: unknown): string {
  * link went out without saying which job it was for, which is the first thing
  * somebody with two quotes open wants to know.
  */
-export function signingLinkMessage(input: { businessName: string; jobNumber: unknown; link: string }): string {
+export function signingLinkMessage(input: {
+  businessName: string;
+  jobNumber: unknown;
+  link: string;
+  /** A change order is not "your contract": it adds to the one they signed. */
+  kind?: unknown;
+}): string {
   const business = input.businessName.trim() || "Your electrician";
   const job =
     typeof input.jobNumber === "number" && Number.isFinite(input.jobNumber)
@@ -315,5 +321,6 @@ export function signingLinkMessage(input: { businessName: string; jobNumber: unk
       : typeof input.jobNumber === "string"
         ? input.jobNumber.trim()
         : "";
-  return `${business}: here is your contract${job ? ` for job #${job}` : ""} to read and sign: ${input.link}`;
+  const what = input.kind === "change_order" ? "a change order" : "your contract";
+  return `${business}: here is ${what}${job ? ` for job #${job}` : ""} to read and sign: ${input.link}`;
 }

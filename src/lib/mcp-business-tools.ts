@@ -6,11 +6,13 @@ import { fillTemplate, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contra
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
+import { claimUnbilledLines, jobInvoices } from "@/lib/job-billing-server";
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { McpSession } from "@/lib/mcp-session-token";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { sendSms } from "@/lib/twilio";
 
 const str = (description: string) => ({ type: "string", description });
@@ -449,9 +451,23 @@ export async function runBusinessMcpTool(input: {
           balance_due_cents: totals.totalCents,
           stripe_application_fee_cents: totals.applicationFeeCents,
         })
-        .select("invoice_number,total_cents")
+        .select("id,invoice_number,total_cents")
         .maybeSingle();
       if (error || !created) return { isError: true, text: "The invoice could not be created." };
+
+      // The amount is the price of whatever is on the job unbilled, so those
+      // lines are this invoice's. Left unbilled, the job page would offer to
+      // bill them a second time.
+      const voided = (await jobInvoices(asFlexibleClient(database), organizationId, text(job.id)))
+        .filter((invoice) => invoice.status === "void")
+        .map((invoice) => invoice.id);
+      await claimUnbilledLines(asFlexibleClient(database), {
+        organizationId,
+        jobId: text(job.id),
+        invoiceId: text(created.id),
+        voidInvoiceIds: voided,
+      });
+
       return { text: `Draft INV-${created.invoice_number} created for ${formatMoney(Number(created.total_cents) / 100)}. It has not been sent.` };
     }
 
