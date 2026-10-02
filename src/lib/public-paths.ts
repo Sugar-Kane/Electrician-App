@@ -9,11 +9,11 @@
  * exactly what they saw signed in, and reasonably concluded that signing out
  * had not worked.
  *
- * The public pages are the ones a customer or a stranger is sent to: booking,
- * paying the booking deposit, signing a contract, accepting an invitation, the
- * journal, a business's terms and privacy pages, signing in and up, and the
- * routes Twilio, Stripe and Google call. Everything else is the business's own
- * work and needs somebody signed in to see it.
+ * The public pages are the ones a customer or a stranger is sent to: the front
+ * page, booking, paying the booking deposit, signing a contract, accepting an
+ * invitation, the journal, a business's terms and privacy pages, signing in and
+ * up, and the routes Twilio, Stripe and Google call. Everything else is the
+ * business's own work and needs somebody signed in to see it.
  *
  * Import-free, so the rule can be tested without a request.
  */
@@ -21,8 +21,13 @@
 /** Whole sections that are public, by their leading segment. */
 const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "invite", "journal", "legal"];
 
-/** Single public pages and files. */
-const PUBLIC_PAGES = new Set(["/login", "/signup", "/robots.txt", "/sitemap.xml", "/icon.svg", "/favicon.ico"]);
+/**
+ * Single public pages and files.
+ *
+ * The home page is one of them, because it is two pages: the front page for a
+ * visitor, and the dashboard for somebody signed in. The page decides which.
+ */
+const PUBLIC_PAGES = new Set(["/", "/login", "/signup", "/robots.txt", "/sitemap.xml", "/icon.svg", "/favicon.ico"]);
 
 export function isPublicPath(pathname: string): boolean {
   const path = (pathname || "/").replace(/\/+$/, "") || "/";

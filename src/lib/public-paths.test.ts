@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { isPublicPath, signInPath } from "./public-paths.ts";
 
 test("the business's own pages need somebody signed in", () => {
-  for (const path of ["/", "/jobs/15", "/schedule", "/invoices", "/invoices/abc", "/inventory", "/materials", "/messages",
+  for (const path of ["/jobs/15", "/schedule", "/invoices", "/invoices/abc", "/inventory", "/materials", "/messages",
     "/customers/7", "/files", "/reports", "/settings/contract", "/account", "/assistant", "/booking-requests", "/onboarding",
     "/admin", "/technicians", "/route", "/search", "/supply-stops", "/jobs/new"]) {
     assert.equal(isPublicPath(path), false, path);
@@ -17,6 +17,14 @@ test("what customers, strangers and webhooks are sent to stays open", () => {
     "/api/twilio/inbound", "/api/stripe/webhook", "/robots.txt", "/sitemap.xml", "/login/"]) {
     assert.equal(isPublicPath(path), true, path);
   }
+});
+
+test("the home page opens for anybody, and decides for itself what to show", () => {
+  // The front page for a visitor, the dashboard for somebody signed in.
+  assert.equal(isPublicPath("/"), true);
+  assert.equal(isPublicPath(""), true);
+  // Only the home page itself: everything under it keeps its own rule.
+  assert.equal(isPublicPath("/jobs"), false);
 });
 
 test("a public word inside a private page does not open it", () => {

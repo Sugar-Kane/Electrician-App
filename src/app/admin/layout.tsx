@@ -43,6 +43,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/audit" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
               Activity
             </Link>
+            <Link href="/admin/front-page" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
+              Front page
+            </Link>
             <Link href="/" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
               Exit
             </Link>

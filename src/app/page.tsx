@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { DashboardShell } from "@/components/dashboard-shell";
+import { FrontPage } from "@/components/front-page";
 import { StartAtTop } from "@/components/start-at-top";
 import { todayInZone } from "@/lib/calendar";
 import { getDashboardSnapshot } from "@/lib/dashboard";
@@ -8,10 +9,31 @@ import { attentionItems, openBookingRequests, unassignedToday } from "@/lib/dash
 import { getBookingRequests } from "@/lib/booking-requests";
 import { followUps, lateJobs } from "@/lib/follow-ups";
 import { getInventory, getInvoices, getJobs, getUnbilledWork } from "@/lib/job-data";
+import { currentUser } from "@/lib/request-context";
+import { listSiteVideos } from "@/lib/site-video-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+/**
+ * Nobody signed in. Without a backend configured there is nobody to sign in
+ * as, and the demo dashboard is the only thing a local copy can show, so that
+ * case keeps it.
+ */
+async function signedOut(): Promise<boolean> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) return false;
+  return !(await currentUser());
+}
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  // A visitor gets the front page, which says what Volteira does and how to
+  // get in. Somebody signed in can see it too, from the support console's
+  // link, with a way back to their own dashboard.
+  const visitor = await signedOut();
+  const { view } = await searchParams;
+  if (visitor || view === "front") {
+    return <FrontPage videos={await listSiteVideos()} preview={!visitor} />;
+  }
+
   const [snapshot, { jobs }, { invoices }, stock, bookings, unbilled] = await Promise.all([
     getDashboardSnapshot(),
     getJobs(),
