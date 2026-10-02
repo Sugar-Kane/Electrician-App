@@ -40,8 +40,8 @@ create index if not exists site_videos_position_idx on public.site_videos (posit
 
 alter table public.site_videos enable row level security;
 
--- Policies are created only when missing, rather than dropped and remade, so
--- this file can run again against a database that already has them.
+-- Each policy is created only when it is missing, so this file can run again
+-- against a database that already has them.
 do $$
 begin
   if not exists (
