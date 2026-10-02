@@ -35,6 +35,7 @@ A field-first business operating system for small electrical contractors. The in
 - Private Supabase document metadata and Storage policies isolated by organization
 - Google Drive folder mirroring with narrow per-file OAuth access and encrypted refresh-token storage
 - Top-right user menu and account center for profiles, preferences, Premium billing, security, and Square information
+- Public front page for signed-out visitors: the headline features, and walkthrough videos that Volteira support uploads from the console to Vercel Blob
 
 ## Stack
 
@@ -64,6 +65,8 @@ A field-first business operating system for small electrical contractors. The in
    DOCUMENT_SYNC_ENCRYPTION_KEY=
    GOOGLE_DRIVE_CLIENT_ID=
    GOOGLE_DRIVE_CLIENT_SECRET=
+   # Set by Vercel when a Blob store is connected. Only needed to upload front page videos.
+   BLOB_READ_WRITE_TOKEN=
    ```
 
 3. Start the app:
@@ -72,7 +75,7 @@ A field-first business operating system for small electrical contractors. The in
    npm run dev
    ```
 
-When no authenticated business is available, the dashboard intentionally displays realistic pilot data. Once a signed-in user belongs to an organization, the same dashboard reads the permitted organization records from Supabase.
+Signed out, `/` is the public front page and every page of the business itself asks the visitor to sign in. A signed-in user with no business yet is sent to onboarding, and one who belongs to an organization gets the dashboard, reading that organization's records from Supabase. Only without Supabase configured at all does the dashboard show realistic pilot data, so the app can be explored with nothing set up.
 
 ## Pilot integration notes
 

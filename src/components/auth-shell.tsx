@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { CalendarCheck2, Check, Route, ShieldCheck, Zap } from "lucide-react";
+import { CalendarCheck2, Check, PhoneCall, ReceiptText, ShieldCheck, Zap } from "lucide-react";
 
+// The same three the front page leads with, so the page that says what Volteira
+// does and the page you sign in on do not tell two different stories.
 const benefits = [
-  { icon: CalendarCheck2, label: "Run today’s schedule from one place" },
-  { icon: Route, label: "Build routes around jobs and supply stops" },
-  { icon: ShieldCheck, label: "Keep each company’s data separated and secure" },
+  { icon: PhoneCall, label: "An AI receptionist that answers every call" },
+  { icon: CalendarCheck2, label: "Diagnostics and work orders booked into your schedule" },
+  { icon: ReceiptText, label: "Invoices built from the work on each job" },
+  { icon: ShieldCheck, label: "Each company’s data kept separate and secure" },
 ];
 
 export function AuthShell({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
