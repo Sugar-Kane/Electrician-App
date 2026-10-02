@@ -18,11 +18,19 @@ const KEY_REFUSED: GeocodePayload = {
   results: [],
 };
 
-const match = (state: string, formatted: string, lat = 34.953, lng = -120.436): GeocodePayload => ({
+const match = (
+  state: string,
+  formatted: string,
+  lat = 34.953,
+  lng = -120.436,
+  // Null for a result that does not say what it is.
+  types: string[] | null = ["street_address"],
+): GeocodePayload => ({
   status: "OK",
   results: [
     {
       formatted_address: formatted,
+      types: types ?? undefined,
       geometry: { location: { lat, lng } },
       address_components: [
         { long_name: state === "TX" ? "Texas" : "California", short_name: state, types: ["administrative_area_level_1", "political"] },
@@ -98,8 +106,51 @@ test("a match in another state is not placed: the job's address needs fixing", (
   assert.match(answer.reason, /100 W Wall St, Midland, TX 79701, USA/);
 });
 
+test("a match that is only an area is not placed: its point is the area's middle", () => {
+  // Production stored 36.778261, -119.417932 for the job saved as "Midland, CA"
+  // with a Texas ZIP: Google's middle of California. It could match nothing
+  // finer than the state, and the state agreed with the job, so it was drawn.
+  const wholeState = match("CA", "California, USA", 36.778261, -119.417932, ["administrative_area_level_1", "political"]);
+  const answer = readGeocodeAnswer(wholeState, { savedState: "CA" });
+  assert.equal(answer.kind, "missed");
+  assert.equal(stopsTheRun(answer), false);
+  if (answer.kind === "missed") {
+    assert.equal(
+      answer.reason,
+      "Google could only find California, USA as a whole, not this street address. Check the address on the job.",
+    );
+  }
+
+  const county = match("CA", "Santa Barbara County, CA, USA", 34.67, -120.02, ["administrative_area_level_2", "political"]);
+  assert.equal(readGeocodeAnswer(county, { savedState: "CA" }).kind, "missed");
+  const city = match("CA", "Santa Maria, CA, USA", 34.953, -120.436, ["locality", "political"]);
+  assert.equal(readGeocodeAnswer(city, { savedState: "CA" }).kind, "missed");
+  const zip = match("CA", "Santa Maria, CA 93454, USA", 34.95, -120.43, ["postal_code"]);
+  assert.equal(readGeocodeAnswer(zip, { savedState: "CA" }).kind, "missed");
+});
+
+test("anything somebody can drive to is placed", () => {
+  for (const types of [
+    ["street_address"],
+    ["premise"],
+    ["subpremise"],
+    ["route"],
+    ["establishment", "point_of_interest", "dentist", "health"],
+  ]) {
+    const answer = readGeocodeAnswer(match("CA", "2050 S Blosser Rd, Santa Maria, CA 93458, USA", 34.93, -120.45, types), {
+      savedState: "CA",
+    });
+    assert.equal(answer.kind, "placed", types.join(","));
+  }
+  // A result that says nothing about what it is keeps the benefit of the doubt.
+  const unsaid = match("CA", "Somewhere, CA", 34.9, -120.4, null);
+  assert.equal(unsaid.results?.[0]?.types, undefined);
+  assert.equal(readGeocodeAnswer(unsaid).kind, "placed");
+  assert.equal(readGeocodeAnswer(match("CA", "Somewhere, CA", 34.9, -120.4, [])).kind, "placed");
+});
+
 test("the saved state is read however it was typed, and not checked when it is missing", () => {
-  const santaMaria = match("CA", "Santa Maria, CA, USA");
+  const santaMaria = match("CA", "412 E Chapel St, Santa Maria, CA 93454, USA");
   assert.equal(readGeocodeAnswer(santaMaria, { savedState: "Ca" }).kind, "placed");
   assert.equal(readGeocodeAnswer(santaMaria, { savedState: "california" }).kind, "placed");
   assert.equal(readGeocodeAnswer(santaMaria, { savedState: "" }).kind, "placed");
