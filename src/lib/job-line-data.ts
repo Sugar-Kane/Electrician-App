@@ -163,6 +163,8 @@ export async function getJobInvoice(jobNumber: string): Promise<JobInvoiceSummar
 export type StockOption = {
   id: string;
   name: string;
+  /** The SKU or catalogue number, so a part can be found by it. */
+  partNumber: string;
   unit: string;
   unitPriceCents: number;
   quantityOnHand: number;
@@ -181,7 +183,7 @@ export async function getStockOptions(): Promise<StockOption[]> {
 
   const { data, error } = await context.database
     .from("inventory_items")
-    .select("id, name, unit, unit_cost_cents, quantity_on_hand, location")
+    .select("id, name, sku, unit, unit_cost_cents, quantity_on_hand, location")
     .eq("organization_id", context.organizationId)
     .is("archived_at", null)
     .order("name", { ascending: true })
@@ -192,6 +194,7 @@ export async function getStockOptions(): Promise<StockOption[]> {
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: str(row.id),
     name: str(row.name),
+    partNumber: str(row.sku),
     unit: str(row.unit) || "each",
     unitPriceCents: num(row.unit_cost_cents),
     quantityOnHand: num(row.quantity_on_hand),

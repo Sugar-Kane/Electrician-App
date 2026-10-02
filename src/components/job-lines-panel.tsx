@@ -11,16 +11,18 @@ import {
   type LineActionState,
 } from "@/app/jobs/[jobId]/line-actions";
 import { raiseInvoice, type RaiseInvoiceState } from "@/app/jobs/[jobId]/invoice-actions";
+import { StockPicker } from "@/components/stock-picker";
 import { inputClass } from "@/components/ui/field";
-import { SelectField } from "@/components/ui/select-field";
 import {
   formatCents,
   formatQuantity,
   lineTotalCents,
+  parseQuantity,
   type JobLine,
   type JobLineTotals,
 } from "@/lib/job-lines";
 import type { JobInvoiceSummary, StockOption } from "@/lib/job-line-data";
+import { stockLeft, stockShortfall } from "@/lib/stock-choices";
 
 /**
  * What the job is made of, and what it comes to.
@@ -91,9 +93,45 @@ function AddLineForm({
   // Picking from stock fills the name, unit and price, so the common case is
   // one tap and a quantity. Typing over any of it afterwards is fine — the
   // fields stay editable, because the price on the van is not always the price.
-  const [chosen, setChosen] = useState<StockOption | null>(null);
+  //
+  // Held by id and looked up in `stock` each time, so the count beside it is
+  // the one the page last drew. Adding a part redraws the page with the new
+  // count; a copy of the item taken before would go on saying there were six.
+  const [chosenId, setChosenId] = useState("");
+  const chosen = stock.find((item) => item.id === chosenId) ?? null;
+
+  // Controlled, unlike the boxes around it, because the warning below reads
+  // it. Left uncontrolled with an onChange, it went quiet after an add: React
+  // resets the form behind its own back, so typing the same number again
+  // looked like no change at all.
+  const [quantityText, setQuantityText] = useState("1");
+
+  // The stock item the last added part came from, for the count it left.
+  const [takenId, setTakenId] = useState("");
+  const taken = stock.find((item) => item.id === takenId) ?? null;
+
+  // Bumped each time an add finishes, so the search starts empty again.
+  const [round, setRound] = useState(0);
+
+  /*
+   * Once the action is done React puts every uncontrolled box back the way it
+   * started, whatever the action said. What is kept in state goes back with
+   * them, and a part that was added is let go — left picked, the boxes would
+   * refill with it and the next tap would take another off the shelf.
+   */
+  const [settled, setSettled] = useState(state);
+  if (state !== settled) {
+    setSettled(state);
+    setQuantityText("1");
+    setRound(round + 1);
+    if (!state.error) {
+      setTakenId(chosenId);
+      setChosenId("");
+    }
+  }
 
   const labor = kind === "labor";
+  const shortfall = chosen ? stockShortfall(chosen, parseQuantity(quantityText)) : "";
 
   return (
     <form action={action} className="mt-3 space-y-2 rounded-control border border-line p-3">
@@ -101,28 +139,30 @@ function AddLineForm({
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="inventoryItemId" value={chosen?.id ?? ""} />
 
-      {!labor && stock.length > 0 ? (
-        <label className="block">
-          <span className="text-xs font-semibold text-ink-muted">From stock</span>
-          <span className="mt-1 block">
-            <SelectField
-              label="From stock"
-              placeholder="Not from stock"
-              value={chosen?.id ?? ""}
-              onChange={(next) => setChosen(stock.find((item) => item.id === next) ?? null)}
-              choices={[
-                { value: "", label: "Not from stock" },
-                ...stock.map((item) => ({
-                  value: item.id,
-                  label: item.name,
-                  description:
-                    item.quantityOnHand > 0 ? `${item.quantityOnHand} on hand` : "None on hand",
-                })),
-              ]}
-            />
-          </span>
-        </label>
-      ) : null}
+      {labor ? null : stock.length > 0 ? (
+        <StockPicker
+          key={round}
+          stock={stock}
+          picked={chosen}
+          onPick={(item) => {
+            setChosenId(item.id);
+            setTakenId("");
+          }}
+          onClear={() => setChosenId("")}
+        />
+      ) : (
+        // Said, rather than the picker quietly not being there. Without it
+        // nothing on this form says parts can come from inventory at all.
+        <p className="flex flex-wrap items-center gap-x-1 text-xs leading-5 text-ink-muted">
+          <span>Nothing in inventory yet, so type the part below.</span>
+          <Link
+            href="/inventory"
+            className="tap-target -my-2 inline-flex min-h-11 items-center px-1 font-semibold text-brand"
+          >
+            Add stock
+          </Link>
+        </p>
+      )}
 
       <label className="block">
         <span className="text-xs font-semibold text-ink-muted">
@@ -148,7 +188,8 @@ function AddLineForm({
           <input
             name="quantity"
             inputMode="decimal"
-            defaultValue="1"
+            value={quantityText}
+            onChange={(event) => setQuantityText(event.target.value)}
             className={`mt-1 ${inputClass}`}
           />
         </label>
@@ -180,14 +221,26 @@ function AddLineForm({
         </label>
       </div>
 
-      {state.error ? <p className="text-xs text-critical">{state.error}</p> : null}
+      {shortfall ? (
+        <p className="text-xs leading-5 text-caution" role="status">
+          {shortfall}
+        </p>
+      ) : null}
+
+      {state.error ? (
+        <p className="text-xs text-critical">{state.error}</p>
+      ) : taken ? (
+        <p className="text-xs text-positive" role="status">
+          Added. {stockLeft(taken)}
+        </p>
+      ) : null}
 
       <div className="flex gap-2">
         <SubmitButton label={labor ? "Add labor" : "Add part"} />
         <button
           type="button"
           onClick={onDone}
-          className="tap-target inline-flex min-h-12 items-center justify-center rounded-control border border-line px-4 text-sm font-semibold"
+          className="tap-target inline-flex min-h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-control border border-line px-4 text-sm font-semibold"
         >
           Done
         </button>
@@ -367,6 +420,9 @@ function LineRow({ jobNumber, line }: { jobNumber: string; line: JobLine }) {
         <span className="block truncate text-sm">{line.description}</span>
         <span className="block text-xs text-ink-muted">
           {formatQuantity(line.quantity)} {line.unit} × {formatCents(line.unitPriceCents)}
+          {/* Which of the two ways it went in. Removing one of these puts it
+              back on the shelf; a part typed in was never on it. */}
+          {line.inventoryItemId ? " · from inventory" : null}
           {state.error ? <span className="text-critical"> · {state.error}</span> : null}
         </span>
       </span>
