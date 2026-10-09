@@ -243,6 +243,21 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Volteira's own auth emails, for every business that signs up. Production does
+# not read these: paste each file into Supabase → Authentication → Emails, with
+# the subject below (supabase/templates/README.md has the steps).
+[auth.email.template.confirmation]
+subject = "Confirm your email to finish signing up for Volteira"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new Volteira sign-in email"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Volteira password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
