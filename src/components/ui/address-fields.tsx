@@ -48,8 +48,15 @@ export type AddressDefaults = Partial<AddressParts> & { line2?: string };
 export function AddressFields({
   defaults,
   withUnit = false,
+  canBeBlank = true,
 }: {
   defaults?: AddressDefaults;
+  /**
+   * Whether the whole address may be left empty, as it can on a new job. Job
+   * settings corrects an address that is already saved, where blank is refused,
+   * so it must not offer that.
+   */
+  canBeBlank?: boolean;
   /**
    * Adds the apartment, suite or floor box, posted as `addressLine2`. Jobs
    * want it; a supply stop is a counter with a door, and its action would
@@ -331,7 +338,11 @@ export function AddressFields({
       </Field>
       <Field
         label="ZIP"
-        hint="Leave the whole address blank if it is not known yet — it can be added later. A job with no address will not appear on the map."
+        hint={
+          canBeBlank
+            ? "Leave the whole address blank if it is not known yet — it can be added later. A job with no address will not appear on the map."
+            : undefined
+        }
       >
         <TextInput
           name="postalCode"

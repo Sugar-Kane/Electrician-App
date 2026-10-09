@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { returnStock } from "@/lib/job-billing-server";
 import { changeNeedsCustomerNotice } from "@/lib/job-change-messages";
 import { notifyJobChange } from "@/lib/job-notifications";
-import { readAccessNotes, readUnit } from "@/lib/property-details";
+import { readAccessNotes, readStreetAddress, readUnit } from "@/lib/property-details";
 import { slotLabel, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -96,11 +96,17 @@ async function loadJob(jobNumber: string) {
 }
 
 /**
- * The unit and the access notes, changed after the job was written down.
+ * The address and its details, changed after the job was written down.
  *
  * They belong to the property, not the job, because the gate code is the same
  * next month: saving them here changes what every job at this address shows.
  * Nothing is sent to the customer.
+ *
+ * The street, city, state and ZIP can be corrected too. A typo in any of them
+ * used to need somebody with database access — a job saved as "Midland, CA"
+ * with a Texas ZIP was pinned in the middle of California until it was fixed
+ * by hand. A contract already generated keeps the address it was written
+ * with: its text is stored when it is made, and a signed one is hashed.
  */
 export async function updateJobPlace(
   _previousState: JobActionState,
@@ -109,6 +115,13 @@ export async function updateJobPlace(
   const jobNumber = String(formData.get("jobNumber") ?? "").trim();
   const unit = readUnit(formData.get("addressLine2"));
   const accessNotes = readAccessNotes(formData.get("accessNotes"));
+  const address = readStreetAddress({
+    line1: formData.get("addressLine1"),
+    city: formData.get("city"),
+    state: formData.get("state"),
+    postalCode: formData.get("postalCode"),
+  });
+  if (!address.ok) return { error: address.error };
 
   const job = await loadJob(jobNumber);
   if (!job) return { error: "That job could not be found." };
@@ -119,9 +132,34 @@ export async function updateJobPlace(
     return { error: "This job has no address, so there is nowhere to keep these." };
   }
 
+  const { data: saved } = await job.supabase
+    .from("properties")
+    .select("address_line_1, city, state, postal_code")
+    .eq("id", job.propertyId)
+    .eq("organization_id", job.organizationId)
+    .maybeSingle();
+  if (!saved) return { error: "That address could not be found." };
+
+  // A different place needs a new pin. Cleared here, the route page looks the
+  // corrected address up the next time it opens; kept, the stop would be drawn
+  // where the typo put it.
+  const moved =
+    text(saved.address_line_1) !== address.value.line1 ||
+    text(saved.city) !== address.value.city ||
+    text(saved.state) !== address.value.state ||
+    text(saved.postal_code) !== address.value.postalCode;
+
   const { data, error } = await job.supabase
     .from("properties")
-    .update({ address_line_2: unit || null, access_notes: accessNotes || null })
+    .update({
+      address_line_1: address.value.line1,
+      address_line_2: unit || null,
+      city: address.value.city,
+      state: address.value.state,
+      postal_code: address.value.postalCode,
+      access_notes: accessNotes || null,
+      ...(moved ? { latitude: null, longitude: null } : {}),
+    })
     .eq("id", job.propertyId)
     .eq("organization_id", job.organizationId)
     .select("id");
@@ -132,6 +170,7 @@ export async function updateJobPlace(
 
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath(`/jobs/${jobNumber}/edit`);
+  if (moved) revalidatePath("/route");
   return { error: "", notice: "Saved. Every job at this address shows these." };
 }
 
