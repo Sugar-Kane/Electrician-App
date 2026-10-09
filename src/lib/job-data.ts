@@ -400,10 +400,19 @@ export async function getJobControls(jobNumber: string): Promise<{
   customerEmail: string;
   technicianNotes: string;
   /**
-   * Where the work is, for the details the street does not say: the unit and
-   * the access notes. Null when the job has no address to keep them with.
+   * Where the work is: the address as saved, which can be corrected, and the
+   * details the street does not say, the unit and the access notes. Null when
+   * the job has no address.
    */
-  place: { street: string; unit: string; town: string; accessNotes: string } | null;
+  place: {
+    street: string;
+    unit: string;
+    town: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    accessNotes: string;
+  } | null;
 } | null> {
   const context = await resolveContext();
   if (!context) return null;
@@ -455,6 +464,9 @@ export async function getJobControls(jobNumber: string): Promise<{
           ]
             .filter(Boolean)
             .join(", "),
+          city: str(property?.city),
+          state: str(property?.state),
+          postalCode: str(property?.postal_code),
           accessNotes: str(property?.access_notes),
         }
       : null,

@@ -9,11 +9,12 @@ import {
   updateJobPlace,
   type JobActionState,
 } from "@/app/jobs/[jobId]/actions";
+import { AddressFields } from "@/components/ui/address-fields";
 import { Button, SubmitButton } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
-import { MAX_ACCESS_NOTES_LENGTH, MAX_UNIT_LENGTH } from "@/lib/property-details";
+import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
 
 /**
  * Moving a job, and calling it off.
@@ -31,11 +32,23 @@ import { MAX_ACCESS_NOTES_LENGTH, MAX_UNIT_LENGTH } from "@/lib/property-details
 
 const initialState: JobActionState = { error: "" };
 
-export type JobPlaceDetails = { street: string; unit: string; town: string; accessNotes: string };
+export type JobPlaceDetails = {
+  street: string;
+  unit: string;
+  town: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  accessNotes: string;
+};
 
 /**
- * The unit and the access notes, for after the job is written down: the gate
- * code usually turns up on the first visit, not on the phone.
+ * The address, for after the job is written down: the gate code usually turns
+ * up on the first visit, not on the phone, and a misheard street or a wrong
+ * state turns up when the map puts the stop somewhere odd.
+ *
+ * The same four boxes as New job, suggestions and all, so a correction is
+ * checked the way the address was when it was first typed.
  */
 function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDetails }) {
   const [state, action] = useActionState(updateJobPlace, initialState);
@@ -59,15 +72,21 @@ function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDeta
         <input type="hidden" name="jobNumber" value={jobNumber} />
 
         <div className="mt-5 grid gap-4">
-          <Field label="Apt, suite or floor" hint="Optional.">
-            <TextInput
-              name="addressLine2"
-              defaultValue={place.unit}
-              autoComplete="off"
-              maxLength={MAX_UNIT_LENGTH}
-              placeholder="Apt 4B, 2nd floor"
-            />
-          </Field>
+          <AddressFields
+            withUnit
+            canBeBlank={false}
+            defaults={{
+              line1: place.street,
+              line2: place.unit,
+              city: place.city,
+              state: place.state,
+              postalCode: place.postalCode,
+            }}
+          />
+          <p className="text-xs leading-5 text-ink-muted">
+            The address belongs to the place, so every job there shows the change. A contract already
+            generated keeps the address it was written with.
+          </p>
           <Field
             label="Access notes"
             hint="Gate codes, pets, which door, where to park. Kept with the address, so every job there shows them."
@@ -86,7 +105,7 @@ function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDeta
         <FormMessage error={state.error} notice={state.notice} />
 
         <div className="mt-5">
-          <SubmitButton pendingLabel="Saving…">Save address details</SubmitButton>
+          <SubmitButton pendingLabel="Saving…">Save address</SubmitButton>
         </div>
       </section>
     </form>

@@ -10,8 +10,10 @@
  * The public booking form already collected both. These are the same two
  * columns, written from the business's side.
  *
- * Import-free, so it can be tested without a browser.
+ * Import-free apart from the state list, so it can be tested without a browser.
  */
+
+import { isUsStateCode } from "./us-states.ts";
 
 /** The same limit the public booking form puts on the same column. */
 export const MAX_UNIT_LENGTH = 120;
@@ -45,4 +47,35 @@ export function streetWithUnit(street: string, unit: string): string {
   if (!tidyUnit) return tidyStreet;
   if (!tidyStreet) return tidyUnit;
   return `${tidyStreet}, ${tidyUnit}`;
+}
+
+export type StreetAddress = { line1: string; city: string; state: string; postalCode: string };
+
+/**
+ * The street, city, state and ZIP of a saved address, corrected.
+ *
+ * All four or nothing, because the properties table holds all four, and the
+ * same two rules the New job form applies: a state from the list and a
+ * five-digit ZIP. A mistyped state is the one that matters most — Google
+ * places the address in the state it is given, or refuses to place it at all.
+ */
+export function readStreetAddress(raw: {
+  line1: unknown;
+  city: unknown;
+  state: unknown;
+  postalCode: unknown;
+}): { ok: true; value: StreetAddress } | { ok: false; error: string } {
+  const tidy = (value: unknown) => (typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "");
+  const line1 = tidy(raw.line1);
+  const city = tidy(raw.city);
+  const state = tidy(raw.state).toUpperCase();
+  const postalCode = tidy(raw.postalCode);
+
+  if (!line1 || !city || !state || !postalCode) {
+    return { ok: false, error: "An address needs street, city, state, and ZIP." };
+  }
+  if (!isUsStateCode(state)) return { ok: false, error: "Pick the state from the list." };
+  if (!/^\d{5}$/.test(postalCode)) return { ok: false, error: "A ZIP code is five digits." };
+
+  return { ok: true, value: { line1, city, state, postalCode } };
 }
