@@ -35,7 +35,7 @@ The existing server-only values are also required:
 ```text
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-NEXT_PUBLIC_APP_URL=https://electrician-app-blue.vercel.app
+NEXT_PUBLIC_APP_URL=https://www.volteira.com
 ```
 
 Enable the Stripe Customer Portal and keep the existing webhook endpoint subscribed to:
