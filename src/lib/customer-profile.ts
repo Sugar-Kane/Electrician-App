@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ActivityRow } from "@/lib/activity-timeline";
+import { INVOICE_STATE_LABELS, invoiceState, type InvoiceState } from "@/lib/dashboard-metrics";
 import {
   readLanguage,
   readLanguageSource,
@@ -31,6 +32,16 @@ export type CustomerProfile = {
   address: string;
   properties: { id: string; address: string; accessNotes: string }[];
   jobs: { id: string; number: string; when: string; summary: string; status: string }[];
+  /** Invoices on their jobs, newest first, read by the same rule as the Invoices list. */
+  invoices: {
+    id: string;
+    number: string;
+    jobNumber: string;
+    totalCents: number;
+    balanceCents: number;
+    state: InvoiceState;
+    label: string;
+  }[];
   openRequests: { id: string; summary: string; status: string }[];
   /** Their thread, whatever the inbox has been told to show. */
   conversationId: string | null;
@@ -167,6 +178,19 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
         .limit(60),
     ]);
 
+  const jobRows = (jobs ?? []) as Record<string, unknown>[];
+  const jobIds = jobRows.map((row) => text(row.id)).filter(Boolean);
+  const { data: invoiceRows } = jobIds.length
+    ? await supabase
+        .from("invoices")
+        .select("id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, job_id")
+        .eq("organization_id", context.organizationId)
+        .in("job_id", jobIds)
+        .order("created_at", { ascending: false })
+        .limit(20)
+    : { data: [] };
+  const jobNumberById = new Map(jobRows.map((row) => [text(row.id), String(row.job_number ?? "")]));
+
   const addressOf = (row: Record<string, unknown>) =>
     [
       text(row.address_line_1),
@@ -204,7 +228,24 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
     preferredContact: text(customer.preferred_contact),
     address: propertyList[0]?.address ?? "",
     properties: propertyList,
-    jobs: ((jobs ?? []) as Record<string, unknown>[]).map((row) => ({
+    invoices: ((invoiceRows ?? []) as Record<string, unknown>[]).map((row) => {
+      const state = invoiceState({
+        status: text(row.status),
+        dueAt: text(row.due_at) || null,
+        balanceDueCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),
+        lastSentAt: text(row.last_sent_at) || null,
+      });
+      return {
+        id: text(row.id),
+        number: String(row.invoice_number ?? ""),
+        jobNumber: jobNumberById.get(text(row.job_id)) ?? "",
+        totalCents: Number(row.total_cents ?? 0),
+        balanceCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),
+        state,
+        label: INVOICE_STATE_LABELS[state],
+      };
+    }),
+    jobs: jobRows.map((row) => ({
       id: text(row.id),
       number: String(row.job_number ?? ""),
       when: when(row.scheduled_start),

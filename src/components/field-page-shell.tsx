@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
-import { AccountMenu } from "@/components/account-menu";
+import { TopActions } from "@/components/top-actions";
 
 /**
  * The frame every signed-in page renders inside.
@@ -126,13 +126,16 @@ export function FieldPageShell({
     // `pb-28` is 112px, which cleared it on a phone with no indicator and hid
     // the last row of every page on one with. The inset is added rather than
     // assumed, now that it reports a real number.
-    <main className="min-h-screen bg-canvas p-2 pb-[calc(7rem+env(safe-area-inset-bottom))] text-ink sm:p-3 lg:pb-3">
+    // A page with a job's action bar floating above the tab bar needs room for
+    // both, or the last thing on the page sits under the bar — which is where
+    // the add-part form ended up on a job.
+    <main className="min-h-screen bg-canvas p-2 pb-[calc(7rem+env(safe-area-inset-bottom))] text-ink has-[[data-sticky-action]]:pb-[calc(12rem+env(safe-area-inset-bottom))] sm:p-3 lg:pb-3 lg:has-[[data-sticky-action]]:pb-3">
       <MobileAppChrome title={title} backHref={backHref} />
       <div className="mx-auto grid max-w-[1760px] gap-2 lg:grid-cols-[248px_minmax(0,1fr)]">
         <AppSidebar />
         <div className="min-w-0 lg:px-4 lg:py-2">
           <div className="hidden items-center justify-end gap-3 lg:flex">
-            <AccountMenu />
+            <TopActions />
           </div>
           {/*
             Where "Skip to content" lands. `tabIndex={-1}` makes it focusable

@@ -12,6 +12,7 @@ import {
   activeNavHref,
   activeNavItem,
   BOTTOM_NAV_HREFS,
+  TOP_BAR_ITEMS,
   isBeyondBottomNav,
 } from "./navigation.ts";
 
@@ -64,7 +65,10 @@ test("every entry has somewhere to go and something to say", () => {
 
 test("the page you are on is the entry that highlights", () => {
   assert.equal(activeNavHref("/"), "/");
-  assert.equal(activeNavHref("/schedule"), "/schedule");
+  assert.equal(activeNavHref("/jobs"), "/jobs");
+  assert.equal(activeNavHref("/customers"), "/customers");
+  // The calendar is a view of the jobs, reached from the jobs list.
+  assert.equal(activeNavHref("/schedule"), "/jobs");
   assert.equal(activeNavHref("/invoices"), "/invoices");
   assert.equal(activeNavHref("/materials"), "/materials");
 });
@@ -92,14 +96,15 @@ test("the account pages highlight nothing in the left menu, because they left it
 });
 
 test("a record opened from a list belongs to that list", () => {
-  // /jobs/1045 has no /schedule prefix, but it is the schedule you came from.
-  assert.equal(activeNavHref("/jobs/1045"), "/schedule");
+  assert.equal(activeNavHref("/jobs/1045"), "/jobs");
+  assert.equal(activeNavHref("/customers/5f2a"), "/customers");
   assert.equal(activeNavHref("/booking/2f1b7c14"), "/booking-requests");
 });
 
 test("a filter on a page does not stop that page highlighting", () => {
   assert.equal(activeNavHref("/invoices?status=overdue"), "/invoices");
-  assert.equal(activeNavHref("/schedule?view=jobs"), "/schedule");
+  assert.equal(activeNavHref("/schedule?view=jobs"), "/jobs");
+  assert.equal(activeNavHref("/jobs?stage=scheduled"), "/jobs");
 });
 
 test("a page outside the menu highlights nothing rather than guessing", () => {
@@ -174,7 +179,7 @@ test("the four permanent tabs do not light More", () => {
 
 test("a page reached through the menu lights More", () => {
   assert.equal(isBeyondBottomNav("/invoices"), true);
-  assert.equal(isBeyondBottomNav("/materials"), true);
+  assert.equal(isBeyondBottomNav("/reports"), true);
   assert.equal(isBeyondBottomNav("/technicians"), true);
 });
 
@@ -221,6 +226,14 @@ test("what left the menu is still somewhere a person can get to", () => {
   assert.ok(hrefs.includes("/settings"), "Settings is nowhere");
   assert.ok(hrefs.includes("/account"), "Your account is nowhere");
 
+  // Search and the assistant left the menu for the top bar of every screen.
+  const topBar = TOP_BAR_ITEMS.map((item) => item.href);
+  assert.ok(topBar.includes("/search"), "Search is nowhere");
+  assert.ok(topBar.includes("/assistant"), "the assistant is nowhere");
+  for (const item of ALL_NAV_ITEMS) {
+    assert.ok(!topBar.includes(item.href), `${item.label} is in the menu and the top bar`);
+  }
+
   // And not in both places at once, which is two entry points to one page.
   for (const item of ALL_NAV_ITEMS) {
     assert.ok(item.href !== "/settings" && item.href !== "/account", item.label);
@@ -237,5 +250,8 @@ test("every account entry explains itself, like every menu entry", () => {
 
   // One list of destinations, so a count that drifts is a destination that was
   // added to one place and forgotten in the other.
-  assert.equal(ALL_DESTINATIONS.length, ALL_NAV_ITEMS.length + ACCOUNT_MENU_ITEMS.length);
+  assert.equal(
+    ALL_DESTINATIONS.length,
+    ALL_NAV_ITEMS.length + TOP_BAR_ITEMS.length + ACCOUNT_MENU_ITEMS.length,
+  );
 });

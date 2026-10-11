@@ -111,7 +111,7 @@ export function NewJobForm({
    */
   const posted = state.values ?? followUp?.values;
   const kept: Partial<NewJobRaw> | undefined = picking ? { ...posted, ...picking.values } : posted;
-  const cancelHref = followUp ? `/jobs/${followUp.jobNumber}` : "/schedule";
+  const cancelHref = followUp ? `/jobs/${followUp.jobNumber}` : "/jobs";
 
   function pickCustomer(choice: CustomerChoice | null) {
     const values = choice ? choiceFill(choice) : EMPTY_CUSTOMER;

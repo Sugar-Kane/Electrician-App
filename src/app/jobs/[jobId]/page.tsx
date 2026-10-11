@@ -201,7 +201,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       compact
       title={job.contactName || job.customer}
       eyebrow={`Job #${job.id}`}
-      backHref="/schedule"
+      backHref="/jobs"
       action={
         controls ? (
           <JobMenu

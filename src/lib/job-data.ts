@@ -23,6 +23,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
+import type { AgreementState } from "@/lib/job-stage";
 import { unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
 import {
@@ -233,6 +234,40 @@ export const getJobs = cache(async function getJobs(): Promise<{
   if (error) return { jobs: [], source: "supabase" };
   return { jobs: (data ?? []).map((row) => mapJob(row, context.timeZone)), source: "supabase" };
 });
+
+/**
+ * Each job's agreement, as far as approval goes: sent for signing, signed, or
+ * neither. Keyed by job number, which is what the jobs list links by.
+ *
+ * Newest agreement per job, skipping voided ones — the same rule the job page
+ * uses to call older copies superseded. Change orders are left out: they are
+ * changes to work already agreed, not the approval itself.
+ */
+export async function getAgreementStates(): Promise<Record<string, AgreementState>> {
+  const context = await resolveContext();
+  if (!context) return {};
+
+  const { data, error } = await context.database
+    .from("contracts")
+    .select("status, signature_sent_at, signed_at, created_at, kind, jobs ( job_number )")
+    .eq("organization_id", context.organizationId)
+    .neq("status", "void")
+    .order("created_at", { ascending: false });
+  if (error) return {};
+
+  const states: Record<string, AgreementState> = {};
+  for (const row of (data ?? []) as Record<string, unknown>[]) {
+    if (row.kind === "change_order") continue;
+    const job = (Array.isArray(row.jobs) ? row.jobs[0] : row.jobs) as { job_number?: unknown } | null;
+    const number = job?.job_number === undefined || job?.job_number === null ? "" : String(job.job_number);
+    if (!number || states[number]) continue;
+    states[number] = {
+      signed: row.status === "signed" || Boolean(row.signed_at),
+      sent: row.status === "sent" || Boolean(row.signature_sent_at),
+    };
+  }
+  return states;
+}
 
 export async function getJob(id: string): Promise<{ job: PilotJob | null; source: Source }> {
   const context = await resolveContext();

@@ -694,6 +694,10 @@ function ActionBar({
 
   return (
     <div
+      // The page reserves room for this bar (field-page-shell), and it hides
+      // while the keyboard is up (globals.css).
+      data-sticky-action
+      data-hide-while-typing
       className={
         // Clears the floating nav — 64px tall, 12px off the bottom, plus the
         // home indicator underneath it.

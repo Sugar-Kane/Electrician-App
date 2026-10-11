@@ -363,3 +363,17 @@ pre {
     line-height: 1.35;
   }
 }
+
+/*
+ * While the keyboard is up, the floating bars step aside.
+ *
+ * `data-typing` is set on <html> by the phone chrome when a text box takes
+ * focus. The tab bar and a job's action bar are fixed to the bottom of the
+ * screen, which on a phone with the keyboard open is on top of the field being
+ * typed into. Desktop has neither bar floating, so this is phone-only.
+ */
+@media (max-width: 1023.98px) {
+  html[data-typing="true"] [data-hide-while-typing] {
+    display: none;
+  }
+}
