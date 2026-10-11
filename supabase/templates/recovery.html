@@ -1,0 +1,29 @@
+<!--
+  Reset password. The app has no "forgot password" link yet, but Supabase sends
+  this when a password reset is started from its dashboard, so it should look
+  like Volteira too.
+
+  Production does not read this file: paste it into Supabase → Authentication
+  → Emails → "Reset Password", with the subject in supabase/config.toml.
+-->
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f1f5f9">
+    <div style="max-width:520px;margin:0 auto;padding:32px 20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.6;color:#0f172a">
+      <p style="margin:0 0 24px;font-size:18px;font-weight:800;letter-spacing:0.04em;color:#071723">
+        <span style="display:inline-block;background:#ffc21c;color:#071723;border-radius:8px;padding:2px 8px;margin-right:6px">&#9889;</span>VOLTEIRA
+      </p>
+      <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px 24px">
+        <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#071723">Reset your Volteira password</h1>
+        <p style="margin:0 0 20px">Open this link to sign in to <strong>{{ .Email }}</strong>, then set a new password under Account.</p>
+        <p style="margin:0 0 24px">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ffc21c;color:#071723;font-weight:700;padding:12px 22px;border-radius:12px;text-decoration:none">Reset my password</a>
+        </p>
+        <p style="margin:0 0 8px;font-size:14px;color:#475569">Or copy this link into your browser:</p>
+        <p style="margin:0 0 20px;font-size:14px;color:#475569;word-break:break-all">{{ .ConfirmationURL }}</p>
+        <p style="margin:0;font-size:14px;color:#475569">The link works once and expires in an hour.</p>
+      </div>
+      <p style="margin:20px 4px 0;font-size:13px;color:#64748b">If you didn't ask to reset your password, ignore this email. Your password stays the same.</p>
+    </div>
+  </body>
+</html>
