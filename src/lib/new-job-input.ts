@@ -479,8 +479,8 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
       ok: false,
       error:
         cost.because === "too_large"
-          ? "That cost is larger than an invoice can hold. The most that fits is $99,999,999.99."
-          : "That cost could not be read. Try a figure like 1280 or 1280.50.",
+          ? "That invoice amount is larger than an invoice can hold. The most that fits is $99,999,999.99."
+          : "The draft invoice amount could not be read. Try a figure like 1280 or 1280.50.",
     };
   }
 

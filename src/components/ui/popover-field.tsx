@@ -155,7 +155,10 @@ export function PopoverField({
   }, [open]);
 
   return (
-    <div ref={root} className="relative">
+    // `min-w-0` because this usually sits in a grid or flex cell, which will
+    // not shrink below its widest child unless told to; the field is as wide
+    // as its column, never as wide as its longest option.
+    <div ref={root} className="relative min-w-0 max-w-full">
       {/*
         The value travels in a hidden input, so every form this replaces a
         native control in keeps posting exactly what it posted before and no

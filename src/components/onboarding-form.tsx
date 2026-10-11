@@ -51,7 +51,7 @@ function SubmitButton() {
       ) : (
         <Zap className="h-5 w-5 fill-current" aria-hidden />
       )}
-      {pending ? "Creating your workspace…" : "Create my business workspace"}
+      {pending ? "Setting up your business…" : "Set up my business"}
       {!pending ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
     </button>
   );

@@ -198,8 +198,8 @@ export function attentionItems(input: {
   }
   if (input.unsentInvoices > 0) {
     items.push({
-      label: `${plural(input.unsentInvoices, "invoice", "invoices")} never sent`,
-      href: "/invoices?status=unpaid",
+      label: `Send ${plural(input.unsentInvoices, "draft invoice", "draft invoices")}`,
+      href: "/invoices?status=draft",
     });
   }
   if (input.lowStock > 0) {

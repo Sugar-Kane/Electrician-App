@@ -6,7 +6,7 @@ Supabase Auth sends these, not the app. Every electrical business that signs up 
 | --- | --- | --- | --- |
 | Confirm signup | `confirmation.html` | Confirm your email to finish signing up for Volteira | Somebody creates an account at volteira.com/signup |
 | Change Email Address | `email_change.html` | Confirm your new Volteira sign-in email | Somebody changes their email under Account |
-| Reset Password | `recovery.html` | Reset your Volteira password | A password reset is started (today, only from the Supabase dashboard) |
+| Reset Password | `recovery.html` | Reset your Volteira password | Somebody uses **Forgot password?** on the sign-in page, or a reset is started from the Supabase dashboard |
 
 Team invitations are the app's own email (`src/lib/invitation-message.ts`, sent from Settings → Team), so they are not here.
 

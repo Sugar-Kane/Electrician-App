@@ -67,6 +67,13 @@ function money(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+/** What one line charges the customer, as typed so far. */
+function lineCents(line: Line): number {
+  const quantity = Number(line.quantity);
+  const cents = parseCostToCents(line.price) ?? 0;
+  return Number.isFinite(quantity) && quantity > 0 ? Math.round(quantity * cents) : 0;
+}
+
 export function WorkOrderLines({
   /** How to read the job, so the draft is about this job and not about jobs. */
   describedBy,
@@ -83,11 +90,7 @@ export function WorkOrderLines({
   const [drafting, setDrafting] = useState(false);
   const [problem, setProblem] = useState("");
 
-  const total = lines.reduce((sum, line) => {
-    const quantity = Number(line.quantity);
-    const cents = parseCostToCents(line.price) ?? 0;
-    return sum + (Number.isFinite(quantity) && quantity > 0 ? Math.round(quantity * cents) : 0);
-  }, 0);
+  const total = lines.reduce((sum, line) => sum + lineCents(line), 0);
 
   function edit(key: string, change: Partial<Line>) {
     setLines((current) =>
@@ -259,7 +262,7 @@ export function WorkOrderLines({
                   />
                 </Field>
 
-                <Field label="Each">
+                <Field label={line.kind === "material" ? "Customer price each" : "Customer rate"}>
                   <TextInput
                     value={line.price}
                     onChange={(event) =>
@@ -270,6 +273,10 @@ export function WorkOrderLines({
                   />
                 </Field>
               </div>
+
+              <p className="mt-2 text-right text-sm text-ink-muted" aria-live="polite">
+                Line total <span className="font-semibold text-ink">{money(lineCents(line))}</span>
+              </p>
 
               <Shortfall stock={stock} line={line} />
             </li>

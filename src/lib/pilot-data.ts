@@ -1,3 +1,4 @@
+import type { InvoiceState } from "./dashboard-metrics.ts";
 import type { KindOfWork } from "./new-job-input.ts";
 
 export type JobStatus = "In progress" | "Scheduled" | "Pending" | "Completed" | "Canceled";
@@ -81,7 +82,10 @@ export type PilotInvoice = {
   id: string;
   customer: string;
   amount: number;
-  status: "Paid" | "Unpaid" | "Overdue";
+  /** The words it is listed under, from `invoiceStatusLabel`. */
+  status: string;
+  /** What filters and styles match on, so rewording a label cannot break them. */
+  state: InvoiceState;
   due: string;
   jobId: string;
   /**
@@ -278,10 +282,10 @@ export const pilotJobs: PilotJob[] = [
 ];
 
 export const pilotInvoices: PilotInvoice[] = [
-  { id: "INV-10024", customer: "Smith Residence", amount: 3789.32, status: "Paid", due: "Paid today", jobId: "1045" },
-  { id: "INV-10023", customer: "Johnson Commercial", amount: 4250, status: "Unpaid", due: "Due Aug 10", jobId: "1046" },
-  { id: "INV-10018", customer: "Harper Residence", amount: 950, status: "Overdue", due: "12 days overdue", jobId: "1048" },
-  { id: "INV-10012", customer: "Coastal Dental", amount: 1280, status: "Paid", due: "Paid Jul 31", jobId: "1050" },
+  { id: "INV-10024", customer: "Smith Residence", amount: 3789.32, status: "Paid", state: "paid", due: "Paid today", jobId: "1045" },
+  { id: "INV-10023", customer: "Johnson Commercial", amount: 4250, status: "Sent · awaiting payment", state: "awaiting", due: "Due Aug 10", jobId: "1046" },
+  { id: "INV-10018", customer: "Harper Residence", amount: 950, status: "Overdue", state: "overdue", due: "12 days overdue", jobId: "1048" },
+  { id: "INV-10012", customer: "Coastal Dental", amount: 1280, status: "Paid", state: "paid", due: "Paid Jul 31", jobId: "1050" },
 ];
 
 export const serviceBase = {

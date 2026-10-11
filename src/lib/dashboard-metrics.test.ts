@@ -4,11 +4,13 @@ import assert from "node:assert/strict";
 import {
   estimatesDetail,
   invoiceAging,
+  invoiceState,
   invoiceStatusLabel,
   invoicesDetail,
   isOverdue,
   jobsDetail,
   profitSummary,
+  receivables,
   revenueDetail,
   techniciansDetail,
 } from "./dashboard-metrics.ts";
@@ -239,12 +241,68 @@ test("an invoice past its due date is listed as overdue, whatever its stored sta
 
   assert.equal(row("sent", "2026-09-17T00:00:00Z", 14_300), "Overdue");
   assert.equal(row("partially_paid", "2026-09-17T00:00:00Z", 5_000), "Overdue");
-  assert.equal(row("sent", "2026-10-13T00:00:00Z", 22_550), "Unpaid");
-  assert.equal(row("draft", null, 22_550), "Unpaid");
+  assert.equal(row("sent", "2026-10-13T00:00:00Z", 22_550), "Sent · awaiting payment");
+  assert.equal(row("partially_paid", "2026-10-13T00:00:00Z", 5_000), "Part paid");
   assert.equal(row("paid", "2026-09-17T00:00:00Z", 0), "Paid");
-  // Nothing left owing is not late, and neither is a voided bill.
-  assert.equal(row("sent", "2026-09-17T00:00:00Z", 0), "Unpaid");
-  assert.equal(row("void", "2026-09-17T00:00:00Z", 14_300), "Unpaid");
+  // Sent with nothing left owing is settled; a voided bill is void.
+  assert.equal(row("sent", "2026-09-17T00:00:00Z", 0), "Paid");
+  assert.equal(row("void", "2026-09-17T00:00:00Z", 14_300), "Void");
   // A row that was stored as overdue stays overdue.
   assert.equal(row("overdue", "2026-09-17T00:00:00Z", 14_300), "Overdue");
+});
+
+test("a draft nobody has sent is a draft, never owed and never overdue", () => {
+  // INV-16: listed as Unpaid and counted in money owed while its job and its
+  // own page said Draft — an owner could chase a bill the customer never got.
+  const now = new Date("2026-10-11T15:00:00Z");
+  const draft = { status: "draft", dueAt: "2026-09-01T00:00:00Z", balanceDueCents: 12_500 };
+
+  assert.equal(invoiceState(draft, now), "draft");
+  assert.equal(invoiceStatusLabel(draft, now), "Draft · not sent");
+  assert.equal(isOverdue(draft, now), false);
+  assert.deepEqual(receivables([draft], now), {
+    owedCents: 0,
+    overdueCount: 0,
+    overdueCents: 0,
+    draftCount: 1,
+    draftCents: 12_500,
+  });
+  // And it is no part of the aging bar.
+  assert.ok(invoiceAging([draft], now).every((bucket) => bucket.percent === 0));
+});
+
+test("a draft that was texted or emailed counts as sent", () => {
+  // Sending recorded the time and left the status at draft.
+  const now = new Date("2026-10-11T15:00:00Z");
+  const texted = {
+    status: "draft",
+    dueAt: "2026-10-01T00:00:00Z",
+    balanceDueCents: 30_000,
+    lastSentAt: "2026-09-20T18:00:00Z",
+  };
+  assert.equal(invoiceState(texted, now), "overdue");
+  assert.equal(receivables([texted], now).owedCents, 30_000);
+  assert.equal(invoiceState({ ...texted, dueAt: "2026-10-20T00:00:00Z" }, now), "awaiting");
+});
+
+test("money owed is every sent, unpaid balance, part-paid included, and nothing else", () => {
+  const now = new Date("2026-10-11T15:00:00Z");
+  const totals = receivables(
+    [
+      { status: "sent", dueAt: "2026-10-20T00:00:00Z", balanceDueCents: 10_000 },
+      { status: "partially_paid", dueAt: "2026-10-20T00:00:00Z", balanceDueCents: 4_000 },
+      { status: "sent", dueAt: "2026-10-01T00:00:00Z", balanceDueCents: 2_500 },
+      { status: "draft", dueAt: null, balanceDueCents: 7_000 },
+      { status: "paid", dueAt: "2026-10-01T00:00:00Z", balanceDueCents: 0 },
+      { status: "void", dueAt: "2026-10-01T00:00:00Z", balanceDueCents: 9_999 },
+    ],
+    now,
+  );
+  assert.deepEqual(totals, {
+    owedCents: 16_500,
+    overdueCount: 1,
+    overdueCents: 2_500,
+    draftCount: 1,
+    draftCents: 7_000,
+  });
 });

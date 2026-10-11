@@ -123,6 +123,8 @@ export function NewJobForm({
   const [duration, setDuration] = useState(kept?.durationHours ?? "");
   const [cost, setCost] = useState(kept?.cost ?? "");
   const [phone, setPhone] = useState(keepPhoneDigits(kept?.phone ?? ""));
+  // Only to name the main button: a time on it is a booking, none is not.
+  const [start, setStart] = useState(kept?.startLocal ?? "");
 
   /*
    * Which button was pressed.
@@ -290,12 +292,13 @@ export function NewJobForm({
             label="Start"
             timeZone={timeZone}
             defaultValue={kept?.startLocal ?? ""}
+            onValueChange={setStart}
           />
         </Field>
 
         <Field
-          label="Cost"
-          hint="Optional. A figure here raises a draft invoice, which is not sent until you send it."
+          label="Create a draft invoice for this amount (optional)"
+          hint="Leave blank for no invoice. A draft invoice is not sent until you send it."
         >
           <TextInput
             name="cost"
@@ -352,7 +355,7 @@ export function NewJobForm({
           ) : (
             <Plus className="h-4 w-4" aria-hidden />
           )}
-          {pending ? "Saving" : "Save"}
+          {pending ? "Saving" : start ? "Schedule job" : "Save job"}
         </button>
 
         <button
@@ -362,7 +365,7 @@ export function NewJobForm({
           className="tap-target inline-flex w-full items-center justify-center gap-2 rounded-control border border-line px-5 text-sm font-semibold text-ink disabled:opacity-60 sm:w-auto"
         >
           <FileText className="h-4 w-4" aria-hidden />
-          Save as draft
+          Save draft
         </button>
 
         <Link
@@ -375,8 +378,9 @@ export function NewJobForm({
       </div>
 
       <p className="text-xs leading-5 text-ink-faint">
-        A draft is saved without a time and without chasing the customer. It stays on the schedule
-        as yours to finish.
+        Neither button texts or emails the customer: messages go only when you send them from the
+        job. A draft can be missing details and stays unconfirmed, even with a time, until you
+        finish it.
       </p>
     </form>
   );

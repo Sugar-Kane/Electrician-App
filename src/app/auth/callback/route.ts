@@ -28,6 +28,17 @@ export async function GET(request: Request) {
     // The login page presents a safe, user-facing callback error.
   }
 
+  // A reset link that failed goes back to asking for another, which is the
+  // only useful thing to do next; signing in is what they could not do.
+  if (nextPath.startsWith("/reset-password")) {
+    const forgotUrl = new URL("/forgot-password", request.url);
+    forgotUrl.searchParams.set(
+      "error",
+      "That reset link has expired, was already used, or was opened in a different browser. Ask for a new one here.",
+    );
+    return NextResponse.redirect(forgotUrl, 303);
+  }
+
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("error", "That sign-in link is invalid or has expired. Please try again.");
   loginUrl.searchParams.set("next", nextPath);

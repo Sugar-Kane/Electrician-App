@@ -40,7 +40,7 @@ function dateLabel(iso: unknown, timeZone: string): string {
 
 const STATUS_WORDS: Record<string, string> = {
   draft: "Draft",
-  sent: "Unpaid",
+  sent: "Awaiting payment",
   partially_paid: "Part paid",
   paid: "Paid",
   overdue: "Overdue",
@@ -196,7 +196,7 @@ export async function generateInvoicePdf(input: {
         invoiceNumber,
         issuedLabel: dateLabel(invoice.created_at, input.timeZone),
         dueLabel: dateLabel(invoice.due_at, input.timeZone) || "On receipt",
-        statusLabel: STATUS_WORDS[str(invoice.status)] ?? "Unpaid",
+        statusLabel: STATUS_WORDS[str(invoice.status)] ?? "Awaiting payment",
         customer: {
           name: customerName,
           addressLines,

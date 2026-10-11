@@ -5,7 +5,7 @@ import { shiftDays, todayInZone } from "@/lib/calendar";
 import {
   estimatesDetail,
   invoicesDetail,
-  isOverdue,
+  receivables,
   invoiceAging,
   jobsDetail,
   profitSummary,
@@ -84,7 +84,7 @@ const demoSnapshot: DashboardSnapshot = {
     { label: "Electricians", value: "6", detail: "2 on the way" },
     { label: "Open estimates", value: "12", detail: "$45,680 pending" },
     {
-      label: "Unpaid invoices",
+      label: "Money owed",
       value: "$12,430",
       detail: "5 overdue",
       tone: "danger",
@@ -233,7 +233,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .lt("scheduled_start", dayEnd.toISOString()),
         supabase
           .from("invoices")
-          .select("status,total_cents,balance_due_cents,due_at,paid_at")
+          .select("status,total_cents,balance_due_cents,due_at,paid_at,last_sent_at")
           .eq("organization_id", organizationId),
         supabase
           .from("estimates")
@@ -284,13 +284,16 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const paidToday = paidBetween(dayStart, dayEnd);
     const paidYesterday = paidBetween(yesterdayStart, dayStart);
 
-    const overdueCount = (invoices.data ?? []).filter((invoice) =>
-      isOverdue({
-        status: invoice.status,
-        dueAt: invoice.due_at,
-        balanceDueCents: invoice.balance_due_cents,
-      }),
-    ).length;
+    // One rule with the Invoices list: owed means sent and not settled, and a
+    // draft nobody has sent is neither owed nor overdue.
+    const invoiceFacts = (invoices.data ?? []).map((invoice) => ({
+      status: invoice.status,
+      dueAt: invoice.due_at,
+      balanceDueCents: invoice.balance_due_cents,
+      lastSentAt: invoice.last_sent_at,
+    }));
+    const owed = receivables(invoiceFacts);
+    const overdueCount = owed.overdueCount;
 
     // Month to date, against the same stretch of last month.
     const monthStart = new Date(zonedWallClockToIso(`${today.slice(0, 8)}01T00:00`, zone));
@@ -308,13 +311,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       lastMonthToDateCents: lastMonthToDate,
     });
 
-    const aging = invoiceAging(
-      (invoices.data ?? []).map((invoice) => ({
-        dueAt: invoice.due_at,
-        balanceDueCents: invoice.balance_due_cents,
-        status: invoice.status,
-      })),
-    );
+    const aging = invoiceAging(invoiceFacts);
 
     // A canceled job is not work. It stayed in the count, so a day whose only
     // job had been called off still read "Jobs today: 1" — and then "0 in
@@ -325,10 +322,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const inProgress = jobsToday.filter((job) => job.status === "in_progress").length;
     const enRoute = jobsToday.filter((job) => job.status === "en_route").length;
     const activeTechnicians = technicians.data?.length ?? 0;
-    const outstanding = (invoices.data ?? []).reduce(
-      (total, invoice) => total + invoice.balance_due_cents,
-      0,
-    );
+    const outstanding = owed.owedCents;
     const estimateTotal = (estimates.data ?? []).reduce(
       (total, estimate) => total + estimate.total_cents,
       0,
@@ -403,9 +397,9 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           }),
         },
         {
-          label: "Unpaid invoices",
+          label: "Money owed",
           value: money.format(outstanding / 100),
-          ...invoicesDetail({ outstandingCents: outstanding, overdue: overdueCount }),
+          ...invoicesDetail({ outstandingCents: outstanding, overdue: overdueCount, draftCents: owed.draftCents }),
         },
       ],
       profit: { value: profit.value, change: profit.change, chart: [] },

@@ -110,7 +110,7 @@ export async function deliverInvoice(input: {
   try {
     const { data: existing } = await database
       .from("invoices")
-      .select("deliveries")
+      .select("deliveries, status")
       .eq("id", input.invoiceId)
       .maybeSingle();
 
@@ -119,11 +119,16 @@ export async function deliverInvoice(input: {
       : [];
 
     const succeeded = attempts.some((attempt) => attempt.ok);
+    // A draft that reached the customer is sent. Recording only the time left
+    // the status at draft, so the job said Draft about a bill the customer
+    // had in hand. Any later status (part paid, paid) is left as it is.
+    const nowSent = succeeded && existing?.status === "draft";
     await database
       .from("invoices")
       .update({
         deliveries: [...previous, ...attempts],
         ...(succeeded ? { last_sent_at: new Date().toISOString() } : {}),
+        ...(nowSent ? { status: "sent" } : {}),
       })
       .eq("id", input.invoiceId);
   } catch {

@@ -22,7 +22,7 @@ import { currentContext } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
-import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
+import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
 import {
@@ -285,17 +285,22 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
       customer.company_name ||
       [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
       "Customer";
+    // One rule for every screen: whether it was sent, its due date and its
+    // balance, not the stored word alone — nothing stores `overdue`, and a
+    // texted invoice used to keep saying draft.
+    const state = invoiceState({
+      status: String(row.status ?? ""),
+      dueAt: (row.due_at as string | null) ?? null,
+      balanceDueCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),
+      lastSentAt: (row.last_sent_at as string | null) ?? null,
+    });
     return {
       id: `INV-${row.invoice_number}`,
       customer: name,
       // Cents in the database; the UI renders dollars.
       amount: Number(row.total_cents ?? 0) / 100,
-      // From the due date as well as the status: nothing stores `overdue`.
-      status: invoiceStatusLabel({
-        status: String(row.status ?? ""),
-        dueAt: (row.due_at as string | null) ?? null,
-        balanceDueCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),
-      }),
+      status: INVOICE_STATE_LABELS[state],
+      state,
       due: inZone(row.due_at as string | null, context.timeZone, {
         month: "short", day: "numeric", year: "numeric",
       }),

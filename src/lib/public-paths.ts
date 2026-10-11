@@ -12,7 +12,7 @@
  * The public pages are the ones a customer or a stranger is sent to: the front
  * page, the demo, booking, paying the booking deposit, signing a contract,
  * accepting an invitation, the journal, a business's terms and privacy pages,
- * signing in and up, and the routes Twilio, Stripe and Google call. Everything
+ * signing in and up, resetting a password, and the routes Twilio, Stripe and Google call. Everything
  * else is the business's own work and needs somebody signed in to see it.
  *
  * Import-free, so the rule can be tested without a request.
@@ -38,6 +38,10 @@ const PUBLIC_PAGES = new Set([
   "/demo",
   "/login",
   "/signup",
+  // Asking for a reset link, and using it. The reset page checks for itself
+  // that the visitor came back through a link; signed out, it says so.
+  "/forgot-password",
+  "/reset-password",
   "/robots.txt",
   "/sitemap.xml",
   "/icon.svg",

@@ -4,6 +4,7 @@ import { ArrowUpRight, FileWarning } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
+import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { currentDocument } from "@/lib/pdf/store";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -55,7 +56,7 @@ export default async function InvoicePage({
   const { data } = await database
     .from("invoices")
     .select(
-      `id, invoice_number, status, total_cents, balance_due_cents, due_at,
+      `id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
        jobs ( job_number, customers ( first_name, last_name, company_name ) )`,
     )
     .eq("organization_id", context.organizationId)
@@ -81,6 +82,22 @@ export default async function InvoicePage({
   });
 
   const jobNumber = String(job?.job_number ?? "");
+  const state = invoiceState({
+    status: str(invoice.status),
+    dueAt: str(invoice.due_at) || null,
+    balanceDueCents: Number(invoice.balance_due_cents ?? 0),
+    lastSentAt: str(invoice.last_sent_at) || null,
+  });
+  // A draft is money the customer has not been asked for, so it never reads
+  // as owed — that is the line an owner chased an unsent bill from.
+  const balanceLine =
+    state === "draft"
+      ? `Draft · not sent — ${money(invoice.balance_due_cents)} once it is sent`
+      : state === "void"
+        ? "Void"
+        : Number(invoice.balance_due_cents ?? 0) > 0
+          ? `${INVOICE_STATE_LABELS[state]} · ${money(invoice.balance_due_cents)} still owed`
+          : "Paid · nothing owed";
 
   return (
     <FieldPageShell
@@ -93,11 +110,7 @@ export default async function InvoicePage({
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="text-2xl font-semibold">{money(invoice.total_cents)}</p>
-            <p className="mt-0.5 text-sm text-ink-muted">
-              {Number(invoice.balance_due_cents ?? 0) > 0
-                ? `${money(invoice.balance_due_cents)} still owed`
-                : "Nothing owed"}
-            </p>
+            <p className="mt-0.5 text-sm text-ink-muted">{balanceLine}</p>
           </div>
           {jobNumber ? (
             <Link

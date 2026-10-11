@@ -3,9 +3,11 @@
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  Ban,
   CheckCircle2,
   ChevronRight,
   Clock3,
+  FilePen,
   LoaderCircle,
   ReceiptText,
   Trash2,
@@ -15,6 +17,7 @@ import {
 import { deleteInvoice, type InvoiceActionState } from "@/app/invoices/actions";
 import { InvoiceSend } from "@/components/invoice-send";
 import { swipeIntent } from "@/lib/swipe";
+import type { InvoiceState } from "@/lib/dashboard-metrics";
 import type { PilotInvoice } from "@/lib/pilot-data";
 
 /**
@@ -34,16 +37,24 @@ import type { PilotInvoice } from "@/lib/pilot-data";
  * touchscreen would be a feature for exactly one kind of user.
  */
 
-const STATUS_STYLES: Record<string, string> = {
-  Paid: "bg-positive-bg text-positive",
-  Unpaid: "bg-info-bg text-info",
-  Overdue: "bg-critical-bg text-critical",
+// Keyed by state. Each pairs a colour with an icon and the words beside it,
+// so status never rests on colour alone.
+const STATUS_STYLES: Record<InvoiceState, string> = {
+  draft: "bg-white/[0.08] text-ink-muted",
+  awaiting: "bg-info-bg text-info",
+  part_paid: "bg-info-bg text-info",
+  overdue: "bg-critical-bg text-critical",
+  paid: "bg-positive-bg text-positive",
+  void: "bg-white/[0.06] text-ink-faint",
 };
 
-const STATUS_ICONS: Record<string, typeof CheckCircle2> = {
-  Paid: CheckCircle2,
-  Unpaid: Clock3,
-  Overdue: TriangleAlert,
+const STATUS_ICONS: Record<InvoiceState, typeof CheckCircle2> = {
+  draft: FilePen,
+  awaiting: Clock3,
+  part_paid: Clock3,
+  overdue: TriangleAlert,
+  paid: CheckCircle2,
+  void: Ban,
 };
 
 const initialState: InvoiceActionState = { error: "" };
@@ -53,7 +64,7 @@ export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
   const [open, setOpen] = useState(false);
   const start = useRef<{ x: number; y: number } | null>(null);
 
-  const Icon = STATUS_ICONS[invoice.status] ?? ReceiptText;
+  const Icon = STATUS_ICONS[invoice.state] ?? ReceiptText;
   // The demo fixtures have no database row, so there is nothing to delete and
   // the gesture is not offered on them.
   const deletable = Boolean(invoice.recordId);
@@ -82,22 +93,28 @@ export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
           href={invoice.recordId ? `/invoices/${invoice.recordId}` : `/jobs/${invoice.jobId}`}
           className="tap-row flex min-h-[52px] min-w-0 flex-1 items-center gap-3 active:bg-white/5"
         >
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5">
+          {/* The icon repeats the status words, so the narrowest phones do without it. */}
+          <span className="hidden h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5 min-[360px]:grid">
             <Icon className="h-5 w-5 text-brand" aria-hidden />
           </span>
+          {/*
+            Name and amount share the top line; the status sits under the due
+            date. With the status beside the amount, "Sent · awaiting payment"
+            took the row's width and left the due date one letter wide.
+          */}
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold">{invoice.customer}</span>
-            <span className="mt-0.5 block truncate text-xs text-ink-muted">
-              {invoice.id} · due {invoice.due}
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="min-w-0 truncate text-sm font-semibold">{invoice.customer}</span>
+              <span className="shrink-0 text-sm font-semibold">
+                ${invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </span>
+            </span>
+            <span className="mt-0.5 block break-words text-xs leading-5 text-ink-muted">
+              {invoice.id} · {invoice.due ? `due ${invoice.due}` : "no due date"}
               {invoice.sentLabel ? ` · sent ${invoice.sentLabel}` : ""}
             </span>
-          </span>
-          <span className="shrink-0 text-right">
-            <span className="block text-sm font-semibold">
-              ${invoice.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </span>
             <span
-              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[invoice.status] ?? ""}`}
+              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[invoice.state] ?? ""}`}
             >
               {invoice.status}
             </span>
@@ -145,7 +162,7 @@ export function InvoiceRow({ invoice }: { invoice: PilotInvoice }) {
 
       {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
 
-      {invoice.status === "Paid" ? null : <InvoiceSend invoice={invoice} />}
+      {invoice.state === "paid" || invoice.state === "void" ? null : <InvoiceSend invoice={invoice} />}
     </div>
   );
 }

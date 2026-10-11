@@ -54,6 +54,8 @@ function StopForm({ stop, onDone }: { stop?: SupplyStopRow; onDone: () => void }
         </Field>
 
         <AddressFields
+          canBeBlank={false}
+          hint="Where you pick parts up. The route drives here, so it needs a street address."
           defaults={{
             line1: stop?.address ?? "",
             city: stop?.city ?? "",

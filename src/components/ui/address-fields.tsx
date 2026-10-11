@@ -49,8 +49,14 @@ export function AddressFields({
   defaults,
   withUnit = false,
   canBeBlank = true,
+  hint,
 }: {
   defaults?: AddressDefaults;
+  /**
+   * What the address is for, said under it. Without one, a blank-able address
+   * explains blank in terms of a job, which is the form it was first built for.
+   */
+  hint?: string;
   /**
    * Whether the whole address may be left empty, as it can on a new job. Job
    * settings corrects an address that is already saved, where blank is refused,
@@ -339,9 +345,10 @@ export function AddressFields({
       <Field
         label="ZIP"
         hint={
-          canBeBlank
+          hint ??
+          (canBeBlank
             ? "Leave the whole address blank if it is not known yet — it can be added later. A job with no address will not appear on the map."
-            : undefined
+            : undefined)
         }
       >
         <TextInput

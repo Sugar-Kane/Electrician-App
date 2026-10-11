@@ -209,8 +209,15 @@ function Listbox({
                   <span className="ml-1 text-[11px] font-normal text-ink-faint">· saved</span>
                 ) : null}
               </span>
+              {/*
+                Wrapped, never cut. One line that cannot break also sets the
+                width of everything around it, so a long description pushed
+                the field and its list past the right edge of a phone — the
+                Diagnostic option's explanation was the one people could not
+                finish reading.
+              */}
               {choice.description ? (
-                <span className="block truncate text-[11px] text-ink-muted">
+                <span className="block whitespace-normal break-words text-xs leading-5 text-ink-muted">
                   {choice.description}
                 </span>
               ) : null}

@@ -18,7 +18,7 @@ export default async function SignupPage({
   // cannot be stuffed with arbitrary text from a link.
   const invited = typeof email === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email) ? email : undefined;
   return (
-    <AuthShell eyebrow="Start your workspace" title="Create your account" description="Set up secure access for your electrical business. You can invite the team after signing in.">
+    <AuthShell eyebrow="Set up your business" title="Create your account" description="Start with your email and a password. Next you'll add your business details, and you can invite your team after that.">
       <AuthForm mode="signup" nextPath={nextPath} defaultEmail={invited} />
     </AuthShell>
   );

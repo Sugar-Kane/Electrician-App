@@ -153,7 +153,8 @@ function ProductConfirmationForm({
   const [productUrl, setProductUrl] = useState("");
   const [retailerSku, setRetailerSku] = useState("");
   const [quantity, setQuantity] = useState(String(shortage));
-  const [unitPrice, setUnitPrice] = useState(material.estimatedUnitPrice.toFixed(2));
+  // Blank until somebody types what the store's page says.
+  const [unitPrice, setUnitPrice] = useState("");
   const [availability, setAvailability] = useState<ProductAvailability>("unknown");
   const [storeName, setStoreName] = useState(initialStore.name);
   const [storeNumber, setStoreNumber] = useState(initialStore.storeNumber ?? "");
@@ -189,7 +190,7 @@ function ProductConfirmationForm({
       setError("Enter a quantity greater than zero.");
       return;
     }
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    if (!unitPrice.trim() || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
       setError("Enter the unit price shown by the retailer.");
       return;
     }
@@ -390,17 +391,16 @@ export function MaterialSourcingWorkflow({
       <div className="space-y-3">
         {materials.map((material) => {
           const shortage = Math.max(0, material.quantity - material.truckStock);
-          const estimatedTotal = shortage * material.estimatedUnitPrice;
           const materialSelections = selectionsByMaterial.get(material.name) ?? [];
           const isOpen = openMaterial === material.name;
 
           return (
             <article key={material.name} className="rounded-panel border border-line bg-white/[0.025] p-4">
               <div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{material.name}</h2><p className="mt-1 text-xs text-ink-muted">Need {material.quantity} {material.unit} · Truck has {material.truckStock}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${shortage > 0 ? "bg-caution-bg text-caution" : "bg-positive-bg text-positive"}`}>{shortage > 0 ? `Buy ${shortage}` : "On truck"}</span></div>
-              <div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-control bg-white/[0.035] p-3"><p className="text-[10px] text-ink-faint">Pilot unit estimate</p><p className="mt-1 text-lg font-semibold">{money.format(material.estimatedUnitPrice)}</p></div><div className="rounded-control bg-white/[0.035] p-3"><p className="text-[10px] text-ink-faint">Estimated shortage cost</p><p className="mt-1 text-lg font-semibold">{money.format(estimatedTotal)}</p></div></div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <a href={buildLowesSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-brand" aria-hidden /> Lowe’s live results</span><ExternalLink className="h-4 w-4 text-ink-faint" aria-hidden /></a>
-                <a href={buildHomeDepotSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-orange-400" aria-hidden /> Home Depot live results</span><ExternalLink className="h-4 w-4 text-ink-faint" aria-hidden /></a>
+              {/* No price here: nothing in Volteira knows what the store charges today. */}
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <a href={buildLowesSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-brand" aria-hidden /> Search Lowe’s</span><ExternalLink className="h-4 w-4 text-ink-faint" aria-hidden /></a>
+                <a href={buildHomeDepotSearchUrl(material.searchTerm)} target="_blank" rel="noreferrer" className="tap-target flex min-h-12 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"><span className="flex items-center gap-2"><Store className="h-4 w-4 text-orange-400" aria-hidden /> Search Home Depot</span><ExternalLink className="h-4 w-4 text-ink-faint" aria-hidden /></a>
               </div>
               <button type="button" onClick={() => setOpenMaterial(isOpen ? null : material.name)} aria-expanded={isOpen} className="tap-target mt-3 flex min-h-12 w-full items-center justify-between rounded-control border border-brand/25 bg-brand/[0.06] px-4 text-sm font-semibold text-brand"><span className="flex items-center gap-2"><PackageCheck className="h-4 w-4" aria-hidden /> Save the product I chose</span>{isOpen ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}</button>
 

@@ -359,7 +359,7 @@ export default async function AccountPage({
               <label className={labelClass}>
                 Starting screen
                 <span className="mt-2 block">
-                  <SelectField name="defaultLandingPage" defaultValue={account.preferences.defaultLandingPage} label="Starting screen" choices={[{ value: "dashboard", label: "Dashboard" }, { value: "schedule", label: "Schedule" }, { value: "jobs", label: "Jobs" }, { value: "route", label: "Route builder" }]} />
+                  <SelectField name="defaultLandingPage" defaultValue={account.preferences.defaultLandingPage} label="Starting screen" choices={[{ value: "dashboard", label: "Dashboard" }, { value: "schedule", label: "Schedule" }, { value: "jobs", label: "Jobs" }, { value: "route", label: "Today's route" }]} />
                 </span>
               </label>
             </div>
