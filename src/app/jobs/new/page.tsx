@@ -45,7 +45,7 @@ export default async function NewJobPage({
           ? `${followUp.customer} · the work diagnostic #${followUp.jobNumber} found.`
           : "For work booked any way other than through the phone line."
       }
-      backHref={followUp ? `/jobs/${followUp.jobNumber}` : "/schedule"}
+      backHref={followUp ? `/jobs/${followUp.jobNumber}` : "/jobs"}
     >
       <NewJobForm
         timeZone={timeZone}

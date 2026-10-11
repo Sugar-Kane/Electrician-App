@@ -46,22 +46,59 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "",
     items: [
       {
-        label: "Home",
+        label: "Today",
         href: "/",
         icon: "LayoutDashboard",
-        description: "Today at a glance",
+        description: "The next job, and what needs you",
       },
     ],
   },
+  /*
+   * The daily places, in the order the audit's job runs: the work, the people
+   * it is for, what they are saying, the parts, and the money.
+   */
   {
     title: "Work",
     items: [
       {
         label: "Jobs",
-        href: "/schedule",
-        icon: "CalendarDays",
-        description: "Today, this week, and the calendar",
+        href: "/jobs",
+        icon: "ClipboardList",
+        description: "Every job, by where it stands",
       },
+      {
+        label: "Customers",
+        href: "/customers",
+        icon: "Contact",
+        description: "Everyone you have worked for",
+      },
+      {
+        label: "Messages",
+        href: "/messages",
+        icon: "MessagesSquare",
+        description: "Texts to and from customers",
+      },
+      {
+        label: "Materials",
+        href: "/materials",
+        icon: "Package",
+        description: "What is on the van, and what to buy",
+      },
+      {
+        label: "Invoices",
+        href: "/invoices",
+        icon: "ReceiptText",
+        description: "Billing and what is owed",
+      },
+    ],
+  },
+  /*
+   * Everything used now and then. Search, New job and Ask Volteira are not
+   * here: they sit in the top bar on every screen, once.
+   */
+  {
+    title: "More",
+    items: [
       {
         label: "Booking requests",
         href: "/booking-requests",
@@ -75,62 +112,16 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Today's driving order",
       },
       {
-        label: "Materials",
-        href: "/materials",
-        icon: "Package",
-        description: "What is on the van, and what to buy",
+        label: "Team",
+        href: "/technicians",
+        icon: "UsersRound",
+        description: "Who is working, their hours and time off",
       },
-    ],
-  },
-  {
-    title: "Customers",
-    items: [
-      {
-        label: "Messages",
-        href: "/messages",
-        icon: "MessagesSquare",
-        description: "Texts to and from customers",
-      },
-      {
-        label: "Search",
-        href: "/search",
-        icon: "Search",
-        description: "Find a customer, job or invoice",
-      },
-      /*
-       * The assistant was reachable only from a sheet behind the centre button,
-       * so it was in the app and not in the menu — and moving it under the thumb
-       * made that a contradiction the bottom-bar test catches: every permanent
-       * tab has to be somewhere a person can find it a second way.
-       */
-      {
-        label: "Chat",
-        href: "/assistant",
-        icon: "MessageCircle",
-        description: "Ask about jobs, invoices, stock and code",
-      },
-    ],
-  },
-  {
-    title: "Business",
-    items: [
       {
         label: "Reports",
         href: "/reports",
         icon: "ChartNoAxesColumn",
         description: "Money in, money owed, activity",
-      },
-      {
-        label: "Invoices",
-        href: "/invoices",
-        icon: "ReceiptText",
-        description: "Billing and what is owed",
-      },
-      {
-        label: "Electricians",
-        href: "/technicians",
-        icon: "UsersRound",
-        description: "Who is working, their hours and time off",
       },
       {
         label: "Files",
@@ -139,6 +130,25 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Documents and photos",
       },
     ],
+  },
+];
+
+/**
+ * In the top bar of every screen rather than in a list: finding something,
+ * starting a job, and asking the assistant are things done from anywhere.
+ */
+export const TOP_BAR_ITEMS: NavItem[] = [
+  {
+    label: "Search",
+    href: "/search",
+    icon: "Search",
+    description: "Find a customer, job or invoice",
+  },
+  {
+    label: "Ask Volteira",
+    href: "/assistant",
+    icon: "MessageCircle",
+    description: "Ask about jobs, invoices, stock and code",
   },
 ];
 
@@ -184,7 +194,7 @@ export const ACCOUNT_MENU_ITEMS: NavItem[] = [
 export const ALL_NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
 /** Everywhere a person can get to from the chrome, menu and avatar together. */
-export const ALL_DESTINATIONS: NavItem[] = [...ALL_NAV_ITEMS, ...ACCOUNT_MENU_ITEMS];
+export const ALL_DESTINATIONS: NavItem[] = [...ALL_NAV_ITEMS, ...TOP_BAR_ITEMS, ...ACCOUNT_MENU_ITEMS];
 
 /**
  * Which menu entry the page you are on belongs to.
@@ -220,8 +230,9 @@ export function activeNavHref(
 
   // Records opened from a list belong to that list, even though their URL does
   // not sit underneath it.
-  if (path.startsWith("/jobs/")) return "/schedule";
   if (path.startsWith("/booking/")) return "/booking-requests";
+  // The calendar is the jobs list drawn by day, reached from its toggle.
+  if (path === "/schedule" || path.startsWith("/schedule/")) return "/jobs";
 
   return null;
 }
@@ -231,8 +242,11 @@ export function activeNavHref(
  *
  * Everything else lives behind More. Kept here rather than in the component so
  * the bottom bar and the "am I somewhere in the menu" test cannot drift apart.
+ *
+ * Materials took the assistant's place: it is where an electrician goes every
+ * day, and the assistant is a button in the top bar on every screen.
  */
-export const BOTTOM_NAV_HREFS = ["/", "/schedule", "/assistant", "/messages"] as const;
+export const BOTTOM_NAV_HREFS = ["/", "/jobs", "/materials", "/messages"] as const;
 
 /**
  * Whether the current page is one of the permanent four.
@@ -285,7 +299,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         description: "Name, phone, timezone and where you work from",
       },
       {
-        label: "Electricians",
+        label: "Team",
         href: "/technicians",
         icon: "UsersRound",
         description: "Who is working, hours and access",

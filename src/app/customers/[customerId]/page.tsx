@@ -17,6 +17,7 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
 import { getCustomerProfile } from "@/lib/customer-profile";
+import { formatCents } from "@/lib/job-lines";
 
 function recordingLabel(startedAt: string, timeZone: string): string {
   if (!startedAt) return "Recorded call";
@@ -70,7 +71,7 @@ export default async function CustomerPage({
       title={profile.name}
       eyebrow="Customer"
       description={profile.address || "No service address on file yet."}
-      backHref="/search"
+      backHref="/customers"
     >
       <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
@@ -192,6 +193,38 @@ export default async function CustomerPage({
                     <span className="block truncate text-xs text-ink-muted">{job.summary}</span>
                   </span>
                   <StatusBadge status={job.status} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <h2 className="text-sm font-semibold">Invoices</h2>
+        {profile.invoices.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-muted">No invoices for them yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {profile.invoices.map((invoice) => (
+              <li key={invoice.id}>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className="tap-row flex min-h-[52px] items-center gap-3 rounded-control border border-line px-3 py-2 active:bg-white/5"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      INV-{invoice.number}
+                      {invoice.jobNumber ? ` · job #${invoice.jobNumber}` : ""}
+                    </span>
+                    <span className="block truncate text-xs text-ink-muted">
+                      {invoice.label}
+                      {invoice.state === "awaiting" || invoice.state === "part_paid" || invoice.state === "overdue"
+                        ? ` · ${formatCents(invoice.balanceCents)} owed`
+                        : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold">{formatCents(invoice.totalCents)}</span>
                 </Link>
               </li>
             ))}

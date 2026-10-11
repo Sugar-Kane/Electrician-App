@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { List } from "lucide-react";
+
 import { CrewWeekView } from "@/components/crew-week-view";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { ScheduleBoard } from "@/components/schedule-board";
@@ -45,7 +48,20 @@ export default async function SchedulePage({
   const allJobs = crew ? crew.jobs : (await getJobs()).jobs;
 
   return (
-    <FieldPageShell title="Jobs" eyebrow="Work">
+    <FieldPageShell
+      title="Calendar"
+      eyebrow="Jobs"
+      backHref="/jobs"
+      action={
+        <Link
+          href="/jobs"
+          className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-3 text-sm font-semibold"
+        >
+          <List className="h-4 w-4" aria-hidden />
+          All jobs
+        </Link>
+      }
+    >
       <ScheduleBoard
         jobs={allJobs}
         today={today}

@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation";
 
 import {
   ArrowLeft,
-  CalendarDays,
+  ClipboardList,
   Home,
   MessageCircle,
   MessagesSquare,
   MoreHorizontal,
+  Package,
   Search,
   X,
   Zap,
@@ -37,23 +38,31 @@ import { scrollToTop } from "@/lib/scroll-top";
  */
 
 /**
- * The four things under a thumb, plus the assistant.
+ * The four places an electrician goes every day, and More.
  *
- * "Schedule" is a software word for a screen an electrician thinks of as their
- * jobs. More is a menu, not a link.
- *
- * The centre used to open a sheet offering "New job" and "Ask Volteira" — two
- * rows, one of which duplicated the Job button already on the jobs screen, and
- * both of which cost a second tap. It is the assistant now, and it opens on the
- * first tap. New job stays where work is created, which is Jobs.
+ * All five look the same. The assistant used to sit in the middle as a raised
+ * yellow button, the loudest thing on every screen, which told people it was
+ * the main way to work; it is a button in the top bar now, beside Search, and
+ * Materials has its place under the thumb. More is a menu, not a link.
  */
 const BOTTOM_ITEMS = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Jobs", href: "/schedule", icon: CalendarDays },
-  { label: "Chat", href: "/assistant", icon: MessageCircle, centre: true },
+  { label: "Today", href: "/", icon: Home },
+  { label: "Jobs", href: "/jobs", icon: ClipboardList },
+  { label: "Materials", href: "/materials", icon: Package },
   { label: "Messages", href: "/messages", icon: MessagesSquare },
   { label: "More", href: "", icon: MoreHorizontal, action: "menu" as const },
 ];
+
+/** A box somebody types into: the keyboard is up, so the bars get out of the way. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  if (!(target instanceof HTMLInputElement)) return false;
+  return !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"].includes(
+    target.type,
+  );
+}
 
 function Brand() {
   return (
@@ -129,6 +138,29 @@ export function MobileAppChrome({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
 
+  /*
+   * While a box has the keyboard, the floating bars hide (globals.css reads
+   * `data-typing`). On a phone the keyboard takes half the screen, and the
+   * tab bar and a job's action bar used to sit on top of the very field being
+   * typed into.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    function onFocusIn(event: FocusEvent) {
+      if (isTypingTarget(event.target)) root.dataset.typing = "true";
+    }
+    function onFocusOut(event: FocusEvent) {
+      if (!isTypingTarget(event.relatedTarget)) delete root.dataset.typing;
+    }
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+      delete root.dataset.typing;
+    };
+  }, []);
+
   return (
     <>
       <header
@@ -170,6 +202,15 @@ export function MobileAppChrome({
               >
                 <Search className="h-5 w-5" aria-hidden />
               </Link>
+              <Link
+                href="/assistant"
+                prefetch
+                aria-current={pathname === "/assistant" ? "page" : undefined}
+                className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink aria-[current=page]:border-brand/50 aria-[current=page]:text-brand"
+                aria-label="Ask Volteira"
+              >
+                <MessageCircle className="h-5 w-5" aria-hidden />
+              </Link>
               <AccountMenu />
             </div>
           </>
@@ -178,11 +219,11 @@ export function MobileAppChrome({
 
       {bottomNav ? (
         <nav
+          data-hide-while-typing
           className="fixed inset-x-3 bottom-3 z-50 flex min-h-[64px] items-end justify-around rounded-control border border-line bg-sunken/96 px-1 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-2xl backdrop-blur lg:hidden"
           aria-label="Mobile navigation"
         >
-          {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action, centre }) => {
-            const create = centre === true;
+          {BOTTOM_ITEMS.map(({ label, href, icon: Icon, action }) => {
             const menu = action === "menu";
 
             const current = menu
@@ -195,14 +236,8 @@ export function MobileAppChrome({
 
             const inner = (
               <>
-                <span
-                  className={
-                    create
-                      ? "-mt-7 grid h-12 w-12 place-items-center rounded-full bg-brand text-on-brand shadow-lg shadow-yellow-500/20"
-                      : "grid h-7 place-items-center"
-                  }
-                >
-                  <Icon className={create ? "h-6 w-6" : "h-5 w-5"} aria-hidden />
+                <span className="grid h-7 place-items-center">
+                  <Icon className="h-5 w-5" aria-hidden />
                 </span>
                 <span>{label}</span>
               </>
@@ -238,7 +273,6 @@ export function MobileAppChrome({
                 prefetch
                 onClick={() => toTopIfHere(href)}
                 aria-current={current ? "page" : undefined}
-                aria-label={create ? "Open the assistant" : undefined}
                 className={shell}
               >
                 {inner}

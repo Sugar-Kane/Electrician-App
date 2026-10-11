@@ -1,16 +1,9 @@
 import Link from "next/link";
-import {
-  Bell,
-  CircleDollarSign,
-  ClipboardCheck,
-  Plus,
-  Search,
-  Zap,
-} from "lucide-react";
+import { CircleDollarSign, ClipboardCheck, Zap } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
-import { AccountMenu } from "@/components/account-menu";
+import { TopActions } from "@/components/top-actions";
 import type { DashboardMetric, DashboardSnapshot } from "@/lib/dashboard";
 import { FollowUps, NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
 import { todayInZone } from "@/lib/calendar";
@@ -209,34 +202,8 @@ function Header({
         */}
         <p className="mt-1 pl-10 text-xs text-ink-muted">{dateLabel}</p>
       </div>
-      <div className="hidden items-center gap-2 lg:flex">
-        {/* The new-job form, where every other "New job" in the app goes. This
-            was `#new-job`, an anchor to a section the dashboard does not have,
-            so pressing it did nothing at all. */}
-        <Link
-          href="/jobs/new"
-          className="tap-target hidden items-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand transition hover:bg-brand-strong sm:flex"
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          New
-        </Link>
-        <Link
-          href="/search"
-          className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
-          aria-label="Search"
-        >
-          <Search className="h-4 w-4" aria-hidden />
-        </Link>
-        {/* No badge: the "3" that used to sit here was a constant, so it
-            never went away however many notifications had been read. */}
-        <Link
-          href="/search?scope=notifications"
-          className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4 w-4" aria-hidden />
-        </Link>
-        <AccountMenu />
+      <div className="hidden lg:block">
+        <TopActions notifications />
       </div>
     </header>
   );

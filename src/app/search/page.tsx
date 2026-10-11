@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Boxes, CalendarDays, ReceiptText, Route } from "lucide-react";
+import { Boxes, CalendarDays, ClipboardList, Contact, ReceiptText, Route } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { SearchConsole } from "@/components/search-console";
@@ -16,7 +16,9 @@ import { getJobs } from "@/lib/job-data";
 export const dynamic = "force-dynamic";
 
 const SHORTCUTS = [
-  { label: "Schedule", description: "Open calendar view", href: "/schedule", icon: CalendarDays },
+  { label: "All jobs", description: "Every job, by where it stands", href: "/jobs", icon: ClipboardList },
+  { label: "Customers", description: "Everyone you have worked for", href: "/customers", icon: Contact },
+  { label: "Calendar", description: "Day, week and month", href: "/schedule", icon: CalendarDays },
   { label: "Invoices", description: "Paid and unpaid", href: "/invoices", icon: ReceiptText },
   { label: "Materials", description: "Stock and sourcing", href: "/materials", icon: Boxes },
   { label: "Today's route", description: "Visits in driving order", href: "/route", icon: Route },

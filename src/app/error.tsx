@@ -51,7 +51,7 @@ export default function AppError({
             Try again
           </button>
           <Link
-            href="/schedule"
+            href="/jobs"
             className="tap-target inline-flex min-h-12 items-center justify-center rounded-control border border-line px-5 text-sm font-semibold"
           >
             Back to jobs
