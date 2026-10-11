@@ -4,7 +4,9 @@ import { getInvoices } from "@/lib/job-data";
 
 const TITLES: Record<string, string> = {
   paid: "Paid invoices",
-  unpaid: "Unpaid invoices",
+  draft: "Drafts not sent",
+  awaiting: "Awaiting payment",
+  unpaid: "Awaiting payment",
   overdue: "Overdue invoices",
 };
 

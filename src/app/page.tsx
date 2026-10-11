@@ -63,10 +63,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
   // rendering concern and the arithmetic stays testable.
   const attention = attentionItems({
     bookingRequests: openBookingRequests(bookings.requests),
-    overdueInvoices: invoices.filter((invoice) => invoice.status === "Overdue").length,
-    unsentInvoices: invoices.filter(
-      (invoice) => invoice.status !== "Paid" && !invoice.sentLabel,
-    ).length,
+    overdueInvoices: invoices.filter((invoice) => invoice.state === "overdue").length,
+    unsentInvoices: invoices.filter((invoice) => invoice.state === "draft").length,
     // Reorder point is what the business itself said "low" means.
     lowStock: stock.filter((item) => item.quantity <= 0).length,
     // Only work that still needs somebody sent to it. A job finished by

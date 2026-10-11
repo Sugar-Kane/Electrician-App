@@ -108,18 +108,41 @@ export function estimatesDetail(input: { pendingCents: number; count: number }):
  * Overdue is the only one of these that should ever look alarming, so it is the
  * only one that returns a danger tone — and only when something really is late.
  */
-export function invoicesDetail(input: { outstandingCents: number; overdue: number }): {
+export function invoicesDetail(input: { outstandingCents: number; overdue: number; draftCents?: number }): {
   detail: string;
   tone: MetricTone;
 } {
+  // Drafts are named beside the total rather than added to it: money the
+  // customer has not been asked for is not money owed.
+  const drafts = (input.draftCents ?? 0) > 0 ? ` · ${formatMoney(input.draftCents ?? 0)} in drafts not sent` : "";
   if (input.outstandingCents === 0 && input.overdue === 0) {
-    return { detail: "Nothing outstanding", tone: "neutral" };
+    return { detail: `Nothing outstanding${drafts}`, tone: "neutral" };
   }
-  if (input.overdue === 0) return { detail: "None overdue", tone: "neutral" };
+  if (input.overdue === 0) return { detail: `None overdue${drafts}`, tone: "neutral" };
   return {
-    detail: `${input.overdue} overdue`,
+    detail: `${input.overdue} overdue${drafts}`,
     tone: "danger",
   };
+}
+
+/** What an invoice's state is worked out from. `lastSentAt` is the delivery record. */
+export type InvoiceFacts = {
+  status: string;
+  dueAt: string | null;
+  balanceDueCents: number;
+  lastSentAt?: string | null;
+};
+
+/**
+ * Whether the customer has been sent this invoice.
+ *
+ * Texting or emailing an invoice used to record when it went and leave the
+ * status at "draft", so a bill the customer had in hand still read Draft on
+ * the job and Unpaid on the list. Either fact is enough: a status past draft,
+ * or a recorded send.
+ */
+export function wasSent(invoice: InvoiceFacts): boolean {
+  return invoice.status !== "draft" || Boolean(invoice.lastSentAt);
 }
 
 /**
@@ -127,14 +150,14 @@ export function invoicesDetail(input: { outstandingCents: number; overdue: numbe
  *
  * Paid invoices are never overdue however old they are, and an invoice with no
  * due date cannot be late — guessing one would manufacture the alarm this whole
- * module exists to stop.
+ * module exists to stop. Nor can a draft nobody has sent: the customer has not
+ * been asked for anything yet, and chasing them for it is the mistake.
  */
-export function isOverdue(
-  invoice: { status: string; dueAt: string | null; balanceDueCents: number },
-  now: Date = new Date(),
-): boolean {
+export function isOverdue(invoice: InvoiceFacts, now: Date = new Date()): boolean {
   if (invoice.status === "paid" || invoice.status === "void") return false;
+  if (!wasSent(invoice)) return false;
   if (invoice.balanceDueCents <= 0) return false;
+  if (invoice.status === "overdue") return true;
   if (!invoice.dueAt) return false;
 
   const due = new Date(invoice.dueAt);
@@ -142,22 +165,70 @@ export function isOverdue(
   return due.getTime() < now.getTime();
 }
 
+export type InvoiceState = "draft" | "awaiting" | "part_paid" | "overdue" | "paid" | "void";
+
 /**
- * The word an invoice is listed under, as of now.
+ * Where an invoice is, as of now: one answer for the list, the job, the
+ * invoice itself, Home and Reports.
  *
- * The list read the stored status alone, and nothing ever stores `overdue`: a
- * bill a month past due read "Unpaid" while Home counted it overdue, and the
- * Overdue tab and Home's "overdue invoices" were always empty. Late is a fact
- * about the due date, so it is worked out from the due date, by the same rule
- * as Home's count.
+ * Each screen used to decide for itself, and they disagreed — the same bill
+ * was Unpaid on the list, Draft on its job, and counted in Home's money owed
+ * before the customer had ever seen it.
  */
-export function invoiceStatusLabel(
-  invoice: { status: string; dueAt: string | null; balanceDueCents: number },
+export function invoiceState(invoice: InvoiceFacts, now: Date = new Date()): InvoiceState {
+  if (invoice.status === "void") return "void";
+  if (invoice.status === "paid") return "paid";
+  if (!wasSent(invoice)) return "draft";
+  if (isOverdue(invoice, now)) return "overdue";
+  if (invoice.status === "partially_paid") return "part_paid";
+  // Sent with nothing left to pay is settled in all but the word.
+  if (invoice.balanceDueCents <= 0) return "paid";
+  return "awaiting";
+}
+
+export const INVOICE_STATE_LABELS: Record<InvoiceState, string> = {
+  draft: "Draft · not sent",
+  awaiting: "Sent · awaiting payment",
+  part_paid: "Part paid",
+  overdue: "Overdue",
+  paid: "Paid",
+  void: "Void",
+};
+
+/** The words an invoice is listed under, as of now. */
+export function invoiceStatusLabel(invoice: InvoiceFacts, now: Date = new Date()): string {
+  return INVOICE_STATE_LABELS[invoiceState(invoice, now)];
+}
+
+/**
+ * What the business is owed, and what it has not yet asked for.
+ *
+ * Owed is the balance on every invoice that has gone to a customer and is not
+ * paid or voided — part-paid ones included, which the old sum of "draft and
+ * sent" left out while counting drafts nobody had seen. Drafts are kept
+ * apart, so a total can say "and $X in drafts not sent" rather than pretend
+ * that money is due.
+ */
+export function receivables(
+  invoices: InvoiceFacts[],
   now: Date = new Date(),
-): "Paid" | "Unpaid" | "Overdue" {
-  if (invoice.status === "paid") return "Paid";
-  if (invoice.status === "overdue" || isOverdue(invoice, now)) return "Overdue";
-  return "Unpaid";
+): { owedCents: number; overdueCount: number; overdueCents: number; draftCount: number; draftCents: number } {
+  const totals = { owedCents: 0, overdueCount: 0, overdueCents: 0, draftCount: 0, draftCents: 0 };
+  for (const invoice of invoices) {
+    const state = invoiceState(invoice, now);
+    const balance = Math.max(0, invoice.balanceDueCents);
+    if (state === "draft") {
+      totals.draftCount += 1;
+      totals.draftCents += balance;
+    } else if (state === "awaiting" || state === "part_paid" || state === "overdue") {
+      totals.owedCents += balance;
+      if (state === "overdue") {
+        totals.overdueCount += 1;
+        totals.overdueCents += balance;
+      }
+    }
+  }
+  return totals;
 }
 
 /**
@@ -203,7 +274,7 @@ export type AgingBucket = { label: string; value: string; percent: number };
  * business does not have.
  */
 export function invoiceAging(
-  invoices: { dueAt: string | null; balanceDueCents: number; status: string }[],
+  invoices: InvoiceFacts[],
   now: Date = new Date(),
 ): AgingBucket[] {
   const buckets = [
@@ -214,6 +285,7 @@ export function invoiceAging(
 
   for (const invoice of invoices) {
     if (invoice.status === "paid" || invoice.status === "void") continue;
+    if (!wasSent(invoice)) continue;
     if (invoice.balanceDueCents <= 0) continue;
 
     const due = invoice.dueAt ? new Date(invoice.dueAt) : null;

@@ -55,7 +55,7 @@ export default async function OnboardingPage() {
               Set up the business you’ll run every day.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-ink-muted">
-              This creates your private company workspace, your owner profile, and the scheduling rules for the paid diagnostic pilot.
+              Your business name, hours and service area. Your jobs, customers and money are kept separate from every other business on Volteira.
             </p>
 
             <ol className="mt-7 space-y-3">

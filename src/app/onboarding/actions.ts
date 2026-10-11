@@ -106,7 +106,7 @@ export async function createOwnerWorkspace(
     if (error) {
       return {
         error:
-          "We couldn’t create the business workspace. Your information was not partially saved—please try again.",
+          "We couldn’t set up your business. Nothing was saved, so please try again.",
       };
     }
 
@@ -123,7 +123,7 @@ export async function createOwnerWorkspace(
   } catch {
     return {
       error:
-        "We couldn’t create the business workspace. Check your connection and try again.",
+        "We couldn’t set up your business. Check your connection and try again.",
     };
   }
 

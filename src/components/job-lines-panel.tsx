@@ -17,6 +17,7 @@ import {
   formatCents,
   formatQuantity,
   lineTotalCents,
+  parsePriceCents,
   parseQuantity,
   type JobLine,
   type JobLineTotals,
@@ -107,6 +108,10 @@ function AddLineForm({
   // looked like no change at all.
   const [quantityText, setQuantityText] = useState("1");
 
+  // Read for the line total under the boxes. Cleared with the quantity after
+  // an add, and refilled when a stock item with a price is picked.
+  const [priceText, setPriceText] = useState("");
+
   // The stock item the last added part came from, for the count it left.
   const [takenId, setTakenId] = useState("");
   const taken = stock.find((item) => item.id === takenId) ?? null;
@@ -124,6 +129,7 @@ function AddLineForm({
   if (state !== settled) {
     setSettled(state);
     setQuantityText("1");
+    setPriceText("");
     setRound(round + 1);
     if (!state.error) {
       setTakenId(chosenId);
@@ -148,8 +154,12 @@ function AddLineForm({
           onPick={(item) => {
             setChosenId(item.id);
             setTakenId("");
+            setPriceText(item.unitPriceCents > 0 ? (item.unitPriceCents / 100).toFixed(2) : "");
           }}
-          onClear={() => setChosenId("")}
+          onClear={() => {
+            setChosenId("");
+            setPriceText("");
+          }}
         />
       ) : (
         // Said, rather than the picker quietly not being there. Without it
@@ -181,7 +191,8 @@ function AddLineForm({
         />
       </label>
 
-      <div className="grid grid-cols-3 gap-2">
+      {/* Price gets its own row on a phone: its label is the long one. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <label className="block">
           <span className="text-xs font-semibold text-ink-muted">
             {labor ? "Hours" : "Qty"}
@@ -205,22 +216,32 @@ function AddLineForm({
           />
         </label>
 
-        <label className="block">
-          <span className="text-xs font-semibold text-ink-muted">Each</span>
+        <label className="col-span-2 block sm:col-span-1">
+          <span className="text-xs font-semibold text-ink-muted">
+            {labor ? "Customer rate" : "Customer price each"}
+          </span>
           <input
             name="unitPrice"
             inputMode="decimal"
-            key={`price-${chosen?.id ?? "blank"}`}
-            defaultValue={
-              chosen && chosen.unitPriceCents > 0
-                ? (chosen.unitPriceCents / 100).toFixed(2)
-                : ""
-            }
+            value={priceText}
+            onChange={(event) => setPriceText(event.target.value)}
             placeholder="0.00"
             className={`mt-1 ${inputClass}`}
           />
         </label>
       </div>
+
+      <p className="text-right text-sm text-ink-muted" aria-live="polite">
+        Line total{" "}
+        <span className="font-semibold text-ink">
+          {formatCents(
+            lineTotalCents({
+              quantity: parseQuantity(quantityText) ?? 0,
+              unitPriceCents: parsePriceCents(priceText) ?? 0,
+            }),
+          )}
+        </span>
+      </p>
 
       {shortfall ? (
         <p className="text-xs leading-5 text-caution" role="status">

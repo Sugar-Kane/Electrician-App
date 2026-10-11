@@ -83,7 +83,7 @@ test("a cost that cannot be read stops the whole job", () => {
   const result = parseNewJob(raw({ cost: "about a grand" }));
 
   assert.equal(result.ok, false);
-  assert.match(result.ok === false ? result.error : "", /cost could not be read/);
+  assert.match(result.ok === false ? result.error : "", /amount could not be read/);
 });
 
 test("a customer with no way to reach them is refused", () => {

@@ -186,7 +186,7 @@ export const ASSISTANT_TOOLS: ToolSpec[] = [
       properties: {
         status: {
           type: "string",
-          enum: ["all", "paid", "unpaid", "overdue"],
+          enum: ["all", "paid", "unpaid", "overdue", "draft"],
           description: "Which invoices.",
         },
       },

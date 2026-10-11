@@ -205,10 +205,18 @@ export async function runReadOnlyTool(
     case "list_invoices": {
       const status = text(input.status) || "all";
       const { invoices } = await getInvoices();
+      // Matched on the state, not the words: "unpaid" is everything sent and
+      // not yet settled, overdue included, and never a draft nobody has sent.
+      const matches: Record<string, (state: string) => boolean> = {
+        paid: (state) => state === "paid",
+        unpaid: (state) => state === "awaiting" || state === "part_paid" || state === "overdue",
+        overdue: (state) => state === "overdue",
+        draft: (state) => state === "draft",
+      };
       const filtered =
-        status === "all"
+        status === "all" || !matches[status]
           ? invoices
-          : invoices.filter((invoice) => invoice.status.toLowerCase() === status);
+          : invoices.filter((invoice) => matches[status]!(invoice.state));
 
       if (filtered.length === 0) return `No ${status === "all" ? "" : `${status} `}invoices.`;
       return filtered

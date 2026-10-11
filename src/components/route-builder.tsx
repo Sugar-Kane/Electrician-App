@@ -253,7 +253,7 @@ export function RouteBuilder({
       ...dayJobs.map((job) => ({
         id: job.id,
         label: job.customer,
-        address: `${job.address}, ${job.city}`,
+        address: [job.address, job.city].filter(Boolean).join(", "),
         detail: `${job.time} · ${job.workType}`,
         kind: "job" as const,
         point: job.coordinates ?? null,
@@ -310,7 +310,9 @@ export function RouteBuilder({
     setBuilt(false);
   }
 
-  const addresses = routeStops.map((stop) => stop.address);
+  // A stop with no address yet cannot be driven to, so it is left out of the
+  // directions rather than sent to Google as an empty waypoint.
+  const addresses = routeStops.map((stop) => stop.address).filter(Boolean);
   const googleUrl = buildGoogleDirectionsUrl(addresses);
 
   const routeKey = buildRouteKey(routeStops.slice(1).map((stop) => stop.id));
@@ -449,7 +451,7 @@ export function RouteBuilder({
               <p className="text-sm text-ink-muted">
                 {routeDate === today ? "Today" : formatDayLabel(routeDate)} · {ordered.length}{" "}
                 {ordered.length === 1 ? "stop" : "stops"} ·{" "}
-                {miles > 0 ? `about ${miles} mi in a straight line` : "distance unknown"}
+                {miles > 0 ? `about ${miles} ${miles === 1 ? "mile" : "miles"}, straight line` : "distance unknown"}
               </p>
             </div>
           </div>
@@ -503,7 +505,7 @@ export function RouteBuilder({
                           ellipsising. */}
                       <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-faint">
                         <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-                        <span className="truncate">{stop.address}</span>
+                        <span className="truncate">{stop.address || "No address yet"}</span>
                       </p>
                       {!hasCoordinates(stop.point) && !isStart ? (
                         <p className="mt-1 text-xs text-caution">

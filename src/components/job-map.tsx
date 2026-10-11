@@ -409,7 +409,7 @@ export function JobMap({
       ) : null}
 
       {/*
-        A failed map says so with a symbol and a button, and nothing else.
+        A failed map says so in one short line and a button.
 
         It used to explain itself at length — which request failed, which key
         was in use, that the variable is compiled at build time and needs a
@@ -418,13 +418,16 @@ export function JobMap({
         on any of it. The stop list below the map keeps working either way, so
         the map failing is an inconvenience, not an incident.
 
-        The reason is still available to anyone who needs it: it goes to the
-        console, and the screen reader gets it through the button's label.
+        The detail goes to the console. The line on screen says only what
+        somebody can act on: the stop list still works, and Refresh may help.
       */}
       {status === "failed" || status === "refused" ? (
         <div className="absolute inset-0 grid place-items-center bg-raised p-4">
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex max-w-xs flex-col items-center gap-3 text-center">
             <TriangleAlert className="h-6 w-6 text-caution" aria-hidden />
+            <p role="status" className="text-sm leading-6 text-ink-muted">
+              The map didn&rsquo;t load. The stop list still works.
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -432,11 +435,7 @@ export function JobMap({
                 setStatus(backToLoading);
                 setAttempt((current) => current + 1);
               }}
-              aria-label={
-                status === "refused"
-                  ? "The map key was refused by Google. Refresh the map"
-                  : "The map could not load. Refresh it"
-              }
+              aria-label="Refresh the map"
               className="tap-target inline-flex min-h-11 items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
             >
               <RefreshCw className="h-4 w-4" aria-hidden />

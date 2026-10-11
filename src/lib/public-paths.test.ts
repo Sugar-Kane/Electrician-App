@@ -14,7 +14,8 @@ test("the business's own pages need somebody signed in", () => {
 test("what customers, strangers and webhooks are sent to stays open", () => {
   for (const path of ["/login", "/signup", "/auth/callback", "/book/pacific-plains", "/book/by-host/confirmation",
     "/booking/0b9c/pay", "/contract/5f2a", "/invite/91ab", "/journal/pacific-plains/first-post", "/legal/pacific-plains/terms",
-    "/api/twilio/inbound", "/api/stripe/webhook", "/robots.txt", "/sitemap.xml", "/login/"]) {
+    "/api/twilio/inbound", "/api/stripe/webhook", "/robots.txt", "/sitemap.xml", "/login/",
+    "/forgot-password", "/reset-password"]) {
     assert.equal(isPublicPath(path), true, path);
   }
 });

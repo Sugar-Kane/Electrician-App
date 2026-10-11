@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Boxes, CheckCircle2, ChevronRight, PackageSearch, Search, Settings2, Store, TriangleAlert } from "lucide-react";
+import { Boxes, CheckCircle2, ChevronRight, PackageSearch, Search, Store, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { MaterialSourcingWorkflow } from "@/components/material-sourcing-workflow";
@@ -60,14 +60,14 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
   const nearAddress = selectedJob ? `${selectedJob.address}, ${selectedJob.city}` : serviceBase.address;
 
   return (
-    <FieldPageShell title="Material sourcing" eyebrow={selectedJob ? `Job #${selectedJob.id}` : "Inventory and suppliers"} description="What is on the van, and what a job still needs. Search finds anything in stock.">
+    <FieldPageShell title="Materials" eyebrow={selectedJob ? `Job #${selectedJob.id}` : "Stock and suppliers"} description="What is on the van, and what a job still needs. Search finds anything in stock.">
       <div className="grid gap-4 lg:grid-cols-[1fr_.72fr]">
         {/* Same reason as the files page: a grid item will not shrink below its
             widest child unless told to, and a part number is a long word. */}
         <section className="min-w-0 rounded-panel border border-line bg-surface p-4 sm:p-6">
           <form action="/materials" className="flex gap-2">
             <input type="hidden" name="job" value={jobId ?? ""} />
-            <label className="flex min-h-12 flex-1 items-center gap-2 rounded-control border border-line bg-raised px-4">
+            <label className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-raised px-4">
               <Search className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
               <span className="sr-only">Search what is in stock</span>
               <input
@@ -77,11 +77,9 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
                 className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
               />
             </label>
-            <button
-              className="tap-target grid h-12 w-12 place-items-center rounded-control bg-brand text-on-brand"
-              aria-label="Search stock"
-            >
+            <button className="tap-target inline-flex h-12 shrink-0 items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand">
               <PackageSearch className="h-5 w-5" aria-hidden />
+              <span className="max-[359px]:sr-only">Search stock</span>
             </button>
           </form>
 
@@ -151,10 +149,10 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
         <div className="space-y-4">
           {selectedJob ? <Link href={`/jobs/${selectedJob.id}`} className="tap-row flex min-h-14 items-center justify-between rounded-panel border border-line bg-surface px-4"><span><span className="block text-xs text-ink-faint">Return to job</span><span className="block text-sm font-semibold">{selectedJob.customer}</span></span><ChevronRight className="h-5 w-5 text-ink-faint" aria-hidden /></Link> : null}
           <section className="rounded-panel border border-caution/25 bg-caution-bg p-5">
-            <div className="flex items-start gap-3"><TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution" aria-hidden /><div><p className="font-semibold text-caution">Retailer approval required for in-app data</p><p className="mt-2 text-sm leading-6 text-ink-muted">The prices above are pilot estimates, not retailer claims. The buttons open each retailer’s current results. Lowe’s store-level data requires Product Discovery approval; Home Depot offers a daily affiliate product feed, while live local inventory remains on its retailer page.</p><Link href="/settings/integrations" className="tap-target mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand"><Settings2 className="h-4 w-4" aria-hidden /> Manage supplier connections</Link></div></div>
+            <div className="flex items-start gap-3"><TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution" aria-hidden /><p className="text-sm leading-6 text-ink-muted">Live store prices aren’t connected. Check price and stock with the store before buying.</p></div>
           </section>
           <section className="rounded-panel border border-line bg-surface p-5">
-            <div className="flex items-center gap-3"><Store className="h-5 w-5 text-brand" aria-hidden /><div><p className="text-xs text-ink-faint">Choose a supply stop</p><h2 className="font-semibold">Route after product review</h2></div></div>
+            <div className="flex items-center gap-3"><Store className="h-5 w-5 text-brand" aria-hidden /><div><p className="text-xs text-ink-faint">Where you pick parts up</p><h2 className="font-semibold">Supply stops</h2></div></div>
             <ul className="mt-4 space-y-2 text-xs text-ink-muted"><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-positive" aria-hidden />Added only when truck stock is short</li><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-positive" aria-hidden />Placed before the first job needing materials</li></ul>
             <div className="mt-4 space-y-2">
               {/*

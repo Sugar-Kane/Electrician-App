@@ -19,7 +19,7 @@ const SHORTCUTS = [
   { label: "Schedule", description: "Open calendar view", href: "/schedule", icon: CalendarDays },
   { label: "Invoices", description: "Paid and unpaid", href: "/invoices", icon: ReceiptText },
   { label: "Materials", description: "Stock and sourcing", href: "/materials", icon: Boxes },
-  { label: "Route builder", description: "Optimize today", href: "/route", icon: Route },
+  { label: "Today's route", description: "Visits in driving order", href: "/route", icon: Route },
 ];
 
 export default async function SearchPage() {

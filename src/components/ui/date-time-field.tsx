@@ -28,6 +28,7 @@ export function DateTimeField({
   label,
   timeZone,
   step = 15,
+  onValueChange,
 }: {
   name: string;
   /** `YYYY-MM-DDTHH:mm`, as the native input took it. */
@@ -36,9 +37,17 @@ export function DateTimeField({
   label: string;
   timeZone: string;
   step?: number;
+  /** Told the posted value whenever it changes: `YYYY-MM-DDTHH:mm`, or "". */
+  onValueChange?: (value: string) => void;
 }) {
   const [date, setDate] = useState(defaultValue.slice(0, 10));
   const [time, setTime] = useState(defaultValue.slice(11, 16));
+
+  function update(nextDate: string, nextTime: string) {
+    setDate(nextDate);
+    setTime(nextTime);
+    onValueChange?.(nextDate && nextTime ? `${nextDate}T${nextTime}` : "");
+  }
 
   /*
    * Stacked, not side by side. The calendar expands in flow underneath its
@@ -53,16 +62,13 @@ export function DateTimeField({
 
       <DateField
         value={date}
-        onChange={(next) => {
-          setDate(next);
-          // Picking a day and being left with no time is a value that never
-          // posts. Eight in the morning is when this business starts.
-          if (next && !time) setTime("08:00");
-        }}
+        // Picking a day and being left with no time is a value that never
+        // posts. Eight in the morning is when this business starts.
+        onChange={(next) => update(next, next && !time ? "08:00" : time)}
         label={`${label} — day`}
         timeZone={timeZone}
       />
-      <TimeField value={time} onChange={setTime} label={`${label} — time`} step={step} />
+      <TimeField value={time} onChange={(next) => update(date, next)} label={`${label} — time`} step={step} />
     </div>
   );
 }

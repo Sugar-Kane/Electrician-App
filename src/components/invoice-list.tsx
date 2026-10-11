@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CircleDollarSign } from "lucide-react";
 
 import { InvoiceRow } from "@/components/invoice-row";
+import type { InvoiceState } from "@/lib/dashboard-metrics";
 import type { PilotInvoice } from "@/lib/pilot-data";
 
 /**
@@ -18,12 +19,25 @@ import type { PilotInvoice } from "@/lib/pilot-data";
  * filtered here. Switching tabs is now instant because nothing has to happen.
  */
 
+/*
+ * By state, so a draft nobody has sent is never under the same tab as money
+ * the customer has been asked for. "unpaid" is still accepted from older links
+ * and lands on Awaiting, which is what it always meant.
+ */
 const FILTERS = [
   { label: "All", value: "all" },
-  { label: "Paid", value: "paid" },
-  { label: "Unpaid", value: "unpaid" },
+  { label: "Drafts", value: "draft" },
+  { label: "Awaiting", value: "awaiting" },
   { label: "Overdue", value: "overdue" },
+  { label: "Paid", value: "paid" },
 ] as const;
+
+const IN_FILTER: Record<string, (state: InvoiceState) => boolean> = {
+  draft: (state) => state === "draft",
+  awaiting: (state) => state === "awaiting" || state === "part_paid",
+  overdue: (state) => state === "overdue",
+  paid: (state) => state === "paid",
+};
 
 export function InvoiceList({
   invoices,
@@ -32,24 +46,33 @@ export function InvoiceList({
   invoices: PilotInvoice[];
   initialStatus: string;
 }) {
-  const [status, setStatus] = useState(
-    FILTERS.some((filter) => filter.value === initialStatus) ? initialStatus : "all",
+  const asked = initialStatus === "unpaid" ? "awaiting" : initialStatus;
+  const [status, setStatus] = useState<string>(
+    FILTERS.some((filter) => filter.value === asked) ? asked : "all",
   );
 
   const visible = useMemo(
     () =>
       status === "all"
         ? invoices
-        : invoices.filter((invoice) => invoice.status.toLowerCase() === status),
+        : invoices.filter((invoice) => IN_FILTER[status]?.(invoice.state) ?? true),
     [invoices, status],
   );
+  // On All, drafts are part of what is listed but not of what is owed, so
+  // the total says how much of it has not been sent.
+  const draftTotal =
+    status === "all"
+      ? visible.filter((invoice) => invoice.state === "draft").reduce((sum, invoice) => sum + invoice.amount, 0)
+      : 0;
 
   const total = visible.reduce((sum, invoice) => sum + invoice.amount, 0);
 
   return (
     <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
       <div
-        className="grid grid-cols-4 gap-1.5"
+        // Two rows on a narrow phone rather than five squeezed tabs that
+        // break "Awaiting" in half.
+        className="grid grid-cols-3 gap-1 min-[440px]:grid-cols-5"
         role="tablist"
         aria-label="Filter invoices by status"
       >
@@ -60,7 +83,7 @@ export function InvoiceList({
             role="tab"
             aria-selected={status === filter.value}
             onClick={() => setStatus(filter.value)}
-            className={`tap-target flex min-h-11 items-center justify-center rounded-chip text-xs font-semibold transition ${
+            className={`tap-target flex min-h-11 items-center justify-center whitespace-nowrap rounded-chip px-2 text-xs font-semibold transition ${
               status === filter.value
                 ? "bg-brand text-on-brand"
                 : "border border-line text-ink-muted hover:text-ink"
@@ -77,6 +100,11 @@ export function InvoiceList({
           <p className="mt-1 text-3xl font-semibold">
             ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
+          {draftTotal > 0 ? (
+            <p className="mt-1 text-xs text-ink-muted">
+              Includes ${draftTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} in drafts not sent
+            </p>
+          ) : null}
         </div>
         <CircleDollarSign className="h-7 w-7 text-brand" aria-hidden />
       </div>

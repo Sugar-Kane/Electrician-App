@@ -154,16 +154,14 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
       lastSentAt: str(row.last_sent_at) || null,
       paidAt: str(row.paid_at) || null,
       createdAt: str(row.created_at),
-      statusLabel:
-        status === "draft"
-          ? "Draft"
-          : status === "void"
-            ? "Void"
-            : invoiceStatusLabel({
-                status,
-                dueAt: str(row.due_at) || null,
-                balanceDueCents: num(row.balance_due_cents ?? row.total_cents),
-              }),
+      // The same words as the Invoices list: a draft the customer has been
+      // texted is sent, and one nobody has sent never reads as owed.
+      statusLabel: invoiceStatusLabel({
+        status,
+        dueAt: str(row.due_at) || null,
+        balanceDueCents: num(row.balance_due_cents ?? row.total_cents),
+        lastSentAt: str(row.last_sent_at) || null,
+      }),
     };
   });
 }
