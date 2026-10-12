@@ -1,23 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
-import { FileText, Link2, LoaderCircle, Plus, X } from "lucide-react";
+import { ChevronDown, FileText, Link2, LoaderCircle, Plus, X } from "lucide-react";
 
-import { createJob, type NewJobState } from "@/app/jobs/new/actions";
+import { createJob, type NewJobIntent, type NewJobState } from "@/app/jobs/new/actions";
 import { CustomerPicker } from "@/components/customer-picker";
 import { AddressFields } from "@/components/ui/address-fields";
 import { DateTimeField } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
-import { SelectField } from "@/components/ui/select-field";
 import { WorkOrderLines } from "@/components/work-order-lines";
 import type { StockOption } from "@/lib/job-line-data";
 import { keepPhoneDigits } from "@/lib/digits-input";
 import { keepMoneyCharacters } from "@/lib/money-input";
 import { choiceFill, type CustomerChoice } from "@/lib/customer-choices";
 import { formatCents } from "@/lib/job-lines";
-import { DIAGNOSTIC_MINUTES, JOB_CATEGORIES, type NewJobRaw } from "@/lib/new-job-input";
+import { DIAGNOSTIC_MINUTES, type NewJobRaw } from "@/lib/new-job-input";
 import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
 
 /**
@@ -54,6 +53,49 @@ const EMPTY_CUSTOMER: ReturnType<typeof choiceFill> = {
 };
 
 const DIAGNOSTIC_HOURS = String(DIAGNOSTIC_MINUTES / 60);
+
+const INTENTS: { value: NewJobIntent; label: string; description: string }[] = [
+  { value: "quote", label: "Quote new work", description: "Price it and send it for approval. No time, no invoice." },
+  { value: "fault", label: "Find a fault", description: "A diagnostic visit, for the fee." },
+  { value: "agreed", label: "Schedule agreed work", description: "Work the customer already said yes to." },
+];
+
+/**
+ * A part of the form most jobs do not need on the first pass, folded away.
+ *
+ * A `<details>`, so it opens and closes with no script, and its boxes still
+ * post when it is closed. It opens by itself when it already holds something
+ * or holds the box with the problem.
+ */
+function Optional({
+  title,
+  summary,
+  open,
+  error = false,
+  children,
+}: {
+  title: string;
+  summary: string;
+  open: boolean;
+  error?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      open={open}
+      className={`group rounded-panel border bg-surface ${error ? "border-critical/50" : "border-line"}`}
+    >
+      <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-6 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">{title}</span>
+          <span className="block truncate text-xs text-ink-muted">{summary}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="px-4 pb-4 sm:px-6 sm:pb-6">{children}</div>
+    </details>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -119,7 +161,21 @@ export function NewJobForm({
     setPhone(values.phone);
   }
 
-  const [category, setCategory] = useState(kept?.category || "diagnostic");
+  const [intent, setIntent] = useState<NewJobIntent>(
+    state.intent ?? (followUp ? "agreed" : kept?.category === "work_order" ? "agreed" : "fault"),
+  );
+  const category = intent === "fault" ? "diagnostic" : "work_order";
+
+  // React resets a form's boxes when its action returns, radios included, and
+  // a controlled radio is not put back. Remounting them after each save keeps
+  // the choice ticked; the choice itself lives in state and never moved.
+  const [round, setRound] = useState(0);
+  const [settled, setSettled] = useState(state);
+  if (state !== settled) {
+    setSettled(state);
+    setRound(round + 1);
+  }
+  const quote = intent === "quote";
   const [duration, setDuration] = useState(kept?.durationHours ?? "");
   const [cost, setCost] = useState(kept?.cost ?? "");
   const [phone, setPhone] = useState(keepPhoneDigits(kept?.phone ?? ""));
@@ -136,16 +192,31 @@ export function NewJobForm({
    */
   const mode = useRef<HTMLInputElement>(null);
   const description = useRef<HTMLTextAreaElement>(null);
+  const summary = useRef<HTMLDivElement>(null);
 
   const diagnostic = category === "diagnostic";
+  const errorFor = (name: keyof NewJobRaw) => (state.field === name ? state.error : undefined);
+
+  // A refused save moves focus to the summary, which names the problem and
+  // the box it is in, so a screen reader hears it and a phone scrolls to it.
+  useEffect(() => {
+    if (state.error) summary.current?.focus();
+  }, [state]);
 
   function submitAs(next: "save" | "draft") {
     if (mode.current) mode.current.value = next;
   }
 
+  // The optional sections open by themselves when they already hold something,
+  // or when the box with the problem is inside them.
+  const hasAddress = Boolean(kept?.addressLine1 || kept?.city || kept?.state || kept?.postalCode);
+  const addressError = ["addressLine1", "state", "postalCode"].includes(state.field ?? "");
+
   return (
     <form action={action} className="space-y-3">
       <input ref={mode} type="hidden" name="mode" defaultValue="save" />
+      <input type="hidden" name="intent" value={intent} />
+      <input type="hidden" name="category" value={category} />
 
       {followUp ? (
         <>
@@ -165,7 +236,42 @@ export function NewJobForm({
             </span>
           </p>
         </>
-      ) : null}
+      ) : (
+        /*
+          The first question. What somebody is doing decides what the form
+          needs from them: a quote has no time and no invoice yet, a fault is a
+          diagnostic visit, and agreed work is ready to book.
+        */
+        <fieldset key={`intent-${round}`} className="rounded-panel border border-line bg-surface p-4 sm:p-6">
+          <legend className="sr-only">What do you need to do?</legend>
+          <p aria-hidden className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-muted">
+            What do you need to do?
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {INTENTS.map((option) => (
+              <label
+                key={option.value}
+                className={`tap-row flex min-h-14 cursor-pointer items-start gap-3 rounded-control border p-3 ${
+                  intent === option.value ? "border-brand/60 bg-brand/[0.08]" : "border-line"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="intentChoice"
+                  value={option.value}
+                  checked={intent === option.value}
+                  onChange={() => setIntent(option.value)}
+                  className="mt-1 h-4 w-4 accent-brand"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="block text-xs leading-5 text-ink-muted">{option.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <Section title="Customer">
         {customers.length > 0 ? (
@@ -177,7 +283,7 @@ export function NewJobForm({
           />
         ) : null}
 
-        <Field label="Name">
+        <Field label="Name" error={errorFor("customerName")}>
           <TextInput
             key={`name-${version}`}
             name="customerName"
@@ -185,9 +291,10 @@ export function NewJobForm({
             autoComplete="off"
             defaultValue={kept?.customerName ?? ""}
             placeholder="Jane Doe"
+            aria-invalid={state.field === "customerName" || undefined}
           />
         </Field>
-        <Field label="Mobile number" hint="Used for booking confirmations and cancellations.">
+        <Field label="Mobile number" hint="Used for confirmations and the approval link." error={errorFor("phone")}>
           <TextInput
             name="phone"
             type="tel"
@@ -201,11 +308,13 @@ export function NewJobForm({
             // had its digits. The filter stops at ten on its own.
             onChange={(event) => setPhone(keepPhoneDigits(event.target.value))}
             placeholder="8055550142"
+            aria-invalid={state.field === "phone" || undefined}
           />
         </Field>
         <Field
           label="Email"
           hint="Either a mobile number or an email is needed, so the customer can be reached."
+          error={errorFor("email")}
         >
           <TextInput
             key={`email-${version}`}
@@ -214,132 +323,160 @@ export function NewJobForm({
             autoComplete="off"
             defaultValue={kept?.email ?? ""}
             placeholder="jane@example.com"
-          />
-        </Field>
-      </Section>
-
-      <Section title="Where the work is">
-        <AddressFields
-          key={`address-${version}`}
-          withUnit
-          defaults={{
-            line1: kept?.addressLine1 ?? "",
-            line2: kept?.addressLine2 ?? "",
-            city: kept?.city ?? "",
-            state: kept?.state ?? "",
-            postalCode: kept?.postalCode ?? "",
-          }}
-        />
-
-        <div className="sm:col-span-2">
-          <Field
-            label="Access notes"
-            hint="Gate codes, pets, which door, where to park. Kept with the address, so every job there shows them."
-          >
-            <textarea
-              key={`notes-${version}`}
-              name="accessNotes"
-              rows={3}
-              maxLength={MAX_ACCESS_NOTES_LENGTH}
-              defaultValue={kept?.accessNotes ?? ""}
-              placeholder="Gate code 4521. Dog in the backyard. Panel is in the garage."
-              className={`${inputClass} min-h-24 py-3`}
-            />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="The work">
-        <Field label="Kind of work">
-          <SelectField
-            name="category"
-            value={category}
-            onChange={setCategory}
-            label="Type of work"
-            choices={JOB_CATEGORIES}
-          />
-        </Field>
-
-        <Field
-          label="How long it should take"
-          hint={
-            diagnostic
-              ? "A diagnostic is two hours. That is what the fee is quoted for."
-              : "Hours. Two if left blank."
-          }
-        >
-          <TextInput
-            name="durationHours"
-            inputMode="decimal"
-            // Set here as well as on the server. The lock is a courtesy on
-            // screen; the parser is what actually decides.
-            value={diagnostic ? DIAGNOSTIC_HOURS : duration}
-            onChange={(event) => setDuration(event.target.value)}
-            readOnly={diagnostic}
-            aria-readonly={diagnostic}
-            className={diagnostic ? "opacity-70" : ""}
-            placeholder="2"
-          />
-        </Field>
-
-        <Field
-          label="Start"
-          hint={`Times are ${timeZoneLabel}. Leave blank to save it unscheduled.`}
-          group
-        >
-          <DateTimeField
-            name="startLocal"
-            label="Start"
-            timeZone={timeZone}
-            defaultValue={kept?.startLocal ?? ""}
-            onValueChange={setStart}
-          />
-        </Field>
-
-        <Field
-          label="Create a draft invoice for this amount (optional)"
-          hint="Leave blank for no invoice. A draft invoice is not sent until you send it."
-        >
-          <TextInput
-            name="cost"
-            // `decimal` rather than `numeric`: a number pad with no decimal
-            // point cannot type a price. Letters are filtered as they arrive,
-            // so the unreadable value never exists in the first place.
-            inputMode="decimal"
-            value={cost}
-            onChange={(event) => setCost(keepMoneyCharacters(event.target.value))}
-            placeholder="1280.00"
+            aria-invalid={state.field === "email" || undefined}
           />
         </Field>
 
         <div className="sm:col-span-2">
           {/* On a follow-up this starts as what the diagnostic found, which is
               the work rather than anything the customer said. */}
-          <Field label={followUp ? "What needs doing" : "What the customer said"}>
+          <Field label={followUp || !diagnostic ? "What needs doing" : "What the customer said"}>
             <textarea
               ref={description}
               name="description"
               rows={3}
               defaultValue={kept?.description ?? ""}
-              placeholder="Panel is buzzing and the kitchen breaker keeps tripping."
+              placeholder={
+                diagnostic
+                  ? "Panel is buzzing and the kitchen breaker keeps tripping."
+                  : "Replace the 100A panel with a 200A panel, and add two circuits in the garage."
+              }
               className={`${inputClass} min-h-24 py-3`}
             />
           </Field>
         </div>
-
-        {diagnostic ? null : (
-          <WorkOrderLines
-            describedBy={() => description.current?.value ?? ""}
-            defaultValue={kept?.workOrderLines ?? ""}
-            stock={stock}
-          />
-        )}
       </Section>
 
-      <FormMessage error={state.error} />
+      {/*
+        Everything else is optional, and folded away until it is wanted. The
+        first screen is who, how to reach them, and what it is about.
+      */}
+      <Optional title="Add address" summary="Where the work is" open={hasAddress || addressError} error={addressError}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <AddressFields
+            key={`address-${version}`}
+            withUnit
+            defaults={{
+              line1: kept?.addressLine1 ?? "",
+              line2: kept?.addressLine2 ?? "",
+              city: kept?.city ?? "",
+              state: kept?.state ?? "",
+              postalCode: kept?.postalCode ?? "",
+            }}
+          />
+        </div>
+        {addressError ? <p className="mt-2 text-sm font-medium text-critical">{state.error}</p> : null}
+      </Optional>
+
+      <Optional title="Access notes" summary="Gate codes, pets, which door" open={Boolean(kept?.accessNotes)}>
+        <Field
+          label="Access notes"
+          hint="Kept with the address, so every job there shows them."
+        >
+          <textarea
+            key={`notes-${version}`}
+            name="accessNotes"
+            rows={3}
+            maxLength={MAX_ACCESS_NOTES_LENGTH}
+            defaultValue={kept?.accessNotes ?? ""}
+            placeholder="Gate code 4521. Dog in the backyard. Panel is in the garage."
+            className={`${inputClass} min-h-24 py-3`}
+          />
+        </Field>
+      </Optional>
+
+      {quote ? (
+        <p className="rounded-panel border border-line bg-surface p-4 text-sm leading-6 text-ink-muted">
+          A quote is saved with no time and no invoice. You price it on the job next, then send it for
+          approval.
+        </p>
+      ) : (
+        <>
+          <Optional
+            title="Schedule now"
+            summary={start ? "A time is set" : "Leave it to save without a time"}
+            open={Boolean(start) || intent === "agreed" || state.field === "durationHours"}
+            error={state.field === "durationHours"}
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Start" hint={`Times are ${timeZoneLabel}. Leave blank to save it unscheduled.`} group>
+                <DateTimeField
+                  name="startLocal"
+                  label="Start"
+                  timeZone={timeZone}
+                  defaultValue={kept?.startLocal ?? ""}
+                  onValueChange={setStart}
+                />
+              </Field>
+              <Field
+                label="How long it should take"
+                hint={
+                  diagnostic
+                    ? "A diagnostic is two hours. That is what the fee is quoted for."
+                    : "Hours. Two if left blank."
+                }
+                error={errorFor("durationHours")}
+              >
+                <TextInput
+                  name="durationHours"
+                  inputMode="decimal"
+                  // Set here as well as on the server. The lock is a courtesy on
+                  // screen; the parser is what actually decides.
+                  value={diagnostic ? DIAGNOSTIC_HOURS : duration}
+                  onChange={(event) => setDuration(event.target.value)}
+                  readOnly={diagnostic}
+                  aria-readonly={diagnostic}
+                  className={diagnostic ? "opacity-70" : ""}
+                  placeholder="2"
+                />
+              </Field>
+            </div>
+          </Optional>
+
+          <Optional
+            title="Draft invoice"
+            summary={cost ? `For ${cost}` : "Optional"}
+            open={Boolean(cost) || state.field === "cost"}
+            error={state.field === "cost"}
+          >
+            <Field
+              label="Create a draft invoice for this amount (optional)"
+              hint="Leave blank for no invoice. A draft invoice is not sent until you send it."
+              error={errorFor("cost")}
+            >
+              <TextInput
+                name="cost"
+                // `decimal` rather than `numeric`: a number pad with no decimal
+                // point cannot type a price. Letters are filtered as they arrive,
+                // so the unreadable value never exists in the first place.
+                inputMode="decimal"
+                value={cost}
+                onChange={(event) => setCost(keepMoneyCharacters(event.target.value))}
+                placeholder="1280.00"
+              />
+            </Field>
+          </Optional>
+
+          {diagnostic ? null : (
+            <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
+              <WorkOrderLines
+                describedBy={() => description.current?.value ?? ""}
+                defaultValue={kept?.workOrderLines ?? ""}
+                stock={stock}
+              />
+            </section>
+          )}
+        </>
+      )}
+
+      {state.error ? (
+        <div ref={summary} tabIndex={-1} role="alert" className="outline-none">
+          <FormMessage error={state.error} />
+        </div>
+      ) : null}
 
       {/*
-        Three decisions, in the order they are made: finish it, keep it for now,
+        The decisions, in the order they are made: finish it, keep it for now,
         or walk away. Full width and stacked on a phone, so nothing here needs
         aiming at.
       */}
@@ -355,7 +492,7 @@ export function NewJobForm({
           ) : (
             <Plus className="h-4 w-4" aria-hidden />
           )}
-          {pending ? "Saving" : start ? "Schedule job" : "Save job"}
+          {pending ? "Saving" : quote ? "Save quote and price it" : start ? "Schedule job" : "Save job"}
         </button>
 
         <button

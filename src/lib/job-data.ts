@@ -24,6 +24,7 @@ import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels"
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import type { AgreementState } from "@/lib/job-stage";
+import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
 import { unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
 import {
@@ -249,7 +250,7 @@ export async function getAgreementStates(): Promise<Record<string, AgreementStat
 
   const { data, error } = await context.database
     .from("contracts")
-    .select("status, signature_sent_at, signed_at, created_at, kind, jobs ( job_number )")
+    .select("status, signature_sent_at, signed_at, created_at, kind, total_cents, jobs ( job_number )")
     .eq("organization_id", context.organizationId)
     .neq("status", "void")
     .order("created_at", { ascending: false });
@@ -264,6 +265,7 @@ export async function getAgreementStates(): Promise<Record<string, AgreementStat
     states[number] = {
       signed: row.status === "signed" || Boolean(row.signed_at),
       sent: row.status === "sent" || Boolean(row.signature_sent_at),
+      totalCents: typeof row.total_cents === "number" ? row.total_cents : null,
     };
   }
   return states;
@@ -1022,6 +1024,12 @@ export type JobContract = {
    * is ready.
    */
   unsignable: string;
+  /** The money it asks the customer to approve, from the figures it saved. Null on older contracts. */
+  summary: ApprovalSummary | null;
+  /** The text the signing link goes out as, exactly, for the preview before sending. */
+  messagePreview: string;
+  /** The scope paragraph, as drafted: what the customer is agreeing to have done. */
+  scope: string;
 };
 
 /**
@@ -1055,7 +1063,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const { data } = await context.database
     .from("contracts")
     .select(
-      "id, kind, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name",
+      "id, kind, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name, total_cents, deposit_cents, deposit_paid, scope",
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -1074,6 +1082,16 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   });
 
   const when = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" } as const;
+
+  // For the preview: the link is built from the app's own address, the same
+  // way sendSigningLink builds it, so the preview is the text that is sent.
+  const { data: organization } = await context.database
+    .from("organizations")
+    .select("name")
+    .eq("id", context.organizationId)
+    .maybeSingle();
+  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+  const { signingLinkMessage } = await import("@/lib/contract-signing");
 
   return rows.map((row, index) => {
     const id = String(row.id);
@@ -1120,6 +1138,18 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
         signatureProvider: typeof row.signature_provider === "string" ? row.signature_provider : null,
         signedAt: typeof row.signed_at === "string" ? row.signed_at : null,
         superseded,
+      }),
+      summary: approvalSummary({
+        totalCents: typeof row.total_cents === "number" ? row.total_cents : null,
+        depositCents: typeof row.deposit_cents === "number" ? row.deposit_cents : null,
+        depositPaid: typeof row.deposit_paid === "boolean" ? row.deposit_paid : null,
+      }),
+      scope: typeof row.scope === "string" ? row.scope : "",
+      messagePreview: signingLinkMessage({
+        businessName: typeof organization?.name === "string" ? organization.name : "",
+        jobNumber,
+        link: `${origin}/contract/${typeof row.public_token === "string" ? row.public_token : ""}`,
+        kind: row.kind,
       }),
     };
   });

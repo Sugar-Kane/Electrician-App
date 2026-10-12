@@ -12,6 +12,7 @@ import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
+import { JobProgress } from "@/components/job-progress";
 import { JobWorkflow } from "@/components/job-workflow";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
@@ -31,6 +32,8 @@ import { getJobInvoices, getJobLines, getStockOptions } from "@/lib/job-line-dat
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges } from "@/lib/job-billing";
+import { jobProgress } from "@/lib/job-progress";
+import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 
 /**
@@ -133,6 +136,29 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
   const canceled = controls?.canceled ?? job.status === "Canceled";
   const state = workflow?.state ?? "scheduled";
+
+  // The newest agreement that was not voided, as far as approval goes.
+  const currentAgreement = contracts.find((contract) => contract.kind === "agreement" && contract.status !== "void");
+  const progress = jobProgress({
+    kindOfWork: job.kindOfWork,
+    scheduledLabel: job.startsAt ? `${job.dateLabel} · ${job.time}` : "",
+    scheduleHref: `/jobs/${job.id}/edit#window`,
+    workflowState: state,
+    pricedCents: totals.subtotalCents,
+    partCount: lines.filter((line) => line.kind === "material").length,
+    agreement: currentAgreement
+      ? {
+          signed: Boolean(currentAgreement.signedAt),
+          sent: currentAgreement.status === "sent" || Boolean(currentAgreement.sentLabel),
+        }
+      : null,
+    invoices: invoices.map((invoice) => ({
+      status: invoice.status,
+      lastSentAt: invoice.lastSentAt,
+      paidAt: invoice.paidAt,
+    })),
+    formatMoney: formatCents,
+  });
   const workspaceOpen = showsWorkspace(state) && !canceled;
   // Hours, parts and the invoice: with the workspace, and on a work order from
   // the moment it is booked, without starting it or texting anybody.
@@ -172,9 +198,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           Follow-up to {followUps.followsUp.kindOfWork.toLowerCase()} #{followUps.followsUp.jobNumber}
         </Link>
       ) : null}
-      <p className="mt-0.5 text-sm text-ink-muted">
-        {job.dateLabel} · {job.time}–{job.endTime}
-      </p>
+      {/* No time yet is said once, by the status below, not as " · –". */}
+      {job.startsAt ? (
+        <p className="mt-0.5 text-sm text-ink-muted">
+          {job.dateLabel} · {job.time}–{job.endTime}
+        </p>
+      ) : null}
       {hasAddress ? (
         <p className="mt-2 flex items-start gap-2 text-base font-medium leading-6">
           <MapPin className="mt-1 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
@@ -226,6 +255,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
+      {controls && !canceled ? <JobProgress steps={progress.steps} next={progress.next} /> : null}
+
       {workflow && !canceled ? (
         <JobWorkflow
           jobNumber={workflow.jobNumber}
@@ -243,6 +274,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           customerReachable={workflow.customerReachable}
           navigateUrl={googleMapsUrl}
           phone={job.phone}
+          unscheduled={!job.startsAt}
         >
           {identity}
         </JobWorkflow>
@@ -350,7 +382,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         after it: those are there from the start, on their own until arrival.
       */}
       {controls && workAndMaterialsOpen ? (
-        <section className="mt-3 divide-y divide-line rounded-panel border border-line bg-surface px-4 sm:px-5">
+        <section
+          id="work-materials"
+          className="mt-3 scroll-mt-24 divide-y divide-line rounded-panel border border-line bg-surface px-4 sm:px-5"
+        >
           <div className="py-4">
             <JobLinesPanel
               jobNumber={controls.jobNumber}
@@ -460,6 +495,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
             jobNumber={controls.jobNumber}
             contracts={contracts}
             customerName={job.contactName || job.customer}
+            customerPhone={job.phone}
             changes={agreement}
           />
         </div>

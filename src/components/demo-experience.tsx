@@ -748,7 +748,7 @@ function InvoiceSheet({ workDay, status }: { workDay: DemoDay; status: string })
         {(
           [
             ["Subtotal", formatCents(totals.subtotalCents), false],
-            ["Diagnostic already paid", `-${formatCents(totals.diagnosticCreditCents)}`, false],
+            ["Diagnostic fee already paid", `-${formatCents(totals.diagnosticCreditCents)}`, false],
             ["Total", formatCents(totals.totalCents), true],
             ["Balance due", formatCents(totals.totalCents), true],
           ] as const

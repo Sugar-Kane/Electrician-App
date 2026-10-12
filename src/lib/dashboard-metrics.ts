@@ -99,6 +99,9 @@ export function estimatesDetail(input: { pendingCents: number; count: number }):
   tone: MetricTone;
 } {
   if (input.count === 0) return { detail: "None waiting on a customer", tone: "neutral" };
+  // Agreements drawn up before their figures were saved have no total to add,
+  // and "$0 pending" beside a waiting quote would be a number that lies.
+  if (input.pendingCents <= 0) return { detail: "Waiting on the customer", tone: "neutral" };
   return { detail: `${formatMoney(input.pendingCents)} pending`, tone: "neutral" };
 }
 

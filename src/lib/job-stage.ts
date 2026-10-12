@@ -45,7 +45,12 @@ export function isJobStageFilter(value: string): value is JobStage | "all" {
 }
 
 /** The newest agreement on the job that was not voided, as far as approval goes. */
-export type AgreementState = { sent: boolean; signed: boolean };
+export type AgreementState = {
+  sent: boolean;
+  signed: boolean;
+  /** The price the agreement states, when it saved one. */
+  totalCents?: number | null;
+};
 
 export function jobStage(job: {
   /** The reading label from mapJob: "Scheduled", "In progress", "Completed"... */

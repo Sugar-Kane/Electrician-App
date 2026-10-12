@@ -62,7 +62,7 @@ test("the contract is the starter template with nothing left blank", () => {
   assert.match(contract.body, /Sarah Martinez/);
   assert.match(contract.body, /Total: \$4,850\.00/);
   // Paid at booking, so the contract does not ask for it again.
-  assert.match(contract.body, /Deposit due before work begins: \$180\.00 \(paid\)/);
+  assert.match(contract.body, /Diagnostic fee: \$180\.00 \(already paid\)/);
   assert.match(contract.body, /scheduled for Tue, Oct 6, 2026/);
   assert.equal(contract.reference, "Job #1042");
   assert.equal(contract.job.scheduledLabel, "Scheduled Oct 6, 2026");

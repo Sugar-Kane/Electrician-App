@@ -337,7 +337,7 @@ export function DashboardShell({
     "/invoices?status=paid",
     "/schedule",
     "/technicians",
-    "/search",
+    "/jobs?stage=awaiting_approval",
     "/invoices?status=unpaid",
   ];
 

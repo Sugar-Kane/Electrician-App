@@ -42,7 +42,27 @@ import { createClient } from "@/lib/supabase/server";
  * back in, so a rejected save leaves the screen exactly as it was, with one
  * sentence saying what to fix.
  */
-export type NewJobState = { error: string; values?: NewJobRaw };
+export type NewJobState = {
+  error: string;
+  /** Which box the error is about, so it can be said beside that box. */
+  field?: keyof NewJobRaw;
+  values?: NewJobRaw;
+  /** What the person said they were doing, kept with the rest. */
+  intent?: NewJobIntent;
+};
+
+/**
+ * What the first question on the form answered.
+ *
+ * A quote is a work order with no time and no invoice: it is priced on the job
+ * page next, and nobody is texted. Agreed work is a work order that may be
+ * scheduled now. A fault is a diagnostic visit.
+ */
+export type NewJobIntent = "quote" | "fault" | "agreed";
+
+function readIntent(value: string): NewJobIntent | undefined {
+  return value === "quote" || value === "fault" || value === "agreed" ? value : undefined;
+}
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -56,6 +76,7 @@ export async function createJob(
   _previousState: NewJobState,
   formData: FormData,
 ): Promise<NewJobState> {
+  const intent = readIntent(field(formData, "intent"));
   const raw: NewJobRaw = {
     customerName: field(formData, "customerName"),
     phone: field(formData, "phone"),
@@ -75,11 +96,32 @@ export async function createJob(
     workOrderLines: field(formData, "workOrderLines"),
   };
 
+  /*
+   * The first question decides the kind of work, and a quote is held to what
+   * it promised on screen: no time, so nobody expects a visit, and no invoice,
+   * because nothing has been agreed. Enforced here as well as by the form
+   * hiding those boxes, because a hidden box is a courtesy.
+   */
+  if (intent === "quote") {
+    raw.category = "work_order";
+    raw.startLocal = "";
+    raw.cost = "";
+  } else if (intent === "agreed") {
+    raw.category = "work_order";
+  } else if (intent === "fault") {
+    raw.category = "diagnostic";
+  }
+
   /** Everything typed, handed back so nothing is lost to a rejected save. */
-  const keep = (error: string): NewJobState => ({ error, values: raw });
+  const keep = (error: string, errorField?: keyof NewJobRaw): NewJobState => ({
+    error,
+    field: errorField,
+    values: raw,
+    intent,
+  });
 
   const parsed = parseNewJob(raw);
-  if (!parsed.ok) return keep(parsed.error);
+  if (!parsed.ok) return keep(parsed.error, parsed.field);
   const job = parsed.value;
   const draft = job.mode === "draft";
 
@@ -450,5 +492,8 @@ export async function createJob(
   revalidatePath("/");
   if (followed) revalidatePath(`/jobs/${followUpNumber}`);
 
-  redirect(`/jobs/${String(createdJob.job_number ?? "")}`);
+  revalidatePath("/jobs");
+
+  // A quote opens where it gets priced.
+  redirect(`/jobs/${String(createdJob.job_number ?? "")}${intent === "quote" ? "#work-materials" : ""}`);
 }

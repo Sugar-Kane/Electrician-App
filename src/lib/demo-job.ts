@@ -331,7 +331,7 @@ export function demoContractFacts(calendar: DemoCalendar, workDay: DemoDay): Par
     total: formatCents(demoTotals().subtotalCents),
     // As the app writes it for a customer who paid when they booked: they are
     // not asked for it again by their own contract.
-    deposit: `${formatCents(DEMO_JOB.diagnosticFeeCents)} (paid)`,
+    deposit: `${formatCents(DEMO_JOB.diagnosticFeeCents)} (already paid)`,
     scope: DEMO_JOB.scope,
     // The day it was drawn up, which is what the template means by today.
     today: longDate(calendar.contract.iso),

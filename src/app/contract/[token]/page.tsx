@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { ArrowDown, CheckCircle2, FileSignature, FileX2, PenLine, Phone } from "lucide-react";
+import { ArrowDown, CheckCircle2, FileSignature, FileX2, MessageSquare, PenLine, Phone } from "lucide-react";
 
 import { ContractPdfPages } from "@/app/contract/[token]/contract-pdf";
 import { ContractSigning } from "@/app/contract/[token]/contract-signing";
 import { ContractPaper } from "@/components/contract-paper";
+import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
 import { unsignableBecause } from "@/lib/contract-signing";
+import { formatCents } from "@/lib/job-lines";
 import { loadContractDocument, type LoadedContract } from "@/lib/pdf/contract-data";
 import { currentDocument, type StoredDocument } from "@/lib/pdf/store";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -113,6 +115,113 @@ async function contractDocument(
   }
 }
 
+/** The figures and scope the contract saved when it was drawn up, for the summary above it. */
+async function contractTerms(
+  contract: PublicContract,
+): Promise<{ summary: ApprovalSummary | null; scope: string }> {
+  try {
+    const { data } = await asFlexibleClient(getSupabaseAdmin())
+      .from("contracts")
+      .select("total_cents, deposit_cents, deposit_paid, scope")
+      .eq("organization_id", contract.organization_id)
+      .eq("id", contract.contract_id)
+      .maybeSingle();
+    const row = (data ?? {}) as Record<string, unknown>;
+    return {
+      summary: approvalSummary({
+        totalCents: typeof row.total_cents === "number" ? row.total_cents : null,
+        depositCents: typeof row.deposit_cents === "number" ? row.deposit_cents : null,
+        depositPaid: typeof row.deposit_paid === "boolean" ? row.deposit_paid : null,
+      }),
+      scope: typeof row.scope === "string" ? row.scope.trim() : "",
+    };
+  } catch (error) {
+    console.error("contract page: could not load the figures", error);
+    return { summary: null, scope: "" };
+  }
+}
+
+/**
+ * What the customer is being asked to agree to, before the terms.
+ *
+ * The contract runs to several screens of terms, and the three things a
+ * customer wants to know — what is being done, what it costs after what they
+ * already paid, and when — were somewhere inside them. They come first now,
+ * from the figures the contract saved, so they match the terms underneath.
+ */
+function Summary({
+  summary,
+  scope,
+  timing,
+  businessName,
+  businessPhone,
+  jobNumber,
+}: {
+  summary: ApprovalSummary | null;
+  scope: string;
+  timing: string;
+  businessName: string;
+  businessPhone: string;
+  jobNumber: number | null;
+}) {
+  const rows: [string, string][] = summary
+    ? [
+        ["Total", formatCents(summary.totalCents)],
+        ...(summary.paidCents > 0
+          ? ([["Diagnostic fee already paid", `−${formatCents(summary.paidCents)}`]] as [string, string][])
+          : []),
+        ...(summary.dueBeforeWorkCents > 0
+          ? ([["Diagnostic fee, due before work begins", formatCents(summary.dueBeforeWorkCents)]] as [string, string][])
+          : []),
+      ]
+    : [];
+  const sms = businessPhone.replace(/[^\d+]/g, "");
+  const question = encodeURIComponent(`Question about ${jobNumber ? `job #${jobNumber}` : "my contract"}: `);
+
+  return (
+    <section aria-labelledby="summary-heading" className="mt-6 rounded-panel border border-line bg-[#081925] p-5 sm:p-6">
+      <h2 id="summary-heading" className="text-lg font-semibold">
+        What you are agreeing to
+      </h2>
+      {scope ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-faint">The work</p>
+          <p className="mt-1 line-clamp-6 whitespace-pre-line text-sm leading-6 text-ink">{scope}</p>
+        </div>
+      ) : null}
+      {summary ? (
+        <dl className="mt-4 space-y-1.5 border-t border-line pt-3 text-sm">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex items-baseline justify-between gap-3">
+              <dt className="text-ink-muted">{label}</dt>
+              <dd className="shrink-0 font-semibold">{value}</dd>
+            </div>
+          ))}
+          <div className="flex items-baseline justify-between gap-3 border-t border-line pt-2 text-base">
+            <dt className="font-semibold">Left to pay</dt>
+            <dd className="shrink-0 font-bold text-brand">{formatCents(summary.balanceCents)}</dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="mt-4 text-sm text-ink-muted">The price is set out in the contract below.</p>
+      )}
+      <p className="mt-3 text-sm text-ink-muted">
+        <span className="font-semibold text-ink">When:</span> {timing || "A date to be agreed with you."}
+      </p>
+      {sms ? (
+        <a
+          href={`sms:${sms}?&body=${question}`}
+          className="tap-target mt-4 inline-flex min-h-11 items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+        >
+          <MessageSquare className="h-4 w-4" aria-hidden />
+          Ask {businessName || "us"} a question
+        </a>
+      ) : null}
+      <p className="mt-3 text-xs text-ink-faint">The full contract is below. Read it before you sign.</p>
+    </section>
+  );
+}
+
 /** The body as paragraphs, split where the template left a blank line. */
 function Body({ text }: { text: string }) {
   const paragraphs = text.split(/\n\s*\n/).filter((block) => block.trim());
@@ -155,9 +264,10 @@ export default async function ContractPage({ params }: { params: Promise<{ token
   }
 
   const timeZone = contract.time_zone || "America/Los_Angeles";
-  const [copy, document] = await Promise.all([
+  const [copy, document, terms] = await Promise.all([
     contractCopy(contract, timeZone),
     contractDocument(contract, timeZone),
+    contractTerms(contract),
   ]);
   const blocked = unsignableBecause({
     status: contract.status,
@@ -189,6 +299,17 @@ export default async function ContractPage({ params }: { params: Promise<{ token
             <p className="mt-1 text-sm text-ink-muted">For {contract.customer_name}</p>
           ) : null}
         </header>
+
+        {signable ? (
+          <Summary
+            summary={terms.summary}
+            scope={terms.scope}
+            timing={copy?.document.job.scheduledLabel ?? ""}
+            businessName={contract.business_name}
+            businessPhone={contract.business_phone ?? ""}
+            jobNumber={contract.job_number}
+          />
+        ) : null}
 
         {signable ? (
           // A plain link to the section, so it works before the page's

@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
+  CalendarClock,
   Check,
   LoaderCircle,
   MessageSquare,
@@ -144,6 +145,12 @@ export type JobWorkflowProps = {
   navigateUrl: string;
   phone: string;
   /**
+   * The job has no time yet: a quote waiting on its price, or agreed work
+   * still to book. Start trip is nonsense then, so the one action is setting
+   * a time instead.
+   */
+  unscheduled?: boolean;
+  /**
    * Who, what and where, rendered above the status.
    *
    * Passed in from the page rather than duplicated here so it stays one card:
@@ -187,6 +194,7 @@ export function JobWorkflow({
   customerReachable,
   navigateUrl,
   phone,
+  unscheduled = false,
   children,
 }: JobWorkflowProps) {
   const [result, submit, pending] = useActionState(advanceJob, initialState);
@@ -355,6 +363,7 @@ export function JobWorkflow({
 
         <Headline
           state={state}
+          unscheduled={unscheduled}
           arrivedLabel={arrivedLabel}
           arrivalSource={arrivalSource}
           tripStartedLabel={tripStartedLabel}
@@ -399,7 +408,17 @@ export function JobWorkflow({
               <p className="mt-3 text-sm text-ink-muted">The customer has been told you are here.</p>
             ) : null}
 
-            {state === "scheduled" && expectedTexts ? (
+            {state === "scheduled" && unscheduled ? (
+              <a
+                href={`/jobs/${jobNumber}/edit#window`}
+                className="tap-target mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+              >
+                <CalendarClock className="h-4 w-4" aria-hidden />
+                Set a time
+              </a>
+            ) : null}
+
+            {state === "scheduled" && expectedTexts && !unscheduled ? (
               <p className="mt-3 text-sm text-ink-muted">{expectedTexts}</p>
             ) : null}
 
@@ -470,7 +489,7 @@ export function JobWorkflow({
         )}
       </section>
 
-      {step && !closed && !asking ? (
+      {step && !closed && !asking && !(unscheduled && state === "scheduled") ? (
         <ActionBar
           state={state}
           step={step}
@@ -492,12 +511,14 @@ export function JobWorkflow({
  */
 function Headline({
   state,
+  unscheduled,
   arrivedLabel,
   arrivalSource,
   tripStartedLabel,
   workStartedLabel,
 }: {
   state: WorkflowState;
+  unscheduled: boolean;
   arrivedLabel: string;
   arrivalSource: "geofence" | "manual" | "";
   tripStartedLabel: string;
@@ -529,7 +550,7 @@ function Headline({
         role="status"
       >
         {arrived ? <Check className="h-4 w-4" aria-hidden /> : null}
-        {stateLabel(state)}
+        {state === "scheduled" && unscheduled ? "Not scheduled yet" : stateLabel(state)}
       </p>
       {detail ? <p className="mt-1 text-sm text-ink-muted">{detail}</p> : null}
     </div>

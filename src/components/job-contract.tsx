@@ -28,6 +28,7 @@ import { PdfViewer } from "@/components/pdf-viewer";
 import { SignaturePad } from "@/components/signature-pad";
 import { FormMessage } from "@/components/ui/field";
 import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
+import { formatForDisplay } from "@/lib/phone-format";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
 import { formatCents } from "@/lib/job-lines";
 
@@ -101,17 +102,95 @@ export type AgreementChangeSummary = {
   behind: boolean;
 };
 
-function SendLinkButton() {
+function ConfirmSendButton() {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
-      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold disabled:opacity-60"
+      className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-60"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <MessageSquare className="h-4 w-4" aria-hidden />}
-      {pending ? "Sending…" : "Send for signing"}
+      {pending ? "Sending…" : "Confirm and text it"}
     </button>
+  );
+}
+
+/**
+ * What is about to be sent, before it is.
+ *
+ * A text to a customer cannot be taken back, so the button that used to send
+ * on the first tap now shows who it goes to, the message word for word, what
+ * they are agreeing to have done, and the money — and sends on the second.
+ */
+function ApprovalPreview({
+  contract,
+  customerPhone,
+  jobNumber,
+  send,
+  onCancel,
+}: {
+  contract: JobContractRecord;
+  customerPhone: string;
+  jobNumber: string;
+  send: (formData: FormData) => void;
+  onCancel: () => void;
+}) {
+  const summary = contract.summary;
+  const scope = contract.scope.trim();
+  const rows: [string, string][] = summary
+    ? [
+        ["Total", formatCents(summary.totalCents)],
+        ...(summary.paidCents > 0 ? ([["Diagnostic fee already paid", `−${formatCents(summary.paidCents)}`]] as [string, string][]) : []),
+        ...(summary.dueBeforeWorkCents > 0
+          ? ([["Diagnostic fee due before work", formatCents(summary.dueBeforeWorkCents)]] as [string, string][])
+          : []),
+        ["Left to pay", formatCents(summary.balanceCents)],
+      ]
+    : [];
+
+  return (
+    <div className="rounded-control border border-brand/30 bg-brand/[0.05] p-3" role="group" aria-label="Before you send">
+      <p className="text-sm font-semibold">Before you send</p>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-ink-muted">To</dt>
+        <dd className="min-w-0 break-words font-semibold">
+          {customerPhone ? formatForDisplay(customerPhone) : "No mobile number on file"} · by text
+        </dd>
+      </dl>
+      <p className="mt-2 text-xs font-semibold text-ink-muted">The message</p>
+      <p className="mt-1 break-words rounded-control bg-white/[0.04] p-2 text-sm leading-6">{contract.messagePreview}</p>
+      {scope ? (
+        <>
+          <p className="mt-2 text-xs font-semibold text-ink-muted">What they are agreeing to</p>
+          <p className="mt-1 line-clamp-4 whitespace-pre-line text-sm leading-6 text-ink-muted">{scope}</p>
+        </>
+      ) : null}
+      {rows.length > 0 ? (
+        <dl className="mt-2 space-y-1 border-t border-line pt-2 text-sm">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex items-baseline justify-between gap-3">
+              <dt className="text-ink-muted">{label}</dt>
+              <dd className="shrink-0 font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-2 text-xs text-ink-muted">The price is in the contract itself.</p>
+      )}
+      <form action={send} className="mt-3 flex gap-2">
+        <input type="hidden" name="contractId" value={contract.id} />
+        <input type="hidden" name="jobNumber" value={jobNumber} />
+        <ConfirmSendButton />
+        <button
+          type="button"
+          onClick={onCancel}
+          className="tap-target inline-flex min-h-12 items-center justify-center rounded-control border border-line px-4 text-sm font-semibold"
+        >
+          Cancel
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -180,14 +259,21 @@ function ContractSigning({
   contract,
   jobNumber,
   customerName,
+  customerPhone,
 }: {
   contract: JobContractRecord;
   jobNumber: string;
   customerName: string;
+  customerPhone: string;
 }) {
   const router = useRouter();
   const [inPerson, setInPerson] = useState(false);
-  const [state, send] = useActionState(sendSigningLink, initialState);
+  const [previewing, setPreviewing] = useState(false);
+  const [state, send] = useActionState(async (previous: ContractState, formData: FormData) => {
+    const result = await sendSigningLink(previous, formData);
+    if (!result.error) setPreviewing(false);
+    return result;
+  }, initialState);
   // The pad opens only once the business has signed.
   const [businessState, signBusiness] = useActionState(
     async (previous: ContractState, formData: FormData) => {
@@ -220,7 +306,7 @@ function ContractSigning({
       <div className="mt-3 space-y-2">
         <button type="button" disabled className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold opacity-60">
           <MessageSquare className="h-4 w-4" aria-hidden />
-          Send for signing
+          Send for approval
         </button>
         <p className="text-sm text-ink-muted">{contract.unsignable}</p>
         {contract.unfilled.length > 0 ? (
@@ -254,6 +340,14 @@ function ContractSigning({
             Cancel
           </button>
         </div>
+      ) : previewing ? (
+        <ApprovalPreview
+          contract={contract}
+          customerPhone={customerPhone}
+          jobNumber={jobNumber}
+          send={send}
+          onCancel={() => setPreviewing(false)}
+        />
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
           <form action={signBusiness}>
@@ -261,11 +355,14 @@ function ContractSigning({
             <input type="hidden" name="jobNumber" value={jobNumber} />
             <SignInPersonButton />
           </form>
-          <form action={send}>
-            <input type="hidden" name="contractId" value={contract.id} />
-            <input type="hidden" name="jobNumber" value={jobNumber} />
-            <SendLinkButton />
-          </form>
+          <button
+            type="button"
+            onClick={() => setPreviewing(true)}
+            className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+          >
+            <MessageSquare className="h-4 w-4" aria-hidden />
+            {contract.sentLabel || state.notice ? "Send again" : "Send for approval"}
+          </button>
         </div>
       )}
 
@@ -318,6 +415,7 @@ function ContractRow({
   contract,
   jobNumber,
   customerName,
+  customerPhone,
   current,
   open,
   onToggle,
@@ -325,6 +423,7 @@ function ContractRow({
   contract: JobContractRecord;
   jobNumber: string;
   customerName: string;
+  customerPhone: string;
   /** The newest draft. The others are labelled as superseded. */
   current: boolean;
   open: boolean;
@@ -367,9 +466,14 @@ function ContractRow({
 
       {current ? (
         <div className="border-t border-line px-3 pb-3">
-          <ContractSigning contract={contract} jobNumber={jobNumber} customerName={customerName} />
+          <ContractSigning
+            contract={contract}
+            jobNumber={jobNumber}
+            customerName={customerName}
+            customerPhone={customerPhone}
+          />
           {!contract.signedLabel && !contract.unsignable ? (
-            <p className="mt-2 text-xs text-ink-muted">Sends the signing link by text.</p>
+            <p className="mt-2 text-xs text-ink-muted">Shows you the text before it goes.</p>
           ) : null}
         </div>
       ) : null}
@@ -451,12 +555,15 @@ export function JobContract({
   jobNumber,
   contracts,
   customerName = "",
+  customerPhone = "",
   changes,
 }: {
   jobNumber: string;
   contracts: JobContractRecord[];
   /** Pre-fills the name on the signing pad. The customer can correct it. */
   customerName?: string;
+  /** Where the signing link is texted, shown before it is. */
+  customerPhone?: string;
   /** What has been written on the job since the customer last signed. */
   changes?: AgreementChangeSummary;
 }) {
@@ -589,6 +696,7 @@ export function JobContract({
                 contract={contract}
                 jobNumber={jobNumber}
                 customerName={customerName}
+                customerPhone={customerPhone}
                 current={index === 0}
                 open={open === contract.id}
                 onToggle={() => setOpen(open === contract.id ? null : contract.id)}

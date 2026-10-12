@@ -16,6 +16,28 @@ import { currentContext, currentUser } from "@/lib/request-context";
 import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
+import { getAgreementStates, getJobs } from "@/lib/job-data";
+import { jobStage } from "@/lib/job-stage";
+
+/** Jobs whose agreement is out for signing, and what those agreements come to. */
+async function awaitingApproval(): Promise<{ count: number; totalCents: number }> {
+  const [{ jobs }, agreements] = await Promise.all([getJobs(), getAgreementStates()]);
+  let count = 0;
+  let totalCents = 0;
+  for (const job of jobs) {
+    const agreement = agreements[job.id] ?? null;
+    const stage = jobStage({
+      status: job.status,
+      scheduled: Boolean(job.startsAt),
+      kindOfWork: job.kindOfWork,
+      agreement,
+    });
+    if (stage !== "awaiting_approval") continue;
+    count += 1;
+    totalCents += Math.max(0, agreement?.totalCents ?? 0);
+  }
+  return { count, totalCents };
+}
 
 export type DashboardMetric = {
   label: string;
@@ -235,11 +257,10 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .from("invoices")
           .select("status,total_cents,balance_due_cents,due_at,paid_at,last_sent_at")
           .eq("organization_id", organizationId),
-        supabase
-          .from("estimates")
-          .select("status,total_cents")
-          .eq("organization_id", organizationId)
-          .in("status", ["draft", "sent"]),
+        // Open estimates are jobs whose agreement is out with the customer.
+        // The estimates table this used to count is never written to, so the
+        // tile read 0 for every business, however many quotes were waiting.
+        awaitingApproval(),
         supabase
           .from("technicians")
           .select("id,user_id,display_name")
@@ -323,10 +344,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const enRoute = jobsToday.filter((job) => job.status === "en_route").length;
     const activeTechnicians = technicians.data?.length ?? 0;
     const outstanding = owed.owedCents;
-    const estimateTotal = (estimates.data ?? []).reduce(
-      (total, estimate) => total + estimate.total_cents,
-      0,
-    );
+    const estimateTotal = estimates.totalCents;
     const money = new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -390,10 +408,10 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         },
         {
           label: "Open estimates",
-          value: String(estimates.data?.length ?? 0),
+          value: String(estimates.count),
           ...estimatesDetail({
             pendingCents: estimateTotal,
-            count: estimates.data?.length ?? 0,
+            count: estimates.count,
           }),
         },
         {

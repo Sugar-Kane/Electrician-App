@@ -310,7 +310,7 @@ function BillingSection({
   const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
 
   return (
-    <div className="mt-3 border-t border-line pt-3">
+    <div id="billing" className="mt-3 scroll-mt-24 border-t border-line pt-3">
       {state.error ? <p className="mb-2 text-xs text-critical">{state.error}</p> : null}
       {state.notice ? (
         <p className="mb-2 text-xs text-positive" role="status">
