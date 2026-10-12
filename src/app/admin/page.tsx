@@ -27,14 +27,13 @@ const FILTERS = [
 export default async function AdminOrganizationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; show?: string }>;
+  searchParams: Promise<{ show?: string }>;
 }) {
-  const [{ q = "", show = "" }, organizations, evidence] = await Promise.all([
+  const [{ show = "" }, organizations, evidence] = await Promise.all([
     searchParams,
     listOrganizations(),
     getMessagingEvidence(null),
   ]);
-  const query = q.trim().toLowerCase().slice(0, 80);
   const filter = FILTERS.some((entry) => entry.value === show) ? show : "";
 
   const rows = organizations.map((organization) => {
@@ -42,7 +41,6 @@ export default async function AdminOrganizationsPage({
     return { organization, verdict: headline(findings) };
   });
   const shown = rows.filter(({ organization, verdict }) => {
-    if (query && ![organization.name, organization.city, organization.id].join(" ").toLowerCase().includes(query)) return false;
     if (filter === "archived") return organization.archived;
     if (organization.archived && filter) return false;
     if (filter === "attention") return verdict.severity === "blocking" || verdict.severity === "degraded";
@@ -50,24 +48,21 @@ export default async function AdminOrganizationsPage({
     return true;
   });
   const href = (next: string) => {
-    const params = new URLSearchParams({ ...(query ? { q: query } : {}), ...(next ? { show: next } : {}) });
-    return params.size ? `/admin?${params.toString()}` : "/admin";
+    return next ? `/admin?show=${next}` : "/admin";
   };
 
   return (
     <div className="space-y-3">
-      <form action="/admin" className="flex gap-2">
-        {filter ? <input type="hidden" name="show" value={filter} /> : null}
+      <form action="/admin/search" className="flex gap-2">
         <label className="flex min-h-12 min-w-0 flex-1 items-center rounded-control border border-line bg-raised px-4">
-          <span className="sr-only">Find a business</span>
+          <span className="sr-only">Search everything</span>
           <input
             name="q"
-            defaultValue={query}
-            placeholder="Business name, city or id"
+            placeholder="Business, email, job #, invoice #, phone or id"
             className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
           />
         </label>
-        <button className="tap-target shrink-0 rounded-control border border-line px-4 text-sm font-semibold">Find</button>
+        <button className="tap-target shrink-0 rounded-control border border-line px-4 text-sm font-semibold">Search</button>
       </form>
 
       <nav aria-label="Filter businesses" className="flex flex-wrap gap-1.5">
@@ -147,7 +142,7 @@ export default async function AdminOrganizationsPage({
 
       {shown.length === 0 ? (
         <p className="rounded-panel border border-line bg-surface p-5 text-sm text-ink-muted">
-          {organizations.length === 0 ? "No businesses yet." : "No business matches."}
+          {organizations.length === 0 ? "No businesses yet." : "No business is in this list."}
         </p>
       ) : null}
     </div>

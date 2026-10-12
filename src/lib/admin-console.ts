@@ -6,7 +6,9 @@
  * shapes and formatting rather than any decision about who may look.
  */
 
+import type { ActivityRow } from "@/lib/activity-timeline";
 import type { DeliveryEvidence } from "@/lib/admin-health";
+import { parseTrace, type JobTrace } from "@/lib/admin-trace";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -207,12 +209,6 @@ export async function getOrganizationDetail(id: string): Promise<OrganizationDet
   };
 }
 
-/** Records that this business's records were opened. Best effort. */
-export async function recordOrganizationView(id: string): Promise<void> {
-  const supabase = await client();
-  await supabase.rpc("admin_open_organization", { p_organization_id: id });
-}
-
 export type OrganizationMember = {
   userId: string;
   email: string;
@@ -366,4 +362,214 @@ export async function listAuditPage(filter: {
         ? (row.detail as Record<string, unknown>)
         : {},
   }));
+}
+
+export type SearchHit = {
+  kind: "business" | "person" | "job" | "invoice" | "customer" | "booking";
+  organizationId: string;
+  organizationName: string;
+  /** Job number for jobs and invoices, the record's id otherwise. */
+  ref: string;
+  title: string;
+  detail: string;
+  at: string;
+};
+
+const HIT_KINDS = new Set<SearchHit["kind"]>(["business", "person", "job", "invoice", "customer", "booking"]);
+
+/** One search across every business. The database records that it ran. */
+export async function searchConsole(query: string): Promise<SearchHit[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_search", { p_query: query.slice(0, 80) });
+  return rows(data)
+    .filter((row) => HIT_KINDS.has(text(row.kind) as SearchHit["kind"]))
+    .map((row) => ({
+      kind: text(row.kind) as SearchHit["kind"],
+      organizationId: text(row.organization_id),
+      organizationName: text(row.organization_name),
+      ref: text(row.ref),
+      title: text(row.title),
+      detail: text(row.detail),
+      at: text(row.at),
+    }));
+}
+
+/** Records which part of a business was opened. Best effort. */
+export async function recordOrganizationTab(id: string, tab: string): Promise<void> {
+  const supabase = await client();
+  await supabase.rpc("admin_view_organization", { p_organization_id: id, p_tab: tab });
+}
+
+/** Whether a reveal on the page address is this admin's own, fresh, for this business. */
+export async function revealIsValid(auditId: string, organizationId: string): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(auditId)) return false;
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_reveal_valid", {
+    p_audit_id: auditId,
+    p_organization_id: organizationId,
+  });
+  return data === true;
+}
+
+export type OrgJob = {
+  id: string;
+  number: string;
+  status: string;
+  category: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  createdAt: string;
+  customerId: string;
+  customerName: string;
+  city: string;
+  technician: string;
+  agreementSent: boolean;
+  agreementSigned: boolean;
+  invoiceCount: number;
+};
+
+export async function listOrgJobs(id: string, customerId?: string): Promise<OrgJob[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_org_jobs", {
+    p_organization_id: id,
+    p_customer_id: customerId || null,
+    p_limit: 200,
+  });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    number: String(row.job_number ?? ""),
+    status: text(row.status),
+    category: text(row.category),
+    scheduledStart: text(row.scheduled_start),
+    scheduledEnd: text(row.scheduled_end),
+    createdAt: text(row.created_at),
+    customerId: text(row.customer_id),
+    customerName: text(row.customer_name),
+    city: text(row.city),
+    technician: text(row.technician_name),
+    agreementSent: row.agreement_sent === true,
+    agreementSigned: row.agreement_signed === true,
+    invoiceCount: count(row.invoice_count),
+  }));
+}
+
+export type OrgMessage = {
+  id: string;
+  createdAt: string;
+  direction: string;
+  status: string;
+  errorCode: string;
+  errorDetail: string;
+  sentAt: string;
+  deliveredAt: string;
+  body: string;
+  hasProviderRef: boolean;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  jobNumber: string;
+};
+
+export async function listOrgMessages(id: string): Promise<OrgMessage[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_org_messages", { p_organization_id: id, p_limit: 150 });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    createdAt: text(row.created_at),
+    direction: text(row.direction),
+    status: text(row.status),
+    errorCode: text(row.error_code),
+    errorDetail: text(row.error_detail),
+    sentAt: text(row.sent_at),
+    deliveredAt: text(row.delivered_at),
+    body: text(row.body),
+    hasProviderRef: Boolean(text(row.provider_message_id)),
+    customerId: text(row.customer_id),
+    customerName: text(row.customer_name),
+    customerPhone: text(row.customer_phone),
+    jobNumber: row.job_number === null || row.job_number === undefined ? "" : String(row.job_number),
+  }));
+}
+
+export type OrgInvoice = {
+  id: string;
+  number: string;
+  jobNumber: string;
+  status: string;
+  totalCents: number;
+  balanceDueCents: number;
+  dueAt: string;
+  paidAt: string;
+  lastSentAt: string;
+  createdAt: string;
+};
+
+export async function listOrgInvoices(id: string): Promise<OrgInvoice[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_org_invoices", { p_organization_id: id, p_limit: 150 });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    number: String(row.invoice_number ?? ""),
+    jobNumber: row.job_number === null || row.job_number === undefined ? "" : String(row.job_number),
+    status: text(row.status),
+    totalCents: count(row.total_cents),
+    balanceDueCents: count(row.balance_due_cents),
+    dueAt: text(row.due_at),
+    paidAt: text(row.paid_at),
+    lastSentAt: text(row.last_sent_at),
+    createdAt: text(row.created_at),
+  }));
+}
+
+export type OrgPayment = {
+  id: string;
+  provider: string;
+  status: string;
+  amountCents: number;
+  paidAt: string;
+  createdAt: string;
+  jobNumber: string;
+  forBooking: boolean;
+  providerRef: string;
+};
+
+export async function listOrgPayments(id: string): Promise<OrgPayment[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_org_payments", { p_organization_id: id, p_limit: 150 });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    provider: text(row.provider),
+    status: text(row.status),
+    amountCents: count(row.amount_cents),
+    paidAt: text(row.paid_at),
+    createdAt: text(row.created_at),
+    jobNumber: row.job_number === null || row.job_number === undefined ? "" : String(row.job_number),
+    forBooking: Boolean(text(row.booking_request_id)),
+    providerRef: text(row.provider_ref),
+  }));
+}
+
+export async function listOrgActivity(id: string): Promise<(ActivityRow & { jobNumber: string; actorEmail: string })[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_org_activity", { p_organization_id: id, p_limit: 150 });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    eventType: text(row.event_type),
+    label: text(row.label),
+    createdAt: text(row.created_at),
+    metadata:
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : null,
+    jobId: row.job_number === null || row.job_number === undefined ? null : String(row.job_number),
+    jobNumber: row.job_number === null || row.job_number === undefined ? "" : String(row.job_number),
+    actorEmail: text(row.actor_email),
+  }));
+}
+
+/** One job and everything attached to it, or null for no such job here. */
+export async function getJobTrace(id: string, jobNumber: number): Promise<JobTrace | null> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_job_trace", { p_organization_id: id, p_job_number: jobNumber });
+  return parseTrace(data);
 }

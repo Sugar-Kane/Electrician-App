@@ -57,3 +57,23 @@ export function failureReason(code: string | null | undefined): FailureReason {
   const key = (code ?? "").trim();
   return BY_CODE[key] ?? { kind: "unknown", words: key ? `Failed (code ${key})` : "Failed with no reason given", retryable: true };
 }
+
+/**
+ * A text's delivery, in words, and how sure that is.
+ *
+ * "Accepted" is Twilio taking it; only a delivery report says the phone got
+ * it. A text with neither is unknown, not delivered.
+ */
+export function deliveryState(message: {
+  direction: string;
+  status: string;
+  errorCode: string;
+  hasProviderRef: boolean;
+}): { label: string; tone: "good" | "problem" | "waiting" | "neutral" } {
+  if (message.direction !== "outbound") return { label: "Received", tone: "neutral" };
+  if (message.status === "delivered") return { label: "Delivered", tone: "good" };
+  if (message.status === "failed" || message.status === "undelivered")
+    return { label: `Failed · ${failureReason(message.errorCode).words}`, tone: "problem" };
+  if (message.hasProviderRef) return { label: "Accepted by Twilio · no delivery report", tone: "waiting" };
+  return { label: "Not sent to Twilio", tone: "waiting" };
+}
