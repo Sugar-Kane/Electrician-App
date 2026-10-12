@@ -52,7 +52,16 @@ export default async function AdminOrganizationPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; reveal?: string; customer?: string; elevate?: string; checked?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    reveal?: string;
+    customer?: string;
+    elevate?: string;
+    checked?: string;
+    done?: string;
+    problem?: string;
+    why?: string;
+  }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   if (!UUID.test(id)) notFound();
@@ -121,7 +130,17 @@ export default async function AdminOrganizationPage({
       {tab === "people" ? <PeopleTab organization={organization} owner={owner} /> : null}
       {tab === "jobs" ? <JobsTab organization={organization} customerId={customerId} /> : null}
       {tab === "messages" ? <MessagesTab organization={organization} revealed={revealed} /> : null}
-      {tab === "bookings" ? <BookingsTab organization={organization} revealed={revealed} checked={UUID.test(query.checked ?? "") ? query.checked! : ""} /> : null}
+      {tab === "bookings" ? (
+        <BookingsTab
+          organization={organization}
+          revealed={revealed}
+          checked={UUID.test(query.checked ?? "") ? query.checked! : ""}
+          done={UUID.test(query.done ?? "") ? query.done! : ""}
+          problem={query.problem ?? ""}
+          why={(query.why ?? "").slice(0, 300)}
+          owner={owner}
+        />
+      ) : null}
       {tab === "money" ? <MoneyTab organization={organization} /> : null}
       {tab === "assistant" ? <AssistantTab organization={organization} revealed={revealed} /> : null}
       {tab === "activity" ? <ActivityTab organization={organization} revealed={revealed} /> : null}

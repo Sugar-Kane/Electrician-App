@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { listRecentBookings } from "@/lib/admin-console";
+import { bookingHideable, listBookings, listRecentBookings } from "@/lib/admin-console";
+import { hideRefusal, keepOne, NOT_SERVICE } from "@/lib/booking-duplicates";
 import { invitationEmail, invitationLink } from "@/lib/invitation-message";
 import { fetchEmailStatus, sendEmail } from "@/lib/email";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -167,3 +168,146 @@ export async function checkEmailDelivery(formData: FormData): Promise<void> {
   redirect(`${back}&checked=${operation}#booking-${bookingId}`);
 }
 
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Where a booking tool sends the admin back to, with how it went. */
+function bookingsTab(organizationId: string, bookingId: string, outcome: Record<string, string>) {
+  return `/admin/organizations/${organizationId}?tab=bookings&${new URLSearchParams(outcome).toString()}#booking-${bookingId}`;
+}
+
+/** The booking as it is now, read again rather than taken from the form. */
+async function freshBooking(organizationId: string, bookingId: string) {
+  return (await listBookings(organizationId, 150)).find((entry) => entry.id === bookingId) ?? null;
+}
+
+/** Claim a booking operation, or say why it couldn't be. */
+async function claimBooking(
+  organizationId: string,
+  tool: "classify_booking" | "merge_duplicates" | "restore_booking",
+  bookingId: string,
+  reason: string,
+  key: string,
+  preview: Record<string, unknown>,
+) {
+  const supabase = asFlexibleClient(await createClient());
+  const { data, error } = await supabase.rpc("admin_operation_start", {
+    p_organization_id: organizationId,
+    p_tool: tool,
+    p_target_type: "booking",
+    p_target_id: bookingId,
+    p_reason: reason,
+    p_key: key,
+    p_preview: preview,
+  });
+  if (error || typeof data !== "string") {
+    const problem = error?.code === "23505" ? "already" : error?.code === "42501" ? "role" : error?.code === "22023" ? "reason" : "refused";
+    redirect(bookingsTab(organizationId, bookingId, { problem }));
+  }
+  return { supabase, operation: data };
+}
+
+/** Hide a booking that isn't a request for work, for a business that can't. */
+export async function supportHideBooking(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!UUID.test(organizationId) || !UUID.test(bookingId)) return;
+  const kind = String(formData.get("kind") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  const seen = String(formData.get("updatedAt") ?? "");
+  if (!NOT_SERVICE.some((entry) => entry.value === kind)) redirect(bookingsTab(organizationId, bookingId, { problem: "kind" }));
+  if (reason.length < 3) redirect(bookingsTab(organizationId, bookingId, { problem: "reason" }));
+
+  const booking = await freshBooking(organizationId, bookingId);
+  if (!booking) redirect(bookingsTab(organizationId, bookingId, { problem: "missing" }));
+  if (booking.updatedAt !== seen) redirect(bookingsTab(organizationId, bookingId, { problem: "changed" }));
+  const why = hideRefusal(bookingHideable(booking));
+  if (why) redirect(bookingsTab(organizationId, bookingId, { problem: "refused", why }));
+
+  const { supabase, operation } = await claimBooking(organizationId, "classify_booking", bookingId, reason, `classify_booking:${bookingId}:${seen}`, {
+    kind,
+    status_before: booking.status,
+  });
+  const { error } = await supabase.rpc("admin_hide_booking_not_service", {
+    p_operation_id: operation,
+    p_request_id: bookingId,
+    p_classification: kind,
+  });
+  await supabase.rpc("admin_operation_finish", {
+    p_operation_id: operation,
+    p_state: error ? "failed" : "verified",
+    p_result: error ? { stopped: error.message } : { kind, status_before: booking.status },
+  });
+  redirect(bookingsTab(organizationId, bookingId, { done: operation }));
+}
+
+/** Bring back a booking that was hidden, to the status it had. */
+export async function supportRestoreBooking(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!UUID.test(organizationId) || !UUID.test(bookingId)) return;
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  const seen = String(formData.get("updatedAt") ?? "");
+  if (reason.length < 3) redirect(bookingsTab(organizationId, bookingId, { problem: "reason" }));
+
+  const booking = await freshBooking(organizationId, bookingId);
+  if (!booking) redirect(bookingsTab(organizationId, bookingId, { problem: "missing" }));
+  if (booking.updatedAt !== seen || !booking.archivedAt) redirect(bookingsTab(organizationId, bookingId, { problem: "changed" }));
+
+  const { supabase, operation } = await claimBooking(organizationId, "restore_booking", bookingId, reason, `restore_booking:${bookingId}:${seen}`, {
+    was: booking.classification || (booking.duplicateOf ? "duplicate" : ""),
+  });
+  const { data, error } = await supabase.rpc("admin_restore_booking", {
+    p_operation_id: operation,
+    p_request_id: bookingId,
+  });
+  await supabase.rpc("admin_operation_finish", {
+    p_operation_id: operation,
+    p_state: error ? "failed" : "verified",
+    p_result: error ? { stopped: error.message } : { status_after: String(data ?? "") },
+  });
+  redirect(bookingsTab(organizationId, bookingId, { done: operation }));
+}
+
+/** Keep one of a set of bookings from the same person and hide the others as its duplicates. */
+export async function supportKeepOneBooking(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const keepId = String(formData.get("keepId") ?? "");
+  const groupIds = formData.getAll("groupId").map((entry) => String(entry)).filter((entry) => UUID.test(entry));
+  if (!UUID.test(organizationId) || groupIds.length < 2) return;
+  const first = groupIds[0];
+  if (!UUID.test(keepId) || !groupIds.includes(keepId)) redirect(bookingsTab(organizationId, first, { problem: "keep" }));
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  if (reason.length < 3) redirect(bookingsTab(organizationId, keepId, { problem: "reason" }));
+  const seen = String(formData.get("seen") ?? "");
+
+  // The group as it is now, with the same rules the page used.
+  const all = await listBookings(organizationId, 150);
+  const group = groupIds.map((id) => all.find((entry) => entry.id === id)).filter((entry) => entry !== undefined);
+  if (group.length !== groupIds.length) redirect(bookingsTab(organizationId, keepId, { problem: "missing" }));
+  const stamp = group.map((entry) => entry.updatedAt).join("|");
+  if (stamp !== seen) redirect(bookingsTab(organizationId, keepId, { problem: "changed" }));
+  const choice = keepOne(group.map(bookingHideable), keepId);
+  if (!choice.ok) redirect(bookingsTab(organizationId, keepId, { problem: "refused", why: choice.refusal }));
+
+  const hide = choice.hide.map((entry) => entry.id);
+  const { supabase, operation } = await claimBooking(
+    organizationId,
+    "merge_duplicates",
+    keepId,
+    reason,
+    `merge_duplicates:${keepId}:${[...hide].sort().join(",")}:${stamp}`,
+    { keep: keepId, hide },
+  );
+  const { data, error } = await supabase.rpc("admin_hide_duplicate_bookings", {
+    p_operation_id: operation,
+    p_keep_id: keepId,
+    p_duplicate_ids: hide,
+  });
+  await supabase.rpc("admin_operation_finish", {
+    p_operation_id: operation,
+    p_state: error ? "failed" : "verified",
+    p_result: error ? { stopped: error.message } : { keep: keepId, hidden: Number(data ?? hide.length) },
+  });
+  redirect(bookingsTab(organizationId, keepId, { done: operation }));
+}
