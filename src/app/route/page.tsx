@@ -1,5 +1,6 @@
 import { FieldPageShell } from "@/components/field-page-shell";
 import { RouteBuilder } from "@/components/route-builder";
+import { getBuyList } from "@/lib/buy-list-data";
 import { todayInZone } from "@/lib/calendar";
 import { getJobs, getSupplyStops, placeTodaysStops } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
@@ -8,6 +9,8 @@ import type { SupplierId, SupplyStore } from "@/lib/pilot-data";
 type RouteSearchParams = {
   job?: string | string[];
   supplier?: string | string[];
+  /** "add": arrived from "Route through …", asking for a supply stop. */
+  stop?: string | string[];
   storeName?: string | string[];
   storeAddress?: string | string[];
   storeNumber?: string | string[];
@@ -34,11 +37,12 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
   // somebody makes to see whether fixing the key worked.
   const placing = await placeTodaysStops();
 
-  const [query, timeZone, { jobs }, stops] = await Promise.all([
+  const [query, timeZone, { jobs }, stops, buyItems] = await Promise.all([
     searchParams,
     getOrganizationTimezone(),
     getJobs(),
     getSupplyStops(),
+    getBuyList(),
   ]);
 
   const job = cleanValue(query.job, 40);
@@ -92,6 +96,8 @@ export default async function RoutePage({ searchParams }: { searchParams: Promis
         focusJobId={job || undefined}
         initialSupplier={initialSupplier}
         initialSupplyStore={initialSupplyStore ?? ownStore}
+        buyItems={buyItems}
+        addStop={cleanValue(query.stop, 8) === "add" || Boolean(storeAddress)}
       />
     </FieldPageShell>
   );

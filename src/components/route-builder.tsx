@@ -40,6 +40,7 @@ import {
   spanInMiles,
   type RouteStopInput,
 } from "@/lib/route-order";
+import { buyStatusLabel, pickupSummary, pickupsFor, type BuyItem } from "@/lib/buy-list";
 import { routeDateFor } from "@/lib/route-date";
 import {
   buildRouteKey,
@@ -101,6 +102,8 @@ export function RouteBuilder({
   focusJobId,
   initialSupplier = "lowes",
   initialSupplyStore,
+  buyItems = [],
+  addStop = false,
 }: {
   jobs: PilotJob[];
   today: string;
@@ -114,6 +117,10 @@ export function RouteBuilder({
   focusJobId?: string;
   initialSupplier?: SupplierId;
   initialSupplyStore?: SupplyStore;
+  /** The buy list, to know what — if anything — the day's jobs need collecting. */
+  buyItems?: BuyItem[];
+  /** Arrived asking for a supply stop ("Route through …" on Materials). */
+  addStop?: boolean;
 }) {
   const [built, setBuilt] = useState(false);
   const [supplier, setSupplier] = useState<SupplierId>(initialSupplier);
@@ -122,6 +129,8 @@ export function RouteBuilder({
   );
   const supplyStore =
     selectedSupplyStore?.supplier === supplier ? selectedSupplyStore : getPilotSupplyStore(supplier);
+  // A supply stop added by hand on a day nothing needs collecting.
+  const [stopWanted, setStopWanted] = useState(addStop);
 
   const [skipped, setSkipped] = useState<string[]>([]);
   /** Hand-moved order. Null means "however the ordering came out". */
@@ -233,6 +242,24 @@ export function RouteBuilder({
     [focusJobId, jobs, today],
   );
 
+  /**
+   * What the day's jobs have waiting on the buy list.
+   *
+   * The supply stop used to be on every route, even a day with no jobs — a
+   * detour nobody asked for, that read as though something were waiting. It
+   * is on the route now only when something is: an open buy-list line for one
+   * of the day's jobs. Otherwise it is one tap away, and says it was added.
+   */
+  const pickups = useMemo(
+    () =>
+      pickupsFor(
+        buyItems,
+        new Set(jobs.filter((job) => job.date === routeDate && job.status !== "Canceled").map((job) => job.id)),
+      ),
+    [buyItems, jobs, routeDate],
+  );
+  const supplyOnRoute = pickups.length > 0 || stopWanted;
+
   /** Every job for the day — no cap. The old three-stop limit lost work. */
   const dayStops = useMemo<Stop[]>(() => {
     const dayJobs = jobs.filter(
@@ -243,13 +270,16 @@ export function RouteBuilder({
       id: supplyStore.id,
       label: supplyStore.name,
       address: supplyStore.address,
-      detail: `Supply pickup${supplyStore.storeNumber ? ` · Store #${supplyStore.storeNumber}` : ""}`,
+      detail:
+        pickups.length > 0
+          ? `Pick up ${pickupSummary(pickups)}`
+          : `Supply stop you added${supplyStore.storeNumber ? ` · Store #${supplyStore.storeNumber}` : ""}`,
       kind: "supply",
       point: supplyStore.coordinates ?? null,
     };
 
     return [
-      supply,
+      ...(supplyOnRoute ? [supply] : []),
       ...dayJobs.map((job) => ({
         id: job.id,
         label: job.customer,
@@ -260,7 +290,7 @@ export function RouteBuilder({
         job,
       })),
     ];
-  }, [jobs, routeDate, supplyStore]);
+  }, [jobs, routeDate, supplyStore, pickups, supplyOnRoute]);
 
   const ordered = useMemo<Stop[]>(() => {
     const live = dayStops.map((stop) => ({ ...stop, skipped: skipped.includes(stop.id) }));
@@ -608,7 +638,54 @@ export function RouteBuilder({
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-faint">
               Supply stop
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            {pickups.length > 0 ? (
+              <div className="mt-2 text-sm">
+                <p className="font-semibold">On the route: {pickupSummary(pickups)} to collect.</p>
+                <ul className="mt-1.5 space-y-1 text-xs text-ink-muted">
+                  {pickups.map((item) => (
+                    <li key={item.id}>
+                      {item.description} · {Math.round(item.quantity * 100) / 100} {item.unit} ·{" "}
+                      <span className="font-semibold text-ink">{buyStatusLabel(item.status)}</span>
+                      {item.orderReference ? ` · order ${item.orderReference}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : stopWanted ? (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <p className="text-ink-muted">Added by you. Nothing on the buy list is waiting for this day’s jobs.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStopWanted(false);
+                    setManualOrder(null);
+                    setBuilt(false);
+                  }}
+                  className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand"
+                >
+                  Remove supply stop
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 text-sm">
+                <p className="text-ink-muted">
+                  None today. Nothing on the buy list is waiting for this day’s jobs.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStopWanted(true);
+                    setManualOrder(null);
+                    setBuilt(false);
+                  }}
+                  className="tap-target mt-2 inline-flex min-h-11 items-center rounded-control border border-line px-3 text-sm font-semibold"
+                >
+                  Add a supply stop
+                </button>
+              </div>
+            )}
+            {supplyOnRoute ? (
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {(["lowes", "home-depot"] as const).map((supplierId) => {
                 const store = getPilotSupplyStore(supplierId);
                 const active = supplier === supplierId;
@@ -637,6 +714,7 @@ export function RouteBuilder({
                 );
               })}
             </div>
+            ) : null}
           </section>
 
           {!built ? (
