@@ -105,6 +105,9 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "invoice.send_failed": { kind: "money", title: "Invoice not sent" },
   "customer.notified": { kind: "appointment", title: "Customer told about the change" },
   "customer.notify_failed": { kind: "appointment", title: "Customer not told about the change" },
+  // Written by the support console's Fix recipient, with the number it replaced
+  // so the business can see exactly what changed and change it back.
+  "customer.phone_corrected": { kind: "other", title: "Phone number corrected by Volteira support" },
 };
 
 const FAILED = new Set(["estimate.send_failed", "invoice.send_failed", "customer.notify_failed"]);
@@ -166,6 +169,9 @@ function detailOf(row: ActivityRow): string {
 
   const note = metadata.note;
   if (typeof note === "string" && note.trim()) parts.push(note.trim());
+
+  const previous = metadata.previous_phone;
+  if (typeof previous === "string" && previous.trim()) parts.push(`was ${previous.trim()}`);
 
   // Why a send did not go, in the words the sender was given.
   const reason = metadata.reason;

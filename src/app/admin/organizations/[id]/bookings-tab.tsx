@@ -2,12 +2,27 @@ import Link from "next/link";
 
 import { AdminTime } from "@/components/admin-time";
 import { Card, Empty } from "@/components/admin-ui";
-import { listRecentBookings, type OrganizationDetail } from "@/lib/admin-console";
+import { listOperations, listRecentBookings, type OrganizationDetail } from "@/lib/admin-console";
 import { maskContacts, maskEmail, maskPhone } from "@/lib/admin-mask";
 
+import { checkEmailDelivery } from "./actions";
+
 /** Recent bookings, and whether anybody was told about each. */
-export async function BookingsTab({ organization, revealed }: { organization: OrganizationDetail; revealed: boolean }) {
-  const bookings = await listRecentBookings(organization.id, 30);
+export async function BookingsTab({
+  organization,
+  revealed,
+  checked,
+}: {
+  organization: OrganizationDetail;
+  revealed: boolean;
+  /** The Check delivery just run, to show its answer beside its email. */
+  checked: string;
+}) {
+  const [bookings, operations] = await Promise.all([
+    listRecentBookings(organization.id, 30),
+    checked ? listOperations({ organizationId: organization.id, tool: "check_delivery" }) : Promise.resolve([]),
+  ]);
+  const answer = operations.find((operation) => operation.id === checked);
   const zone = organization.timeZone;
   const base = `/admin/organizations/${organization.id}`;
 
@@ -62,6 +77,23 @@ export async function BookingsTab({ organization, revealed }: { organization: Or
                           {" · "}
                           <AdminTime iso={attempt.at} timeZone={zone} />
                         </>
+                      ) : null}
+                      {attempt.channel === "email" && attempt.ok ? (
+                        <form action={checkEmailDelivery} className="mt-1">
+                          <input type="hidden" name="organizationId" value={organization.id} />
+                          <input type="hidden" name="bookingId" value={booking.id} />
+                          <input type="hidden" name="index" value={index} />
+                          <button type="submit" className="min-h-11 font-semibold underline underline-offset-2">
+                            Check delivery
+                          </button>
+                          {answer && answer.targetId === booking.id && Number(answer.result.attempt) === index ? (
+                            <span className="ml-2 text-ink">
+                              {answer.state === "verified"
+                                ? `The provider says: ${String(answer.result.last_event)}.`
+                                : `Couldn't tell: ${String(answer.result.why)}`}
+                            </span>
+                          ) : null}
+                        </form>
                       ) : null}
                     </li>
                   ))}

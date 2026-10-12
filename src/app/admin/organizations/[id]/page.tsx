@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { AdminTime } from "@/components/admin-time";
 import { RevealBar } from "@/components/admin-ui";
 import { RevealCurrent } from "@/components/ui/reveal-current";
-import { getOrganizationDetail, recordOrganizationTab, revealIsValid } from "@/lib/admin-console";
+import { getOrganizationDetail, myAdminRole, recordOrganizationTab, revealIsValid } from "@/lib/admin-console";
 import { zoneAbbreviation } from "@/lib/admin-time";
 
 import { ActivityTab } from "./activity-tab";
@@ -52,7 +52,7 @@ export default async function AdminOrganizationPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; reveal?: string; customer?: string; elevate?: string }>;
+  searchParams: Promise<{ tab?: string; reveal?: string; customer?: string; elevate?: string; checked?: string }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   if (!UUID.test(id)) notFound();
@@ -64,10 +64,12 @@ export default async function AdminOrganizationPage({
   const customerId = tab === "jobs" && UUID.test(query.customer ?? "") ? query.customer! : "";
   const label = TABS.find((entry) => entry.value === tab)!.label;
   const revealId = query.reveal ?? "";
-  const [, revealed] = await Promise.all([
+  const [, revealed, role] = await Promise.all([
     recordOrganizationTab(id, customerId ? `${label} for one customer` : label),
     PRIVATE.has(tab) && UUID.test(revealId) ? revealIsValid(revealId, id) : Promise.resolve(false),
+    myAdminRole(),
   ]);
+  const owner = role === "owner";
 
   const base = `/admin/organizations/${id}`;
   const here = `${base}?tab=${tab}${customerId ? `&customer=${customerId}` : ""}`;
@@ -115,11 +117,11 @@ export default async function AdminOrganizationPage({
         <p className="text-sm text-critical">Say why you need to see them. The reason goes on the activity record.</p>
       ) : null}
 
-      {tab === "summary" ? <SummaryTab organization={organization} elevate={query.elevate ?? ""} /> : null}
-      {tab === "people" ? <PeopleTab organization={organization} /> : null}
+      {tab === "summary" ? <SummaryTab organization={organization} elevate={query.elevate ?? ""} owner={owner} /> : null}
+      {tab === "people" ? <PeopleTab organization={organization} owner={owner} /> : null}
       {tab === "jobs" ? <JobsTab organization={organization} customerId={customerId} /> : null}
       {tab === "messages" ? <MessagesTab organization={organization} revealed={revealed} /> : null}
-      {tab === "bookings" ? <BookingsTab organization={organization} revealed={revealed} /> : null}
+      {tab === "bookings" ? <BookingsTab organization={organization} revealed={revealed} checked={UUID.test(query.checked ?? "") ? query.checked! : ""} /> : null}
       {tab === "money" ? <MoneyTab organization={organization} /> : null}
       {tab === "assistant" ? <AssistantTab organization={organization} revealed={revealed} /> : null}
       {tab === "activity" ? <ActivityTab organization={organization} revealed={revealed} /> : null}

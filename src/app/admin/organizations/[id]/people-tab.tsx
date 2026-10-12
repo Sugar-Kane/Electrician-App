@@ -4,7 +4,7 @@ import { Card, Empty } from "@/components/admin-ui";
 import { listOrganizationMembers, type OrganizationDetail } from "@/lib/admin-console";
 
 /** Who can sign in, and a way to invite somebody when nobody inside can. */
-export async function PeopleTab({ organization }: { organization: OrganizationDetail }) {
+export async function PeopleTab({ organization, owner }: { organization: OrganizationDetail; owner: boolean }) {
   const members = await listOrganizationMembers(organization.id);
   const zone = organization.timeZone;
 
@@ -29,12 +29,14 @@ export async function PeopleTab({ organization }: { organization: OrganizationDe
           ))}
         </ul>
       )}
-      <div className="mt-5 border-t border-line pt-5">
-        <p className="mb-4 text-sm text-ink-muted">
-          Invite somebody into this business. Works even when nobody on the inside can sign in to do it themselves.
-        </p>
-        <AdminInviteForm organizationId={organization.id} />
-      </div>
+      {owner ? (
+        <div className="mt-5 border-t border-line pt-5">
+          <p className="mb-4 text-sm text-ink-muted">
+            Invite somebody into this business. Works even when nobody on the inside can sign in to do it themselves.
+          </p>
+          <AdminInviteForm organizationId={organization.id} />
+        </div>
+      ) : null}
     </Card>
   );
 }

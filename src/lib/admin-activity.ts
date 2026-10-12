@@ -13,10 +13,20 @@ export type ActivityAction = { value: string; label: string };
 /** The actions the filter offers, in the order support thinks about them. */
 export const ACTIVITY_ACTIONS: readonly ActivityAction[] = [
   { value: "organization.viewed", label: "Opened a business" },
+  { value: "search.run", label: "Searched" },
+  { value: "record.revealed", label: "Showed private details" },
+  { value: "operation.started", label: "Started a recovery tool" },
+  { value: "operation.finished", label: "Finished a recovery tool" },
   { value: "impersonation.started", label: "Started making changes" },
   { value: "impersonation.ended", label: "Stopped making changes" },
   { value: "invitation.sent", label: "Sent an invitation" },
 ];
+
+const TOOL_WORDS: Record<string, string> = {
+  check_delivery: "checked a text's delivery",
+  retry_text: "sent a failed text again",
+  fix_recipient: "corrected a customer's number",
+};
 
 const ROLE_WORDS: Record<string, string> = {
   owner: "an owner",
@@ -39,6 +49,18 @@ export function activitySentence(action: string, business: string, detail: Recor
     case "invitation.sent": {
       const role = ROLE_WORDS[str(detail.role)] ?? "a member";
       return `Invited ${str(detail.email) || "somebody"} into ${where} as ${role}`;
+    }
+    case "search.run":
+      return `Searched for “${str(detail.query)}”`;
+    case "record.revealed":
+      return `Showed private details in ${where}${str(detail.scope) ? `: ${str(detail.scope)}` : ""}`;
+    case "operation.started": {
+      const tool = TOOL_WORDS[str(detail.tool)] ?? str(detail.tool).replace(/_/g, " ");
+      return `Started: ${tool} · ${where}`;
+    }
+    case "operation.finished": {
+      const tool = TOOL_WORDS[str(detail.tool)] ?? str(detail.tool).replace(/_/g, " ");
+      return `Finished (${str(detail.outcome)}): ${tool} · ${where}`;
     }
     case "impersonation.started":
       return `Started making changes as ${where}`;
@@ -69,7 +91,7 @@ export function activityFacts(action: string, detail: Record<string, unknown>): 
     });
   }
 
-  const known = new Set(["reason", "email", "role", "tab", "granted_membership"]);
+  const known = new Set(["reason", "email", "role", "tab", "granted_membership", "query", "scope", "tool", "outcome"]);
   for (const [key, value] of Object.entries(detail)) {
     if (known.has(key)) continue;
     const text = typeof value === "object" && value !== null ? JSON.stringify(value) : str(value) || String(value);

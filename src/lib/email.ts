@@ -83,3 +83,31 @@ export async function sendEmail(input: {
     return { ok: false, errorCode: "network_error", errorDetail: "Could not reach the email provider." };
   }
 }
+
+export type EmailStatus = { known: true; lastEvent: string } | { known: false; reason: string };
+
+/**
+ * What the email provider says now about one email, by the id it gave back.
+ *
+ * Read-only. Accepted is not delivered: only the provider's last event says
+ * whether it arrived, bounced or was marked as spam.
+ */
+export async function fetchEmailStatus(id: string): Promise<EmailStatus> {
+  const auth = credentials();
+  if (!auth) return { known: false, reason: "Email isn't configured on this deployment." };
+  if (!/^[0-9a-f-]{20,64}$/i.test(id)) return { known: false, reason: "No provider reference was saved for this email." };
+
+  try {
+    const response = await fetch(`https://api.resend.com/emails/${id}`, {
+      headers: { Authorization: `Bearer ${auth.apiKey}` },
+      signal: AbortSignal.timeout(8_000),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { last_event?: string };
+    if (!response.ok || !payload.last_event) {
+      return { known: false, reason: `The provider answered ${response.status} without a status.` };
+    }
+    return { known: true, lastEvent: payload.last_event };
+  } catch {
+    return { known: false, reason: "Couldn't reach the email provider." };
+  }
+}

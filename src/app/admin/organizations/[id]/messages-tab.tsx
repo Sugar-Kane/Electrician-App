@@ -23,13 +23,13 @@ export async function MessagesTab({ organization, revealed }: { organization: Or
             return (
               <li key={message.id} className="rounded-control border border-line p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="min-w-0 text-sm font-semibold">
+                  <Link href={`${base}/messages/${message.id}`} className="min-w-0 text-sm font-semibold hover:text-brand">
                     {message.direction === "outbound" ? "To " : "From "}
                     {message.customerName || "unknown"}{" "}
                     <span className="font-normal text-ink-muted">
                       {revealed ? message.customerPhone : maskPhone(message.customerPhone)}
                     </span>
-                  </p>
+                  </Link>
                   <Pill tone={state.tone}>{state.label}</Pill>
                 </div>
                 <p className={`mt-1 text-sm ${revealed ? "whitespace-pre-wrap break-words text-ink" : "text-ink-faint"}`}>

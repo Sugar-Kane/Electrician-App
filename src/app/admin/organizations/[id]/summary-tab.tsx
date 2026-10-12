@@ -22,9 +22,12 @@ const FINDING_STYLE: Record<Finding["severity"], string> = {
 export async function SummaryTab({
   organization,
   elevate,
+  owner,
 }: {
   organization: OrganizationDetail;
   elevate: string;
+  /** Support admins look and check; only owners can make changes. */
+  owner: boolean;
 }) {
   const id = organization.id;
   const zone = organization.timeZone;
@@ -120,45 +123,47 @@ export async function SummaryTab({
         </dl>
       </Card>
 
-      <Card title="Make changes as this business">
-        <div id="elevate" className="scroll-mt-28" />
-        <p className="text-sm leading-6 text-ink-muted">
-          Everything in this console is read-only. If you need to act for {organization.name}, this opens the app as
-          one of its members with full access for one hour. Anything you do is real: a cancelled job texts their
-          customer, and an invoice is their invoice. It is recorded against your account, with the reason you give.
-        </p>
-        {elevate === "reason" ? (
-          <p className="mt-3 flex items-start gap-2 text-sm text-critical">
-            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            Say why you need to make changes. The reason goes on the activity record.
+      {owner ? (
+        <Card title="Make changes as this business">
+          <div id="elevate" className="scroll-mt-28" />
+          <p className="text-sm leading-6 text-ink-muted">
+            Everything in this console is read-only. If you need to act for {organization.name}, this opens the app as
+            one of its members with full access for one hour. Anything you do is real: a cancelled job texts their
+            customer, and an invoice is their invoice. It is recorded against your account, with the reason you give.
           </p>
-        ) : elevate === "refused" ? (
-          <p className="mt-3 flex items-start gap-2 text-sm text-critical">
-            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            That didn&rsquo;t start. The business may be archived, or your access may have changed.
-          </p>
-        ) : null}
-        <form action={beginImpersonation} className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <input type="hidden" name="organizationId" value={id} />
-          <label className="min-w-0 flex-1">
-            <span className="sr-only">Reason</span>
-            <input
-              name="reason"
-              required
-              minLength={3}
-              maxLength={200}
-              placeholder="Why, e.g. owner can't see their schedule"
-              className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-brand/70"
-            />
-          </label>
-          <button
-            type="submit"
-            className="tap-target shrink-0 rounded-control border border-brand/50 px-5 text-sm font-bold text-brand"
-          >
-            Make changes as {organization.name}
-          </button>
-        </form>
-      </Card>
+          {elevate === "reason" ? (
+            <p className="mt-3 flex items-start gap-2 text-sm text-critical">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              Say why you need to make changes. The reason goes on the activity record.
+            </p>
+          ) : elevate === "refused" ? (
+            <p className="mt-3 flex items-start gap-2 text-sm text-critical">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              That didn&rsquo;t start. The business may be archived, or your access may have changed.
+            </p>
+          ) : null}
+          <form action={beginImpersonation} className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input type="hidden" name="organizationId" value={id} />
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">Reason</span>
+              <input
+                name="reason"
+                required
+                minLength={3}
+                maxLength={200}
+                placeholder="Why, e.g. owner can't see their schedule"
+                className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-brand/70"
+              />
+            </label>
+            <button
+              type="submit"
+              className="tap-target shrink-0 rounded-control border border-brand/50 px-5 text-sm font-bold text-brand"
+            >
+              Make changes as {organization.name}
+            </button>
+          </form>
+        </Card>
+      ) : null}
     </>
   );
 }

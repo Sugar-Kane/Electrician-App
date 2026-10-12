@@ -9,6 +9,7 @@
 import type { ActivityRow } from "@/lib/activity-timeline";
 import type { DeliveryEvidence } from "@/lib/admin-health";
 import { parseTrace, type JobTrace } from "@/lib/admin-trace";
+import type { TextFacts } from "@/lib/recovery/text-recovery";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -68,6 +69,8 @@ export type NotificationAttempt = {
   audience: string;
   ok: boolean;
   detail: string;
+  /** The provider's id for it. Older email attempts kept it as their detail. */
+  ref: string;
   at: string;
 };
 
@@ -238,12 +241,15 @@ function attempts(value: unknown): NotificationAttempt[] {
   if (!Array.isArray(value)) return [];
   return value.map((entry) => {
     const row = (entry ?? {}) as Record<string, unknown>;
+    const detail = text(row.detail);
+    const channel = text(row.channel);
     return {
-      channel: text(row.channel),
+      channel,
       to: text(row.to),
       audience: text(row.audience),
       ok: row.ok === true,
-      detail: text(row.detail),
+      detail,
+      ref: text(row.ref) || (channel === "email" && row.ok === true && /^[0-9a-f-]{36}$/i.test(detail) ? detail : ""),
       at: text(row.at),
     };
   });
@@ -572,4 +578,136 @@ export async function getJobTrace(id: string, jobNumber: number): Promise<JobTra
   const supabase = await client();
   const { data } = await supabase.rpc("admin_job_trace", { p_organization_id: id, p_job_number: jobNumber });
   return parseTrace(data);
+}
+
+/** "owner" may change things; "support" may look and check. Null for anybody else. */
+export async function myAdminRole(): Promise<"owner" | "support" | null> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_my_role");
+  return data === "owner" || data === "support" ? data : null;
+}
+
+export type MessageFacts = TextFacts & {
+  message: TextFacts["message"] & { conversationId: string; errorDetail: string; sentAt: string; deliveredAt: string };
+  operationLog: {
+    id: string;
+    tool: string;
+    state: string;
+    createdAt: string;
+    finishedAt: string;
+    reason: string;
+    actor: string;
+    result: Record<string, unknown>;
+  }[];
+};
+
+/** One text and everything that decides what support may do with it, or null. */
+export async function getMessageFacts(organizationId: string, messageId: string): Promise<MessageFacts | null> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_message_facts", {
+    p_organization_id: organizationId,
+    p_message_id: messageId,
+  });
+  const root = data && typeof data === "object" && !Array.isArray(data) ? (data as Record<string, unknown>) : null;
+  const message = root?.message as Record<string, unknown> | undefined;
+  if (!root || !message) return null;
+  const customer = root.customer as Record<string, unknown> | null;
+  const consent = (root.consent ?? {}) as Record<string, unknown>;
+  const job = root.job as Record<string, unknown> | null;
+  const messaging = (root.messaging ?? {}) as Record<string, unknown>;
+  const operations = rows(root.operations);
+
+  return {
+    organizationId,
+    message: {
+      id: text(message.id),
+      organizationId: text(message.organization_id),
+      conversationId: text(message.conversation_id),
+      direction: text(message.direction),
+      status: text(message.status),
+      errorCode: text(message.error_code),
+      errorDetail: text(message.error_detail),
+      body: text(message.body),
+      createdAt: text(message.created_at),
+      updatedAt: text(message.updated_at),
+      sentAt: text(message.sent_at),
+      deliveredAt: text(message.delivered_at),
+      providerMessageId: text(message.provider_message_id),
+    },
+    customer: customer ? { id: text(customer.id), name: text(customer.name), phone: text(customer.phone) } : null,
+    consent: { optedInAt: text(consent.opted_in_at) || null, optedOutAt: text(consent.opted_out_at) || null },
+    job: job ? { jobNumber: String(job.job_number ?? ""), status: text(job.status) } : null,
+    messaging: {
+      serviceSid: text(messaging.service_sid),
+      quietStart: text(messaging.quiet_start) || "21:00:00",
+      quietEnd: text(messaging.quiet_end) || "08:00:00",
+      timezone: text(messaging.timezone) || "America/Los_Angeles",
+    },
+    laterSends: rows(root.later_sends).map((row) => ({ status: text(row.status), sameBody: row.same_body === true })),
+    recipientFixedAt: text(root.recipient_fixed_at),
+    operations: operations.map((row) => ({ tool: text(row.tool), state: text(row.state) })),
+    operationLog: operations.map((row) => ({
+      id: text(row.id),
+      tool: text(row.tool),
+      state: text(row.state),
+      createdAt: text(row.created_at),
+      finishedAt: text(row.finished_at),
+      reason: text(row.reason),
+      actor: text(row.actor),
+      result:
+        row.result && typeof row.result === "object" && !Array.isArray(row.result)
+          ? (row.result as Record<string, unknown>)
+          : {},
+    })),
+  };
+}
+
+export type OperationRow = {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  timeZone: string;
+  actorEmail: string;
+  tool: string;
+  targetType: string;
+  targetId: string;
+  /** The text a number was corrected from, when there was one. */
+  messageId: string;
+  reason: string;
+  state: string;
+  result: Record<string, unknown>;
+  createdAt: string;
+  finishedAt: string;
+};
+
+/** The recovery history, newest first. */
+export async function listOperations(filter: { organizationId?: string; tool?: string } = {}): Promise<OperationRow[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_operations", {
+    p_organization_id: filter.organizationId || null,
+    p_tool: filter.tool || null,
+    p_limit: 150,
+  });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    organizationId: text(row.organization_id),
+    organizationName: text(row.organization_name),
+    timeZone: text(row.organization_timezone),
+    actorEmail: text(row.actor_email),
+    tool: text(row.tool),
+    targetType: text(row.target_type),
+    targetId: text(row.target_id),
+    messageId:
+      row.preview && typeof row.preview === "object" && !Array.isArray(row.preview)
+        ? text((row.preview as Record<string, unknown>).message)
+        : "",
+    reason: text(row.reason),
+    state: text(row.state),
+    result:
+      row.result && typeof row.result === "object" && !Array.isArray(row.result)
+        ? (row.result as Record<string, unknown>)
+        : {},
+    createdAt: text(row.created_at),
+    finishedAt: text(row.finished_at),
+  }));
 }
