@@ -21,6 +21,10 @@ export type McpLogEntry = {
   isError?: boolean;
   httpStatus?: number;
   durationMs?: number;
+  /** One per phone call: a hash of the signed URL it used, never the URL. */
+  sessionKey?: string;
+  bookingRequestId?: string;
+  jobId?: string;
 };
 
 export async function logMcpCall(database: Database, entry: McpLogEntry): Promise<void> {
@@ -36,6 +40,9 @@ export async function logMcpCall(database: Database, entry: McpLogEntry): Promis
       is_error: entry.isError === true,
       http_status: entry.httpStatus ?? null,
       duration_ms: entry.durationMs ?? null,
+      session_key: entry.sessionKey ?? null,
+      booking_request_id: entry.bookingRequestId ?? null,
+      job_id: entry.jobId ?? null,
     });
   } catch {
     // Deliberately silent.

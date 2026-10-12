@@ -345,15 +345,20 @@ export async function runBookingTool(input: {
     }
   }
 
-  return describeOutcome({
-    name: input.name,
-    action,
-    context,
-    phone,
-    handoff: chosen,
-    deliveryPreference: preference,
-    held: Boolean(recorded.payUrl),
-    needsReview: recorded.needsReview,
-    transfer,
-  });
+  return {
+    ...describeOutcome({
+      name: input.name,
+      action,
+      context,
+      phone,
+      handoff: chosen,
+      deliveryPreference: preference,
+      held: Boolean(recorded.payUrl),
+      needsReview: recorded.needsReview,
+      transfer,
+    }),
+    // So the call log can show which booking this call saved, and support can
+    // tell "said it was booked" from "is booked".
+    record: { bookingRequestId: recorded.requestId, jobId: recorded.jobId },
+  };
 }

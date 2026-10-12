@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
@@ -46,6 +47,9 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   const session = readSession(token);
   const database = getSupabaseAdmin();
   if (!session) return rpcError(404, -32001, "Session not found");
+  // Groups this call's log rows together. A hash, so the log never holds a
+  // URL that would still work.
+  const sessionKey = createHash("sha256").update(token).digest("hex").slice(0, 32);
 
   const business = session.scope === "business";
   if (business) {
@@ -91,6 +95,9 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         resultText: result.text,
         isError: result.isError === true,
         durationMs: Date.now() - toolStartedAt,
+        sessionKey,
+        bookingRequestId: result.record?.bookingRequestId,
+        jobId: result.record?.jobId,
       });
       return result;
     },
@@ -98,7 +105,13 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
   const described = describeRequest(body);
   if (described.method !== "tools/call") {
-    await logMcpCall(database, { organizationId: session.organizationId, method: described.method, httpStatus: reply.status, durationMs: Date.now() - startedAt });
+    await logMcpCall(database, {
+      organizationId: session.organizationId,
+      method: described.method,
+      httpStatus: reply.status,
+      durationMs: Date.now() - startedAt,
+      sessionKey,
+    });
   }
 
   if (reply.body === undefined) return new NextResponse(null, { status: reply.status });
