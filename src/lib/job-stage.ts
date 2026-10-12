@@ -10,6 +10,37 @@
  * Import-free, so the jobs page and anything else can share one reading.
  */
 
+import type { JobStatus } from "./pilot-data.ts";
+
+/**
+ * The stored status, as the app reads it: "Scheduled", "In progress"...
+ *
+ * Shared by the app and the support console, so a job reads the same on both.
+ */
+const JOB_STATUS: Record<string, JobStatus> = {
+  in_progress: "In progress",
+  en_route: "In progress",
+  arrived: "In progress",
+  confirmed: "Scheduled",
+  assigned: "Scheduled",
+  rescheduled: "Scheduled",
+  completed: "Completed",
+  draft: "Pending",
+  awaiting_payment: "Pending",
+  // Work that is done and not signed off. It is what the job screen calls
+  // "Ready to complete", and reading as "Pending" put a finished visit in the
+  // same bucket on the schedule as one that was never confirmed.
+  needs_review: "In progress",
+  // Its own state, not a pending one: a cancelled job that reads as "Pending"
+  // is indistinguishable from work still to come.
+  canceled: "Canceled",
+  no_show: "Pending",
+};
+
+export function jobStatusLabel(stored: string | null | undefined): JobStatus {
+  return JOB_STATUS[stored ?? ""] ?? "Pending";
+}
+
 export type JobStage =
   | "needs_estimate"
   | "awaiting_approval"

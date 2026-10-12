@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { invitationEmail, invitationLink } from "@/lib/invitation-message";
 import { sendEmail } from "@/lib/email";
@@ -93,3 +94,35 @@ export async function adminInvite(
     link,
   };
 }
+
+/**
+ * Showing a business's private details on one page, for a stated reason.
+ *
+ * The database records the reason and hands back the record's id; the page
+ * comes back with that id on its address, and shows the details only while it
+ * is this admin's own and less than fifteen minutes old.
+ */
+export async function revealPrivateDetails(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+  const scope = String(formData.get("scope") ?? "").trim().slice(0, 80);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 200);
+  const returnTo = String(formData.get("returnTo") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return;
+
+  // Only ever back into this business's own console pages.
+  const base = `/admin/organizations/${organizationId}`;
+  const back = returnTo === base || returnTo.startsWith(`${base}?`) || returnTo.startsWith(`${base}/`) ? returnTo : base;
+  const join = back.includes("?") ? "&" : "?";
+  if (reason.length < 3) redirect(`${back}${join}reveal=reason`);
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data, error } = await supabase.rpc("admin_record_reveal", {
+    p_organization_id: organizationId,
+    p_scope: scope,
+    p_reason: reason,
+  });
+  if (error || typeof data !== "string") redirect(`${back}${join}reveal=refused`);
+
+  redirect(`${back}${join}reveal=${data}`);
+}
+

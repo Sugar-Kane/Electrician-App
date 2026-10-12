@@ -17,6 +17,7 @@ import type { CustomerChoice } from "@/lib/customer-choices";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { followUpPrefill } from "@/lib/follow-up-jobs";
 import { jobCategoryLabel, kindOfWork, type KindOfWork, type NewJobRaw } from "@/lib/new-job-input";
+import { jobStatusLabel } from "@/lib/job-stage";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { currentContext } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -53,26 +54,6 @@ import {
  */
 
 type Source = "demo" | "supabase";
-
-const JOB_STATUS: Record<string, JobStatus> = {
-  in_progress: "In progress",
-  en_route: "In progress",
-  arrived: "In progress",
-  confirmed: "Scheduled",
-  assigned: "Scheduled",
-  rescheduled: "Scheduled",
-  completed: "Completed",
-  draft: "Pending",
-  awaiting_payment: "Pending",
-  // Work that is done and not signed off. It is what the job screen calls
-  // "Ready to complete", and reading as "Pending" put a finished visit in the
-  // same bucket on the schedule as one that was never confirmed.
-  needs_review: "In progress",
-  // Its own state, not a pending one: a cancelled job that reads as "Pending"
-  // is indistinguishable from work still to come.
-  canceled: "Canceled",
-  no_show: "Pending",
-};
 
 function initialsOf(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2)
@@ -172,7 +153,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
     workType: jobCategoryLabel(String(row.category ?? "")),
     kindOfWork: kindOfWork(String(row.category ?? "")),
     summary: row.customer_description ?? row.ai_summary ?? "",
-    status: JOB_STATUS[row.status] ?? "Pending",
+    status: jobStatusLabel(row.status),
     technician: technicianName,
     technicianInitials: initialsOf(technicianName),
     accessNotes: property.access_notes ?? "",
@@ -1511,7 +1492,7 @@ export async function getJobFollowUps(jobNumber: string): Promise<JobFollowUps> 
       hour: "numeric",
       minute: "2-digit",
     }),
-    status: JOB_STATUS[textOf(job.status)] ?? "Pending",
+    status: jobStatusLabel(textOf(job.status)),
   });
 
   const [followed, booked, creditCents] = await Promise.all([
