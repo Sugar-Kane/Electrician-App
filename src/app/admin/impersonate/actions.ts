@@ -17,15 +17,19 @@ import { createClient } from "@/lib/supabase/server";
 export async function beginImpersonation(formData: FormData): Promise<void> {
   const organizationId = String(formData.get("organizationId") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim().slice(0, 200);
-  if (!organizationId) return;
+  if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return;
+  const back = `/admin/organizations/${organizationId}`;
+
+  // The database refuses without a reason too; this only says so sooner.
+  if (reason.length < 3) redirect(`${back}?elevate=reason#elevate`);
 
   const supabase = asFlexibleClient(await createClient());
   const { error } = await supabase.rpc("admin_begin_impersonation", {
     p_organization_id: organizationId,
-    p_reason: reason || null,
+    p_reason: reason,
   });
 
-  if (error) return;
+  if (error) redirect(`${back}?elevate=${error.code === "22023" ? "reason" : "refused"}#elevate`);
 
   // Everything is now read as that business, so nothing cached from before is
   // still true.

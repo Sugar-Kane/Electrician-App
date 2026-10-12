@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, LoaderCircle, TriangleAlert } from "lucide-react";
 
@@ -28,6 +28,7 @@ function SendButton() {
 
 export function AdminInviteForm({ organizationId }: { organizationId: string }) {
   const [state, formAction] = useActionState(adminInvite, initialState);
+  const [role, setRole] = useState("");
 
   return (
     <form action={formAction}>
@@ -50,19 +51,29 @@ export function AdminInviteForm({ organizationId }: { organizationId: string }) 
           <span className="mt-2 block">
             <SelectField
               name="role"
-              defaultValue="owner"
+              value={role}
+              onChange={setRole}
+              required
+              placeholder="Choose a role"
               label="Role"
               choices={[
-                { value: "owner", label: "Owner" },
-                { value: "admin", label: "Administrator" },
-                { value: "dispatcher", label: "Dispatcher" },
-                { value: "technician", label: "Technician" },
-                { value: "accountant", label: "Accountant" },
+                { value: "technician", label: "Technician", description: "Their own jobs" },
+                { value: "dispatcher", label: "Dispatcher", description: "Schedule and customers" },
+                { value: "accountant", label: "Accountant", description: "Invoices and payments" },
+                { value: "admin", label: "Administrator", description: "Everything except ownership" },
+                { value: "owner", label: "Owner", description: "Full control" },
               ]}
             />
           </span>
         </div>
       </div>
+      {role === "owner" ? (
+        <p className="mt-3 flex items-start gap-2 rounded-control border border-caution/25 bg-caution-bg p-3 text-sm text-caution">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          Owners can invite and remove anyone, change billing and delete records. Only choose this for the person who
+          owns the business.
+        </p>
+      ) : null}
 
       {state.error ? (
         <p className="mt-4 flex items-start gap-2 text-sm text-critical">
