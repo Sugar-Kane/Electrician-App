@@ -118,7 +118,7 @@ export default async function AccountPage({
     <FieldPageShell
       title="Account"
       eyebrow="User and business settings"
-      description="Update your profile, control the app experience, manage Premium, and maintain payment-provider information."
+      description="Your profile, app settings, plan and payment details."
     >
       <section className="mb-4 rounded-panel border border-brand/20 bg-brand/[0.045] p-4 sm:p-5">
         <div className="flex items-center gap-4">

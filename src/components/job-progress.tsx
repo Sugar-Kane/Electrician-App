@@ -44,7 +44,9 @@ export function JobProgress({ steps, next }: { steps: ProgressStep[]; next: Prog
       ) : (
         <p className="text-sm font-semibold text-positive">Every step is done.</p>
       )}
-      <ol className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+      {/* Columns sized in rem, so larger text means fewer, wider tiles rather
+          than step names broken a letter at a time. */}
+      <ol className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5">
         {steps.map((step) => (
           <li key={step.key}>
             <a

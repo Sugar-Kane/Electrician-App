@@ -9,7 +9,9 @@ import {
 } from "@/lib/job-change-messages";
 import { emailSender, looksLikeEmail } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
+import { recordActivity } from "@/lib/activity";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { sendSms } from "@/lib/twilio";
 
 /**
@@ -124,6 +126,28 @@ export async function notifyJobChange(input: {
     // Deliberately silent. The messages are already sent; losing the record of
     // them is bad, but undoing the change would be worse.
   }
+
+  // And onto the job's history, where the rest of what was sent is: told by
+  // which channel, or not told and why. `recordActivity` never throws.
+  const reached = attempts.filter((attempt) => attempt.ok);
+  await recordActivity(asFlexibleClient(database), {
+    organizationId: input.organizationId,
+    eventType: reached.length > 0 ? "customer.notified" : "customer.notify_failed",
+    label: reached.length > 0 ? "Customer told about the change" : "Customer not told about the change",
+    jobId: input.jobId,
+    metadata:
+      reached.length > 0
+        ? {
+            // One channel reads through the timeline's own words ("by text");
+            // both are said together.
+            via: reached.length === 1 ? reached[0]!.channel : "by text and email",
+            note: canceled ? "Canceled" : "Rescheduled",
+          }
+        : {
+            note: canceled ? "Canceled" : "Rescheduled",
+            reason: attempts.map((attempt) => attempt.detail).filter(Boolean).join(" "),
+          },
+  });
 
   return attempts;
 }

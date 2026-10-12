@@ -62,7 +62,7 @@ export async function sendInvoice(
     .select(
       `id, invoice_number, status, total_cents, balance_due_cents, due_at,
        stripe_hosted_invoice_url, organization_id,
-       jobs ( id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
+       jobs ( id, job_number, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
     )
     .eq("id", invoiceId)
@@ -117,6 +117,7 @@ export async function sendInvoice(
   // Only when it actually went. An invoice that failed to send is not an
   // invoice the customer has, and a history saying otherwise is worse than no
   // history at all.
+  const via = channels.map((channel) => (channel === "sms" ? "text" : channel)).join(" and ");
   if (outcome.ok) {
     await recordActivity(supabase, {
       organizationId: text(row.organization_id),
@@ -125,12 +126,29 @@ export async function sendInvoice(
       jobId: text(job?.id) || null,
       metadata: {
         amount_cents: Number(row.total_cents) || 0,
-        via: channels.map((channel) => (channel === "sms" ? "text" : channel)).join(" and "),
+        via,
+        invoice_id: text(row.id),
+      },
+    });
+  } else {
+    // Written down as a failure, with why and where to try again, so the job
+    // says the customer was not sent it rather than saying nothing at all.
+    await recordActivity(supabase, {
+      organizationId: text(row.organization_id),
+      eventType: "invoice.send_failed",
+      label: "Invoice not sent",
+      jobId: text(job?.id) || null,
+      metadata: {
+        amount_cents: Number(row.total_cents) || 0,
+        via,
+        invoice_id: text(row.id),
+        reason: outcome.message,
       },
     });
   }
 
   revalidatePath("/invoices");
+  if (text(job?.job_number)) revalidatePath(`/jobs/${text(job?.job_number)}`);
 
   return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };
 }

@@ -8,6 +8,7 @@ import {
   MapPin,
   Navigation,
   Phone,
+  PlayCircle,
   Plus,
   Receipt,
 } from "lucide-react";
@@ -34,6 +35,44 @@ import type { PilotJob } from "@/lib/pilot-data";
 function directionsHref(job: PilotJob): string {
   const destination = [job.address, job.city].filter(Boolean).join(", ");
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
+
+/**
+ * The first thing a new business sees: one job to start with, or a sample one
+ * to watch first.
+ *
+ * Shown only while the business has no jobs at all. Everything else a business
+ * can set up — suppliers, the team, texting — waits in Settings until it is
+ * wanted, rather than standing between a new owner and a first useful job.
+ */
+export function StartHere() {
+  return (
+    <section aria-labelledby="start-heading" className="mt-5 rounded-panel border border-brand/30 bg-brand/[0.06] p-4 sm:p-5">
+      <h2 id="start-heading" className="text-lg font-semibold">
+        Start here
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-ink-muted">Add the job you&apos;re working on next, or see how one runs first.</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <Link
+          href="/jobs/new"
+          className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Add your first job
+        </Link>
+        <Link
+          href="/demo"
+          className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line px-4 text-sm font-semibold"
+        >
+          <PlayCircle className="h-4 w-4" aria-hidden />
+          Try a sample job · nothing is saved
+        </Link>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-ink-muted">
+        Suppliers, your team and texting can wait. They&apos;re in Settings when you need them.
+      </p>
+    </section>
+  );
 }
 
 export function NextJobCard({
@@ -116,7 +155,7 @@ export function NextJobCard({
       {/* "Assign N jobs today" points here, so the next job, which the list
           below leaves out, has its own way to send somebody. */}
       {needsTechnician(job) ? (
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
           <p className="text-sm text-ink-muted">Nobody is on this job yet.</p>
           <AssignTechnician jobNumber={job.id} technician={job.technician} size="sm" />
         </div>

@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
+
 import { draftScope } from "@/lib/claude";
 import {
   completeDraftFields,
@@ -639,6 +641,30 @@ export async function rebuildContractPdf(
 }
 
 /**
+ * Writing a send attempt onto the job's history, whether or not it went.
+ *
+ * A failure used to exist only as the red line under the button, gone on the
+ * next page load, so "did they get the link?" had no answer anywhere. Now it
+ * is on the job, with the reason and a way to try again.
+ */
+async function noteApprovalSend(
+  supabase: FlexibleSupabaseClient,
+  contract: Record<string, unknown>,
+  jobId: string,
+  outcome: { ok: true } | { ok: false; reason: string },
+) {
+  await recordActivity(supabase, {
+    organizationId: text(contract.organization_id),
+    eventType: outcome.ok ? "estimate.sent" : "estimate.send_failed",
+    label: outcome.ok ? "Sent for approval" : "Approval text not sent",
+    jobId: jobId || null,
+    metadata: outcome.ok
+      ? { via: "sms", contract_id: text(contract.id) }
+      : { via: "sms", contract_id: text(contract.id), reason: outcome.reason },
+  });
+}
+
+/**
  * Text the customer a link to sign the contract on their own phone.
  *
  * The claim comes before the text, deliberately. The database already allows
@@ -682,6 +708,8 @@ export async function sendSigningLink(
   const { toE164 } = await import("@/lib/phone-format");
   const phone = toE164(text(customer?.phone));
   if (!phone) {
+    await noteApprovalSend(supabase, contract, jobId, { ok: false, reason: "No mobile number on the customer" });
+    if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
     return {
       error:
         "This customer has no mobile number we can text. Add one to the customer, or have them sign here in person.",
@@ -701,6 +729,8 @@ export async function sendSigningLink(
     .maybeSingle();
   const messagingServiceSid = text(messaging?.messaging_service_sid);
   if (!messagingServiceSid) {
+    await noteApprovalSend(supabase, contract, jobId, { ok: false, reason: "Texting is not set up for this business" });
+    if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
     return { error: "Texting is not set up for this business yet, so the link could not be sent." };
   }
 
@@ -789,9 +819,15 @@ export async function sendSigningLink(
       .update({ status: previousStatus, signature_provider: previousProvider, signature_sent_at: previousSentAt })
       .eq("id", contractId)
       .is("signed_at", null);
+    await noteApprovalSend(supabase, contract, jobId, {
+      ok: false,
+      reason: `The text could not be sent (${sent.errorDetail || sent.errorCode})`,
+    });
+    if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
     return { error: `The text could not be sent (${sent.errorDetail || sent.errorCode}).` };
   }
 
+  await noteApprovalSend(supabase, contract, jobId, { ok: true });
   if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
 
   const { formatForDisplay } = await import("@/lib/phone-format");

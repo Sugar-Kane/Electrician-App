@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { TopActions } from "@/components/top-actions";
 import type { DashboardSnapshot } from "@/lib/dashboard";
-import { MoneySummary, NeedsYourAction, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
+import { MoneySummary, NeedsYourAction, NextJobCard, StartHere, TodaysJobs } from "@/components/dashboard-today";
 import { todayInZone } from "@/lib/calendar";
 import {
   canceledToday,
@@ -307,6 +307,9 @@ export function DashboardShell({
             they live in Reports, and the money that matters today is the short
             summary at the bottom.
           */}
+          {/* A business with no jobs yet gets one next step, not an empty day. */}
+          {jobs.length === 0 && snapshot.source === "supabase" ? <StartHere /> : null}
+
           <div id="visits" className="scroll-mt-24">
             {nextUp ? (
               <div className="mt-5">

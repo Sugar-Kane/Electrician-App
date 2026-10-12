@@ -45,6 +45,10 @@ export type TimelineEntry = {
   /** A second line, when the metadata carries something worth reading. */
   detail: string;
   jobId?: string;
+  /** A send that did not reach the customer. */
+  failed?: boolean;
+  /** Where to try a failed send again. */
+  retry?: { label: string; href: string };
 };
 
 export type TimelineDay = {
@@ -94,7 +98,45 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "estimate.approved": { kind: "money", title: "Estimate approved" },
   "invoice.sent": { kind: "money", title: "Invoice sent" },
   "invoice.paid": { kind: "money", title: "Invoice paid" },
+  // Sends that did not reach the customer are written down too, so a failed
+  // or repeated send shows on the job rather than only in a toast that is gone
+  // by the time anybody asks "did they get it?".
+  "estimate.send_failed": { kind: "money", title: "Approval text not sent" },
+  "invoice.send_failed": { kind: "money", title: "Invoice not sent" },
+  "customer.notified": { kind: "appointment", title: "Customer told about the change" },
+  "customer.notify_failed": { kind: "appointment", title: "Customer not told about the change" },
 };
+
+const FAILED = new Set(["estimate.send_failed", "invoice.send_failed", "customer.notify_failed"]);
+
+/**
+ * What a send was of, so a later success can be matched to an earlier
+ * failure: the job's approval, or one invoice.
+ */
+function sendKey(row: ActivityRow): string | null {
+  if (row.eventType === "estimate.sent" || row.eventType === "estimate.send_failed") return "estimate";
+  if (row.eventType === "invoice.sent" || row.eventType === "invoice.send_failed") {
+    const id = row.metadata?.invoice_id;
+    return typeof id === "string" && id ? `invoice:${id}` : null;
+  }
+  return null;
+}
+
+/**
+ * Where a failed send can be tried again: the invoice itself, or the job's
+ * contract card. On a customer's timeline the job is another page, so the link
+ * goes there; on the job's own timeline it is a jump down the page.
+ */
+function retryOf(row: ActivityRow): TimelineEntry["retry"] {
+  const metadata = row.metadata ?? {};
+  if (row.eventType === "invoice.send_failed" && typeof metadata.invoice_id === "string" && metadata.invoice_id) {
+    return { label: "Send again", href: `/invoices/${metadata.invoice_id}` };
+  }
+  if (row.eventType === "estimate.send_failed") {
+    return { label: "Send again", href: `${row.jobId ? `/jobs/${row.jobId}` : ""}#contract` };
+  }
+  return undefined;
+}
 
 const CHANNELS: Record<string, string> = {
   sms: "by text",
@@ -124,6 +166,10 @@ function detailOf(row: ActivityRow): string {
 
   const note = metadata.note;
   if (typeof note === "string" && note.trim()) parts.push(note.trim());
+
+  // Why a send did not go, in the words the sender was given.
+  const reason = metadata.reason;
+  if (typeof reason === "string" && reason.trim()) parts.push(reason.trim());
 
   return parts.join(" · ");
 }
@@ -169,6 +215,10 @@ export function buildTimeline(
     return at !== 0 ? at : b.id.localeCompare(a.id);
   });
 
+  // Newest first, so by the time a failure is reached every later send of the
+  // same thing has been seen. One that went through since needs no retry.
+  const sentSince = new Set<string>();
+
   for (const row of ordered) {
     // Checked before formatting, because `calendarDate` throws on a date it
     // cannot read rather than returning nothing — and one unreadable row must
@@ -187,6 +237,14 @@ export function buildTimeline(
       detail: detailOf(row),
     };
     if (row.jobId) entry.jobId = row.jobId;
+    const key = sendKey(row);
+    if (FAILED.has(row.eventType)) {
+      entry.failed = true;
+      const retry = key && sentSince.has(key) ? undefined : retryOf(row);
+      if (retry) entry.retry = retry;
+    } else if (key) {
+      sentSince.add(key);
+    }
 
     const list = days.get(date);
     if (list) list.push(entry);

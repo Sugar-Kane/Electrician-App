@@ -50,28 +50,18 @@ export default async function OnboardingPage() {
 
         <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,.72fr)_minmax(520px,1.28fr)] lg:items-start">
           <section className="lg:sticky lg:top-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Step 1 of 3</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Set up your business</p>
             <h1 className="mt-4 max-w-lg text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               Set up the business you’ll run every day.
             </h1>
+            {/*
+              One page, then the app. This used to say "Step 1 of 3" beside a
+              booking page and a test payment that the flow never showed, so a
+              new owner waited for steps that were not coming.
+            */}
             <p className="mt-5 max-w-xl text-base leading-7 text-ink-muted">
-              Your business name, hours and service area. Your jobs, customers and money are kept separate from every other business on Volteira.
+              Takes a minute. Then add your first job, or try a sample one first.
             </p>
-
-            <ol className="mt-7 space-y-3">
-              <li className="flex items-center gap-3 rounded-control border border-brand/25 bg-brand/[0.06] p-4 text-sm font-semibold">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand text-on-brand">1</span>
-                Business and schedule
-              </li>
-              <li className="flex items-center gap-3 rounded-control border border-line p-4 text-sm text-ink-muted">
-                <span className="grid h-8 w-8 place-items-center rounded-full border border-line">2</span>
-                Customer booking page
-              </li>
-              <li className="flex items-center gap-3 rounded-control border border-line p-4 text-sm text-ink-muted">
-                <span className="grid h-8 w-8 place-items-center rounded-full border border-line">3</span>
-                Test diagnostic payment
-              </li>
-            </ol>
 
             <div className="mt-7 rounded-control border border-line bg-white/[0.03] p-4 text-sm leading-6 text-ink-muted">
               <p className="flex items-center gap-2 font-semibold text-ink">

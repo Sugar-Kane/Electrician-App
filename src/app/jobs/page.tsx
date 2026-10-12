@@ -150,7 +150,7 @@ export default async function JobsPage({
         <div className="flex items-center gap-2">
           <Link
             href="/schedule"
-            className="tap-target inline-flex items-center gap-2 rounded-control border border-line px-3 text-sm font-semibold"
+            className="tap-target inline-flex min-w-11 items-center justify-center gap-2 rounded-control border border-line px-3 text-sm font-semibold"
           >
             <CalendarDays className="h-4 w-4" aria-hidden />
             {/* Icon only on the narrowest phones, so the title keeps its line. */}

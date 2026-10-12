@@ -30,7 +30,12 @@
   /* Text, by how loudly it should speak. */
   --color-ink: #f8fafc;
   --color-ink-muted: #94a3b8;
-  --color-ink-faint: #64748b;
+  /*
+   * Measured, not assumed: #64748b was 3.1–3.9:1 on these grounds, under the
+   * 4.5:1 small text needs, and it carries times, counts and "date passed".
+   * This is the quietest grey that clears 4.5:1 on every ground and tint here.
+   */
+  --color-ink-faint: #8291a8;
 
   /* Lines and separators, as opacities over the ground rather than greys. */
   --color-line: rgba(255, 255, 255, 0.1);

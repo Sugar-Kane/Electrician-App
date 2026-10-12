@@ -68,11 +68,13 @@ function Brand() {
   return (
     <Link
       href="/"
-      className="flex min-h-11 items-center gap-2 text-ink"
+      className="flex min-h-11 min-w-0 items-center gap-2 text-ink"
       aria-label="Volteira dashboard"
     >
-      <Zap className="h-7 w-7 fill-brand text-brand" aria-hidden />
-      <span className="text-lg font-bold">VOLTEIRA</span>
+      <Zap className="h-7 w-7 shrink-0 fill-brand text-brand" aria-hidden />
+      {/* Cut short with an ellipsis when the bar is crowded (large text),
+          never stacked a letter to a line. */}
+      <span className="min-w-0 truncate text-lg font-bold [overflow-wrap:normal]">VOLTEIRA</span>
     </Link>
   );
 }

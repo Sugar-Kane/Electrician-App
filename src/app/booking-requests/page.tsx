@@ -167,7 +167,7 @@ export default async function BookingRequestsPage({
     <FieldPageShell
       title="Booking requests"
       eyebrow="Requests for work"
-      description="What customers have asked for, however they asked — by text, by phone, or through your booking page. A visit they accepted is already on the schedule."
+      description="Customers asking for a visit, by text, phone or your booking page."
     >
       {query.saved ? (
         <Banner tone="positive" className="mb-4">{query.saved}</Banner>

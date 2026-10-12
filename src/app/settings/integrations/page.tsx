@@ -52,7 +52,7 @@ export default async function IntegrationsPage() {
     .select("account_email,connected_at,last_error").eq("organization_id", context.organizationId).maybeSingle() : null;
   const calendarReady = Boolean(calendarConfig());
   return (
-    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT and approved supplier programs without exposing business credentials to technicians or customer browsers.">
+    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT and supplier programs. Their keys stay on the server.">
       <div className="grid gap-4 lg:grid-cols-2">
         <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
 
