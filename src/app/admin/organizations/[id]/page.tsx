@@ -3,15 +3,19 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
 import { AdminInviteForm } from "@/components/admin-invite-form";
+import { AdminTime } from "@/components/admin-time";
 import { beginImpersonation } from "@/app/admin/impersonate/actions";
 import {
+  getMessagingEvidence,
   getOrganizationDetail,
   listMcpCalls,
   listOrganizationMembers,
   listRecentBookings,
   recordOrganizationView,
 } from "@/lib/admin-console";
-import { diagnose, type Finding } from "@/lib/admin-health";
+import { diagnose, failingNow, type Finding } from "@/lib/admin-health";
+import { zoneAbbreviation } from "@/lib/admin-time";
+import { failureReason } from "@/lib/message-errors";
 
 export const metadata: Metadata = {
   title: "Business | Volteira support",
@@ -26,18 +30,6 @@ const FINDING_STYLE: Record<Finding["severity"], string> = {
   note: "border-line bg-white/[0.03] text-ink-muted",
 };
 
-function stamp(iso: string): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
@@ -47,11 +39,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/5 py-2 last:border-0">
       <dt className="text-sm text-ink-muted">{label}</dt>
-      <dd className="text-sm font-medium">{value || "—"}</dd>
+      <dd className="text-right text-sm font-medium">{value || "—"}</dd>
     </div>
   );
 }
@@ -66,10 +58,12 @@ function Row({ label, value }: { label: string; value: string }) {
  */
 export default async function AdminOrganizationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ elevate?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { elevate }] = await Promise.all([params, searchParams]);
   if (!UUID.test(id)) notFound();
 
   const organization = await getOrganizationDetail(id);
@@ -77,11 +71,14 @@ export default async function AdminOrganizationPage({
 
   await recordOrganizationView(id);
 
-  const [members, bookings, calls] = await Promise.all([
+  const [members, bookings, calls, evidence] = await Promise.all([
     listOrganizationMembers(id),
     listRecentBookings(id, 15),
     listMcpCalls(id, 25),
+    getMessagingEvidence(id),
   ]);
+  const zone = organization.timeZone;
+  const delivery = evidence.get(id);
 
   const findings = diagnose({
     memberCount: members.length,
@@ -94,6 +91,7 @@ export default async function AdminOrganizationPage({
     a2pRegistered: Boolean(organization.a2pRegisteredAt),
     legalPublished: organization.legalPublished,
     archived: organization.archived,
+    delivery,
   });
 
   return (
@@ -106,7 +104,8 @@ export default async function AdminOrganizationPage({
             .join(", ") || "No address"}
         </p>
         <p className="mt-1 text-sm text-ink-faint">
-          {organization.phone} · {organization.timeZone} · since {stamp(organization.createdAt)}
+          {organization.phone} · times below are {zone} ({zoneAbbreviation(zone)}) · since{" "}
+          <AdminTime iso={organization.createdAt} timeZone={zone} dateOnly />
         </p>
       </header>
 
@@ -134,28 +133,6 @@ export default async function AdminOrganizationPage({
         )}
       </Card>
 
-      <Card title="Work inside this business">
-        <p className="text-sm leading-6 text-ink-muted">
-          Opens the app as a member of {organization.name} with full access, for one hour.
-          Anything you do is real: a cancelled job texts their customer, and an invoice is
-          their invoice. It is recorded against your account, not the owner&rsquo;s.
-        </p>
-        <form action={beginImpersonation} className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <input type="hidden" name="organizationId" value={id} />
-          <input
-            name="reason"
-            maxLength={200}
-            placeholder="Why, e.g. owner cannot see their schedule"
-            className="min-h-12 flex-1 rounded-control border border-line bg-raised px-4 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-brand/70"
-          />
-          <button
-            type="submit"
-            className="tap-target shrink-0 rounded-control bg-brand px-5 text-sm font-bold text-on-brand"
-          >
-            Open as this business
-          </button>
-        </form>
-      </Card>
 
       <Card title="Setup">
         <dl>
@@ -166,7 +143,37 @@ export default async function AdminOrganizationPage({
           <Row label="Messaging service" value={organization.messagingServiceSid} />
           <Row label="Messaging number" value={organization.messagingPhone} />
           <Row label="A2P campaign" value={organization.a2pCampaignId} />
-          <Row label="A2P approved" value={organization.a2pRegisteredAt ? stamp(organization.a2pRegisteredAt) : "Not approved"} />
+          <Row
+            label="A2P approval (recorded by hand)"
+            value={organization.a2pRegisteredAt ? <AdminTime iso={organization.a2pRegisteredAt} timeZone={zone} dateOnly /> : "Not recorded"}
+          />
+          <Row
+            label="Last delivered text"
+            value={delivery?.lastDeliveredAt ? <AdminTime iso={delivery.lastDeliveredAt} timeZone={zone} /> : "No delivery report yet"}
+          />
+          <Row
+            label="Failed texts, last 7 days"
+            value={
+              delivery && delivery.failures7d.length > 0
+                ? delivery.failures7d
+                    .map((entry) => `${failureReason(entry.code).words}${entry.code ? ` (${entry.code})` : ""} ×${entry.count}`)
+                    .join(" · ")
+                : "None"
+            }
+          />
+          <Row
+            label="Last failed text"
+            value={
+              delivery?.lastFailedAt ? (
+                <>
+                  <AdminTime iso={delivery.lastFailedAt} timeZone={zone} /> · {failureReason(delivery.lastFailedCode).words}
+                  {failingNow(delivery) ? "" : " · history, delivered since"}
+                </>
+              ) : (
+                "None"
+              )
+            }
+          />
           <Row label="Legal pages" value={organization.legalPublished ? "Published" : "Not published"} />
           <Row label="Booking page" value={`/book/${organization.slug}`} />
         </dl>
@@ -184,7 +191,8 @@ export default async function AdminOrganizationPage({
                   {member.email} · {member.role}
                 </p>
                 <p className="mt-1 text-xs text-ink-faint">
-                  Joined {stamp(member.joinedAt)} · last signed in {stamp(member.lastSignInAt)}
+                  Joined <AdminTime iso={member.joinedAt} timeZone={zone} dateOnly /> · last signed in{" "}
+                  <AdminTime iso={member.lastSignInAt} timeZone={zone} empty="never" />
                   {member.emailConfirmed ? "" : " · email not confirmed"}
                 </p>
               </li>
@@ -211,7 +219,9 @@ export default async function AdminOrganizationPage({
                   <p className="text-sm font-semibold">
                     {booking.contactName || "No name"} · {booking.status}
                   </p>
-                  <p className="text-xs text-ink-faint">{stamp(booking.createdAt)}</p>
+                  <p className="text-xs text-ink-faint">
+                    <AdminTime iso={booking.createdAt} timeZone={zone} />
+                  </p>
                 </div>
                 <p className="mt-1 text-sm text-ink-muted">
                   {booking.phone}
@@ -219,7 +229,14 @@ export default async function AdminOrganizationPage({
                 </p>
                 <p className="mt-1 text-sm text-ink-muted">{booking.description}</p>
                 <p className="mt-1 text-xs text-ink-faint">
-                  {booking.windowStart ? `Window ${stamp(booking.windowStart)}` : "No window"} ·{" "}
+                  {booking.windowStart ? (
+                    <>
+                      Window <AdminTime iso={booking.windowStart} timeZone={zone} />
+                    </>
+                  ) : (
+                    "No window"
+                  )}{" "}
+                  ·{" "}
                   {booking.intakeAnswerCount} intake answers
                 </p>
 
@@ -270,7 +287,7 @@ export default async function AdminOrganizationPage({
                     {call.toolName ? ` · ${call.toolName}` : ""}
                   </span>
                   <span className="text-ink-faint">
-                    {stamp(call.createdAt)} · {call.httpStatus} · {call.durationMs}ms
+                    <AdminTime iso={call.createdAt} timeZone={zone} /> · {call.httpStatus} · {call.durationMs}ms
                   </span>
                 </div>
                 {call.resultText ? (
@@ -282,6 +299,45 @@ export default async function AdminOrganizationPage({
             ))}
           </ul>
         )}
+      </Card>
+      <Card title="Make changes as this business">
+        <div id="elevate" className="scroll-mt-4" />
+        <p className="text-sm leading-6 text-ink-muted">
+          Everything above is read-only. If you need to act for {organization.name}, this opens the app as one of its
+          members with full access for one hour. Anything you do is real: a cancelled job texts their customer, and an
+          invoice is their invoice. It is recorded against your account, with the reason you give.
+        </p>
+        {elevate === "reason" ? (
+          <p className="mt-3 flex items-start gap-2 text-sm text-critical">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            Say why you need to make changes. The reason goes on the activity record.
+          </p>
+        ) : elevate === "refused" ? (
+          <p className="mt-3 flex items-start gap-2 text-sm text-critical">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            That didn&rsquo;t start. The business may be archived, or your access may have changed.
+          </p>
+        ) : null}
+        <form action={beginImpersonation} className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <input type="hidden" name="organizationId" value={id} />
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">Reason</span>
+            <input
+              name="reason"
+              required
+              minLength={3}
+              maxLength={200}
+              placeholder="Why, e.g. owner can't see their schedule"
+              className="min-h-12 w-full rounded-control border border-line bg-raised px-4 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-brand/70"
+            />
+          </label>
+          <button
+            type="submit"
+            className="tap-target shrink-0 rounded-control border border-brand/50 px-5 text-sm font-bold text-brand"
+          >
+            Make changes as {organization.name}
+          </button>
+        </form>
       </Card>
     </div>
   );

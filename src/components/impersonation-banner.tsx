@@ -31,6 +31,7 @@ export async function ImpersonationBanner() {
           You are working inside {impersonating.organizationName}.
           <span className="ml-2 font-normal opacity-80">
             Anything you do here is real, and ends in {minutes} minute{minutes === 1 ? "" : "s"}.
+            {impersonating.reason ? ` Reason: ${impersonating.reason}` : ""}
           </span>
         </p>
         <form action={endImpersonation}>

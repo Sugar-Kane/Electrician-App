@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
  * support exists to work around, so the console shows the URL to read out.
  */
 
+const ROLES = new Set(["owner", "admin", "dispatcher", "technician", "accountant"]);
+
 export type AdminInviteState = { error: string; notice?: string; link?: string };
 
 async function origin(): Promise<string> {
@@ -36,9 +38,11 @@ export async function adminInvite(
 ): Promise<AdminInviteState> {
   const organizationId = String(formData.get("organizationId") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 254);
-  const role = String(formData.get("role") ?? "owner").trim();
+  // No default: who gets an owner's powers is a decision, not a fallback.
+  const role = String(formData.get("role") ?? "").trim();
 
   if (!organizationId) return { error: "No business was named." };
+  if (!ROLES.has(role)) return { error: "Choose what they can do in this business." };
   if (!/^[^@\s]+@[^@.\s]+\.[^@\s]{2,}$/.test(email)) {
     return { error: "That email address does not look right." };
   }

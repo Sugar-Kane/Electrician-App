@@ -6,6 +6,7 @@
  * shapes and formatting rather than any decision about who may look.
  */
 
+import type { DeliveryEvidence } from "@/lib/admin-health";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -78,16 +79,6 @@ export type McpCall = {
   durationMs: number;
   arguments: string;
   resultText: string;
-};
-
-export type AuditEntry = {
-  id: string;
-  createdAt: string;
-  adminEmail: string;
-  action: string;
-  organizationId: string;
-  organizationName: string;
-  detail: string;
 };
 
 function text(value: unknown): string {
@@ -306,9 +297,61 @@ export async function listMcpCalls(id: string, limit = 40): Promise<McpCall[]> {
   }));
 }
 
-export async function listAuditTrail(limit = 100): Promise<AuditEntry[]> {
+/**
+ * Delivery evidence for one business, or for every business keyed by id.
+ *
+ * From the outbound texts' own delivery reports, so What's wrong can say
+ * "delivering", "failing now", "failed before but delivering since" or
+ * "unknown" instead of reading a hand-kept approval date as a verdict.
+ */
+export async function getMessagingEvidence(id: string | null): Promise<Map<string, DeliveryEvidence>> {
   const supabase = await client();
-  const { data } = await supabase.rpc("admin_audit_trail", { p_limit: limit });
+  const { data } = await supabase.rpc("admin_messaging_evidence", { p_organization_id: id });
+
+  return new Map(
+    rows(data).map((row) => [
+      text(row.organization_id),
+      {
+        lastDeliveredAt: text(row.last_delivered_at),
+        lastFailedAt: text(row.last_failed_at),
+        lastFailedCode: text(row.last_failed_code),
+        outbound30d: count(row.outbound_30d),
+        failed7d: count(row.failed_7d),
+        failures7d: rows(row.failures_7d).map((entry) => ({
+          code: text(entry.code),
+          count: count(entry.count),
+          lastAt: text(entry.last_at),
+        })),
+      },
+    ]),
+  );
+}
+
+export type AuditRow = {
+  id: string;
+  createdAt: string;
+  adminEmail: string;
+  action: string;
+  organizationId: string;
+  organizationName: string;
+  timeZone: string;
+  detail: Record<string, unknown>;
+};
+
+/** One page of the trail, newest first, optionally for one business or action. */
+export async function listAuditPage(filter: {
+  organizationId?: string;
+  action?: string;
+  before?: string;
+  limit?: number;
+}): Promise<AuditRow[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_audit_page", {
+    p_organization_id: filter.organizationId || null,
+    p_action: filter.action || null,
+    p_before: filter.before || null,
+    p_limit: filter.limit ?? 50,
+  });
 
   return rows(data).map((row) => ({
     id: text(row.id),
@@ -317,6 +360,10 @@ export async function listAuditTrail(limit = 100): Promise<AuditEntry[]> {
     action: text(row.action),
     organizationId: text(row.organization_id),
     organizationName: text(row.organization_name),
-    detail: JSON.stringify(row.detail ?? {}),
+    timeZone: text(row.organization_timezone),
+    detail:
+      row.detail && typeof row.detail === "object" && !Array.isArray(row.detail)
+        ? (row.detail as Record<string, unknown>)
+        : {},
   }));
 }

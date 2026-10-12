@@ -12,6 +12,8 @@
  * is to answer "what do I tell them first".
  */
 
+import { failureReason } from "./message-errors.ts";
+
 export type HealthInput = {
   memberCount: number;
   pendingInvitations: number;
@@ -24,7 +26,30 @@ export type HealthInput = {
   a2pRegistered: boolean;
   legalPublished?: boolean;
   archived: boolean;
+  /** What the texts themselves say. Absent when it was not looked up. */
+  delivery?: DeliveryEvidence;
 };
+
+/**
+ * Delivery reports from the business's own outbound texts. Evidence, unlike
+ * the hand-kept A2P date: a delivered text proves carriers accept them, and a
+ * failure says why it failed.
+ */
+export type DeliveryEvidence = {
+  lastDeliveredAt: string;
+  lastFailedAt: string;
+  lastFailedCode: string;
+  outbound30d: number;
+  failed7d: number;
+  failures7d: { code: string; count: number; lastAt: string }[];
+};
+
+/** Whether the latest failure came after the latest delivery: a problem now, not history. */
+export function failingNow(delivery: DeliveryEvidence): boolean {
+  if (delivery.failed7d === 0 || !delivery.lastFailedAt) return false;
+  if (!delivery.lastDeliveredAt) return true;
+  return new Date(delivery.lastFailedAt).getTime() > new Date(delivery.lastDeliveredAt).getTime();
+}
 
 export type Finding = {
   /** Ordered: 'blocking' stops the business working at all. */
@@ -88,19 +113,48 @@ export function diagnose(input: HealthInput, now: Date = new Date()): Finding[] 
     });
   }
 
+  const delivery = input.delivery;
   if (!input.messagingServiceSid) {
     findings.push({
       severity: "degraded",
       title: "No messaging service",
       detail: "Texting is not configured, so no customer confirmation can be sent.",
     });
-  } else if (!input.a2pRegistered) {
-    findings.push({
-      severity: "note",
-      title: "No A2P approval recorded",
-      detail:
-        "Nothing here records an approved messaging campaign. This is a bookkeeping field somebody fills in by hand, not proof that texts fail — check whether recent messages actually delivered before telling them carriers are refusing (error 30034).",
-    });
+  } else {
+    const failing = delivery ? failingNow(delivery) : false;
+    if (delivery && failing) {
+      findings.push({
+        severity: "degraded",
+        title: "Texts are failing",
+        detail: `${delivery.failed7d} text${delivery.failed7d === 1 ? "" : "s"} failed in the last 7 days. Latest: ${failureReason(delivery.lastFailedCode).words}. None has been delivered since.`,
+      });
+    } else if (delivery?.lastFailedAt && delivery.lastDeliveredAt) {
+      findings.push({
+        severity: "note",
+        title: "Earlier text failures",
+        detail: `Texts have been delivered since the last failure (${failureReason(delivery.lastFailedCode).words}). History, not a current problem, unless they report a new one.`,
+      });
+    }
+
+    if (!input.a2pRegistered) {
+      // When texts are failing now, the finding above already says why.
+      const evidence = !delivery || failing
+        ? ""
+        : delivery.lastDeliveredAt
+          ? " Their texts are being delivered, so carriers are accepting them."
+          : " No text from this business has a delivery report yet, so delivery is unknown — not working, not broken.";
+      findings.push({
+        severity: "note",
+        title: "No A2P approval recorded",
+        detail: `Nothing here records an approved messaging campaign. This is a bookkeeping field somebody fills in by hand, not proof that texts fail — check whether recent messages actually delivered before telling them carriers are refusing (error 30034).${evidence}`,
+      });
+    } else if (delivery && !delivery.lastDeliveredAt && !delivery.lastFailedAt) {
+      findings.push({
+        severity: "note",
+        title: "Delivery unknown",
+        detail: "No text from this business has a delivery report yet. Unknown is not the same as working.",
+      });
+    }
   }
 
   if (input.legalPublished === false) {

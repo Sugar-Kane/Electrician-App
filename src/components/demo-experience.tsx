@@ -819,7 +819,7 @@ function InvoicePanel({
         <DemoNotice show={notice === "send-invoice"} />
       </section>
 
-      <NextButton onClick={onNext}>Next: Paid</NextButton>
+      <NextButton onClick={onNext}>Next: Getting paid</NextButton>
     </div>
   );
 }

@@ -203,6 +203,9 @@ PRICE
 Total: {{total}}
 Diagnostic fee: {{deposit}}
 
+The total is the full price of the work. A diagnostic fee already paid counts
+toward it and is not charged again.
+
 The price above covers the scope of work described. Work found to be necessary
 beyond that scope will be quoted separately and will not begin without your
 approval.

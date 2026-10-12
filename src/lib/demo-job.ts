@@ -38,7 +38,7 @@ export type JobStage = {
  *
  * Each line says only what the app does. Estimate is the job's priced labor
  * and parts: there is no separate estimate document, and what the customer
- * approves is the contract. Paid is what is still owed and the customer's
+ * approves is the contract. Getting paid is what is still owed and the customer's
  * history, because nothing records an invoice payment yet.
  */
 export const JOB_STAGES: readonly JobStage[] = [
@@ -48,7 +48,9 @@ export const JOB_STAGES: readonly JobStage[] = [
   { id: "schedule", name: "Schedule", line: "Put the work on the calendar." },
   { id: "work", name: "Work", line: "Keep materials, photos, notes, and progress together." },
   { id: "invoice", name: "Invoice", line: "Turn completed work into a bill." },
-  { id: "paid", name: "Paid", line: "Track what’s owed and keep the customer’s history." },
+  // "Getting paid", not "Paid": the stage is where the balance is collected,
+  // and calling it Paid beside an invoice marked Unpaid says two things at once.
+  { id: "paid", name: "Getting paid", line: "Track what’s owed and keep the customer’s history." },
 ];
 
 export function stageIndex(stage: JobStageId): number {

@@ -89,6 +89,8 @@ export type Impersonation = {
   organizationId: string;
   organizationName: string;
   expiresAt: string;
+  /** Why it was opened, as given when it was started. */
+  reason: string;
 };
 
 /**
@@ -114,10 +116,19 @@ export const currentImpersonation = cache(async (): Promise<Impersonation | null
   const organizationId = str(row.organization_id);
   if (!organizationId) return null;
 
+  const sessionId = str(row.session_id);
+  // Only platform admins can read sessions, and only an admin has one.
+  const { data: session } = await supabase
+    .from("impersonation_sessions")
+    .select("reason")
+    .eq("id", sessionId)
+    .maybeSingle();
+
   return {
-    sessionId: str(row.session_id),
+    sessionId,
     organizationId,
     organizationName: str(row.organization_name),
     expiresAt: str(row.expires_at),
+    reason: str((session as Record<string, unknown> | null)?.reason),
   };
 });
