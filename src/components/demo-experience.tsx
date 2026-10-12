@@ -69,7 +69,7 @@ import type { ContractSignature } from "@/lib/pdf/contract-document";
 
 const STAGE_TITLES: Record<JobStageId, string> = {
   estimate: "Price the job",
-  contract: "Contract",
+  contract: "Approval",
   schedule: "Schedule",
   work: "On the job",
   invoice: "Invoice",

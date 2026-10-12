@@ -23,7 +23,7 @@ export default async function SupplyStopsPage() {
     <FieldPageShell
       title="Supply stops"
       eyebrow="Where you pick things up"
-      description="Anywhere you stop on the way to a job — a supply house, a big-box store, your own storage. The route puts the one you pick before the first job that needs it."
+      description="Where you pick up parts. A stop joins the route when a job that day has something to collect."
       backHref="/materials"
     >
       <SupplyStopList stops={stops} />

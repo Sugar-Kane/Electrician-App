@@ -22,7 +22,7 @@ import {
 test("the six stages, in the order a job moves through them", () => {
   assert.deepEqual(
     JOB_STAGES.map((stage) => stage.name),
-    ["Estimate", "Contract", "Schedule", "Work", "Invoice", "Paid"],
+    ["Estimate", "Approval", "Schedule", "Work", "Invoice", "Paid"],
   );
   assert.equal(stageIndex("schedule"), 2);
   for (const stage of JOB_STAGES) assert.ok(stage.line.length > 0, stage.id);

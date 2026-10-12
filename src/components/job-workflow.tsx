@@ -470,7 +470,7 @@ export function JobWorkflow({
             ) : null}
 
             {!closed ? (
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 {/*
                   Not while travelling: Navigate is the big button in the action
                   bar then, and the same control twice on one card is the kind
@@ -482,7 +482,7 @@ export function JobWorkflow({
                     href={navigateUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control border border-brand/40 bg-brand/[0.08] text-sm font-semibold text-brand"
+                    className="tap-target inline-flex min-h-12 flex-[1_1_6.5rem] items-center justify-center gap-2 rounded-control border border-brand/40 bg-brand/[0.08] text-sm font-semibold text-brand"
                   >
                     <Navigation className="h-4 w-4" aria-hidden />
                     Navigate
@@ -493,14 +493,14 @@ export function JobWorkflow({
                   <>
                     <a
                       href={`tel:${dialable}`}
-                      className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+                      className="tap-target inline-flex min-h-12 flex-[1_1_6.5rem] items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
                     >
                       <Phone className="h-4 w-4" aria-hidden />
                       Call
                     </a>
                     <a
                       href={`sms:${dialable}`}
-                      className="tap-target inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
+                      className="tap-target inline-flex min-h-12 flex-[1_1_6.5rem] items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
                     >
                       <MessageSquare className="h-4 w-4" aria-hidden />
                       Text

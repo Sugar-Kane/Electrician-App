@@ -1,8 +1,10 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   Banknote,
   CalendarClock,
   MessageSquareText,
+  RotateCw,
   ShieldAlert,
   Wrench,
 } from "lucide-react";
@@ -79,17 +81,29 @@ export function ActivityTimeline({
 
           <ol className="mt-2 space-y-1.5">
             {day.entries.map((entry) => {
-              const Icon = ICONS[entry.kind];
+              // A failed send wears a warning, not its usual icon, and says
+              // "Failed" in words as well as in colour.
+              const Icon = entry.failed ? AlertTriangle : ICONS[entry.kind];
 
               const line = (
                 <>
                   <span
-                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-chip ${TONES[entry.kind]}`}
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-chip ${
+                      entry.failed ? "bg-critical-bg text-critical" : TONES[entry.kind]
+                    }`}
                   >
                     <Icon className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold">{entry.title}</span>
+                    <span className="block text-sm font-semibold">
+                      {entry.failed ? (
+                        <span className="mr-1.5 rounded-full bg-critical-bg px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-critical">
+                          Failed
+                        </span>
+                      ) : null}
+                      {entry.failed ? " " : null}
+                      {entry.title}
+                    </span>
                     {entry.detail ? (
                       <span className="block text-xs text-ink-muted">{entry.detail}</span>
                     ) : null}
@@ -116,6 +130,17 @@ export function ActivityTimeline({
                   ) : (
                     <div className="flex min-h-11 items-center gap-2.5 px-1 py-1.5">{line}</div>
                   )}
+                  {/* Beside the row rather than inside it: a link inside a
+                      link is invalid, and the tap would go to either. */}
+                  {entry.retry ? (
+                    <Link
+                      href={entry.retry.href}
+                      className="tap-target ml-11 inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-brand"
+                    >
+                      <RotateCw className="h-3.5 w-3.5" aria-hidden />
+                      {entry.retry.label}
+                    </Link>
+                  ) : null}
                 </li>
               );
             })}

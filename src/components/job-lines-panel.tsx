@@ -558,9 +558,12 @@ function LineRow({
   const locked = lineLockedBecause({ invoiceId: line.invoiceId ?? null }, invoices);
 
   return (
-    <li className="flex items-center gap-2 border-b border-line py-2 last:border-b-0">
+    // Wraps rather than squeezes: with large text the amount and the remove
+    // button drop under the description instead of crushing it to a column
+    // one letter wide. The minimum is in rem so it grows with the text.
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line py-2 last:border-b-0">
       <Icon className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
-      <span className="min-w-0 flex-1">
+      <span className="min-w-[8rem] flex-1">
         <span className="block truncate text-sm">{line.description}</span>
         <span className="block text-xs text-ink-muted">
           {formatQuantity(line.quantity)} {unitLabel(line.unit, line.quantity)} × {formatCents(line.unitPriceCents)}
@@ -579,7 +582,7 @@ function LineRow({
           </span>
         ) : null}
       </span>
-      <span className="shrink-0 text-sm font-semibold">{formatCents(lineTotalCents(line))}</span>
+      <span className="ml-auto shrink-0 whitespace-nowrap text-sm font-semibold [overflow-wrap:normal]">{formatCents(lineTotalCents(line))}</span>
       {locked ? (
         <span title={locked} className="grid h-11 w-11 shrink-0 place-items-center text-ink-faint">
           <Lock className="h-4 w-4" aria-hidden />
@@ -622,7 +625,7 @@ export function JobLinesPanel({
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Work &amp; materials</h2>
         {totals.subtotalCents > 0 ? (
-          <span className="text-sm font-semibold">{formatCents(totals.subtotalCents)}</span>
+          <span className="shrink-0 whitespace-nowrap text-sm font-semibold [overflow-wrap:normal]">{formatCents(totals.subtotalCents)}</span>
         ) : null}
       </div>
 

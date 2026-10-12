@@ -43,7 +43,8 @@ export type JobStage = {
  */
 export const JOB_STAGES: readonly JobStage[] = [
   { id: "estimate", name: "Estimate", line: "Price the labor and materials." },
-  { id: "contract", name: "Contract", line: "Send the agreement and capture approval." },
+  // "Approval", as the stage is called on a live job's stage summary.
+  { id: "contract", name: "Approval", line: "Send the agreement and capture approval." },
   { id: "schedule", name: "Schedule", line: "Put the work on the calendar." },
   { id: "work", name: "Work", line: "Keep materials, photos, notes, and progress together." },
   { id: "invoice", name: "Invoice", line: "Turn completed work into a bill." },

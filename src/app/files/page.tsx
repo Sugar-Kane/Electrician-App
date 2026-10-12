@@ -146,7 +146,7 @@ export default async function FilesPage({
     <FieldPageShell
       title={query.job ? `Job #${query.job} files` : "Files"}
       eyebrow="Documents and cloud sync"
-      description="Files are filed by year, month, and job. Customer, property, payment status, and document type are filters in the app, not folders — so each file exists exactly once."
+      description="Every file once, by job. Filter by customer, payment or type to find it."
     >
       {query.connected === "google_drive" ? (
         <Banner tone="positive" className="mb-4">
