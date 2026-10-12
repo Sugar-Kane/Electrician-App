@@ -180,6 +180,8 @@ type Attempt = {
   audience: "customer" | "owner";
   ok: boolean;
   detail?: string;
+  /** The provider's id for it, so support can ask later whether it arrived. */
+  ref?: string;
   at: string;
   phase?: "request" | "payment";
 };
@@ -294,6 +296,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
         to: input.phone,
         audience: "customer",
         ok: result.ok,
+        ref: result.ok ? result.providerMessageId : undefined,
         detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
       });
       await recordOutbound({
@@ -332,6 +335,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: ownerPhone,
       audience: "owner",
       ok: sent.ok,
+      ref: sent.ok ? sent.providerMessageId : undefined,
       detail: sent.ok ? sent.status : `${sent.errorCode}: ${sent.errorDetail}`,
     });
 
@@ -370,6 +374,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: ownerEmail,
       audience: "owner",
       ok: sent.ok,
+      ref: sent.ok ? sent.id : undefined,
       detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
     });
   } else {
@@ -399,6 +404,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       to: input.email,
       audience: "customer",
       ok: sent.ok,
+      ref: sent.ok ? sent.id : undefined,
       detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
     });
   }
@@ -523,6 +529,7 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
       to: ownerPhone,
       audience: "owner",
       ok: sent.ok,
+      ref: sent.ok ? sent.providerMessageId : undefined,
       detail: sent.ok ? sent.status : `${sent.errorCode}: ${sent.errorDetail}`,
     });
   } else if (!ownerPhone) {
@@ -551,6 +558,7 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
       to: ownerEmail,
       audience: "owner",
       ok: sent.ok,
+      ref: sent.ok ? sent.id : undefined,
       detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
     });
   }
@@ -586,6 +594,7 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
       to: input.phone,
       audience: "customer",
       ok: result.ok,
+      ref: result.ok ? result.providerMessageId : undefined,
       detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
     });
     await recordOutbound({

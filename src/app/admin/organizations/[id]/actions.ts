@@ -1,11 +1,13 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { listRecentBookings } from "@/lib/admin-console";
 import { invitationEmail, invitationLink } from "@/lib/invitation-message";
-import { sendEmail } from "@/lib/email";
+import { fetchEmailStatus, sendEmail } from "@/lib/email";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -124,5 +126,44 @@ export async function revealPrivateDetails(formData: FormData): Promise<void> {
   if (error || typeof data !== "string") redirect(`${back}${join}reveal=refused`);
 
   redirect(`${back}${join}reveal=${data}`);
+}
+
+/**
+ * Ask the email provider whether one booking alert arrived.
+ *
+ * Read-only: nothing is sent, and nothing in the business changes. The answer
+ * is kept on the operation, so it is there for the next person who asks.
+ */
+export async function checkEmailDelivery(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const index = Number(formData.get("index") ?? -1);
+  if (!/^[0-9a-f-]{36}$/i.test(organizationId) || !/^[0-9a-f-]{36}$/i.test(bookingId)) return;
+  const back = `/admin/organizations/${organizationId}?tab=bookings`;
+
+  // The reference is read again here, never taken from the form.
+  const booking = (await listRecentBookings(organizationId, 100)).find((entry) => entry.id === bookingId);
+  const attempt = booking?.notifications[index];
+  if (!booking || !attempt || attempt.channel !== "email") redirect(`${back}#booking-${bookingId}`);
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: operation, error } = await supabase.rpc("admin_operation_start", {
+    p_organization_id: organizationId,
+    p_tool: "check_delivery",
+    p_target_type: "booking_alert",
+    p_target_id: bookingId,
+    p_reason: null,
+    p_key: `check_delivery:${bookingId}:${index}:${randomUUID()}`,
+    p_preview: { attempt: index, audience: attempt.audience },
+  });
+  if (error || typeof operation !== "string") redirect(`${back}#booking-${bookingId}`);
+
+  const answer = attempt.ref ? await fetchEmailStatus(attempt.ref) : ({ known: false, reason: "No provider reference was saved for this email." } as const);
+  await supabase.rpc("admin_operation_finish", {
+    p_operation_id: operation,
+    p_state: answer.known ? "verified" : "unknown",
+    p_result: answer.known ? { attempt: index, last_event: answer.lastEvent } : { attempt: index, why: answer.reason },
+  });
+  redirect(`${back}&checked=${operation}#booking-${bookingId}`);
 }
 

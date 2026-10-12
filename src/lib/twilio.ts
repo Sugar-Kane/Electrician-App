@@ -278,6 +278,46 @@ export async function sendSms(input: {
   }
 }
 
+export type TwilioMessageStatus =
+  | { known: true; status: string; errorCode: string; errorMessage: string }
+  | { known: false; reason: string };
+
+/**
+ * What Twilio says now about one text it was given.
+ *
+ * Read-only. Used by the support console's Check delivery, which reconciles
+ * a status the callback may never have delivered. No answer is "unknown",
+ * never "delivered" or "failed".
+ */
+export async function fetchTwilioMessage(messageSid: string): Promise<TwilioMessageStatus> {
+  const auth = credentials();
+  if (!auth) return { known: false, reason: "Twilio isn't configured on this deployment." };
+  if (!/^(SM|MM)[0-9a-f]{32}$/i.test(messageSid)) return { known: false, reason: "No Twilio reference was saved for this text." };
+
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Messages/${messageSid}.json`,
+      { headers: { Authorization: twilioAuthorization(auth) }, signal: AbortSignal.timeout(8_000) },
+    );
+    const payload = (await response.json().catch(() => ({}))) as {
+      status?: string;
+      error_code?: number | null;
+      error_message?: string | null;
+    };
+    if (!response.ok || !payload.status) {
+      return { known: false, reason: `Twilio answered ${response.status} without a status.` };
+    }
+    return {
+      known: true,
+      status: payload.status,
+      errorCode: payload.error_code ? String(payload.error_code) : "",
+      errorMessage: payload.error_message ?? "",
+    };
+  } catch {
+    return { known: false, reason: "Couldn't reach Twilio." };
+  }
+}
+
 /**
  * Verify that a webhook really came from Twilio.
  *

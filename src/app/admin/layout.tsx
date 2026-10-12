@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
-import { isPlatformAdmin } from "@/lib/admin-console";
+import { isPlatformAdmin, myAdminRole } from "@/lib/admin-console";
 
 /**
  * The gate on the whole console.
@@ -17,6 +17,7 @@ import { isPlatformAdmin } from "@/lib/admin-console";
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   if (!(await isPlatformAdmin())) notFound();
+  const role = await myAdminRole();
 
   return (
     <main className="min-h-screen bg-canvas px-3 py-4 pb-24 text-white sm:px-5 sm:py-6 lg:px-8">
@@ -30,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </p>
               <p className="text-sm text-ink-muted">
                 Every business on the platform. Opening one is recorded.
+                {role === "support" ? " Your support role can look and check, not change." : ""}
               </p>
             </div>
           </div>
@@ -39,6 +41,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
             <Link href="/admin/users" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
               People
+            </Link>
+            <Link href="/admin/recovery" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
+              Recovery
             </Link>
             <Link href="/admin/audit" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
               Activity
