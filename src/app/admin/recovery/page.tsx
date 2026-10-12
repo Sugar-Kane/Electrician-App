@@ -17,6 +17,9 @@ const TOOLS = [
   { value: "check_delivery", label: "Checked delivery" },
   { value: "retry_text", label: "Sent a text again" },
   { value: "fix_recipient", label: "Corrected a number" },
+  { value: "classify_booking", label: "Hid a booking" },
+  { value: "merge_duplicates", label: "Hid duplicate bookings" },
+  { value: "restore_booking", label: "Brought a booking back" },
 ];
 
 const STATES: Record<string, { label: string; tone: Tone }> = {
@@ -86,7 +89,9 @@ export default async function AdminRecoveryPage({
                 ? `${base}/messages/${operation.messageId}`
                 : operation.targetType === "customer"
                   ? `${base}?tab=jobs&customer=${operation.targetId}`
-                  : base;
+                  : operation.targetType === "booking" || operation.targetType === "booking_alert"
+                    ? `${base}?tab=bookings#booking-${operation.targetId}`
+                    : base;
           return (
             <div key={operation.id} className="rounded-control border border-line bg-surface p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">

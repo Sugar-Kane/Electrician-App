@@ -5,17 +5,26 @@ import {
   CalendarPlus,
   Check,
   ChevronDown,
+  EyeOff,
+  History,
   MessagesSquare,
   PhoneCall,
   ShieldAlert,
   TriangleAlert,
+  Users,
   X,
 } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { getBookingRequests, type BookingRequest } from "@/lib/booking-requests";
+import { getBookingRequests, hideable, type BookingRequest } from "@/lib/booking-requests";
+import { hideRefusal, NOT_SERVICE } from "@/lib/booking-duplicates";
 import { isOpenRequest } from "@/lib/booking-queue";
-import { dismissBookingRequest, scheduleBookingRequest } from "@/app/booking-requests/actions";
+import {
+  dismissBookingRequest,
+  hideNotService,
+  restoreRequest,
+  scheduleBookingRequest,
+} from "@/app/booking-requests/actions";
 import { Banner } from "@/components/ui/banner";
 
 export const metadata: Metadata = { title: "Booking requests | Volteira" };
@@ -149,6 +158,46 @@ function RequestCard({ request }: { request: BookingRequest }) {
           </>
         ) : null}
       </div>
+
+      {/*
+        Folded away: most requests are real, and this is for the few that are
+        not. Offered only where the database would allow it — never on one with
+        a payment link out or money behind it.
+      */}
+      {!handled && !hideRefusal(hideable(request)) ? (
+        <details className="mt-3 rounded-control border border-line">
+          <summary className="tap-target flex cursor-pointer list-none items-center gap-2 px-3 text-xs font-semibold text-ink-muted">
+            <EyeOff className="h-4 w-4" aria-hidden /> Not a service request?
+          </summary>
+          <form action={hideNotService} className="space-y-3 px-3 pb-3">
+            <input type="hidden" name="requestId" value={request.id} />
+            <fieldset>
+              <legend className="text-xs text-ink-muted">What was it?</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {NOT_SERVICE.map((kind, index) => (
+                  <label
+                    key={kind.value}
+                    className="tap-target inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-chip border border-line px-3 text-xs font-semibold has-[:checked]:border-brand/60 has-[:checked]:text-brand"
+                  >
+                    <input type="radio" name="kind" value={kind.value} required={index === 0} className="h-4 w-4" />
+                    {kind.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <p className="text-xs leading-5 text-ink-muted">
+              It leaves this list and Today. It isn&rsquo;t deleted, and nobody is texted. You can bring it back from
+              History.
+            </p>
+            <button
+              type="submit"
+              className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip border border-line px-3.5 text-xs font-semibold"
+            >
+              <EyeOff className="h-4 w-4" aria-hidden /> Hide it
+            </button>
+          </form>
+        </details>
+      ) : null}
     </article>
   );
 }
@@ -156,24 +205,63 @@ function RequestCard({ request }: { request: BookingRequest }) {
 export default async function BookingRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; hidden?: string }>;
 }) {
   const [queue, query] = await Promise.all([getBookingRequests(), searchParams]);
   if (queue.requiresLogin) redirect("/login?next=/booking-requests");
 
-  const { open, handled, agedOut } = queue;
+  const { open, handled, agedOut, duplicates } = queue;
+  const doubled = duplicates.reduce((sum, group) => sum + group.length, 0);
 
   return (
     <FieldPageShell
       title="Booking requests"
       eyebrow="Requests for work"
       description="Customers asking for a visit, by text, phone or your booking page."
+      action={
+        <Link
+          href="/booking-requests/history"
+          className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip border border-line px-3.5 text-xs font-semibold text-ink"
+        >
+          <History className="h-4 w-4" aria-hidden /> History
+        </Link>
+      }
     >
       {query.saved ? (
         <Banner tone="positive" className="mb-4">{query.saved}</Banner>
       ) : null}
       {query.error ? (
         <Banner tone="critical" className="mb-4">{query.error}</Banner>
+      ) : null}
+      {query.hidden ? (
+        // Not a Banner: that is a paragraph, and this holds a form.
+        <div
+          role="status"
+          className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-control border border-positive/20 bg-positive-bg px-4 py-2 text-sm leading-6 text-positive"
+        >
+          <span className="flex items-center gap-2">
+            <Check className="h-4 w-4 shrink-0" aria-hidden />
+            Hidden. It&rsquo;s in History, not deleted, and nobody was told.
+          </span>
+          <form action={restoreRequest}>
+            <input type="hidden" name="requestId" value={query.hidden} />
+            <button type="submit" className="min-h-11 font-semibold underline underline-offset-2">
+              Undo
+            </button>
+          </form>
+        </div>
+      ) : null}
+      {duplicates.length > 0 ? (
+        <Banner tone="info" className="mb-4">
+          <span>
+            {duplicates.length === 1
+              ? `${doubled} requests look like the same person asking more than once.`
+              : `${duplicates.length} people look like they asked more than once.`}{" "}
+          </span>
+          <Link href="/booking-requests/duplicates" className="inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-2">
+            <Users className="h-4 w-4" aria-hidden /> Review them
+          </Link>
+        </Banner>
       ) : null}
 
       {open.length === 0 && handled.length === 0 ? (
@@ -241,12 +329,15 @@ export default async function BookingRequestsPage({
         Said out loud rather than left as a silent gap. A page that quietly
         drops rows is a page somebody stops trusting.
       */}
-      {agedOut > 0 ? (
-        <p className="mt-3 px-1 text-center text-xs text-ink-faint">
-          {agedOut} older {agedOut === 1 ? "request has" : "requests have"} dropped off after a
-          week. Anything still waiting on you stays here however old it is.
-        </p>
-      ) : null}
+      <p className="mt-3 px-1 text-center text-xs text-ink-faint">
+        {agedOut > 0
+          ? `${agedOut} older ${agedOut === 1 ? "request is" : "requests are"} in History, with any you've hidden. `
+          : "Older requests, and any you've hidden, are in History. "}
+        Anything still waiting on you stays here however old it is.{" "}
+        <Link href="/booking-requests/history" className="font-semibold text-brand">
+          Search History
+        </Link>
+      </p>
     </FieldPageShell>
   );
 }

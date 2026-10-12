@@ -14,6 +14,7 @@
  * the evening turns up under tomorrow.
  */
 
+import { notServiceLabel } from "./booking-duplicates.ts";
 import { calendarDate } from "./schedule-labels.ts";
 
 /** A row as it comes out of `activity_events`. */
@@ -108,6 +109,9 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   // Written by the support console's Fix recipient, with the number it replaced
   // so the business can see exactly what changed and change it back.
   "customer.phone_corrected": { kind: "other", title: "Phone number corrected by Volteira support" },
+  "booking.not_service": { kind: "inquiry", title: "Hidden: not a service request" },
+  "booking.duplicate_hidden": { kind: "inquiry", title: "Hidden as a duplicate request" },
+  "booking.restored": { kind: "inquiry", title: "Request brought back from hidden" },
 };
 
 const FAILED = new Set(["estimate.send_failed", "invoice.send_failed", "customer.notify_failed"]);
@@ -172,6 +176,10 @@ function detailOf(row: ActivityRow): string {
 
   const previous = metadata.previous_phone;
   if (typeof previous === "string" && previous.trim()) parts.push(`was ${previous.trim()}`);
+
+  const classification = metadata.classification;
+  if (typeof classification === "string" && classification) parts.push(notServiceLabel(classification) || classification);
+  if (metadata.by_support === true) parts.push("by Volteira support");
 
   // Why a send did not go, in the words the sender was given.
   const reason = metadata.reason;

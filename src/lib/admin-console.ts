@@ -9,6 +9,7 @@
 import type { ActivityRow } from "@/lib/activity-timeline";
 import type { DeliveryEvidence } from "@/lib/admin-health";
 import { parseTrace, type JobTrace } from "@/lib/admin-trace";
+import type { HideableBooking } from "@/lib/booking-duplicates";
 import type { TextFacts } from "@/lib/recovery/text-recovery";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -277,6 +278,76 @@ export async function listRecentBookings(id: string, limit = 20): Promise<Bookin
     jobId: text(row.created_job_id),
     notifications: attempts(row.notification_results),
   }));
+}
+
+/** A booking as the console's Bookings tab needs it: enough to decide what may be hidden. */
+export type AdminBooking = BookingDiagnostic & {
+  organizationId: string;
+  updatedAt: string;
+  source: string;
+  depositPaidAt: string;
+  paymentIntentId: string;
+  paymentCount: number;
+  classification: string;
+  archivedAt: string;
+  archivedByEmail: string;
+  archivedStatus: string;
+  duplicateOf: string;
+  duplicateReviewedAt: string;
+};
+
+export async function listBookings(id: string, limit = 40): Promise<AdminBooking[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_booking_list", {
+    p_organization_id: id,
+    p_limit: limit,
+  });
+
+  return rows(data).map((row) => ({
+    id: text(row.booking_id),
+    organizationId: id,
+    createdAt: text(row.created_at),
+    updatedAt: text(row.updated_at),
+    status: text(row.status),
+    intent: text(row.intent),
+    source: text(row.source),
+    contactName: text(row.contact_name),
+    phone: text(row.phone),
+    email: text(row.email),
+    description: text(row.description),
+    windowStart: text(row.arrival_window_start),
+    windowEnd: text(row.arrival_window_end),
+    intakeAnswerCount: count(row.intake_answer_count),
+    jobId: text(row.created_job_id),
+    notifications: attempts(row.notification_results),
+    depositPaidAt: text(row.deposit_paid_at),
+    paymentIntentId: text(row.stripe_payment_intent_id),
+    paymentCount: count(row.payment_count),
+    classification: text(row.classification),
+    archivedAt: text(row.archived_at),
+    archivedByEmail: text(row.archived_by_email),
+    archivedStatus: text(row.archived_status),
+    duplicateOf: text(row.duplicate_of),
+    duplicateReviewedAt: text(row.duplicate_reviewed_at),
+  }));
+}
+
+/** The fields the hiding rules read. */
+export function bookingHideable(booking: AdminBooking): HideableBooking {
+  return {
+    id: booking.id,
+    organizationId: booking.organizationId,
+    status: booking.status,
+    phone: booking.phone,
+    email: booking.email,
+    createdAt: booking.createdAt,
+    jobId: booking.jobId,
+    depositPaidAt: booking.depositPaidAt,
+    paymentIntentId: booking.paymentIntentId,
+    paymentCount: booking.paymentCount,
+    archivedAt: booking.archivedAt,
+    duplicateReviewedAt: booking.duplicateReviewedAt,
+  };
 }
 
 export async function listMcpCalls(id: string, limit = 40): Promise<McpCall[]> {

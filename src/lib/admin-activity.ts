@@ -26,6 +26,9 @@ const TOOL_WORDS: Record<string, string> = {
   check_delivery: "checked a text's delivery",
   retry_text: "sent a failed text again",
   fix_recipient: "corrected a customer's number",
+  classify_booking: "hid a booking that wasn't a service request",
+  merge_duplicates: "hid duplicate bookings",
+  restore_booking: "brought a hidden booking back",
 };
 
 const ROLE_WORDS: Record<string, string> = {
