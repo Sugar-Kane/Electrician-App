@@ -14,11 +14,24 @@ import { createClient } from "@/lib/supabase/server";
  * calling these gets a refusal from Postgres, not from a missing UI button.
  */
 
+/** What a past visit's outcome choice adds to the reason on the record. */
+const CHOICES: Record<string, string> = {
+  reschedule: "the visit didn't happen; rescheduling",
+  complete: "the work happened; completing",
+};
+
 export async function beginImpersonation(formData: FormData): Promise<void> {
   const organizationId = String(formData.get("organizationId") ?? "").trim();
-  const reason = String(formData.get("reason") ?? "").trim().slice(0, 200);
   if (!/^[0-9a-f-]{36}$/i.test(organizationId)) return;
   const back = `/admin/organizations/${organizationId}`;
+
+  // Opened from a past visit: straight to that job, with the choice on the record.
+  const next = String(formData.get("next") ?? "");
+  const job = /^\/jobs\/(\d{1,9})$/.exec(next);
+  const choice = CHOICES[String(formData.get("choice") ?? "")];
+  const suffix = job && choice ? ` · job #${job[1]}: ${choice}` : "";
+  const typed = String(formData.get("reason") ?? "").trim();
+  const reason = typed.length >= 3 ? `${typed.slice(0, 200 - suffix.length)}${suffix}` : typed;
 
   // The database refuses without a reason too; this only says so sooner.
   if (reason.length < 3) redirect(`${back}?elevate=reason#elevate`);
@@ -34,7 +47,7 @@ export async function beginImpersonation(formData: FormData): Promise<void> {
   // Everything is now read as that business, so nothing cached from before is
   // still true.
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(job ? next : "/");
 }
 
 export async function endImpersonation(): Promise<void> {

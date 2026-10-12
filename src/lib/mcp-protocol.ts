@@ -44,7 +44,15 @@ export type McpTool = {
  * respond to, while a JSON-RPC error is a protocol failure it can only give up
  * on. Booking rules produce the former.
  */
-export type ToolResult = { text: string; isError?: boolean };
+export type ToolResult = {
+  text: string;
+  isError?: boolean;
+  /**
+   * What the call saved, for the call log. Never sent to the model: only
+   * `text` and `isError` go back over the wire.
+   */
+  record?: { bookingRequestId?: string; jobId?: string };
+};
 
 export type McpReply = { status: number; body?: unknown };
 

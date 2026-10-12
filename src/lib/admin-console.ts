@@ -9,6 +9,7 @@
 import type { ActivityRow } from "@/lib/activity-timeline";
 import type { DeliveryEvidence } from "@/lib/admin-health";
 import { parseTrace, type JobTrace } from "@/lib/admin-trace";
+import type { AssistantRow } from "@/lib/assistant-trace";
 import type { HideableBooking } from "@/lib/booking-duplicates";
 import type { TextFacts } from "@/lib/recovery/text-recovery";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -73,18 +74,6 @@ export type NotificationAttempt = {
   /** The provider's id for it. Older email attempts kept it as their detail. */
   ref: string;
   at: string;
-};
-
-export type McpCall = {
-  id: string;
-  createdAt: string;
-  method: string;
-  toolName: string;
-  isError: boolean;
-  httpStatus: number;
-  durationMs: number;
-  arguments: string;
-  resultText: string;
 };
 
 function text(value: unknown): string {
@@ -350,23 +339,32 @@ export function bookingHideable(booking: AdminBooking): HideableBooking {
   };
 }
 
-export async function listMcpCalls(id: string, limit = 40): Promise<McpCall[]> {
+/** The assistant's log for one business, with what each tool call saved. */
+export async function listAssistantRows(id: string, limit = 300): Promise<AssistantRow[]> {
   const supabase = await client();
-  const { data } = await supabase.rpc("admin_mcp_calls", {
+  const { data } = await supabase.rpc("admin_assistant_calls", {
     p_organization_id: id,
     p_limit: limit,
   });
-
   return rows(data).map((row) => ({
     id: text(row.id),
     createdAt: text(row.created_at),
     method: text(row.method),
     toolName: text(row.tool_name),
-    isError: row.is_error === true,
-    httpStatus: count(row.http_status),
-    durationMs: count(row.duration_ms),
-    arguments: JSON.stringify(row.arguments ?? {}),
     resultText: text(row.result_text),
+    isError: row.is_error === true,
+    durationMs: count(row.duration_ms),
+    sessionKey: text(row.session_key),
+    bookingRequestId: text(row.booking_request_id),
+    jobId: text(row.job_id),
+    bookingStatus: text(row.booking_status),
+    bookingArchived: row.booking_archived === true,
+    bookingNotifications: attempts(row.booking_notifications).map((attempt) => ({
+      audience: attempt.audience,
+      channel: attempt.channel,
+      ok: attempt.ok,
+    })),
+    jobNumber: row.job_number === null || row.job_number === undefined ? "" : String(row.job_number),
   }));
 }
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
 import { beginImpersonation } from "@/app/admin/impersonate/actions";
@@ -6,11 +7,14 @@ import { Card, Row } from "@/components/admin-ui";
 import {
   getMessagingEvidence,
   listOrganizationMembers,
+  listOrgJobs,
   listRecentBookings,
   type OrganizationDetail,
 } from "@/lib/admin-console";
 import { diagnose, failingNow, type Finding } from "@/lib/admin-health";
+import { followUps, isPastVisit } from "@/lib/follow-ups";
 import { failureReason } from "@/lib/message-errors";
+import { kindOfWork } from "@/lib/new-job-input";
 
 const FINDING_STYLE: Record<Finding["severity"], string> = {
   blocking: "border-critical/30 bg-critical-bg text-critical",
@@ -31,12 +35,29 @@ export async function SummaryTab({
 }) {
   const id = organization.id;
   const zone = organization.timeZone;
-  const [members, bookings, evidence] = await Promise.all([
+  const [members, bookings, evidence, jobs] = await Promise.all([
     listOrganizationMembers(id),
     listRecentBookings(id, 1),
     getMessagingEvidence(id),
+    listOrgJobs(id),
   ]);
   const delivery = evidence.get(id);
+
+  // Worked out exactly as the business's own Today does it, so support and the
+  // electrician see the same list.
+  const pastVisits = followUps({
+    jobs: jobs.map((job) => ({
+      id: job.number,
+      customer: job.customerName,
+      stage: job.status,
+      startsAt: job.scheduledStart || undefined,
+      endsAt: job.scheduledEnd || undefined,
+      kindOfWork: kindOfWork(job.category),
+    })),
+    unbilled: {},
+    now: new Date(),
+    timeZone: zone,
+  }).filter(isPastVisit);
 
   const findings = diagnose({
     memberCount: members.length,
@@ -75,6 +96,71 @@ export async function SummaryTab({
               </li>
             ))}
           </ul>
+        )}
+      </Card>
+
+      <Card title="Past visits with no outcome" aside={pastVisits.length ? `${pastVisits.length}` : undefined}>
+        {pastVisits.length === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-positive">
+            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+            None. Every visit whose time has passed has a result.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm leading-6 text-ink-muted">
+              The same list the business sees on Today. Nothing here is completed on its own: each choice opens the job as
+              the business, for an hour, so the normal steps run — a reschedule texts the customer, a completion asks for
+              the work done. Not sure what happened? Ask the business before changing anything.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {pastVisits.slice(0, 12).map((visit) => (
+                <li key={visit.jobNumber} id={`visit-${visit.jobNumber}`} className="rounded-control border border-line p-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <Link href={`/admin/organizations/${id}/jobs/${visit.jobNumber}`} className="text-sm font-semibold text-brand">
+                      Job #{visit.jobNumber} · {visit.customer || "No customer"}
+                    </Link>
+                    {visit.kindOfWork ? <span className="text-xs text-ink-faint">{visit.kindOfWork}</span> : null}
+                  </div>
+                  <p className="mt-1 text-sm text-ink-muted">{visit.detail}</p>
+                  {owner ? (
+                    <details className="mt-2 rounded-control border border-line">
+                      <summary className="tap-target flex cursor-pointer list-none items-center px-3 text-xs font-semibold text-ink-muted">
+                        Sort it out
+                      </summary>
+                      <form action={beginImpersonation} className="flex flex-col gap-2 px-3 pb-3 lg:flex-row">
+                        <input type="hidden" name="organizationId" value={id} />
+                        <input type="hidden" name="next" value={`/jobs/${visit.jobNumber}`} />
+                        <label className="min-w-0 flex-1">
+                          <span className="sr-only">Reason</span>
+                          <input
+                            name="reason"
+                            required
+                            minLength={3}
+                            maxLength={140}
+                            placeholder="Why, e.g. owner called: customer wasn't home"
+                            className="min-h-11 w-full rounded-control border border-line bg-raised px-3 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-brand/70"
+                          />
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="submit" name="choice" value="reschedule" className="tap-target rounded-control border border-line px-3 text-xs font-semibold">
+                            Didn&rsquo;t happen: reschedule
+                          </button>
+                          <button type="submit" name="choice" value="complete" className="tap-target rounded-control border border-line px-3 text-xs font-semibold">
+                            Work happened: complete
+                          </button>
+                        </div>
+                      </form>
+                    </details>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {pastVisits.length > 12 ? (
+              <p className="mt-2 text-xs text-ink-faint">
+                And {pastVisits.length - 12} more. <Link href={`/admin/organizations/${id}?tab=jobs`} className="font-semibold text-brand">All jobs</Link>
+              </p>
+            ) : null}
+          </>
         )}
       </Card>
 
