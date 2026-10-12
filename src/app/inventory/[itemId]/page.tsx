@@ -7,6 +7,7 @@ import { StockAdjust } from "@/components/stock-adjust";
 import { StockPhoto } from "@/components/stock-photo";
 import { getInventoryItem } from "@/lib/job-data";
 import { movementLabel } from "@/lib/inventory-movement";
+import { freeQuantity } from "@/lib/stock-reservation";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ export default async function StockItemPage({
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 
   const low = item.quantity <= 0;
+  const free = freeQuantity(item.quantity, item.reserved);
+  const amount = (value: number) => String(Math.round(value * 100) / 100);
 
   return (
     <FieldPageShell title={item.name} eyebrow="Stock" backHref="/inventory">
@@ -52,10 +55,34 @@ export default async function StockItemPage({
               <span className="text-sm text-ink-muted">{item.unit} on hand</span>
             </p>
 
+            {/* On hand is what is on the shelf; some of it may already be
+                promised to jobs that have not been finished yet. */}
+            <p className="mt-1 text-sm text-ink-muted">
+              {amount(item.reserved)} reserved ·{" "}
+              <span className={free < 0 ? "font-semibold text-critical" : "font-semibold text-ink"}>
+                {amount(free)} free
+              </span>
+            </p>
+            {item.reservedFor.length > 0 ? (
+              <p className="mt-2 text-xs text-ink-muted">
+                Reserved for{" "}
+                {item.reservedFor.map((held, index) => (
+                  <span key={held.jobNumber}>
+                    {index > 0 ? ", " : ""}
+                    <Link href={`/jobs/${held.jobNumber}`} className="font-semibold text-brand underline-offset-2 hover:underline">
+                      job #{held.jobNumber}
+                    </Link>{" "}
+                    ({amount(held.quantity)})
+                  </span>
+                ))}
+                . They come off the count when each job is finished.
+              </p>
+            ) : null}
+
             <dl className="mt-3 grid gap-1 text-xs text-ink-muted">
               {item.unitCost !== null ? (
                 <div className="flex gap-2">
-                  <dt className="text-ink-faint">Each</dt>
+                  <dt className="text-ink-faint">Your cost each</dt>
                   <dd>{money(Math.round(item.unitCost * 100))}</dd>
                 </div>
               ) : null}
@@ -109,7 +136,7 @@ export default async function StockItemPage({
 
         {item.movements.length === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">
-            Nothing has moved yet. Adding this part to a job takes it off the shelf on its own.
+            Nothing has moved yet. A part added to a job is reserved, and comes off the count when that job is finished.
           </p>
         ) : (
           <ul className="mt-3 divide-y divide-line">

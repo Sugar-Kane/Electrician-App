@@ -4,6 +4,13 @@ import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { lineTotalCents } from "@/lib/job-lines";
 import type { InvoiceStanding } from "@/lib/job-billing";
+import {
+  reservedQuantity,
+  stockQuantity,
+  takenByLine,
+  usageMovements,
+  usedSentence,
+} from "@/lib/stock-reservation";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
 /**
@@ -197,19 +204,35 @@ export async function rebuildInvoiceDocument(
 }
 
 /**
- * Take parts off the shelf for lines just written.
+ * Take parts off the shelf.
+ *
+ * Called when a job is finished, with what was actually used, and when a part
+ * is written onto a job that is already finished. A part on an open job is
+ * reserved instead and moves nothing (see stock-reservation.ts).
  *
  * The cost is read off each item now and written onto its movement, because
  * what a breaker cost the day it was fitted is the expense — not what the same
  * breaker costs when somebody runs a report in April. An item that is not this
  * business's is not an item, and moves nothing.
+ *
+ * A line that says its unit (and, for a box, roll or stick, what one holds) is
+ * converted into the unit the item is counted in: ten sticks of conduit take a
+ * hundred feet from conduit counted in feet. Without a unit the quantity is
+ * taken as already in the item's unit.
  */
 export async function takeFromStock(
   database: FlexibleSupabaseClient,
   input: {
     organizationId: string;
     jobId: string;
-    lines: { lineId: string; itemId: string; quantity: number }[];
+    lines: {
+      lineId: string;
+      itemId: string;
+      quantity: number;
+      unit?: string;
+      packSize?: number | null;
+      packUnit?: string | null;
+    }[];
   },
 ): Promise<boolean> {
   const lines = input.lines.filter((line) => line.itemId && line.lineId && line.quantity > 0);
@@ -217,30 +240,241 @@ export async function takeFromStock(
 
   const { data: items } = await database
     .from("inventory_items")
-    .select("id, unit_cost_cents")
+    .select("id, unit, unit_cost_cents")
     .eq("organization_id", input.organizationId)
     .in("id", [...new Set(lines.map((line) => line.itemId))]);
 
-  const cost = new Map(
-    ((items ?? []) as Record<string, unknown>[]).map((row) => [text(row.id), Number(row.unit_cost_cents ?? 0)]),
+  const known = new Map(
+    ((items ?? []) as Record<string, unknown>[]).map((row) => [
+      text(row.id),
+      { unit: text(row.unit) || "each", costCents: Number(row.unit_cost_cents ?? 0) },
+    ]),
   );
-  const moving = lines.filter((line) => cost.has(line.itemId));
+  const moving = lines.filter((line) => known.has(line.itemId));
   if (moving.length === 0) return lines.length === 0;
 
   const { error } = await database.from("inventory_movements").insert(
-    moving.map((line) => ({
-      organization_id: input.organizationId,
-      item_id: line.itemId,
-      quantity: -Math.abs(line.quantity),
-      reason: "used_on_job",
-      job_id: input.jobId,
-      job_line_item_id: line.lineId,
-      unit_cost_cents: cost.get(line.itemId) ?? 0,
-    })),
+    moving.map((line) => {
+      const item = known.get(line.itemId)!;
+      const quantity = line.unit ? stockQuantity({ ...line, unit: line.unit }, item.unit) : line.quantity;
+      return {
+        organization_id: input.organizationId,
+        item_id: line.itemId,
+        quantity: -Math.abs(quantity),
+        reason: "used_on_job",
+        job_id: input.jobId,
+        job_line_item_id: line.lineId,
+        unit_cost_cents: item.costCents,
+      };
+    }),
   );
 
   if (error) console.error("billing: stock was not taken off the shelf", error);
   return !error && moving.length === lines.length;
+}
+
+/** One of a job's parts that comes from stock: what it asks for, has taken, and holds back. */
+export type JobStockLine = {
+  lineId: string;
+  itemId: string;
+  description: string;
+  itemName: string;
+  /** In the item's unit. */
+  quantity: number;
+  itemUnit: string;
+  onHand: number;
+  taken: number;
+  reserved: number;
+};
+
+const CHUNK = 100;
+
+/** What the ledger says each of these lines has taken, net of returns. */
+async function takenFor(
+  database: FlexibleSupabaseClient,
+  organizationId: string,
+  lineIds: string[],
+): Promise<Map<string, number>> {
+  const entries: { lineId: string; quantity: number }[] = [];
+  for (let start = 0; start < lineIds.length; start += CHUNK) {
+    const { data, error } = await database
+      .from("inventory_movements")
+      .select("job_line_item_id, quantity")
+      .eq("organization_id", organizationId)
+      .in("job_line_item_id", lineIds.slice(start, start + CHUNK));
+    if (error) console.error("stock: could not read what these lines took", error);
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      entries.push({ lineId: text(row.job_line_item_id), quantity: Number(row.quantity ?? 0) });
+    }
+  }
+  return takenByLine(entries);
+}
+
+/**
+ * A job's parts that come from stock, with what each has taken and reserves.
+ *
+ * `open` is whether the job still holds its parts back: true for a job being
+ * worked or about to be finished, false once it is completed or canceled.
+ */
+export async function jobStockLines(
+  database: FlexibleSupabaseClient,
+  input: { organizationId: string; jobId: string; open: boolean },
+): Promise<JobStockLine[]> {
+  const { data: lineRows } = await database
+    .from("job_line_items")
+    .select("id, description, quantity, unit, pack_size, pack_unit, inventory_item_id")
+    .eq("organization_id", input.organizationId)
+    .eq("job_id", input.jobId)
+    .not("inventory_item_id", "is", null)
+    .order("created_at", { ascending: true });
+
+  const rows = (lineRows ?? []) as Record<string, unknown>[];
+  if (rows.length === 0) return [];
+
+  const { data: itemRows } = await database
+    .from("inventory_items")
+    .select("id, name, unit, quantity_on_hand")
+    .eq("organization_id", input.organizationId)
+    .in("id", [...new Set(rows.map((row) => text(row.inventory_item_id)))]);
+
+  const items = new Map(
+    ((itemRows ?? []) as Record<string, unknown>[]).map((row) => [
+      text(row.id),
+      { name: text(row.name), unit: text(row.unit) || "each", onHand: Number(row.quantity_on_hand ?? 0) },
+    ]),
+  );
+  const taken = await takenFor(database, input.organizationId, rows.map((row) => text(row.id)));
+
+  return rows.flatMap((row) => {
+    const itemId = text(row.inventory_item_id);
+    const item = items.get(itemId);
+    if (!item) return [];
+    const lineId = text(row.id);
+    const quantity = stockQuantity(
+      {
+        quantity: Number(row.quantity ?? 0),
+        unit: text(row.unit) || "each",
+        packSize: row.pack_size === null || row.pack_size === undefined ? null : Number(row.pack_size),
+        packUnit: text(row.pack_unit) || null,
+      },
+      item.unit,
+    );
+    const stock = { lineId, itemId, quantity, open: input.open, taken: taken.get(lineId) ?? 0 };
+    return [
+      {
+        lineId,
+        itemId,
+        description: text(row.description),
+        itemName: item.name,
+        quantity,
+        itemUnit: item.unit,
+        onHand: item.onHand,
+        taken: stock.taken,
+        reserved: reservedQuantity(stock),
+      },
+    ];
+  });
+}
+
+/**
+ * Finishing a job: take off the shelf what its parts actually used.
+ *
+ * `confirmed` is what somebody said at completion, by line; a line not
+ * mentioned uses what it reserved. Called before the job is marked completed,
+ * so a failure here leaves a job that is still open with its parts still
+ * reserved, rather than a finished job whose parts never came off the count.
+ *
+ * Returns one sentence per part moved — "Used 2 from stock, 18 left." — read
+ * back from the count after the movement, so it says what the shelf now holds.
+ */
+export async function takeReservedParts(
+  database: FlexibleSupabaseClient,
+  input: { organizationId: string; jobId: string; confirmed?: ReadonlyMap<string, number | null> },
+): Promise<{ ok: boolean; said: string[] }> {
+  const lines = await jobStockLines(database, { ...input, open: true });
+  // Only lines still holding something back are offered at completion, so
+  // only they can be told a different number; the rest take what they asked.
+  const moves = usageMovements(lines, input.confirmed);
+  if (moves.length === 0) return { ok: true, said: [] };
+
+  const ok = await takeFromStock(database, {
+    organizationId: input.organizationId,
+    jobId: input.jobId,
+    lines: moves,
+  });
+
+  const { data: after } = await database
+    .from("inventory_items")
+    .select("id, quantity_on_hand")
+    .eq("organization_id", input.organizationId)
+    .in("id", [...new Set(moves.map((move) => move.itemId))]);
+  const left = new Map(
+    ((after ?? []) as Record<string, unknown>[]).map((row) => [text(row.id), Number(row.quantity_on_hand ?? 0)]),
+  );
+
+  const said = moves.map((move) => {
+    const line = lines.find((entry) => entry.lineId === move.lineId)!;
+    return `${line.itemName || line.description}: ${usedSentence(move.quantity, left.get(move.itemId) ?? 0, line.itemUnit)}`;
+  });
+  return { ok, said };
+}
+
+/**
+ * Every item's reservations across the business's open jobs, with the jobs
+ * holding them — for the stock list, the item page and the part picker.
+ */
+export async function reservedStock(
+  database: FlexibleSupabaseClient,
+  organizationId: string,
+): Promise<Map<string, { reserved: number; jobs: { jobNumber: string; quantity: number }[] }>> {
+  const { data, error } = await database
+    .from("job_line_items")
+    .select(
+      "id, quantity, unit, pack_size, pack_unit, inventory_item_id, job:jobs!inner(job_number, status), item:inventory_items(unit)",
+    )
+    .eq("organization_id", organizationId)
+    .not("inventory_item_id", "is", null)
+    .not("job.status", "in", "(completed,canceled)");
+
+  const result = new Map<string, { reserved: number; jobs: { jobNumber: string; quantity: number }[] }>();
+  if (error) {
+    console.error("stock: could not read reservations", error);
+    return result;
+  }
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  const taken = await takenFor(database, organizationId, rows.map((row) => text(row.id)));
+
+  for (const row of rows) {
+    const itemId = text(row.inventory_item_id);
+    const job = (row.job ?? {}) as Record<string, unknown>;
+    const item = (row.item ?? {}) as Record<string, unknown>;
+    const quantity = stockQuantity(
+      {
+        quantity: Number(row.quantity ?? 0),
+        unit: text(row.unit) || "each",
+        packSize: row.pack_size === null || row.pack_size === undefined ? null : Number(row.pack_size),
+        packUnit: text(row.pack_unit) || null,
+      },
+      text(item.unit) || "each",
+    );
+    const reserved = reservedQuantity({
+      lineId: text(row.id),
+      itemId,
+      quantity,
+      open: true,
+      taken: taken.get(text(row.id)) ?? 0,
+    });
+    if (reserved <= 0) continue;
+    const entry = result.get(itemId) ?? { reserved: 0, jobs: [] };
+    entry.reserved = Math.round((entry.reserved + reserved) * 100) / 100;
+    const jobNumber = String(job.job_number ?? "");
+    const existing = entry.jobs.find((held) => held.jobNumber === jobNumber);
+    if (existing) existing.quantity = Math.round((existing.quantity + reserved) * 100) / 100;
+    else entry.jobs.push({ jobNumber, quantity: reserved });
+    result.set(itemId, entry);
+  }
+  return result;
 }
 
 /**

@@ -293,8 +293,33 @@ test("a half-typed line is dropped rather than losing the other eight", () => {
     lines.map((line) => line.description),
     ["Pull new circuit", "Free offcut"],
   );
-  // A part with no price is a part with no price, not a refusal.
+  // Kept, so nothing typed is lost, but marked as unpriced rather than as free.
   assert.equal(lines[1]?.unitPriceCents, 0);
+  assert.equal(lines[1]?.priceMissing, true);
+  assert.equal(lines[0]?.priceMissing, undefined);
+});
+
+test("a work order line with no customer price is refused; one priced at 0 is free", () => {
+  const unpriced = parseNewJob(
+    raw({
+      category: "work_order",
+      workOrderLines: JSON.stringify([{ kind: "material", description: "Free offcut", quantity: 2 }]),
+    }),
+  );
+  assert.equal(unpriced.ok, false);
+  if (!unpriced.ok) {
+    assert.match(unpriced.error, /"Free offcut" has no customer price/);
+    assert.equal(unpriced.field, "workOrderLines");
+  }
+
+  const free = parseNewJob(
+    raw({
+      category: "work_order",
+      workOrderLines: JSON.stringify([{ kind: "material", description: "Free offcut", quantity: 2, unitPriceCents: 0 }]),
+    }),
+  );
+  assert.equal(free.ok, true);
+  if (free.ok) assert.equal(free.value.lines[0]?.unitPriceCents, 0);
 });
 
 test("a part picked from inventory keeps its stock item; hours and junk ids do not", () => {

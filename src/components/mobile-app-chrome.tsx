@@ -146,15 +146,30 @@ export function MobileAppChrome({
    */
   useEffect(() => {
     const root = document.documentElement;
+    let showing: number | undefined;
     function onFocusIn(event: FocusEvent) {
-      if (isTypingTarget(event.target)) root.dataset.typing = "true";
+      if (!isTypingTarget(event.target)) return;
+      window.clearTimeout(showing);
+      root.dataset.typing = "true";
     }
+    /*
+     * The bars come back a moment after the box loses focus, not at once.
+     * Tapping Save under a text box moves focus on the press, and a bar that
+     * reappeared right then sat under the finger for the release — so the tap
+     * landed on the bar and Save never heard it. Waiting until the tap is
+     * over lets it finish where it started.
+     */
     function onFocusOut(event: FocusEvent) {
-      if (!isTypingTarget(event.relatedTarget)) delete root.dataset.typing;
+      if (isTypingTarget(event.relatedTarget)) return;
+      window.clearTimeout(showing);
+      showing = window.setTimeout(() => {
+        if (!isTypingTarget(document.activeElement)) delete root.dataset.typing;
+      }, 300);
     }
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
     return () => {
+      window.clearTimeout(showing);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
       delete root.dataset.typing;

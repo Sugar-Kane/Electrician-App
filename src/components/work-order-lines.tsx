@@ -9,6 +9,7 @@ import { Field, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import type { StockOption } from "@/lib/job-line-data";
 import { stockShortfall } from "@/lib/stock-choices";
+import { PART_UNITS } from "@/lib/stock-reservation";
 import { centsToInput, keepMoneyCharacters, keepQuantityCharacters } from "@/lib/money-input";
 import { parseCostToCents, MAX_WORK_ORDER_LINES } from "@/lib/new-job-input";
 
@@ -37,7 +38,7 @@ type Line = {
   quantity: string;
   unit: string;
   price: string;
-  /** The stock item a part was picked from. Saving the job takes it off the count. */
+  /** The stock item a part was picked from. Saving the job reserves it. */
   inventoryItemId?: string;
 };
 
@@ -45,6 +46,13 @@ const KINDS = [
   { value: "labor", label: "Labour" },
   { value: "material", label: "Material" },
 ] as const;
+
+/** The trade's units, plus whatever unit a picked stock item is counted in. */
+function unitChoices(current: string): { value: string; label: string }[] {
+  const units: string[] = [...PART_UNITS];
+  if (current && !units.includes(current)) units.push(current);
+  return units.map((unit) => ({ value: unit, label: unit }));
+}
 
 let counter = 0;
 function nextKey(): string {
@@ -139,7 +147,9 @@ export function WorkOrderLines({
         description: line.description,
         quantity: Number(line.quantity) || 0,
         unit: line.unit,
-        unitPriceCents: parseCostToCents(line.price) ?? 0,
+        // Null when blank: the save refuses a line with no customer price
+        // rather than billing it as nothing. "0" is how to say no charge.
+        unitPriceCents: line.price.trim() ? (parseCostToCents(line.price) ?? 0) : null,
         // Only a part, and only when it was picked. Undefined drops out of the
         // JSON, which is how a typed part says it came from nowhere.
         inventoryItemId: line.kind === "material" ? line.inventoryItemId : undefined,
@@ -188,11 +198,12 @@ export function WorkOrderLines({
                         inventoryItemId: item.id,
                         description: item.name,
                         unit: item.unit || "each",
-                        price: item.unitPriceCents > 0 ? centsToInput(item.unitPriceCents) : line.price,
+                        // The item's cost is what it cost the business, not
+                        // what to charge — the price stays what was typed.
                       })
                     }
                     onClear={() => edit(line.key, { inventoryItemId: undefined })}
-                    hint="Pick a part you stock and it fills in below, and comes off the count when the job is saved. Anything else, type below."
+                    hint="Pick a part you stock and it fills in below. It is reserved for this job, and comes off the count when the job is finished. Anything else, type below."
                   />
                 </div>
               ) : null}
@@ -254,12 +265,16 @@ export function WorkOrderLines({
                 </Field>
 
                 <Field label="Unit">
-                  <TextInput
-                    value={line.unit}
-                    onChange={(event) => edit(line.key, { unit: event.target.value })}
-                    maxLength={24}
-                    placeholder="hour"
-                  />
+                  {line.kind === "material" ? (
+                    <SelectField
+                      label="Unit"
+                      choices={unitChoices(line.unit)}
+                      value={line.unit}
+                      onChange={(next) => edit(line.key, { unit: next })}
+                    />
+                  ) : (
+                    <TextInput value="hour" readOnly aria-readonly className="opacity-70" />
+                  )}
                 </Field>
 
                 <Field label={line.kind === "material" ? "Customer price each" : "Customer rate"}>
@@ -331,6 +346,7 @@ function restore(value: string): Line[] {
     return parsed.slice(0, MAX_WORK_ORDER_LINES).map((entry) => {
       const row = (entry ?? {}) as Record<string, unknown>;
       const kind = row.kind === "material" ? "material" : "labor";
+      const blank = row.unitPriceCents === null || row.unitPriceCents === undefined;
       const price = Number(row.unitPriceCents);
 
       return {
@@ -339,7 +355,7 @@ function restore(value: string): Line[] {
         description: typeof row.description === "string" ? row.description : "",
         quantity: String(Number(row.quantity) || 1),
         unit: typeof row.unit === "string" && row.unit ? row.unit : kind === "labor" ? "hour" : "each",
-        price: centsToInput(Number.isFinite(price) ? price : 0),
+        price: blank ? "" : centsToInput(Number.isFinite(price) ? price : 0),
         ...(kind === "material" && typeof row.inventoryItemId === "string" && row.inventoryItemId
           ? { inventoryItemId: row.inventoryItemId }
           : {}),

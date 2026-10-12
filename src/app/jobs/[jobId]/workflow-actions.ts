@@ -5,6 +5,7 @@ import { after } from "next/server";
 
 import { recordActivity } from "@/lib/activity";
 import { sendJobEventMessage } from "@/lib/automatic-messages";
+import { takeReservedParts } from "@/lib/job-billing-server";
 import { writePostForJob } from "@/lib/journal-writer";
 import {
   canAdvance,
@@ -193,13 +194,68 @@ export async function advanceJob(
   if (requested === "working" && !progress?.workStartedAt) patch.work_started_at = now;
   if (requested === "completed") patch.completed_at = now;
 
-  const { error: statusError } = await job.supabase
-    .from("jobs")
-    .update({ status: jobStatusFor(requested) })
-    .eq("id", job.id)
-    .eq("organization_id", job.organizationId);
+  /*
+   * Finishing a job claims it, then takes its parts off the count.
+   *
+   * Until now its parts were reserved: on the van, counted, but held for this
+   * job. The form carries what was actually used from stock for each reserved
+   * line, as `used:<line id>`; a line it does not mention used what it asked
+   * for.
+   *
+   * The status moves first, and only from the status this request read — so
+   * of two taps that arrive together, one finishes the job and the other finds
+   * it already finished, and the parts come off once. If taking them then
+   * fails, the job goes back to where it was, still open with its parts still
+   * reserved, rather than finished with them never taken.
+   */
+  let partsUsed: string[] = [];
+  if (requested === "completed") {
+    const { data: claimed, error: claimError } = await job.supabase
+      .from("jobs")
+      .update({ status: jobStatusFor(requested) })
+      .eq("id", job.id)
+      .eq("organization_id", job.organizationId)
+      .eq("status", job.status)
+      .select("id");
 
-  if (statusError) return { error: "That could not be saved. Try again." };
+    if (claimError) return { error: "That could not be saved. Try again." };
+    if (!Array.isArray(claimed) || claimed.length === 0) {
+      // Somebody else finished it (or moved it) a moment ago.
+      return { error: "", state: requested };
+    }
+
+    const confirmed = new Map<string, number | null>();
+    for (const [key, value] of formData.entries()) {
+      if (!key.startsWith("used:")) continue;
+      const typed = String(value).trim();
+      const amount = Number(typed);
+      // Blank, or anything that is not a number, is "none from stock".
+      confirmed.set(key.slice("used:".length), typed && Number.isFinite(amount) ? amount : 0);
+    }
+    const parts = await takeReservedParts(job.supabase, {
+      organizationId: job.organizationId,
+      jobId: job.id,
+      confirmed,
+    });
+    if (!parts.ok) {
+      await job.supabase
+        .from("jobs")
+        .update({ status: job.status })
+        .eq("id", job.id)
+        .eq("organization_id", job.organizationId)
+        .eq("status", jobStatusFor(requested));
+      return { error: "The parts used could not be taken off the stock count, so the job is not completed yet. Try again." };
+    }
+    partsUsed = parts.said;
+  } else {
+    const { error: statusError } = await job.supabase
+      .from("jobs")
+      .update({ status: jobStatusFor(requested) })
+      .eq("id", job.id)
+      .eq("organization_id", job.organizationId);
+
+    if (statusError) return { error: "That could not be saved. Try again." };
+  }
 
   // The status is what the rest of the app reads, so it is written first and
   // the timestamps are best effort behind it. A progress row that fails to save
@@ -273,6 +329,9 @@ export async function advanceJob(
       await writePostForJob({ jobId: job.id });
       revalidatePath(`/jobs/${jobNumber}`);
     });
+    revalidatePath("/inventory");
+    revalidatePath("/materials");
+    if (partsUsed.length > 0) return { error: "", state: requested, notice: partsUsed.join(" ") };
   }
 
   // Setting off and turning up are the two moments the customer is waiting on,

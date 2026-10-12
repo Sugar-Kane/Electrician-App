@@ -16,7 +16,7 @@ import { findStockChoices, stockChoiceDetail, type StockChoice } from "@/lib/sto
  *
  * Tapping the box shows the whole shelf; typing narrows it by name, part number
  * or bin, searched the way the Stock page searches. Picking fills the part
- * below, and saving takes it off the count. Not picking is the other way in:
+ * below, and saving reserves it for the job. Not picking is the other way in:
  * the boxes below take anything typed, and a part typed by hand touches no
  * stock.
  */
@@ -25,7 +25,7 @@ export function StockPicker<T extends StockChoice>({
   picked,
   onPick,
   onClear,
-  hint = "Pick a part you stock and it fills in below, and comes off the count when added. Anything else, type below.",
+  hint = "Pick a part you stock and it fills in below. It is reserved for this job and comes off the count when the job is finished. Anything else, type below.",
 }: {
   stock: readonly T[];
   /** The stock item the part below came from, when one was picked. */

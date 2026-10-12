@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { findStockChoices, stockChoiceDetail, stockLeft, stockShortfall, type StockChoice } from "./stock-choices.ts";
+import { findStockChoices, stockChoiceDetail, stockReservedNote, stockShortfall, type StockChoice } from "./stock-choices.ts";
 
 const item = (overrides: Partial<StockChoice>): StockChoice => ({
   id: overrides.name ?? "x",
   name: "Part",
   partNumber: "",
   unit: "each",
-  unitPriceCents: 0,
+  unitCostCents: 0,
   quantityOnHand: 0,
   location: "",
   ...overrides,
@@ -46,19 +46,32 @@ test("the line under a part says its number, how many and where", () => {
   assert.equal(stockChoiceDetail(stock[2]!), "QO120 · 6 on hand · Van — bin 3");
   assert.equal(stockChoiceDetail(item({ quantityOnHand: 12.5 })), "12.5 on hand");
   assert.equal(stockChoiceDetail(item({ quantityOnHand: 0, location: "Van" })), "None on hand · Van");
+  assert.equal(stockChoiceDetail(item({ quantityOnHand: 6, reserved: 2 })), "6 on hand, 2 reserved");
 });
 
-test("what is left once a part is added", () => {
-  assert.equal(stockLeft(item({ quantityOnHand: 4 })), "4 left in inventory.");
-  assert.equal(stockLeft(item({ quantityOnHand: 0 })), "None left in inventory.");
-  assert.equal(stockLeft(item({ quantityOnHand: -1 })), "Inventory now shows -1. Recount it when you can.");
+test("adding a part reserves it: the note says what is still free, not what is left", () => {
+  assert.equal(stockReservedNote(item({ quantityOnHand: 6, reserved: 2 })), "Reserved for this job. 4 of 6 still free.");
+  assert.equal(stockReservedNote(item({ quantityOnHand: 2, reserved: 2 })), "Reserved for this job. 0 of 2 still free.");
+  assert.equal(
+    stockReservedNote(item({ quantityOnHand: 1, reserved: 2 })),
+    "Reserved for this job, but that is 1 more than you have free. Recount it or buy more.",
+  );
 });
 
-test("taking more than the shelf has is said, not refused", () => {
+test("asking for more than is free is said, not refused", () => {
   assert.equal(stockShortfall(stock[2]!, 6), "");
   assert.equal(stockShortfall(stock[2]!, 2), "");
-  assert.equal(stockShortfall(stock[1]!, 2), "Only 1 on hand. Adding 2 takes the count below zero.");
-  assert.equal(stockShortfall(item({ quantityOnHand: 0 }), 1), "None on hand. Adding it takes the count below zero.");
+  assert.equal(stockShortfall(stock[1]!, 2), "Only 1 on hand. Reserving 2 promises more than you have.");
+  assert.equal(stockShortfall(item({ quantityOnHand: 0 }), 1), "None on hand. Reserving it promises more than you have.");
+  // Parts held for other jobs are not free.
+  assert.equal(
+    stockShortfall(item({ quantityOnHand: 6, reserved: 4 }), 3),
+    "Only 2 free (6 on hand, 4 reserved). Reserving 3 promises more than you have.",
+  );
+  assert.equal(
+    stockShortfall(item({ quantityOnHand: 3, reserved: 3 }), 1),
+    "None free: all 3 on hand are reserved for other jobs. Reserving it promises more than you have.",
+  );
   // An unreadable quantity is the form's to complain about, not this.
   assert.equal(stockShortfall(stock[1]!, null), "");
 });

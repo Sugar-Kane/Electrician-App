@@ -5,6 +5,7 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { currentContext } from "@/lib/request-context";
 import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
 import type { InvoiceStanding } from "@/lib/job-billing";
+import { jobStockLines, reservedStock, type JobStockLine } from "@/lib/job-billing-server";
 import { jobLineTotals, type JobLine, type JobLineTotals } from "@/lib/job-lines";
 
 /**
@@ -83,7 +84,9 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
 
   const { data, error } = await context.database
     .from("job_line_items")
-    .select("id, kind, description, quantity, unit, unit_price_cents, inventory_item_id, invoice_id, created_at, notes")
+    .select(
+      "id, kind, description, quantity, unit, unit_price_cents, unit_cost_cents, pack_size, pack_unit, inventory_item_id, invoice_id, created_at, notes",
+    )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: true });
@@ -100,6 +103,10 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
     quantity: num(row.quantity),
     unit: str(row.unit) || "each",
     unitPriceCents: num(row.unit_price_cents),
+    // Null stays null: a cost nobody recorded is not a part that was free.
+    unitCostCents: row.unit_cost_cents === null || row.unit_cost_cents === undefined ? null : num(row.unit_cost_cents),
+    packSize: row.pack_size === null || row.pack_size === undefined ? null : num(row.pack_size),
+    packUnit: str(row.pack_unit) || null,
     inventoryItemId: str(row.inventory_item_id) || null,
     invoiceId: str(row.invoice_id) || null,
     createdAt: str(row.created_at),
@@ -172,8 +179,11 @@ export type StockOption = {
   /** The SKU or catalogue number, so a part can be found by it. */
   partNumber: string;
   unit: string;
-  unitPriceCents: number;
+  /** What one cost the business, to fill "Your cost each". Never the customer's price. */
+  unitCostCents: number;
   quantityOnHand: number;
+  /** Held for open jobs. */
+  reserved: number;
   location: string;
 };
 
@@ -197,13 +207,28 @@ export async function getStockOptions(): Promise<StockOption[]> {
 
   if (error) return [];
 
+  const reserved = await reservedStock(context.database, context.organizationId);
+
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: str(row.id),
     name: str(row.name),
     partNumber: str(row.sku),
     unit: str(row.unit) || "each",
-    unitPriceCents: num(row.unit_cost_cents),
+    unitCostCents: num(row.unit_cost_cents),
     quantityOnHand: num(row.quantity_on_hand),
+    reserved: reserved.get(str(row.id))?.reserved ?? 0,
     location: str(row.location),
   }));
+}
+
+/**
+ * A job's parts that come from stock, with what each reserves and has taken.
+ *
+ * `open` is whether the job still holds its parts back — false once it is
+ * completed or canceled, when nothing it lists is reserved any more.
+ */
+export async function getJobStock(jobId: string, open: boolean): Promise<JobStockLine[]> {
+  const context = await resolveContext();
+  if (!context) return [];
+  return jobStockLines(context.database, { organizationId: context.organizationId, jobId, open });
 }

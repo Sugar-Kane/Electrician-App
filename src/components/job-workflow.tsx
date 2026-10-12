@@ -127,6 +127,17 @@ const geolocationOnClient = () =>
   typeof navigator !== "undefined" && typeof navigator.geolocation === "object";
 const geolocationOnServer = () => true;
 
+export type ReservedPart = {
+  lineId: string;
+  name: string;
+  /** What the line asks for, in the stock item's unit. */
+  quantity: number;
+  /** Already taken off the count for this line, if any. */
+  taken: number;
+  unit: string;
+  onHand: number;
+};
+
 export type JobWorkflowProps = {
   jobNumber: string;
   state: WorkflowState;
@@ -150,6 +161,11 @@ export type JobWorkflowProps = {
    * a time instead.
    */
   unscheduled?: boolean;
+  /**
+   * Parts from stock still reserved for this job. Finishing asks how many of
+   * each were actually used before they come off the count.
+   */
+  reservedParts?: ReservedPart[];
   /**
    * Who, what and where, rendered above the status.
    *
@@ -195,11 +211,13 @@ export function JobWorkflow({
   navigateUrl,
   phone,
   unscheduled = false,
+  reservedParts = [],
   children,
 }: JobWorkflowProps) {
   const [result, submit, pending] = useActionState(advanceJob, initialState);
   const [asking, setAsking] = useState(false);
   const [confirmingWork, setConfirmingWork] = useState(false);
+  const [confirmingParts, setConfirmingParts] = useState(false);
   const [nearby, setNearby] = useState<Nearby | null>(null);
   const [locationProblem, setLocationProblem] = useState("");
 
@@ -222,11 +240,12 @@ export function JobWorkflow({
   const reported = useRef(false);
 
   const advance = useCallback(
-    (to: WorkflowState, source: "manual" | "geofence") => {
+    (to: WorkflowState, source: "manual" | "geofence", extra: Record<string, string> = {}) => {
       const data = new FormData();
       data.set("jobNumber", jobNumber);
       data.set("to", to);
       data.set("source", source);
+      for (const [key, value] of Object.entries(extra)) data.set(key, value);
       startTransition(() => submit(data));
     },
     [jobNumber, submit],
@@ -372,6 +391,20 @@ export function JobWorkflow({
 
         {asking ? (
           <PermissionExplainer onAnswer={answer} pending={pending} />
+        ) : confirmingParts ? (
+          <ConfirmPartsUsed
+            parts={reservedParts}
+            pending={pending}
+            onConfirm={(used) => {
+              setConfirmingParts(false);
+              advance(
+                "completed",
+                "manual",
+                Object.fromEntries(Object.entries(used).map(([lineId, amount]) => [`used:${lineId}`, amount])),
+              );
+            }}
+            onCancel={() => setConfirmingParts(false)}
+          />
         ) : confirmingWork ? (
           <ConfirmEarlyWork
             pending={pending}
@@ -420,6 +453,13 @@ export function JobWorkflow({
 
             {state === "scheduled" && expectedTexts && !unscheduled ? (
               <p className="mt-3 text-sm text-ink-muted">{expectedTexts}</p>
+            ) : null}
+
+            {/* What finishing took off the count, part by part. */}
+            {state === "completed" && result.notice ? (
+              <p className="mt-3 text-sm leading-6 text-positive" role="status">
+                {result.notice}
+              </p>
             ) : null}
 
             {result.error ? (
@@ -489,13 +529,19 @@ export function JobWorkflow({
         )}
       </section>
 
-      {step && !closed && !asking && !(unscheduled && state === "scheduled") ? (
+      {step && !closed && !asking && !confirmingParts && !(unscheduled && state === "scheduled") ? (
         <ActionBar
           state={state}
           step={step}
           pending={pending}
           navigateUrl={navigateUrl}
-          onAdvance={() => (state === "scheduled" ? startTrip() : advance(step.to, "manual"))}
+          onAdvance={() =>
+            state === "scheduled"
+              ? startTrip()
+              : step.to === "completed" && reservedParts.length > 0
+                ? setConfirmingParts(true)
+                : advance(step.to, "manual")
+          }
         />
       ) : null}
     </>
@@ -592,6 +638,94 @@ function PermissionExplainer({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Confirm parts used": what came off the van, before the job is finished.
+ *
+ * Each part reserved for the job is listed with what it asked for. The number
+ * is what was used from stock — change it when fewer went in, or when the part
+ * was bought at the counter instead (0). The bill is not changed here; the
+ * lines are what the customer is charged for.
+ */
+function ConfirmPartsUsed({
+  parts,
+  onConfirm,
+  onCancel,
+  pending,
+}: {
+  parts: ReservedPart[];
+  onConfirm: (used: Record<string, string>) => void;
+  onCancel: () => void;
+  pending: boolean;
+}) {
+  const [used, setUsed] = useState<Record<string, string>>(() =>
+    Object.fromEntries(parts.map((part) => [part.lineId, String(part.quantity)])),
+  );
+
+  const amount = (value: number) => String(Math.round(value * 100) / 100);
+  const unitText = (unit: string) => (unit && unit !== "each" ? ` ${unit}` : "");
+
+  return (
+    <form
+      className="mt-4 rounded-control border border-line bg-raised p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onConfirm(used);
+      }}
+    >
+      <h3 className="text-sm font-semibold">Confirm parts used</h3>
+      <p className="mt-1 text-sm leading-6 text-ink-muted">
+        These come off your stock count when the job is finished. Change a number if fewer were used, or 0 if
+        you bought it for this job.
+      </p>
+      <ul className="mt-3 space-y-3">
+        {parts.map((part) => {
+          const typed = Number(used[part.lineId]);
+          const taking = Number.isFinite(typed) ? Math.max(0, typed - part.taken) : 0;
+          const left = Math.round((part.onHand - taking) * 100) / 100;
+          return (
+            <li key={part.lineId} className="grid grid-cols-[1fr_6.5rem] items-end gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{part.name}</p>
+                <p className="text-xs text-ink-muted">
+                  Reserved {amount(part.quantity - part.taken)}
+                  {unitText(part.unit)} · {amount(part.onHand)}
+                  {unitText(part.unit)} on hand
+                </p>
+                <p className="text-xs text-ink-faint" aria-live="polite">
+                  {taking > 0
+                    ? `Use ${amount(taking)}${unitText(part.unit)} from stock, ${amount(left)}${unitText(part.unit)} left`
+                    : "None taken from stock"}
+                </p>
+              </div>
+              <label className="block">
+                <span className="text-xs font-semibold text-ink-muted">
+                  Used{part.unit && part.unit !== "each" ? ` (${part.unit})` : ""}
+                </span>
+                <input
+                  inputMode="decimal"
+                  value={used[part.lineId] ?? ""}
+                  onChange={(event) => setUsed({ ...used, [part.lineId]: event.target.value })}
+                  aria-label={`How many ${part.name} were used from stock`}
+                  className="tap-target mt-1 min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base"
+                />
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button type="submit" disabled={pending} className={PRIMARY}>
+          {pending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}
+          Confirm and complete
+        </button>
+        <button type="button" onClick={onCancel} disabled={pending} className={SECONDARY}>
+          Back
+        </button>
+      </div>
+    </form>
   );
 }
 

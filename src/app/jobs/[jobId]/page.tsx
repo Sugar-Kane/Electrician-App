@@ -28,7 +28,7 @@ import {
 } from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
-import { getJobInvoices, getJobLines, getStockOptions } from "@/lib/job-line-data";
+import { getJobInvoices, getJobLines, getJobStock, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges } from "@/lib/job-billing";
@@ -82,7 +82,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
     controls,
     workflow,
     contracts,
-    { lines, totals },
+    { jobId: lineJobId, lines, totals },
     invoices,
     followUps,
     stock,
@@ -136,6 +136,24 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
 
   const canceled = controls?.canceled ?? job.status === "Canceled";
   const state = workflow?.state ?? "scheduled";
+
+  // What each stock part holds back or has taken, for the lines list and for
+  // "Confirm parts used" when the job is finished.
+  const stockLines =
+    lineJobId && controls ? await getJobStock(lineJobId, !canceled && state !== "completed") : [];
+  const lineStock = Object.fromEntries(
+    stockLines.map((line) => [line.lineId, { reserved: line.reserved, taken: line.taken, itemUnit: line.itemUnit }]),
+  );
+  const reservedParts = stockLines
+    .filter((line) => line.reserved > 0)
+    .map((line) => ({
+      lineId: line.lineId,
+      name: line.description || line.itemName,
+      quantity: line.quantity,
+      taken: line.taken,
+      unit: line.itemUnit,
+      onHand: line.onHand,
+    }));
 
   // The newest agreement that was not voided, as far as approval goes.
   const currentAgreement = contracts.find((contract) => contract.kind === "agreement" && contract.status !== "void");
@@ -275,6 +293,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           navigateUrl={googleMapsUrl}
           phone={job.phone}
           unscheduled={!job.startsAt}
+          reservedParts={reservedParts}
         >
           {identity}
         </JobWorkflow>
@@ -393,6 +412,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               totals={totals}
               invoices={invoices}
               stock={stock}
+              lineStock={lineStock}
             />
           </div>
           {workspaceOpen ? (

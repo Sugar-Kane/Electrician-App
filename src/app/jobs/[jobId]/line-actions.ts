@@ -11,7 +11,8 @@ import {
   returnStock,
   takeFromStock,
 } from "@/lib/job-billing-server";
-import { lineTotalCents, parsePriceCents, parseQuantity } from "@/lib/job-lines";
+import { lineTotalCents, parseQuantity, readPrice } from "@/lib/job-lines";
+import { PACK_CONTENTS, PACK_UNITS, PART_UNITS } from "@/lib/stock-reservation";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -57,7 +58,7 @@ async function findJob(jobNumber: string) {
 
   const { data } = await context.supabase
     .from("jobs")
-    .select("id, diagnostic_paid, diagnostic_fee_cents, follow_up_of")
+    .select("id, status, diagnostic_paid, diagnostic_fee_cents, follow_up_of")
     .eq("organization_id", context.organizationId)
     .eq("job_number", numeric)
     .maybeSingle();
@@ -68,6 +69,7 @@ async function findJob(jobNumber: string) {
   return {
     ...context,
     jobId: id,
+    status: typeof data?.status === "string" ? data.status : "",
     // What a draft invoice's recount needs to give the diagnostic credit once.
     billedJob: {
       id,
@@ -97,10 +99,46 @@ export async function addJobLine(
     return { error: "That quantity could not be read. A number like 2 or 1.5 works." };
   }
 
-  const unitPriceCents = parsePriceCents(text(formData, "unitPrice") || "0");
-  if (unitPriceCents === null) {
+  /*
+   * Blank and zero are different answers. A customer price left blank is
+   * refused rather than billed as nothing — "0" is how somebody says there is
+   * no charge. A cost left blank is recorded as unknown, not as free.
+   */
+  const price = readPrice(text(formData, "unitPrice"));
+  if (price.state === "missing") {
+    return {
+      error:
+        kind === "labor"
+          ? "Enter the customer rate. Type 0 if there is no charge."
+          : "Enter the customer price each. Type 0 if there is no charge.",
+    };
+  }
+  if (price.state === "invalid") {
     return { error: "That price could not be read. Something like 59.99 works." };
   }
+  const unitPriceCents = price.cents;
+
+  const cost = kind === "material" ? readPrice(text(formData, "unitCost")) : ({ state: "missing" } as const);
+  if (cost.state === "invalid") {
+    return { error: "Your cost could not be read. Something like 4.20 works, or leave it blank." };
+  }
+
+  // Labor is hours. A part is counted in one of the trade's units, or in the
+  // stock item's own unit when it was picked from stock.
+  const typedUnit = text(formData, "unit");
+  const unit =
+    kind === "labor"
+      ? "hr"
+      : (PART_UNITS as readonly string[]).includes(typedUnit) || (typedUnit && text(formData, "inventoryItemId"))
+        ? typedUnit
+        : "each";
+
+  // What one box, roll or stick holds, when somebody said. Only kept when the
+  // unit is a pack and both halves are there: half a conversion is a guess.
+  const packSize = parseQuantity(text(formData, "packSize"));
+  const packUnit = text(formData, "packUnit");
+  const packed =
+    PACK_UNITS.has(unit) && packSize !== null && packSize > 0 && (PACK_CONTENTS as readonly string[]).includes(packUnit);
 
   const context = await findJob(jobNumber);
   if (!context) return { error: "That job could not be found." };
@@ -115,8 +153,11 @@ export async function addJobLine(
       kind,
       description,
       quantity,
-      unit: text(formData, "unit") || (kind === "labor" ? "hr" : "each"),
+      unit,
       unit_price_cents: unitPriceCents,
+      unit_cost_cents: cost.state === "set" ? cost.cents : null,
+      pack_size: packed ? packSize : null,
+      pack_unit: packed ? packUnit : null,
       // Only when it came from the stock list. A part typed by hand has no
       // inventory row, and inventing a link would let a later change to that
       // stock item rewrite what this job was charged.
@@ -128,34 +169,47 @@ export async function addJobLine(
   if (error || !created) return { error: "That line could not be saved." };
 
   /*
-   * The part left the van when it was written down.
+   * A part on a job that is still open is reserved, not taken.
    *
-   * Not at completion: the count has to be true for the rest of the day, or
-   * the next job's materials list says there are three breakers on the shelf
-   * that are already in somebody's wall. Nobody deducts by hand — that is the
-   * habit that makes a stock list stop being true within a fortnight.
+   * It stays on the van and in the count, held for this job, and comes off
+   * when the job is finished and somebody says how many were used. Taking it
+   * now — what this used to do — emptied the shelf for quotes nobody accepted.
    *
-   * A line typed by hand has no `inventory_item_id` and moves nothing, which is
-   * right: it was bought for this job, not taken from stock.
+   * A part written onto a job that is already finished was used: there is no
+   * later moment for it to come off, so it comes off now. A line typed by hand
+   * has no `inventory_item_id` and moves nothing — it was bought for the job.
    *
    * Deliberately not fatal. The line is what the electrician asked for, and
    * losing it to a bookkeeping row would be a poor trade — but the failure is
    * said out loud, because a count that quietly stops moving is worse than one
    * that never moved.
    */
-  if (inventoryItemId) {
+  if (inventoryItemId && context.status === "completed") {
     const moved = await takeFromStock(context.supabase, {
       organizationId: context.organizationId,
       jobId: context.jobId,
-      lines: [{ lineId: String(created.id), itemId: inventoryItemId, quantity }],
+      lines: [
+        {
+          lineId: String(created.id),
+          itemId: inventoryItemId,
+          quantity,
+          unit,
+          packSize: packed ? packSize : null,
+          packUnit: packed ? packUnit : null,
+        },
+      ],
     });
     if (!moved) console.error("job line: stock was not deducted", { lineId: created.id });
+    revalidatePath(`/jobs/${jobNumber}`);
+    revalidatePath("/inventory");
+    revalidatePath("/materials");
+    return { error: "", notice: "Added, and taken from stock: this job is finished." };
   }
 
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/inventory");
   revalidatePath("/materials");
-  return { error: "", notice: "Added." };
+  return { error: "", notice: inventoryItemId ? "Added and reserved for this job." : "Added." };
 }
 
 export async function removeJobLine(

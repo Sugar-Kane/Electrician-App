@@ -135,6 +135,11 @@ export type WorkOrderLine = {
    * business's item is the database's to say when the job is saved.
    */
   inventoryItemId?: string;
+  /**
+   * Set when nobody typed a customer price. The line is kept so nothing typed
+   * is lost, but the job is not saved until it is priced: blank is not zero.
+   */
+  priceMissing?: true;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -350,9 +355,10 @@ export function parseWorkOrderLines(raw: string): WorkOrderLine[] {
       clean(typeof row.unit === "string" ? row.unit : "").slice(0, MAX_LINE_UNIT) ||
       (kind === "labor" ? "hour" : "each");
 
+    const blank = row.unitPriceCents === null || row.unitPriceCents === undefined || row.unitPriceCents === "";
     const price = Number(row.unitPriceCents);
     const unitPriceCents =
-      Number.isFinite(price) && price >= 0 ? Math.min(Math.round(price), MAX_COST_CENTS) : 0;
+      !blank && Number.isFinite(price) && price >= 0 ? Math.min(Math.round(price), MAX_COST_CENTS) : 0;
 
     const stockId = typeof row.inventoryItemId === "string" ? row.inventoryItemId.trim() : "";
 
@@ -366,6 +372,7 @@ export function parseWorkOrderLines(raw: string): WorkOrderLine[] {
       unitPriceCents,
       // Hours never come off a shelf, and anything that is not an id is not one.
       ...(kind === "material" && UUID.test(stockId) ? { inventoryItemId: stockId } : {}),
+      ...(blank ? { priceMissing: true as const } : {}),
     });
   }
 
@@ -489,6 +496,14 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   }
 
   const lines = category === "work_order" ? parseWorkOrderLines(raw.workOrderLines) : [];
+  const unpriced = lines.find((line) => line.priceMissing);
+  if (unpriced) {
+    return {
+      ok: false,
+      error: `"${unpriced.description}" has no customer price. Type one, or 0 if there is no charge.`,
+      field: "workOrderLines",
+    };
+  }
 
   return {
     ok: true,

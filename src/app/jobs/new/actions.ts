@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
-import { claimUnbilledLines, takeFromStock } from "@/lib/job-billing-server";
+import { claimUnbilledLines } from "@/lib/job-billing-server";
 import {
   kindOfWork,
   parseNewJob,
@@ -388,47 +388,44 @@ export async function createJob(
    * retyped on the job page, where it also lives.
    */
   if (job.lines.length > 0) {
-    const { data: savedLines, error: lineError } = await supabase
-      .from("job_line_items")
-      .insert(
-        job.lines.map((line) => ({
-          organization_id: organizationId,
-          job_id: text(createdJob.id),
-          kind: line.kind,
-          description: line.description,
-          quantity: line.quantity,
-          unit: line.unit,
-          unit_price_cents: line.unitPriceCents,
-          // Only when it was picked from the stock list. A part typed by hand
-          // was bought for this job, not taken off the shelf.
-          inventory_item_id: line.inventoryItemId ?? null,
-        })),
-      )
-      .select("id, inventory_item_id, quantity");
-
-    if (lineError) console.error("new job: the work order lines could not be saved", lineError);
-
     /*
-     * Parts picked from inventory come off the count now, the same as a part
-     * written on the job page: the count has to say what is spoken for, or the
-     * next job is booked against breakers already promised to this one. If
-     * the job is canceled they go back.
+     * What a part picked from stock cost, read off the item. The customer's
+     * price is what was typed; this is the business's cost beside it, never
+     * the other way round. A part typed by hand has no recorded cost.
      */
-    const fromStock = ((savedLines ?? []) as Record<string, unknown>[])
-      .filter((line) => text(line.inventory_item_id))
-      .map((line) => ({
-        lineId: text(line.id),
-        itemId: text(line.inventory_item_id),
-        quantity: Number(line.quantity ?? 0),
-      }));
-    if (fromStock.length > 0) {
-      const moved = await takeFromStock(supabase, {
-        organizationId,
-        jobId: text(createdJob.id),
-        lines: fromStock,
-      });
-      if (!moved) console.error("new job: stock was not taken off the shelf", { jobId: createdJob.id });
+    const stockIds = [...new Set(job.lines.map((line) => line.inventoryItemId).filter(Boolean))] as string[];
+    const costs = new Map<string, number>();
+    if (stockIds.length > 0) {
+      const { data: items } = await supabase
+        .from("inventory_items")
+        .select("id, unit_cost_cents")
+        .eq("organization_id", organizationId)
+        .in("id", stockIds);
+      for (const item of (items ?? []) as Record<string, unknown>[]) {
+        costs.set(text(item.id), Number(item.unit_cost_cents ?? 0));
+      }
     }
+
+    const { error: lineError } = await supabase.from("job_line_items").insert(
+      job.lines.map((line) => ({
+        organization_id: organizationId,
+        job_id: text(createdJob.id),
+        kind: line.kind,
+        description: line.description,
+        quantity: line.quantity,
+        unit: line.unit,
+        unit_price_cents: line.unitPriceCents,
+        unit_cost_cents:
+          line.inventoryItemId && costs.has(line.inventoryItemId) ? costs.get(line.inventoryItemId) : null,
+        // Only when it was picked from the stock list. A part typed by hand
+        // was bought for this job, not taken off the shelf.
+        inventory_item_id: line.inventoryItemId ?? null,
+      })),
+    );
+
+    // Parts picked from stock are reserved for the job, not taken: they come
+    // off the count when the job is finished and somebody says what was used.
+    if (lineError) console.error("new job: the work order lines could not be saved", lineError);
   }
 
   /*

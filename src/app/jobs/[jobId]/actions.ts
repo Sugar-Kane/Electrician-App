@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { returnStock } from "@/lib/job-billing-server";
+import { returnStock, takeReservedParts } from "@/lib/job-billing-server";
 import { changeNeedsCustomerNotice } from "@/lib/job-change-messages";
 import { notifyJobChange } from "@/lib/job-notifications";
 import { readAccessNotes, readStreetAddress, readUnit } from "@/lib/property-details";
@@ -221,6 +221,21 @@ export async function updateJob(
 
   if (Object.keys(patch).length === 0) return { error: "Nothing was changed." };
 
+  /*
+   * Marked completed from here rather than from the job page: its reserved
+   * parts come off the count as asked for, the same as finishing it there
+   * without changing any numbers. Before the status, so a failure leaves the
+   * job open with its parts still reserved.
+   */
+  let partsUsed: string[] = [];
+  if (status === "completed" && job.status !== "completed") {
+    const parts = await takeReservedParts(job.supabase, { organizationId: job.organizationId, jobId: job.id });
+    if (!parts.ok) {
+      return { error: "The job's parts could not be taken off the stock count, so it was not marked completed. Try again." };
+    }
+    partsUsed = parts.said;
+  }
+
   const { data, error } = await job.supabase
     .from("jobs")
     .update(patch)
@@ -242,8 +257,12 @@ export async function updateJob(
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath(`/jobs/${jobNumber}/edit`);
   revalidatePath("/schedule");
+  if (partsUsed.length > 0) {
+    revalidatePath("/inventory");
+    revalidatePath("/materials");
+  }
 
-  if (!moved) return { error: "", notice: "Job updated." };
+  if (!moved) return { error: "", notice: ["Job updated.", ...partsUsed].join(" ") };
   if (!notifyCustomer) {
     return { error: "", notice: "Job moved. The customer was not told, as you asked." };
   }
