@@ -5,10 +5,13 @@ import { FrontPage } from "@/components/front-page";
 import { StartAtTop } from "@/components/start-at-top";
 import { todayInZone } from "@/lib/calendar";
 import { getDashboardSnapshot } from "@/lib/dashboard";
+import { stillToGet } from "@/lib/buy-list";
+import { getBuyList } from "@/lib/buy-list-data";
 import { attentionItems, openBookingRequests, unassignedToday } from "@/lib/dashboard-focus";
 import { getBookingRequests } from "@/lib/booking-requests";
-import { followUps, lateJobs } from "@/lib/follow-ups";
-import { getInventory, getInvoices, getJobs, getUnbilledWork } from "@/lib/job-data";
+import { followUps, isPastVisit, lateJobs } from "@/lib/follow-ups";
+import { getAgreementStates, getInventory, getJobs, getUnbilledWork } from "@/lib/job-data";
+import { jobStage } from "@/lib/job-stage";
 import { currentUser } from "@/lib/request-context";
 import { listSiteVideos } from "@/lib/site-video-data";
 
@@ -40,13 +43,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
     return <FrontPage videos={listSiteVideos()} preview={!visitor} />;
   }
 
-  const [snapshot, { jobs }, { invoices }, stock, bookings, unbilled] = await Promise.all([
+  const [snapshot, { jobs }, stock, bookings, unbilled, agreements, buyList] = await Promise.all([
     getDashboardSnapshot(),
     getJobs(),
-    getInvoices(),
     getInventory(),
     getBookingRequests(),
     getUnbilledWork(),
+    getAgreementStates(),
+    getBuyList(),
   ]);
 
   // Signed in, with no business yet: part-way through signing up. The demo
@@ -59,13 +63,42 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
   // what is late.
   const now = new Date();
 
+  const loose = followUps({ jobs, unbilled, now, timeZone: snapshot.timezone });
+  const toInvoice = loose.filter((item) => item.kind === "not_invoiced");
+  // Quotes still to price: the jobs list's "Needs estimate", read the same way.
+  const quotesToPrice = jobs.filter(
+    (job) =>
+      jobStage({
+        status: job.status,
+        scheduled: Boolean(job.startsAt),
+        kindOfWork: job.kindOfWork,
+        agreement: agreements[job.id] ?? null,
+      }) === "needs_estimate",
+  ).length;
+  const toGet = buyList.filter(stillToGet);
+  const { money } = snapshot;
+
   // Counted here rather than inside the shell so the component stays a
-  // rendering concern and the arithmetic stays testable.
+  // rendering concern and the arithmetic stays testable. Each count is the
+  // length of the list its link opens.
   const attention = attentionItems({
     bookingRequests: openBookingRequests(bookings.requests),
-    overdueInvoices: invoices.filter((invoice) => invoice.state === "overdue").length,
-    unsentInvoices: invoices.filter((invoice) => invoice.state === "draft").length,
-    // Reorder point is what the business itself said "low" means.
+    pastVisits: loose.filter(isPastVisit).length,
+    overdueInvoices: money.overdueCount,
+    overdueCents: money.overdueCents,
+    unsentInvoices: money.draftCount,
+    unsentCents: money.draftCents,
+    toInvoice: toInvoice.length,
+    toInvoiceCents: toInvoice.reduce((sum, item) => sum + (unbilled[item.jobNumber] ?? 0), 0),
+    awaitingApproval: money.awaitingApprovalCount,
+    awaitingApprovalCents: money.awaitingApprovalCents,
+    quotesToPrice,
+    buyList: {
+      toBuy: toGet.filter((item) => item.status === "need_to_buy").length,
+      ordered: toGet.filter((item) => item.status === "ordered").length,
+      ready: toGet.filter((item) => item.status === "ready_for_pickup").length,
+    },
+    // Nothing left on hand, which is what the label says.
     lowStock: stock.filter((item) => item.quantity <= 0).length,
     // Only work that still needs somebody sent to it. A job finished by
     // whoever happened to be there, with the technician field never filled in,
@@ -80,7 +113,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
         snapshot={snapshot}
         jobs={jobs}
         attention={attention}
-        followUps={followUps({ jobs, unbilled, now, timeZone: snapshot.timezone })}
+        followUps={loose}
         late={lateJobs(jobs, now)}
       />
     </>

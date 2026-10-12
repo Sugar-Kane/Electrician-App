@@ -101,6 +101,8 @@ export type PilotInvoice = {
   balance?: number;
   /** When it last reached the customer. Empty means never — not the same as unpaid. */
   sentLabel?: string;
+  /** The business's calendar day it was paid, YYYY-MM-DD, or empty. */
+  paidOn?: string;
 };
 
 const commonDocuments: JobDocument[] = [

@@ -4,8 +4,8 @@ import { CircleDollarSign, ClipboardCheck, Zap } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { TopActions } from "@/components/top-actions";
-import type { DashboardMetric, DashboardSnapshot } from "@/lib/dashboard";
-import { FollowUps, NeedsAttention, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
+import type { DashboardSnapshot } from "@/lib/dashboard";
+import { MoneySummary, NeedsYourAction, NextJobCard, TodaysJobs } from "@/components/dashboard-today";
 import { todayInZone } from "@/lib/calendar";
 import {
   canceledToday,
@@ -15,7 +15,7 @@ import {
   todaysJobs,
   type AttentionItem,
 } from "@/lib/dashboard-focus";
-import type { FollowUp, Lateness } from "@/lib/follow-ups";
+import { isPastVisit, type FollowUp, type Lateness } from "@/lib/follow-ups";
 import type { PilotJob } from "@/lib/pilot-data";
 
 /**
@@ -103,56 +103,6 @@ function Sparkline({ values, large = false }: { values: number[]; large?: boolea
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-
-function MetricCard({
-  metric,
-  href,
-  spanWhenOdd = false,
-}: {
-  metric: DashboardMetric;
-  href: string;
-  /** Fill the row rather than sit half empty as the last of an odd number. */
-  spanWhenOdd?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      // No min-width. It was there to give the old horizontal strip something
-      // to scroll, and in a two-column grid it is the thing that pushes the
-      // page wider than a 320px phone.
-      className={`tap-card block min-h-[112px] rounded-control border border-line bg-surface p-4 ${
-        spanWhenOdd ? "col-span-2 sm:col-span-1" : ""
-      }`}
-      aria-label={`${metric.label}: ${metric.value}. Open details`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.04em] text-ink-muted">
-        {metric.label}
-      </p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        {/* min-w-0 so a long detail line wraps inside the tile rather than
-            refusing to shrink and shouldering the sparkline out of it. Half a
-            phone is much less room than the strip these were designed in. */}
-        <div className="min-w-0">
-          <p className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-ink">
-            {metric.value}
-          </p>
-          <p
-            className={`mt-2 text-xs ${
-              metric.tone === "positive"
-                ? "text-positive"
-                : metric.tone === "danger"
-                  ? "text-critical"
-                  : "text-ink-muted"
-            }`}
-          >
-            {metric.detail}
-          </p>
-        </div>
-        {metric.chart ? <Sparkline values={metric.chart} /> : null}
-      </div>
-    </Link>
   );
 }
 
@@ -250,10 +200,10 @@ export function InvoiceOverview({
 export function ProfitOverview({ profit }: Pick<DashboardSnapshot, "profit">) {
   return (
     <Link
-      href="/invoices?status=paid"
+      href="/invoices?status=paid&paid=month"
       id="reports"
       className="tap-card block rounded-panel border border-line bg-surface p-4"
-      aria-label="Open paid invoices and revenue"
+      aria-label="Open invoices paid this month"
     >
       <PanelHeading
         title="Profit overview"
@@ -322,24 +272,21 @@ export function DashboardShell({
    *  business — it returns [] — so the panel that read it has always been
    *  empty outside the demo. */
   jobs: PilotJob[];
+  /** What needs doing, most urgent first (dashboard-focus.ts). */
   attention: AttentionItem[];
-  /** What the day left undone (follow-ups.ts), most pressing first. */
+  /** The jobs behind the past-visit and to-invoice tasks (follow-ups.ts). */
   followUps?: FollowUp[];
   /** Jobs whose time went by without them being started or finished. */
   late?: Record<string, Lateness>;
 }) {
   const today = todayInZone(snapshot.timezone);
   const nextUp = nextJob(jobs, today);
+  const nextIsToday = nextUp?.date === today;
   const activeToday = todaysJobs(jobs, today);
   const canceled = canceledToday(jobs, today);
-
-  const metricDestinations = [
-    "/invoices?status=paid",
-    "/schedule",
-    "/technicians",
-    "/jobs?stage=awaiting_approval",
-    "/invoices?status=unpaid",
-  ];
+  // The rest of today: what is still to do, after the job at the top.
+  const remaining = activeToday.filter((job) => job.id !== nextUp?.id && job.status !== "Completed");
+  const done = activeToday.filter((job) => job.status === "Completed").length;
 
   return (
     <main id="dashboard" className="min-h-screen bg-canvas p-2 pb-[calc(7rem+env(safe-area-inset-bottom))] text-ink sm:p-3 lg:pb-3">
@@ -354,64 +301,37 @@ export function DashboardShell({
           />
 
           {/*
-            The working day first. Metrics used to open the page and the
-            schedule arrived in the third section; an electrician in a truck
-            wants the next job, and everything else can wait for a scroll.
+            Today, in the order it is worked: where am I going next, what needs
+            me, what else is on today, and then — briefly — the money. The five
+            metric tiles that used to sit here were an owner's monthly view;
+            they live in Reports, and the money that matters today is the short
+            summary at the bottom.
           */}
-          {nextUp ? (
-            <div className="mt-5">
-              <NextJobCard job={nextUp} isToday={nextUp.date === today} late={late[nextUp.id]} />
-            </div>
-          ) : null}
+          <div id="visits" className="scroll-mt-24">
+            {nextUp ? (
+              <div className="mt-5">
+                <NextJobCard job={nextUp} isToday={nextIsToday} late={late[nextUp.id]} />
+              </div>
+            ) : null}
+          </div>
 
-          <TodaysJobs jobs={activeToday} canceledCount={canceled.length} late={late} />
+          <NeedsYourAction
+            items={attention}
+            details={{
+              past_visits: followUps.filter(isPastVisit),
+              to_invoice: followUps.filter((item) => item.kind === "not_invoiced"),
+            }}
+          />
 
-          <FollowUps items={followUps} />
+          <TodaysJobs
+            jobs={remaining}
+            canceledCount={canceled.length}
+            doneCount={done}
+            nextIsToday={nextIsToday}
+            late={late}
+          />
 
-          <NeedsAttention items={attention} />
-
-          <section aria-labelledby="snapshot-heading" className="mt-5">
-            <div className="mb-2 flex items-end justify-between px-1">
-              <h2 id="snapshot-heading" className="text-sm font-semibold">
-                Business
-              </h2>
-              <Link
-                href="/reports"
-                className="tap-target -my-2 inline-flex min-h-11 items-center px-2 text-xs font-semibold text-brand"
-              >
-                Reports
-              </Link>
-            </div>
-            {/*
-              Two columns on a phone rather than a sideways scroll.
-
-              These five used to sit in a horizontal strip, so three of them
-              were off the right edge of the screen with nothing to say they
-              were there — a row of numbers only reads as a row if you can see
-              it, and nobody swipes a dashboard they think they have finished.
-
-              The odd one out spans the full width instead of sitting half
-              empty beside a gap. The wrapper is no longer a focusable scroll
-              region: it does not scroll now, and a tab stop that goes nowhere
-              is one more press between a keyboard user and the page.
-            */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-              {snapshot.metrics.map((metric, index) => (
-                <MetricCard
-                  key={metric.label}
-                  metric={metric}
-                  href={metricDestinations[index] ?? "/"}
-                  // Only when it would otherwise be alone on the last row, and
-                  // only in the two-column layout that can strand it.
-                  spanWhenOdd={
-                    snapshot.metrics.length % 2 === 1 &&
-                    index === snapshot.metrics.length - 1
-                  }
-                />
-              ))}
-            </div>
-          </section>
-
+          <MoneySummary money={snapshot.money} />
         </div>
       </div>
     </main>

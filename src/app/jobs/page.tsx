@@ -2,6 +2,8 @@ import Link from "next/link";
 import { CalendarDays, ChevronRight, MapPin, Plus, Search } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { RevealCurrent } from "@/components/ui/reveal-current";
+import { followUps, isPastVisit } from "@/lib/follow-ups";
 import { getAgreementStates, getJobs } from "@/lib/job-data";
 import {
   JOB_STAGE_FILTERS,
@@ -12,6 +14,8 @@ import {
   type JobStage,
 } from "@/lib/job-stage";
 import type { PilotJob } from "@/lib/pilot-data";
+import { currentContext } from "@/lib/request-context";
+import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +48,9 @@ const STAGE_STYLES: Record<JobStage, string> = {
   canceled: "bg-white/5 text-ink-faint",
 };
 
-type Row = { job: PilotJob; stage: JobStage; passed: boolean };
+type Row = { job: PilotJob; stage: JobStage; passed: boolean; toConfirm: boolean };
+
+const TIME_PASSED = "time_passed";
 
 function sortRows(rows: Row[]): Row[] {
   return [...rows].sort((a, b) => {
@@ -88,12 +94,21 @@ export default async function JobsPage({
 }: {
   searchParams: Promise<{ stage?: string; q?: string }>;
 }) {
-  const [{ stage: askedStage = "", q = "" }, { jobs }, agreements] = await Promise.all([
+  const [{ stage: askedStage = "", q = "" }, { jobs }, agreements, context] = await Promise.all([
     searchParams,
     getJobs(),
     getAgreementStates(),
+    currentContext(),
   ]);
-  const stage = isJobStageFilter(askedStage) ? askedStage : "all";
+  // "Time passed" is not a stage but a check across them: the visits Today asks
+  // to confirm, worked out the same way, so its count matches Today's.
+  const pastVisits = new Set(
+    followUps({ jobs, unbilled: {}, now: new Date(), timeZone: context?.timeZone || DEFAULT_TIMEZONE })
+      .filter(isPastVisit)
+      .map((item) => item.jobNumber),
+  );
+  const stage: JobStage | "all" | typeof TIME_PASSED =
+    askedStage === TIME_PASSED ? TIME_PASSED : isJobStageFilter(askedStage) ? askedStage : "all";
   const query = q.slice(0, 80);
 
   const rows: Row[] = jobs.map((job) => ({
@@ -105,13 +120,26 @@ export default async function JobsPage({
       agreement: agreements[job.id] ?? null,
     }),
     passed: startTimePassed(job.startsAt),
+    toConfirm: pastVisits.has(job.id),
   }));
   const searched = rows.filter((row) => matches(row.job, query));
   const counts = new Map<string, number>();
   for (const row of searched) counts.set(row.stage, (counts.get(row.stage) ?? 0) + 1);
-  const shown = sortRows(stage === "all" ? searched : searched.filter((row) => row.stage === stage));
+  const toConfirm = searched.filter((row) => row.toConfirm);
+  const shown = sortRows(
+    stage === "all"
+      ? searched
+      : stage === TIME_PASSED
+        ? toConfirm
+        : searched.filter((row) => row.stage === stage),
+  );
 
-  const label = JOB_STAGE_FILTERS.find((filter) => filter.value === stage)?.label ?? "All";
+  // Shown only while there is something in it, or it is the filter in use.
+  const filters = [
+    ...JOB_STAGE_FILTERS,
+    ...(toConfirm.length > 0 || stage === TIME_PASSED ? [{ value: TIME_PASSED, label: "Time passed" }] : []),
+  ];
+  const label = filters.find((filter) => filter.value === stage)?.label ?? "All";
 
   return (
     <FieldPageShell
@@ -162,12 +190,18 @@ export default async function JobsPage({
           three ragged rows; the page itself never scrolls sideways.
         */}
         <nav
+          id="job-filters"
           aria-label="Filter jobs by stage"
           className="-mx-3 mt-3 flex gap-1.5 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
         >
-          {JOB_STAGE_FILTERS.map((filter) => {
+          {filters.map((filter) => {
             const active = filter.value === stage;
-            const count = filter.value === "all" ? searched.length : (counts.get(filter.value) ?? 0);
+            const count =
+              filter.value === "all"
+                ? searched.length
+                : filter.value === TIME_PASSED
+                  ? toConfirm.length
+                  : (counts.get(filter.value) ?? 0);
             return (
               <Link
                 key={filter.value}
@@ -183,6 +217,7 @@ export default async function JobsPage({
             );
           })}
         </nav>
+        <RevealCurrent targetId="job-filters" />
 
         <h2 className="sr-only">
           {label}
@@ -195,9 +230,18 @@ export default async function JobsPage({
               ? `No ${stage === "all" ? "" : `${label.toLowerCase()} `}jobs match “${query}”.`
               : stage === "all"
                 ? "No jobs yet. New job adds the first one."
-                : `No jobs are ${label.toLowerCase()} right now.`}
+                : stage === TIME_PASSED
+                  ? "No visits to confirm. Every past visit says what happened."
+                  : `No jobs are ${label.toLowerCase()} right now.`}
           </p>
         ) : (
+          <>
+          {stage === TIME_PASSED ? (
+            <p className="mt-3 text-sm text-ink-muted">
+              Their time has gone by and the job doesn&apos;t say what happened. Open each one to start, reschedule or
+              complete it.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {shown.map(({ job, stage: rowStage, passed }) => (
               <li key={job.id}>
@@ -239,6 +283,7 @@ export default async function JobsPage({
               </li>
             ))}
           </ul>
+          </>
         )}
       </section>
     </FieldPageShell>

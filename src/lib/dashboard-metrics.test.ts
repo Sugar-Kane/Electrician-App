@@ -3,12 +3,15 @@ import assert from "node:assert/strict";
 
 import {
   estimatesDetail,
+  inInvoiceFilter,
   invoiceAging,
   invoiceState,
   invoiceStatusLabel,
   invoicesDetail,
   isOverdue,
   jobsDetail,
+  listedTotalCents,
+  paidInPeriod,
   profitSummary,
   receivables,
   revenueDetail,
@@ -305,4 +308,43 @@ test("money owed is every sent, unpaid balance, part-paid included, and nothing 
     draftCount: 1,
     draftCents: 7_000,
   });
+});
+
+test("Today's money owed is exactly what the Awaiting list adds up to", () => {
+  // Owed on Today opens the Awaiting tab. Part-paid bills count at their
+  // balance and late ones are in it, or the tab shows less than was tapped.
+  const now = new Date("2026-10-11T15:00:00Z");
+  const facts = [
+    { status: "sent", dueAt: "2026-10-20T00:00:00Z", balanceDueCents: 10_000, totalCents: 10_000 },
+    { status: "partially_paid", dueAt: "2026-10-20T00:00:00Z", balanceDueCents: 4_000, totalCents: 9_000 },
+    { status: "sent", dueAt: "2026-10-01T00:00:00Z", balanceDueCents: 2_500, totalCents: 2_500 },
+    { status: "draft", dueAt: null, balanceDueCents: 7_000, totalCents: 7_000 },
+    { status: "paid", dueAt: "2026-10-01T00:00:00Z", balanceDueCents: 0, totalCents: 3_000 },
+    { status: "void", dueAt: "2026-10-01T00:00:00Z", balanceDueCents: 9_999, totalCents: 9_999 },
+  ];
+  const totals = receivables(facts, now);
+  const listed = facts.map((fact) => ({
+    state: invoiceState(fact, now),
+    totalCents: fact.totalCents,
+    balanceCents: fact.balanceDueCents,
+  }));
+
+  assert.equal(listedTotalCents(listed, "awaiting"), totals.owedCents);
+  assert.equal(listedTotalCents(listed, "overdue"), totals.overdueCents);
+  assert.equal(listed.filter((invoice) => inInvoiceFilter(invoice.state, "overdue")).length, totals.overdueCount);
+  // Drafts are listed at what they would ask for, and are never in Awaiting.
+  assert.equal(listedTotalCents(listed, "draft"), totals.draftCents);
+  assert.equal(inInvoiceFilter("draft", "awaiting"), false);
+  // Paid lists what was collected, the invoice total.
+  assert.equal(listedTotalCents(listed, "paid"), 3_000);
+});
+
+test("paid today is the business's today, and this month stops at today", () => {
+  assert.equal(paidInPeriod("2026-10-12", "today", "2026-10-12"), true);
+  assert.equal(paidInPeriod("2026-10-11", "today", "2026-10-12"), false);
+  assert.equal(paidInPeriod("2026-10-01", "month", "2026-10-12"), true);
+  assert.equal(paidInPeriod("2026-09-30", "month", "2026-10-12"), false);
+  // Never paid is never counted.
+  assert.equal(paidInPeriod(null, "today", "2026-10-12"), false);
+  assert.equal(paidInPeriod("", "month", "2026-10-12"), false);
 });

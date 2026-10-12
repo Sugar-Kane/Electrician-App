@@ -15,7 +15,9 @@ import {
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { statusTone } from "@/components/ui/status-badge";
-import { needsTechnician, type AttentionItem } from "@/lib/dashboard-focus";
+import type { MoneySummary as Money } from "@/lib/dashboard";
+import { needsTechnician, type AttentionItem, type AttentionKey } from "@/lib/dashboard-focus";
+import { formatMoney, revenueDetail } from "@/lib/dashboard-metrics";
 import { lateLabel, type FollowUp, type FollowUpKind, type Lateness } from "@/lib/follow-ups";
 import type { PilotJob } from "@/lib/pilot-data";
 
@@ -60,7 +62,7 @@ export function NextJobCard({
           {job.status === "In progress" ? "On this job" : isToday ? "Next job" : "Next job up"}
           {` · ${job.kindOfWork}`}
         </p>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(status)}`}>
+        <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(status)}`}>
           {status}
         </span>
       </div>
@@ -110,6 +112,15 @@ export function NextJobCard({
           Open job
         </Link>
       </div>
+
+      {/* "Assign N jobs today" points here, so the next job, which the list
+          below leaves out, has its own way to send somebody. */}
+      {needsTechnician(job) ? (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+          <p className="text-sm text-ink-muted">Nobody is on this job yet.</p>
+          <AssignTechnician jobNumber={job.id} technician={job.technician} size="sm" />
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -117,30 +128,43 @@ export function NextJobCard({
 export function TodaysJobs({
   jobs,
   canceledCount,
+  doneCount = 0,
+  nextIsToday = false,
   late = {},
 }: {
+  /** Today's visits still to do, after the next job shown above. */
   jobs: PilotJob[];
   canceledCount: number;
+  /** Today's visits already finished. */
+  doneCount?: number;
+  /** Whether the next job card above is one of today's. */
+  nextIsToday?: boolean;
   /** Today's jobs whose time has gone by untouched, by job number. */
   late?: Record<string, Lateness>;
 }) {
   const statusOf = (job: PilotJob) => (late[job.id] ? lateLabel(late[job.id]!) : job.status);
+  const tally = [
+    jobs.length === 0 ? "" : `${jobs.length} to go`,
+    doneCount > 0 ? `${doneCount} done` : "",
+    // Canceled work is named but never added in — a day that looks full
+    // because of a cancellation is a day somebody plans around wrongly.
+    canceledCount > 0 ? `${canceledCount} canceled` : "",
+  ].filter(Boolean);
 
   return (
-    <section aria-labelledby="today-heading" className="mt-3">
+    <section aria-labelledby="today-heading" className="mt-5">
       <div className="mb-2 flex items-end justify-between px-1">
         <h2 id="today-heading" className="text-sm font-semibold">
-          Jobs today
+          {nextIsToday ? "Rest of today" : "Today's visits"}
         </h2>
-        <span className="text-xs text-ink-muted">
-          {jobs.length === 0 ? "None" : `${jobs.length} active`}
-          {/* Canceled work is named but never added in — a day that looks full
-              because of a cancellation is a day somebody plans around wrongly. */}
-          {canceledCount > 0 ? ` · ${canceledCount} canceled` : ""}
-        </span>
+        {tally.length > 0 ? <span className="text-xs text-ink-muted">{tally.join(" · ")}</span> : null}
       </div>
 
-      {jobs.length === 0 ? (
+      {jobs.length === 0 && nextIsToday ? (
+        <p className="rounded-panel border border-dashed border-line px-4 py-3 text-sm text-ink-muted">
+          Nothing else booked today.
+        </p>
+      ) : jobs.length === 0 ? (
         <div className="rounded-panel border border-dashed border-line p-6 text-center">
           <p className="text-sm text-ink-muted">Nothing booked today.</p>
           <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -237,9 +261,6 @@ const FOLLOW_UP_LOOK: Record<FollowUpKind, { icon: typeof Clock3; row: string; i
   not_invoiced: { icon: Receipt, row: "border-line bg-surface", iconTone: "text-brand" },
 };
 
-/** How many show before the rest fold away. */
-const FOLLOW_UPS_SHOWN = 6;
-
 function FollowUpRow({ item }: { item: FollowUp }) {
   const look = FOLLOW_UP_LOOK[item.kind];
   const Icon = look.icon;
@@ -273,85 +294,175 @@ function FollowUpRow({ item }: { item: FollowUp }) {
 }
 
 /**
- * The loose ends: visits nobody started, work left open, work done and not
- * signed off, and finished work nobody has billed.
+ * What needs somebody, as a list of things to do.
  *
- * Each row is the job it is about, because every way of clearing one — starting
- * it, finishing it, rescheduling, canceling, invoicing — is on the job. It is
- * there all day, and it is what is left when the day is over. Nothing at all
- * when there is nothing to follow up, like Needs attention.
+ * Each task says what to do and how many ("Confirm 7 past visits"), why it is
+ * here, and opens the list of exactly those. The past visits and the finished
+ * work to bill also open in place, one row per job, because each is cleared on
+ * its job.
+ *
+ * Most urgent first: the ones that cost a customer or money if left carry a
+ * warning icon as well as their colour.
  */
-export function FollowUps({ items }: { items: FollowUp[] }) {
-  if (items.length === 0) return null;
-
-  const shown = items.slice(0, FOLLOW_UPS_SHOWN);
-  const folded = items.slice(FOLLOW_UPS_SHOWN);
-
+export function NeedsYourAction({
+  items,
+  details = {},
+}: {
+  items: AttentionItem[];
+  /** The jobs behind a task, for those that open in place. */
+  details?: Partial<Record<AttentionKey, FollowUp[]>>;
+}) {
   return (
-    <section aria-labelledby="follow-up-heading" className="mt-3">
+    <section aria-labelledby="action-heading" className="mt-5">
       <div className="mb-2 flex items-end justify-between px-1">
-        <h2 id="follow-up-heading" className="text-sm font-semibold">
-          To follow up
+        <h2 id="action-heading" className="text-sm font-semibold">
+          Needs your action
         </h2>
-        <span className="text-xs text-ink-muted">{items.length}</span>
+        {items.length > 0 ? <span className="text-xs text-ink-muted">{items.length}</span> : null}
       </div>
-      <ul className="space-y-2">
-        {shown.map((item) => (
-          <FollowUpRow key={`${item.kind}-${item.jobNumber}`} item={item} />
-        ))}
-      </ul>
-      {folded.length > 0 ? (
-        <details className="group mt-2">
-          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center px-1 text-sm font-semibold text-brand [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">Show {folded.length} more</span>
-            <span className="hidden group-open:inline">Show fewer</span>
-          </summary>
-          <ul className="mt-2 space-y-2">
-            {folded.map((item) => (
-              <FollowUpRow key={`${item.kind}-${item.jobNumber}`} item={item} />
-            ))}
-          </ul>
-        </details>
-      ) : null}
+
+      {items.length === 0 ? (
+        <p className="flex items-center gap-2 rounded-panel border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-positive" aria-hidden />
+          Nothing needs you right now.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <ActionRow key={item.key} item={item} rows={details[item.key] ?? []} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
 
-/**
- * The things that need somebody.
- *
- * Renders nothing at all when the list is empty rather than an empty card. A
- * panel that says "nothing to report" teaches people to skip the place real
- * warnings appear.
- */
-export function NeedsAttention({ items }: { items: AttentionItem[] }) {
-  if (items.length === 0) return null;
+function ActionRow({ item, rows }: { item: AttentionItem; rows: FollowUp[] }) {
+  const tone = item.urgent ? "border-caution/30 bg-caution-bg" : "border-line bg-surface";
+  const heading = (
+    <>
+      {item.urgent ? (
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
+      ) : (
+        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-ink-faint" aria-hidden />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className={`block text-sm font-semibold ${item.urgent ? "text-caution" : ""}`}>
+          {item.urgent ? <span className="sr-only">Urgent: </span> : null}
+          {item.label}
+        </span>
+        <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{item.reason}</span>
+      </span>
+    </>
+  );
+
+  // One job behind it: straight to that job.
+  const href = item.href ?? (rows.length === 1 ? `/jobs/${rows[0]!.jobNumber}` : undefined);
 
   return (
-    <section aria-labelledby="attention-heading" className="mt-3">
-      <h2 id="attention-heading" className="mb-2 px-1 text-sm font-semibold">
-        Needs attention
-      </h2>
-      <ul className="space-y-2">
-        {items.map((item) => (
-          <li key={item.href + item.label}>
+    <li className={`rounded-control border ${tone}`}>
+      {href ? (
+        <Link href={href} className="tap-row flex min-h-13 items-start gap-3 px-4 py-3">
+          {heading}
+          <ChevronRight className="h-5 w-5 shrink-0 self-center text-ink-faint" aria-hidden />
+        </Link>
+      ) : (
+        <div className="flex min-h-13 items-start gap-3 px-4 py-3">{heading}</div>
+      )}
+
+      {rows.length > 1 ? (
+        <details className="group border-t border-line/70 px-2 pb-2">
+          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center px-2 text-sm font-semibold text-brand [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">Show the {rows.length}</span>
+            <span className="hidden group-open:inline">Hide them</span>
+          </summary>
+          <ul className="space-y-2">
+            {rows.map((row) => (
+              <FollowUpRow key={`${row.kind}-${row.jobNumber}`} item={row} />
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </li>
+  );
+}
+
+/**
+ * The money, in four lines, each opening the list that makes up its number.
+ *
+ * Detailed reporting is a tap away; Today only answers "has anything come in,
+ * and what is still out".
+ */
+export function MoneySummary({ money }: { money: Money }) {
+  const revenue = revenueDetail({ todayCents: money.paidTodayCents, yesterdayCents: money.paidYesterdayCents });
+  const lines: { label: string; value: string; detail: string; href: string; danger?: boolean }[] = [
+    {
+      label: "Paid today",
+      value: formatMoney(money.paidTodayCents),
+      detail: revenue.detail,
+      href: "/invoices?status=paid&paid=today",
+    },
+    {
+      label: "Owed to you",
+      value: formatMoney(money.owedCents),
+      detail:
+        money.overdueCount > 0
+          ? `${money.overdueCount} overdue · ${formatMoney(money.overdueCents)}`
+          : money.owedCents > 0
+            ? "None overdue"
+            : "Nothing outstanding",
+      href: "/invoices?status=awaiting",
+      danger: money.overdueCount > 0,
+    },
+    {
+      label: "Drafts not sent",
+      value: formatMoney(money.draftCents),
+      detail:
+        money.draftCount === 0
+          ? "None waiting"
+          : `${money.draftCount} ${money.draftCount === 1 ? "invoice" : "invoices"}, not owed until sent`,
+      href: "/invoices?status=draft",
+    },
+    {
+      label: "Awaiting approval",
+      value: money.awaitingApprovalCents > 0 ? formatMoney(money.awaitingApprovalCents) : String(money.awaitingApprovalCount),
+      detail:
+        money.awaitingApprovalCount === 0
+          ? "No estimates out"
+          : `${money.awaitingApprovalCount} ${money.awaitingApprovalCount === 1 ? "estimate" : "estimates"} sent to sign`,
+      href: "/jobs?stage=awaiting_approval",
+    },
+  ];
+
+  return (
+    <section aria-labelledby="money-heading" className="mt-5">
+      <div className="mb-2 flex items-end justify-between px-1">
+        <h2 id="money-heading" className="text-sm font-semibold">
+          Money
+        </h2>
+        <Link
+          href="/reports"
+          className="tap-target -my-2 inline-flex min-h-11 items-center px-2 text-xs font-semibold text-brand"
+        >
+          Reports
+        </Link>
+      </div>
+      <ul className="grid gap-px overflow-hidden rounded-panel border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+        {lines.map((line) => (
+          <li key={line.label} className="bg-surface">
             <Link
-              href={item.href}
-              className={`tap-row flex min-h-13 items-center gap-3 rounded-control border px-4 py-3 ${
-                item.urgent ? "border-caution/30 bg-caution-bg" : "border-line bg-surface"
-              }`}
+              href={line.href}
+              className="tap-row flex min-h-16 items-center gap-3 px-4 py-3"
+              aria-label={`${line.label}: ${line.value}. ${line.detail}. Open the list`}
             >
-              {item.urgent ? (
-                <AlertTriangle className="h-4 w-4 shrink-0 text-caution" aria-hidden />
-              ) : null}
-              <span
-                className={`min-w-0 flex-1 truncate text-sm font-semibold ${
-                  item.urgent ? "text-caution" : ""
-                }`}
-              >
-                {item.label}
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold text-ink-muted">{line.label}</span>
+                <span className="mt-0.5 block text-lg font-semibold leading-tight">{line.value}</span>
+                <span className={`mt-0.5 block text-xs ${line.danger ? "text-critical" : "text-ink-muted"}`}>
+                  {line.detail}
+                </span>
               </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+              <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
             </Link>
           </li>
         ))}

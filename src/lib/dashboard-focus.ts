@@ -149,27 +149,72 @@ export function openBookingRequests(requests: { status: string }[]): number {
   ).length;
 }
 
+export type AttentionKey =
+  | "booking_requests"
+  | "past_visits"
+  | "overdue_invoices"
+  | "unassigned_today"
+  | "draft_invoices"
+  | "to_invoice"
+  | "awaiting_approval"
+  | "quotes_to_price"
+  | "buy_list"
+  | "out_of_stock";
+
 export type AttentionItem = {
+  key: AttentionKey;
+  /** What to do, with how many: "Confirm 7 past visits". */
   label: string;
-  href: string;
+  /** Why it is here, in one line. */
+  reason: string;
+  /**
+   * The list that holds exactly these, so the count and what opens agree.
+   * Absent when the only list is the one Today shows under it.
+   */
+  href?: string;
   /** Marks the ones that cost money or a customer if left. */
   urgent?: boolean;
 };
 
+function money(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
 /**
- * The things that genuinely need somebody, consolidated.
+ * What needs somebody, as things to do.
  *
- * One list rather than alerts scattered through the page, and — the part that
- * matters — nothing at all when there is nothing wrong. A card that exists only
- * to say "no low-stock items yet" trains people to skim past the place real
- * warnings appear.
+ * The page used to list what had happened — seven "Not started" rows above the
+ * overdue invoices — and leave the reader to work out why each was there and
+ * what to do about it. Each of these is one task with a count, the reason it
+ * is here, and a link to the list of exactly those, most urgent first.
+ *
+ * And — the part that matters — nothing at all for a task with nothing in it.
+ * A card that exists only to say "no low-stock items yet" trains people to
+ * skim past the place real warnings appear.
  */
 export function attentionItems(input: {
   bookingRequests: number;
   overdueInvoices: number;
+  overdueCents?: number;
   unsentInvoices: number;
+  unsentCents?: number;
+  /** Parts with nothing left on hand. */
   lowStock: number;
   unassignedToday: number;
+  /** Visits whose time went by without being started, finished or signed off. */
+  pastVisits?: number;
+  /** Finished jobs with recorded work and no invoice. */
+  toInvoice?: number;
+  toInvoiceCents?: number;
+  awaitingApproval?: number;
+  awaitingApprovalCents?: number;
+  quotesToPrice?: number;
+  /** Buy-list lines not yet picked up, by status. */
+  buyList?: { toBuy: number; ordered: number; ready: number };
 }): AttentionItem[] {
   const items: AttentionItem[] = [];
   const plural = (count: number, one: string, many: string) =>
@@ -177,35 +222,100 @@ export function attentionItems(input: {
 
   if (input.bookingRequests > 0) {
     items.push({
-      label: plural(input.bookingRequests, "booking request", "booking requests"),
+      key: "booking_requests",
+      label: `Answer ${plural(input.bookingRequests, "booking request", "booking requests")}`,
+      reason: "Customers asked for a visit and are waiting to hear back.",
       href: "/booking-requests",
       urgent: true,
     });
   }
-  if (input.overdueInvoices > 0) {
+  const pastVisits = input.pastVisits ?? 0;
+  if (pastVisits > 0) {
     items.push({
-      label: plural(input.overdueInvoices, "overdue invoice", "overdue invoices"),
+      key: "past_visits",
+      label: `Confirm ${plural(pastVisits, "past visit", "past visits")}`,
+      reason: "Their time has gone by and the job doesn't say what happened. Start, reschedule or complete each one.",
+      href: "/jobs?stage=time_passed",
+      urgent: true,
+    });
+  }
+  if (input.overdueInvoices > 0) {
+    const owed = (input.overdueCents ?? 0) > 0 ? `: ${money(input.overdueCents ?? 0)} still owed` : "";
+    items.push({
+      key: "overdue_invoices",
+      label: `Review ${plural(input.overdueInvoices, "overdue invoice", "overdue invoices")}`,
+      reason: `Sent and past the due date${owed}.`,
       href: "/invoices?status=overdue",
       urgent: true,
     });
   }
   if (input.unassignedToday > 0) {
     items.push({
-      label: `${plural(input.unassignedToday, "job", "jobs")} today with nobody assigned`,
-      href: "/schedule",
+      key: "unassigned_today",
+      label: `Assign ${plural(input.unassignedToday, "job", "jobs")} today`,
+      reason: "Booked for today with nobody on it.",
+      href: "#visits",
       urgent: true,
     });
   }
   if (input.unsentInvoices > 0) {
+    const worth = (input.unsentCents ?? 0) > 0 ? ` (${money(input.unsentCents ?? 0)})` : "";
     items.push({
+      key: "draft_invoices",
       label: `Send ${plural(input.unsentInvoices, "draft invoice", "draft invoices")}`,
+      reason: `Written but never sent, so nobody has been asked to pay${worth}.`,
       href: "/invoices?status=draft",
+    });
+  }
+  const toInvoice = input.toInvoice ?? 0;
+  if (toInvoice > 0) {
+    items.push({
+      key: "to_invoice",
+      label: `Invoice ${plural(toInvoice, "finished job", "finished jobs")}`,
+      reason: `${money(input.toInvoiceCents ?? 0)} of finished work has no invoice yet.`,
+    });
+  }
+  const awaiting = input.awaitingApproval ?? 0;
+  if (awaiting > 0) {
+    // Agreements made before their figures were saved have no total to add.
+    const worth = (input.awaitingApprovalCents ?? 0) > 0 ? ` · ${money(input.awaitingApprovalCents ?? 0)}` : "";
+    items.push({
+      key: "awaiting_approval",
+      label: `${plural(awaiting, "estimate", "estimates")} awaiting approval`,
+      reason: `Sent to the customer to sign, not signed yet${worth}. Follow up if it has been a while.`,
+      href: "/jobs?stage=awaiting_approval",
+    });
+  }
+  const quotes = input.quotesToPrice ?? 0;
+  if (quotes > 0) {
+    items.push({
+      key: "quotes_to_price",
+      label: `Price ${plural(quotes, "quote", "quotes")}`,
+      reason: "Saved as a quote with no estimate sent yet.",
+      href: "/jobs?stage=needs_estimate",
+    });
+  }
+  const buy = input.buyList ?? { toBuy: 0, ordered: 0, ready: 0 };
+  const buyTotal = buy.toBuy + buy.ordered + buy.ready;
+  if (buyTotal > 0) {
+    const parts = [
+      buy.ready > 0 ? `${buy.ready} ready for pickup` : "",
+      buy.toBuy > 0 ? `${buy.toBuy} to buy` : "",
+      buy.ordered > 0 ? `${buy.ordered} ordered` : "",
+    ].filter(Boolean);
+    items.push({
+      key: "buy_list",
+      label: `Get ${plural(buyTotal, "item", "items")} on the buy list`,
+      reason: `${parts.join(" · ")}.`,
+      href: "/materials?tab=buy",
     });
   }
   if (input.lowStock > 0) {
     items.push({
-      label: `${plural(input.lowStock, "part", "parts")} running low`,
-      href: "/inventory",
+      key: "out_of_stock",
+      label: `Restock ${plural(input.lowStock, "part", "parts")}`,
+      reason: "None left on hand.",
+      href: "/materials?tab=stock",
     });
   }
 

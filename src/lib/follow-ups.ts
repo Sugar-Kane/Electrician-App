@@ -61,6 +61,15 @@ export type FollowUp = {
 
 const KIND_ORDER: FollowUpKind[] = ["not_finished", "not_started", "to_complete", "not_invoiced"];
 
+/**
+ * A visit to confirm: its time went by and the job does not say what happened.
+ * Today's "Confirm N past visits" and the jobs list's "Time passed" both count
+ * these, so the number and the list agree.
+ */
+export function isPastVisit(item: Pick<FollowUp, "kind">): boolean {
+  return item.kind === "not_finished" || item.kind === "not_started" || item.kind === "to_complete";
+}
+
 const KIND_LABEL: Record<FollowUpKind, string> = {
   not_finished: "Not finished",
   not_started: "Not started",

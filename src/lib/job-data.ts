@@ -245,7 +245,9 @@ export const getJobs = cache(async function getJobs(): Promise<{
  * uses to call older copies superseded. Change orders are left out: they are
  * changes to work already agreed, not the approval itself.
  */
-export async function getAgreementStates(): Promise<Record<string, AgreementState>> {
+export const getAgreementStates = cache(async function getAgreementStates(): Promise<
+  Record<string, AgreementState>
+> {
   const context = await resolveContext();
   if (!context) return {};
 
@@ -270,7 +272,7 @@ export async function getAgreementStates(): Promise<Record<string, AgreementStat
     };
   }
   return states;
-}
+});
 
 export async function getJob(id: string): Promise<{ job: PilotJob | null; source: Source }> {
   const context = await resolveContext();
@@ -303,7 +305,7 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   const { data, error } = await context.database
     .from("invoices")
     .select(`
-      id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
+      id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at,
       jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )
     `)
     .eq("organization_id", context.organizationId)
@@ -354,6 +356,8 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
             month: "short", day: "numeric",
           })
         : "",
+      // The day it counts towards "paid today", in the business's own zone.
+      paidOn: row.paid_at ? isoDateInZone(new Date(row.paid_at as string), context.timeZone) : "",
     };
   });
 
