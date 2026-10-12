@@ -1,13 +1,14 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { shiftDays, todayInZone } from "@/lib/calendar";
+import { isoDateInZone, shiftDays, todayInZone } from "@/lib/calendar";
 import {
   estimatesDetail,
   invoicesDetail,
   receivables,
   invoiceAging,
   jobsDetail,
+  paidInPeriod,
   profitSummary,
   revenueDetail,
   techniciansDetail,
@@ -65,6 +66,24 @@ export type TechnicianMarker = {
   y: number;
 };
 
+/**
+ * The money Today summarises, in cents, each figure exactly what the list it
+ * opens adds up to.
+ */
+export type MoneySummary = {
+  paidTodayCents: number;
+  paidYesterdayCents: number;
+  /** Sent and not settled, balances, overdue included: the Awaiting tab. */
+  owedCents: number;
+  overdueCount: number;
+  overdueCents: number;
+  draftCount: number;
+  draftCents: number;
+  /** Agreements out for signature: the jobs list's Awaiting approval. */
+  awaitingApprovalCount: number;
+  awaitingApprovalCents: number;
+};
+
 export type DashboardSnapshot = {
   source: "demo" | "supabase";
   /** The business timezone. The header's date and greeting are read from it. */
@@ -83,6 +102,7 @@ export type DashboardSnapshot = {
   profit: { value: string; change: string; chart: number[] };
   lowStock: { name: string; quantity: number; unit: string }[];
   activity: { label: string; when: string; tone?: "danger" }[];
+  money: MoneySummary;
 };
 
 const demoSnapshot: DashboardSnapshot = {
@@ -177,6 +197,19 @@ const demoSnapshot: DashboardSnapshot = {
     { label: "Job #1048 needs review", when: "Today", tone: "danger" },
     { label: "PO #2008 received", when: "Yesterday" },
   ],
+  // Matches the demo invoices, so the summary and the list it opens agree
+  // there too.
+  money: {
+    paidTodayCents: 378_932,
+    paidYesterdayCents: 0,
+    owedCents: 520_000,
+    overdueCount: 1,
+    overdueCents: 95_000,
+    draftCount: 0,
+    draftCents: 0,
+    awaitingApprovalCount: 0,
+    awaitingApprovalCents: 0,
+  },
 };
 
 function hasSupabaseEnvironment() {
@@ -302,7 +335,15 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         })
         .reduce((total, invoice) => total + invoice.total_cents, 0);
 
-    const paidToday = paidBetween(dayStart, dayEnd);
+    // Today's takings by the same day rule as the Paid today list it opens:
+    // the business's calendar day each invoice was paid on.
+    const paidToday = (invoices.data ?? [])
+      .filter(
+        (invoice) =>
+          invoice.status === "paid" &&
+          paidInPeriod(invoice.paid_at ? isoDateInZone(new Date(invoice.paid_at), zone) : "", "today", today),
+      )
+      .reduce((total, invoice) => total + invoice.total_cents, 0);
     const paidYesterday = paidBetween(yesterdayStart, dayStart);
 
     // One rule with the Invoices list: owed means sent and not settled, and a
@@ -363,7 +404,11 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       requiresOnboarding: false,
       businessName: organization?.name ?? demoSnapshot.businessName,
       businessSlug: organization?.slug ?? null,
-      timezone: organization?.timezone || DEFAULT_TIMEZONE,
+      // The zone every figure above was worked out in, and the one jobs' dates
+      // are written in. The organisation row read here has no timezone column
+      // selected, so this used to fall back to Pacific time and put Today a
+      // day out from the jobs on it for a business further east.
+      timezone: zone,
       // Every place a real name might be, best first, for `greetingName` to
       // pick through. It used to be `profile.display_name ?? technician ?? demo`
       // — and `display_name` is NOT NULL, so signing up fills it with whatever
@@ -421,6 +466,17 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         },
       ],
       profit: { value: profit.value, change: profit.change, chart: [] },
+      money: {
+        paidTodayCents: paidToday,
+        paidYesterdayCents: paidYesterday,
+        owedCents: owed.owedCents,
+        overdueCount: owed.overdueCount,
+        overdueCents: owed.overdueCents,
+        draftCount: owed.draftCount,
+        draftCents: owed.draftCents,
+        awaitingApprovalCount: estimates.count,
+        awaitingApprovalCents: estimates.totalCents,
+      },
       invoiceAging: aging,
       schedule: [],
       technicians:

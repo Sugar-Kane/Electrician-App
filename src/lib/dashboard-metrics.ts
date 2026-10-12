@@ -235,6 +235,58 @@ export function receivables(
 }
 
 /**
+ * The Invoices list's tabs, as one rule with the totals above.
+ *
+ * Awaiting is everything sent and not settled, overdue included: Today's
+ * "owed" opens it, and a tab that left the late ones out would show less than
+ * the number that was tapped. Overdue is the late part of it.
+ */
+export type InvoiceFilter = "all" | "draft" | "awaiting" | "overdue" | "paid";
+
+export function inInvoiceFilter(state: InvoiceState, filter: InvoiceFilter): boolean {
+  switch (filter) {
+    case "all":
+      return true;
+    case "draft":
+      return state === "draft";
+    case "awaiting":
+      return state === "awaiting" || state === "part_paid" || state === "overdue";
+    case "overdue":
+      return state === "overdue";
+    case "paid":
+      return state === "paid";
+  }
+}
+
+/**
+ * What a tab adds up to: the balance still owed where money is being waited
+ * for, so it matches `receivables`, and the invoice total everywhere else.
+ */
+export function listedTotalCents(
+  invoices: { state: InvoiceState; totalCents: number; balanceCents: number }[],
+  filter: InvoiceFilter,
+): number {
+  const owing = filter === "awaiting" || filter === "overdue";
+  return invoices
+    .filter((invoice) => inInvoiceFilter(invoice.state, filter))
+    .reduce((sum, invoice) => sum + (owing ? Math.max(0, invoice.balanceCents) : invoice.totalCents), 0);
+}
+
+export type PaidPeriod = "today" | "month";
+
+/**
+ * Whether an invoice paid on `paidOn` (YYYY-MM-DD, the business's own day)
+ * falls in the period, as of `today`. Today's takings and the list they open
+ * both ask this, so the two cannot disagree about a payment just after
+ * midnight.
+ */
+export function paidInPeriod(paidOn: string | null | undefined, period: PaidPeriod, today: string): boolean {
+  if (!paidOn) return false;
+  if (period === "today") return paidOn === today;
+  return paidOn.slice(0, 7) === today.slice(0, 7) && paidOn <= today;
+}
+
+/**
  * Money collected this month against the same stretch of last month.
  *
  * Compared like-for-like — the first eleven days of this month against the

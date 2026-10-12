@@ -190,17 +190,21 @@ test("attention items are counted, worded and linked", () => {
     unassignedToday: 1,
   });
 
+  // Each says what to do, not what happened.
   assert.deepEqual(
     items.map((item) => item.label),
     [
-      "2 booking requests",
-      "1 overdue invoice",
-      "1 job today with nobody assigned",
-      "3 parts running low",
+      "Answer 2 booking requests",
+      "Review 1 overdue invoice",
+      "Assign 1 job today",
+      "Restock 3 parts",
     ],
   );
   assert.equal(items[0]!.href, "/booking-requests");
+  assert.equal(items[1]!.href, "/invoices?status=overdue");
   assert.equal(items[1]!.urgent, true);
+  // Every one says why it is there.
+  assert.ok(items.every((item) => item.reason.length > 0));
   // Low stock is worth knowing and is not an emergency.
   assert.equal(items[3]!.urgent, undefined);
 });
