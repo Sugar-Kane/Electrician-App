@@ -24,6 +24,11 @@ export type JobLine = {
   unitPriceCents: number;
   /** Set when the line was filled from stock the business already owns. */
   inventoryItemId?: string | null;
+  /** What one cost the business, in cents. Null when nobody recorded it. Never shown to the customer. */
+  unitCostCents?: number | null;
+  /** How much one box, roll or stick holds, and in what. */
+  packSize?: number | null;
+  packUnit?: string | null;
   /** The invoice that billed it. Null until one does. */
   invoiceId?: string | null;
   /** When it was written, as an ISO timestamp — what a signed contract is measured against. */
@@ -153,6 +158,47 @@ export function parsePriceCents(input: string): number | null {
   if (!Number.isFinite(value) || value < 0) return null;
 
   return Math.round(value * 100);
+}
+
+/**
+ * A price box, read so that blank and zero stay different things.
+ *
+ * Blank is "nobody said": a customer price left blank is refused rather than
+ * billed as nothing, and a cost left blank is recorded as unknown. "0" is a
+ * real answer — no charge, or a part that cost nothing.
+ */
+export type PriceInput = { state: "missing" } | { state: "invalid" } | { state: "set"; cents: number };
+
+export function readPrice(input: string | null | undefined): PriceInput {
+  if (!(input ?? "").trim()) return { state: "missing" };
+  const cents = parsePriceCents(input ?? "");
+  return cents === null ? { state: "invalid" } : { state: "set", cents };
+}
+
+/**
+ * What a line cost the business, or null when nobody recorded it.
+ *
+ * Null is not zero: a part whose cost is unknown makes the job's cost unknown
+ * too, and saying so beats a margin that looks better than it is.
+ */
+export function lineCostCents(line: { quantity: number; unitCostCents?: number | null }): number | null {
+  if (typeof line.unitCostCents !== "number" || !Number.isFinite(line.unitCostCents)) return null;
+  return lineTotalCents({ quantity: line.quantity, unitPriceCents: line.unitCostCents });
+}
+
+/** The parts' cost to the business: what is known, and how many parts have no cost recorded. */
+export function partsCost(
+  lines: { kind: LineKind; quantity: number; unitCostCents?: number | null }[],
+): { knownCents: number; unknownCount: number } {
+  let knownCents = 0;
+  let unknownCount = 0;
+  for (const line of lines) {
+    if (line.kind !== "material") continue;
+    const cost = lineCostCents(line);
+    if (cost === null) unknownCount += 1;
+    else knownCents += cost;
+  }
+  return { knownCents, unknownCount };
 }
 
 /** Cents as "$1,289.00", for a screen. Never fed back into arithmetic. */

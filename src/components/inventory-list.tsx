@@ -13,6 +13,7 @@ import {
 import { FormMessage, inputClass } from "@/components/ui/field";
 import { useImageFallback } from "@/components/use-image-fallback";
 import { normalizeName } from "@/lib/inventory-match";
+import { stockSummary } from "@/lib/stock-reservation";
 
 /**
  * The stock list.
@@ -34,6 +35,8 @@ export type InventoryRow = {
   location: string;
   notes: string;
   photoUrl: string;
+  /** Held for open jobs. */
+  reserved?: number;
 };
 
 const initialState: InventoryState = { error: "" };
@@ -309,7 +312,7 @@ export function InventoryList({ items }: { items: InventoryRow[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{item.name}</p>
                   <p className="mt-0.5 truncate text-xs text-ink-muted">
-                    {item.quantity} {item.unit}
+                    {stockSummary(item.quantity, item.reserved ?? 0, item.unit)}
                     {item.partNumber ? ` · ${item.partNumber}` : ""}
                   </p>
                   {item.location ? (

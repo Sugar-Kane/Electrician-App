@@ -13,18 +13,24 @@ import {
 import { raiseInvoice, type RaiseInvoiceState } from "@/app/jobs/[jobId]/invoice-actions";
 import { StockPicker } from "@/components/stock-picker";
 import { inputClass } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 import {
   formatCents,
   formatQuantity,
   lineTotalCents,
   parsePriceCents,
   parseQuantity,
+  partsCost,
   type JobLine,
   type JobLineTotals,
 } from "@/lib/job-lines";
 import { invoiceIsLive, lineLockedBecause, nextBillingStep } from "@/lib/job-billing";
 import type { JobInvoiceSummary, StockOption } from "@/lib/job-line-data";
-import { stockLeft, stockShortfall } from "@/lib/stock-choices";
+import { stockReservedNote, stockShortfall } from "@/lib/stock-choices";
+import { PACK_CONTENTS, PACK_UNITS, PART_UNITS, packLabel, unitLabel } from "@/lib/stock-reservation";
+
+/** What a job's stock part has done so far: held for the job, or taken off the count. */
+export type LineStock = { reserved: number; taken: number; itemUnit: string };
 
 /**
  * What the job is made of, and what it comes to.
@@ -108,9 +114,23 @@ function AddLineForm({
   // looked like no change at all.
   const [quantityText, setQuantityText] = useState("1");
 
+  // Controlled for the same reason: React empties uncontrolled boxes after
+  // every action, and a refused line should not lose its name.
+  const [descriptionText, setDescriptionText] = useState("");
+
   // Read for the line total under the boxes. Cleared with the quantity after
-  // an add, and refilled when a stock item with a price is picked.
+  // an add. Never filled from stock: what a part cost is not what to charge.
   const [priceText, setPriceText] = useState("");
+
+  // What one cost the business. Worked out from the stock item until somebody
+  // types over it; left blank, it is recorded as unknown rather than as free.
+  const [costText, setCostText] = useState("");
+  const [costTyped, setCostTyped] = useState(false);
+
+  // Counted in a trade unit; a box, roll or stick can say what it holds.
+  const [unit, setUnit] = useState(kind === "labor" ? "hr" : "each");
+  const [packText, setPackText] = useState("");
+  const [packUnit, setPackUnit] = useState<string>("ft");
 
   // The stock item the last added part came from, for the count it left.
   const [takenId, setTakenId] = useState("");
@@ -128,17 +148,42 @@ function AddLineForm({
   const [settled, setSettled] = useState(state);
   if (state !== settled) {
     setSettled(state);
-    setQuantityText("1");
-    setPriceText("");
-    setRound(round + 1);
+    // A refused line keeps everything typed, so fixing the one box named in
+    // the message is all it takes. Only a line that was added clears.
     if (!state.error) {
+      setDescriptionText("");
+      setQuantityText("1");
+      setPriceText("");
+      setCostText("");
+      setCostTyped(false);
+      setPackText("");
+      setUnit(kind === "labor" ? "hr" : "each");
+      setRound(round + 1);
       setTakenId(chosenId);
       setChosenId("");
     }
   }
 
   const labor = kind === "labor";
-  const shortfall = chosen ? stockShortfall(chosen, parseQuantity(quantityText)) : "";
+  const packSize = parseQuantity(packText);
+  // How many of the stock item's units one of this line's units is: 1 in its
+  // own unit, the pack size when a stick holds feet of conduit counted in feet.
+  const perUnit = chosen
+    ? unit === chosen.unit
+      ? 1
+      : PACK_UNITS.has(unit) && packSize && packUnit === chosen.unit
+        ? packSize
+        : null
+    : null;
+  const cost =
+    costTyped || !chosen
+      ? costText
+      : perUnit && chosen.unitCostCents > 0
+        ? ((chosen.unitCostCents * perUnit) / 100).toFixed(2)
+        : "";
+  const stockNeeded =
+    chosen && perUnit !== null ? (parseQuantity(quantityText) ?? 0) * perUnit : parseQuantity(quantityText);
+  const shortfall = chosen ? stockShortfall(chosen, stockNeeded) : "";
 
   return (
     <form action={action} className="mt-3 space-y-2 rounded-control border border-line p-3">
@@ -154,11 +199,13 @@ function AddLineForm({
           onPick={(item) => {
             setChosenId(item.id);
             setTakenId("");
-            setPriceText(item.unitPriceCents > 0 ? (item.unitPriceCents / 100).toFixed(2) : "");
+            setDescriptionText(item.name);
+            setUnit(item.unit || "each");
+            setCostTyped(false);
           }}
           onClear={() => {
             setChosenId("");
-            setPriceText("");
+            setCostTyped(false);
           }}
         />
       ) : (
@@ -182,21 +229,16 @@ function AddLineForm({
         <input
           name="description"
           required
-          // Keyed to the chosen item so picking from stock refills an
-          // uncontrolled input that the technician may already have typed in.
-          key={chosen?.id ?? "blank"}
-          defaultValue={chosen?.name ?? ""}
+          value={descriptionText}
+          onChange={(event) => setDescriptionText(event.target.value)}
           placeholder={labor ? "Traced and replaced backstabbed receptacle" : "20A AFCI breaker"}
           className={`mt-1 ${inputClass}`}
         />
       </label>
 
-      {/* Price gets its own row on a phone: its label is the long one. */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="text-xs font-semibold text-ink-muted">
-            {labor ? "Hours" : "Qty"}
-          </span>
+          <span className="text-xs font-semibold text-ink-muted">{labor ? "Hours" : "Quantity"}</span>
           <input
             name="quantity"
             inputMode="decimal"
@@ -206,19 +248,82 @@ function AddLineForm({
           />
         </label>
 
-        <label className="block">
-          <span className="text-xs font-semibold text-ink-muted">Unit</span>
-          <input
-            name="unit"
-            key={`unit-${chosen?.id ?? "blank"}`}
-            defaultValue={labor ? "hr" : (chosen?.unit ?? "each")}
-            className={`mt-1 ${inputClass}`}
-          />
-        </label>
+        {labor ? (
+          <input type="hidden" name="unit" value="hr" />
+        ) : (
+          <div className="block">
+            <span className="text-xs font-semibold text-ink-muted">Unit</span>
+            <input type="hidden" name="unit" value={unit} />
+            <div className="mt-1">
+              <SelectField
+                label="Unit"
+                choices={[...PART_UNITS, ...(PART_UNITS.includes(unit as never) ? [] : [unit])].map((value) => ({
+                  value,
+                  label: value,
+                }))}
+                value={unit}
+                onChange={setUnit}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
-        <label className="col-span-2 block sm:col-span-1">
+      {/* A box, roll or stick says what it holds, so the conversion is written
+          down rather than worked out in somebody's head at the counter. */}
+      {!labor && PACK_UNITS.has(unit) ? (
+        <div className="rounded-control border border-line p-2">
+          <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+            <label className="block">
+              <span className="text-xs font-semibold text-ink-muted">Each {unit} holds (optional)</span>
+              <input
+                name="packSize"
+                inputMode="decimal"
+                value={packText}
+                onChange={(event) => setPackText(event.target.value)}
+                placeholder="10"
+                className={`mt-1 ${inputClass}`}
+              />
+            </label>
+            <div className="w-24">
+              <input type="hidden" name="packUnit" value={packUnit} />
+              <SelectField
+                label={`What one ${unit} holds is counted in`}
+                choices={PACK_CONTENTS.map((value) => ({ value, label: value }))}
+                value={packUnit}
+                onChange={setPackUnit}
+              />
+            </div>
+          </div>
+          {packLabel({ quantity: parseQuantity(quantityText) ?? 0, unit, packSize, packUnit }) ? (
+            <p className="mt-1.5 text-sm font-semibold" aria-live="polite">
+              {packLabel({ quantity: parseQuantity(quantityText) ?? 0, unit, packSize, packUnit })}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-2">
+        {labor ? null : (
+          <label className="block">
+            <span className="text-xs font-semibold text-ink-muted">Your cost each</span>
+            <input
+              name="unitCost"
+              inputMode="decimal"
+              value={cost}
+              onChange={(event) => {
+                setCostTyped(true);
+                setCostText(event.target.value);
+              }}
+              placeholder="Not recorded"
+              className={`mt-1 ${inputClass}`}
+            />
+          </label>
+        )}
+
+        <label className={labor ? "col-span-2 block" : "block"}>
           <span className="text-xs font-semibold text-ink-muted">
-            {labor ? "Customer rate" : "Customer price each"}
+            {labor ? "Customer rate per hour" : "Customer price each"}
           </span>
           <input
             name="unitPrice"
@@ -226,10 +331,16 @@ function AddLineForm({
             value={priceText}
             onChange={(event) => setPriceText(event.target.value)}
             placeholder="0.00"
+            aria-describedby={`price-note-${kind}`}
             className={`mt-1 ${inputClass}`}
           />
         </label>
       </div>
+      <p id={`price-note-${kind}`} className="text-xs text-ink-faint">
+        {labor
+          ? "What the customer pays. Type 0 if there is no charge."
+          : "Your cost is never shown to the customer. Type 0 for no charge."}
+      </p>
 
       <p className="text-right text-sm text-ink-muted" aria-live="polite">
         Line total{" "}
@@ -241,6 +352,14 @@ function AddLineForm({
             }),
           )}
         </span>
+        {!labor && parsePriceCents(cost) !== null && (parseQuantity(quantityText) ?? 0) > 0 ? (
+          <span className="block text-xs">
+            Costs you{" "}
+            {formatCents(
+              lineTotalCents({ quantity: parseQuantity(quantityText) ?? 0, unitPriceCents: parsePriceCents(cost) ?? 0 }),
+            )}
+          </span>
+        ) : null}
       </p>
 
       {shortfall ? (
@@ -250,10 +369,16 @@ function AddLineForm({
       ) : null}
 
       {state.error ? (
-        <p className="text-xs text-critical">{state.error}</p>
-      ) : taken ? (
+        <p className="text-xs text-critical" role="alert">
+          {state.error}
+        </p>
+      ) : taken && state.notice?.includes("reserved") ? (
         <p className="text-xs text-positive" role="status">
-          Added. {stockLeft(taken)}
+          Added. {stockReservedNote(taken)}
+        </p>
+      ) : state.notice && state.notice !== "Added." ? (
+        <p className="text-xs text-positive" role="status">
+          {state.notice}
         </p>
       ) : null}
 
@@ -399,14 +524,30 @@ function InvoiceButton({ label, pendingLabel }: { label: string; pendingLabel: s
   );
 }
 
+/** Where a part came from and what it has done to the count, in a few words. */
+function stockWords(line: JobLine, stock: LineStock | undefined): string {
+  if (line.kind !== "material") return "";
+  if (!line.inventoryItemId) return "bought for this job";
+  if (!stock) return "from stock";
+  const unit = stock.itemUnit && stock.itemUnit !== "each" ? ` ${stock.itemUnit}` : "";
+  if (stock.reserved > 0 && stock.taken > 0) {
+    return `${formatQuantity(stock.taken)}${unit} used, ${formatQuantity(stock.reserved)}${unit} reserved`;
+  }
+  if (stock.reserved > 0) return `reserved from stock`;
+  if (stock.taken > 0) return `used from stock`;
+  return "from stock, none used";
+}
+
 function LineRow({
   jobNumber,
   line,
   invoices,
+  stock,
 }: {
   jobNumber: string;
   line: JobLine;
   invoices: JobInvoiceSummary[];
+  stock?: LineStock;
 }) {
   const [state, action] = useActionState(removeJobLine, initialState);
   const Icon = line.kind === "labor" ? Clock : Package;
@@ -422,13 +563,21 @@ function LineRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm">{line.description}</span>
         <span className="block text-xs text-ink-muted">
-          {formatQuantity(line.quantity)} {line.unit} × {formatCents(line.unitPriceCents)}
-          {/* Which of the two ways it went in. Removing one of these puts it
-              back on the shelf; a part typed in was never on it. */}
-          {line.inventoryItemId ? " · from inventory" : null}
+          {formatQuantity(line.quantity)} {unitLabel(line.unit, line.quantity)} × {formatCents(line.unitPriceCents)}
+          {/* Where it came from and what it did to the count: held for this
+              job, taken off it, or bought for the job and never on the shelf. */}
+          {stockWords(line, stock) ? ` · ${stockWords(line, stock)}` : null}
           {billedOn ? ` · ${billedOn.label}` : null}
           {state.error ? <span className="text-critical"> · {state.error}</span> : null}
         </span>
+        {packLabel(line) ? <span className="block text-xs text-ink-muted">{packLabel(line)}</span> : null}
+        {line.kind === "material" ? (
+          <span className="block text-xs text-ink-faint">
+            {typeof line.unitCostCents === "number"
+              ? `Your cost ${formatCents(line.unitCostCents)} each`
+              : "Your cost not recorded"}
+          </span>
+        ) : null}
       </span>
       <span className="shrink-0 text-sm font-semibold">{formatCents(lineTotalCents(line))}</span>
       {locked ? (
@@ -453,6 +602,7 @@ export function JobLinesPanel({
   totals,
   invoices = [],
   stock,
+  lineStock = {},
 }: {
   jobNumber: string;
   lines: JobLine[];
@@ -460,8 +610,12 @@ export function JobLinesPanel({
   /** The job's invoices, newest first, so the panel can tell billed from not. */
   invoices?: JobInvoiceSummary[];
   stock: StockOption[];
+  /** What each stock part has reserved or taken, by line id. */
+  lineStock?: Record<string, LineStock>;
 }) {
   const [adding, setAdding] = useState<"labor" | "material" | null>(null);
+  const cost = partsCost(lines);
+  const parts = lines.filter((line) => line.kind === "material").length;
 
   return (
     <section>
@@ -481,7 +635,7 @@ export function JobLinesPanel({
         <>
           <ul className="mt-2">
             {lines.map((line) => (
-              <LineRow key={line.id} jobNumber={jobNumber} line={line} invoices={invoices} />
+              <LineRow key={line.id} jobNumber={jobNumber} line={line} invoices={invoices} stock={lineStock[line.id]} />
             ))}
           </ul>
 
@@ -498,6 +652,20 @@ export function JobLinesPanel({
                 <dd>{formatCents(totals.materialCents)}</dd>
               </div>
             </dl>
+          ) : null}
+
+          {/* For the business only: what the parts cost, said as unknown when
+              any part has no cost, so a margin is never better than the facts. */}
+          {parts > 0 ? (
+            <p className="mt-2 text-xs text-ink-faint">
+              {cost.unknownCount === parts
+                ? "Your cost for these parts is not recorded."
+                : `Parts cost you ${formatCents(cost.knownCents)}${
+                    cost.unknownCount > 0
+                      ? `, plus ${cost.unknownCount} ${cost.unknownCount === 1 ? "part" : "parts"} with no cost recorded`
+                      : ""
+                  }.`}
+            </p>
           ) : null}
         </>
       )}

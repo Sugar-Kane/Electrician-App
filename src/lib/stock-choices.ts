@@ -16,10 +16,18 @@ export type StockChoice = {
   /** The SKU or catalogue number, as the business wrote it. */
   partNumber: string;
   unit: string;
-  unitPriceCents: number;
+  /** What one cost the business. Never a customer price. */
+  unitCostCents: number;
   quantityOnHand: number;
+  /** Held for open jobs: still on the shelf, but spoken for. */
+  reserved?: number;
   location: string;
 };
+
+/** On hand less what open jobs are holding. */
+function free(item: StockChoice): number {
+  return Math.round((item.quantityOnHand - Math.max(0, item.reserved ?? 0)) * 1000) / 1000;
+}
 
 /** What is on the shelf that matches what was typed. Everything when nothing was. */
 export function findStockChoices<T extends StockChoice>(stock: readonly T[], query: string): T[] {
@@ -41,31 +49,40 @@ function count(quantity: number): string {
 /** The line under a part's name: what it is called in the catalogue, how many, where. */
 export function stockChoiceDetail(item: StockChoice): string {
   const onHand = item.quantityOnHand > 0 ? `${count(item.quantityOnHand)} on hand` : "None on hand";
-  return [item.partNumber, onHand, item.location].filter((part) => part.trim()).join(" · ");
+  const held = (item.reserved ?? 0) > 0 ? `${onHand}, ${count(item.reserved ?? 0)} reserved` : onHand;
+  return [item.partNumber, held, item.location].filter((part) => part.trim()).join(" · ");
 }
 
 /**
- * What the shelf holds once a part is added, so taking it is seen to happen.
+ * What adding a part did: it is held for this job, not taken.
  *
- * Below zero is said as the number it is. The part was in somebody's hand, so
- * it is the count that is wrong, and the way to fix that is to count.
+ * Read off the redrawn item, so `reserved` already includes the line just
+ * added. Free below zero is said as the number it is: more is promised than
+ * the shelf holds, and that is worth knowing before the van leaves.
  */
-export function stockLeft(item: StockChoice): string {
-  if (item.quantityOnHand > 0) return `${count(item.quantityOnHand)} left in inventory.`;
-  if (item.quantityOnHand === 0) return "None left in inventory.";
-  return `Inventory now shows ${count(item.quantityOnHand)}. Recount it when you can.`;
+export function stockReservedNote(item: StockChoice): string {
+  const left = free(item);
+  if (left >= 0) return `Reserved for this job. ${count(left)} of ${count(item.quantityOnHand)} still free.`;
+  return `Reserved for this job, but that is ${count(-left)} more than you have free. Recount it or buy more.`;
 }
 
 /**
- * Said when a line takes more than the shelf has, or "" when it does not.
+ * Said when a line asks for more than the shelf has free, or "" when it does not.
  *
  * A warning, not a refusal: the part may well be on the van and the count
- * wrong, and the job's bill should not wait for a stock-take. The count goes
- * below zero, which is how the Stock page finds out it was wrong.
+ * wrong, and the job's bill should not wait for a stock-take. Free goes below
+ * zero, which is how the Stock page finds out it was wrong.
  */
 export function stockShortfall(item: StockChoice, quantity: number | null): string {
-  if (quantity === null || quantity <= item.quantityOnHand) return "";
-  return item.quantityOnHand > 0
-    ? `Only ${count(item.quantityOnHand)} on hand. Adding ${count(quantity)} takes the count below zero.`
-    : "None on hand. Adding it takes the count below zero.";
+  const available = free(item);
+  if (quantity === null || quantity <= available) return "";
+  const reserved = item.reserved ?? 0;
+  if (available <= 0) {
+    return reserved > 0
+      ? `None free: all ${count(item.quantityOnHand)} on hand are reserved for other jobs. Reserving it promises more than you have.`
+      : "None on hand. Reserving it promises more than you have.";
+  }
+  return reserved > 0
+    ? `Only ${count(available)} free (${count(item.quantityOnHand)} on hand, ${count(reserved)} reserved). Reserving ${count(quantity)} promises more than you have.`
+    : `Only ${count(available)} on hand. Reserving ${count(quantity)} promises more than you have.`;
 }

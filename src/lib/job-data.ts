@@ -27,6 +27,7 @@ import type { AgreementState } from "@/lib/job-stage";
 import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
 import { unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
+import { reservedStock } from "@/lib/job-billing-server";
 import {
   pilotInvoices,
   pilotJobs,
@@ -1175,10 +1176,14 @@ export async function getInventory(): Promise<
     location: string;
     notes: string;
     photoUrl: string;
+    /** Held for open jobs: on the shelf, but spoken for. */
+    reserved: number;
   }[]
 > {
   const context = await resolveContext();
   if (!context) return [];
+
+  const reserved = await reservedStock(context.database, context.organizationId);
 
   const { data } = await context.database
     .from("inventory_items")
@@ -1221,6 +1226,7 @@ export async function getInventory(): Promise<
     photoUrl:
       photos.get(typeof row.photo_path === "string" ? row.photo_path : "") ||
       (typeof row.photo_url === "string" ? row.photo_url : ""),
+    reserved: reserved.get(String(row.id))?.reserved ?? 0,
   }));
 }
 
@@ -1250,6 +1256,9 @@ export type StockItemDetail = {
   movements: StockMovementRow[];
   /** Cents. What has left on jobs, at the price it left at. */
   spentCents: number;
+  /** Held for open jobs, and which jobs hold it. */
+  reserved: number;
+  reservedFor: { jobNumber: string; quantity: number }[];
 };
 
 /**
@@ -1289,6 +1298,7 @@ export async function getInventoryItem(id: string): Promise<StockItemDetail | nu
   const photos = await signStockPhotos([
     typeof row.photo_path === "string" ? row.photo_path : "",
   ]);
+  const held = (await reservedStock(context.database, context.organizationId)).get(String(row.id));
 
   const movements = ((history ?? []) as Record<string, unknown>[]).map((entry) => {
     const job = (entry.jobs ?? null) as { job_number?: unknown } | null;
@@ -1337,6 +1347,8 @@ export async function getInventoryItem(id: string): Promise<StockItemDetail | nu
         movement.quantity < 0 ? sum + Math.abs(movement.quantity) * movement.unitCostCents : sum,
       0,
     ),
+    reserved: held?.reserved ?? 0,
+    reservedFor: held?.jobs ?? [],
   };
 }
 

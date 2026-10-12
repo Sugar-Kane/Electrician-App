@@ -121,11 +121,17 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
                         </span>
                       </span>
                       <span
-                        className={`shrink-0 text-sm font-semibold ${
+                        className={`shrink-0 text-right text-sm font-semibold ${
                           item.quantity <= 0 ? "text-critical" : "text-ink"
                         }`}
                       >
                         {item.quantity} {item.unit}
+                        {/* Some of what is on hand may be promised to open jobs. */}
+                        {item.reserved > 0 ? (
+                          <span className="block text-[11px] font-normal text-ink-faint">
+                            {Math.round(item.reserved * 100) / 100} reserved
+                          </span>
+                        ) : null}
                       </span>
                     </Link>
                   </li>
