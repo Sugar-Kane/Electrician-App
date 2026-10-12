@@ -194,7 +194,7 @@ export function JobControls({
         // reported — who was told, and what went back on the shelf.
         key={status}
       >
-        <section id="window" className="rounded-panel border border-line bg-surface p-5 sm:p-6">
+        <section id="window" className="scroll-mt-24 rounded-panel border border-line bg-surface p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand/10 text-brand">
               <CalendarClock className="h-5 w-5" aria-hidden />

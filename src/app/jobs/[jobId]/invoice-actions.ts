@@ -249,7 +249,7 @@ export async function raiseInvoice(
   }
 
   const credited = totals.diagnosticCreditCents > 0
-    ? ` The ${formatMoney(totals.diagnosticCreditCents / 100)} diagnostic they already paid has been taken off.`
+    ? ` The ${formatMoney(totals.diagnosticCreditCents / 100)} diagnostic fee they already paid has been taken off.`
     : "";
 
   return {

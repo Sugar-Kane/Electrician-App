@@ -68,7 +68,7 @@ async function loadSignable(supabase: FlexibleSupabaseClient, contractId: string
   const { data } = await supabase
     .from("contracts")
     .select(
-      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, organizations ( name, timezone ), jobs ( job_number, customers ( phone ) )",
+      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, signature_sent_at, organizations ( name, timezone ), jobs ( job_number, customers ( phone ) )",
     )
     .eq("id", contractId)
     .maybeSingle();
@@ -279,10 +279,19 @@ export async function generateContract(
         .maybeSingle()
     : { data: null };
   const followed = followedRow as Record<string, unknown> | null;
+  /*
+   * A work order that no diagnostic came before has no diagnostic fee. The
+   * column holds the business's default fee on every job, so read bare it
+   * put "Diagnostic fee: $180.00, due before work begins" on a quote for a
+   * panel swap nobody had visited for.
+   */
+  // One whose fee was paid all the same — booked online as a diagnostic, then
+  // made a work order — keeps it, and it still comes off.
+  const noVisitFirst = text(row.category) === "work_order" && !followUpOf && row.diagnostic_paid !== true;
   const fee = creditSource(
     {
       diagnosticPaid: row.diagnostic_paid === true,
-      diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+      diagnosticFeeCents: noVisitFirst ? 0 : Number(row.diagnostic_fee_cents ?? 0),
       followUpOf: followUpOf || null,
     },
     followed
@@ -343,15 +352,20 @@ export async function generateContract(
     customer_name: customerName,
     service_address: address,
     job_number: String(row.job_number ?? jobNumber),
-    job_date: formatDate(text(row.scheduled_start)),
+    // A quote has no time yet, and that is not a blank to fill before it can
+    // be sent: the date is agreed once the work is.
+    job_date: formatDate(text(row.scheduled_start)) || "a date to be agreed",
     work_type: workType,
     total: money.totalCents > 0 ? formatMoney(money.totalCents / 100) : "",
-    // "Deposit due before work begins: $180.00 (paid)" — a customer who paid
-    // when they booked is not asked for it again by their own contract.
+    // "Diagnostic fee: $180.00 (already paid)" — a customer who paid when they
+    // booked is not asked for it again by their own contract. Called the
+    // diagnostic fee here, on the signing summary and on the invoice alike.
     deposit:
       money.depositCents > 0
-        ? `${formatMoney(money.depositCents / 100)}${money.depositPaid ? " (paid)" : ""}`
-        : "",
+        ? `${formatMoney(money.depositCents / 100)}${money.depositPaid ? " (already paid)" : ", due before work begins"}`
+        : // No visit came first, so there is no fee — said, rather than left
+          // as a blank that stops a quote being sent until somebody types "none".
+          "None",
     scope: scope ?? "",
     today: formatDate(new Date().toISOString()),
   };
@@ -371,6 +385,11 @@ export async function generateContract(
       scope: scope ?? "",
       unfilled: filled.unfilled,
       status: "draft",
+      // The same figures the words above were filled from, for the summary
+      // the customer sees above them.
+      total_cents: money.totalCents,
+      deposit_cents: money.depositCents,
+      deposit_paid: money.depositPaid,
     })
     .select("id")
     .maybeSingle();
@@ -535,6 +554,10 @@ export async function generateChangeOrder(
       scope: "",
       unfilled: filled.unfilled,
       status: "draft",
+      // A change order asks for what was added, and nothing else.
+      total_cents: changes.addedCents,
+      deposit_cents: 0,
+      deposit_paid: false,
     })
     .select("id")
     .maybeSingle();
@@ -647,6 +670,13 @@ export async function sendSigningLink(
   const { contract, job, customer, business, jobId, blocked } = signable;
   if (blocked) return { error: blocked };
 
+  // Before anything is signed or changed: a link texted under a minute ago is
+  // not texted again. The claim below holds the same line when two taps race.
+  const lastSent = Date.parse(text(contract.signature_sent_at));
+  if (Number.isFinite(lastSent) && lastSent > Date.now() - RESEND_GAP_MS) {
+    return { error: "The signing link was texted less than a minute ago, so it was not sent again." };
+  }
+
   const { signingLinkMessage } = await import("@/lib/contract-signing");
 
   const { toE164 } = await import("@/lib/phone-format");
@@ -707,13 +737,25 @@ export async function sendSigningLink(
   // The claim. Another contract on this job still out for signature is refused
   // here by the unique index, before anybody is texted — and a claim that
   // matched no row, because it was signed a moment ago, texts nobody either.
+  //
+  // It also stamps the send. A link texted under a minute ago is not texted
+  // again; otherwise the update only matches if the last-sent time is still
+  // the one read above. Two taps at once — a double tap, or two phones — read
+  // the same time, and only the first update finds it: the other matches no
+  // row and texts nobody, so the customer is not sent the same link twice.
   const previousStatus = text(contract.status) || "draft";
   const previousProvider = text(contract.signature_provider) || null;
-  const { data: claimed, error: claimError } = await supabase
+  const previousSentAt = text(contract.signature_sent_at) || null;
+  const sentAt = new Date();
+  const claim = supabase
     .from("contracts")
-    .update({ status: "sent", signature_provider: "in_app" })
+    .update({ status: "sent", signature_provider: "in_app", signature_sent_at: sentAt.toISOString() })
     .eq("id", contractId)
-    .is("signed_at", null)
+    .is("signed_at", null);
+  const { data: claimed, error: claimError } = await (previousSentAt
+    ? claim.eq("signature_sent_at", previousSentAt)
+    : claim.is("signature_sent_at", null)
+  )
     .select("id")
     .maybeSingle();
 
@@ -722,7 +764,9 @@ export async function sendSigningLink(
       error:
         claimError?.code === "23505"
           ? "Another contract for this job is already out for signature, so this one was not sent."
-          : "That contract could not be sent. Reload the page and try again.",
+          : claimError
+            ? "That contract could not be sent. Reload the page and try again."
+            : "That contract changed a moment ago — it may have just been sent or signed. Reload the page to see.",
     };
   }
 
@@ -742,22 +786,20 @@ export async function sendSigningLink(
     // Released, so the contract does not read as sent when nothing was.
     await supabase
       .from("contracts")
-      .update({ status: previousStatus, signature_provider: previousProvider })
+      .update({ status: previousStatus, signature_provider: previousProvider, signature_sent_at: previousSentAt })
       .eq("id", contractId)
       .is("signed_at", null);
     return { error: `The text could not be sent (${sent.errorDetail || sent.errorCode}).` };
   }
-
-  await supabase
-    .from("contracts")
-    .update({ signature_sent_at: new Date().toISOString() })
-    .eq("id", contractId);
 
   if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
 
   const { formatForDisplay } = await import("@/lib/phone-format");
   return { error: "", contractId, notice: `Signing link texted to ${formatForDisplay(phone)}.` };
 }
+
+/** How long after a signing link is texted before the same one can be texted again. */
+const RESEND_GAP_MS = 60_000;
 
 /** Complete missing fields as a new draft; never alter an existing agreement. */
 export async function completeContractDetails(
@@ -769,7 +811,7 @@ export async function completeContractDetails(
   if (!auth.user?.id) return { error: "You are not signed in." };
   const contractId = String(formData.get("contractId") ?? "");
   const { data: sourceData } = await supabase.from("contracts")
-    .select("id, organization_id, job_id, kind, body, scope, status, signed_at, created_at, organizations ( timezone ), jobs ( job_number )")
+    .select("id, organization_id, job_id, kind, body, scope, status, signed_at, created_at, total_cents, deposit_cents, deposit_paid, organizations ( timezone ), jobs ( job_number )")
     .eq("id", contractId).maybeSingle();
   if (!sourceData) return { error: "That contract could not be found." };
   const source = sourceData as Record<string, unknown>;
@@ -810,6 +852,11 @@ export async function completeContractDetails(
     // A change order completed is still a change order.
     kind: source.kind === "change_order" ? "change_order" : "agreement",
     body: filled.body, scope: values.scope ?? text(source.scope), unfilled: [], status: "draft",
+    // Kept, unless the money itself was typed in by hand: then only the words
+    // know it, and the summary points at them instead of guessing.
+    ...("total" in values || "deposit" in values
+      ? { total_cents: null, deposit_cents: null, deposit_paid: null }
+      : { total_cents: source.total_cents ?? null, deposit_cents: source.deposit_cents ?? null, deposit_paid: source.deposit_paid ?? null }),
   }).select("id").maybeSingle();
   if (error || !created) return { error: "The completed draft could not be saved. Try again." };
   const organization = source.organizations as Record<string, unknown> | null;

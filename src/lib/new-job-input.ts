@@ -204,7 +204,7 @@ export type NewJobParsed = {
 
 export type ParseResult =
   | { ok: true; value: NewJobParsed }
-  | { ok: false; error: string };
+  | { ok: false; error: string; field?: keyof NewJobRaw };
 
 /** The default visit length, when nobody says otherwise. */
 const DEFAULT_DURATION_MINUTES = 120;
@@ -385,12 +385,12 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   if (!customerName) {
     // Enforced even for a draft. A job filed under nobody cannot be found
     // again, which makes saving it the same as losing it.
-    return { ok: false, error: "A customer name is needed, even to save a draft." };
+    return { ok: false, error: "A customer name is needed, even to save a draft.", field: "customerName" };
   }
 
   const email = raw.email.trim();
   if (email && !looksLikeEmail(email)) {
-    return { ok: false, error: "That email address does not look like one mail can reach." };
+    return { ok: false, error: "That email address does not look like one mail can reach.", field: "email" };
   }
 
   const phone = toE164(raw.phone);
@@ -398,6 +398,7 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
     return {
       ok: false,
       error: "That phone number could not be read. A 10-digit US number or +country code works.",
+      field: "phone",
     };
   }
 
@@ -406,7 +407,7 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   // sends notifications. A draft is exempt — it is not going to notify anybody
   // yet, and the whole point of the button is to save what there is so far.
   if (!draft && !phone && !email) {
-    return { ok: false, error: "A phone number or an email address is needed to reach them." };
+    return { ok: false, error: "A phone number or an email address is needed to reach them.", field: "phone" };
   }
 
   const line1 = clean(raw.addressLine1);
@@ -426,6 +427,7 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
     return {
       ok: false,
       error: "An address needs street, city, state, and ZIP — or leave all four blank.",
+      field: "addressLine1",
     };
   }
 
@@ -437,6 +439,7 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
       ok: false,
       error:
         "The apartment, floor and access notes are kept with the street address — add it, or clear them.",
+      field: "addressLine1",
     };
   }
 
@@ -444,16 +447,16 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   // checked on a draft too: a gap can be filled in later, a wrong state is
   // simply wrong.
   if (state && !isUsStateCode(state)) {
-    return { ok: false, error: "Choose the state from the list." };
+    return { ok: false, error: "Choose the state from the list.", field: "state" };
   }
 
   if (!draft && postalCode && !/^\d{5}$/.test(postalCode)) {
-    return { ok: false, error: "A ZIP code is five digits." };
+    return { ok: false, error: "A ZIP code is five digits.", field: "postalCode" };
   }
 
   const category = raw.category.trim() || "diagnostic";
   if (!isJobCategory(category)) {
-    return { ok: false, error: "That is not a kind of work this app knows about." };
+    return { ok: false, error: "That is not a kind of work this app knows about.", field: "category" };
   }
 
   const durationRaw = raw.durationHours.trim();
@@ -461,11 +464,11 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   if (durationRaw) {
     const hours = Number(durationRaw);
     if (!Number.isFinite(hours) || hours <= 0) {
-      return { ok: false, error: "How long the visit takes has to be a number of hours." };
+      return { ok: false, error: "How long the visit takes has to be a number of hours.", field: "durationHours" };
     }
     durationMinutes = Math.round(hours * 60);
     if (durationMinutes > MAX_DURATION_MINUTES) {
-      return { ok: false, error: "A single visit cannot be longer than 12 hours." };
+      return { ok: false, error: "A single visit cannot be longer than 12 hours.", field: "durationHours" };
     }
   }
 
@@ -481,6 +484,7 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
         cost.because === "too_large"
           ? "That invoice amount is larger than an invoice can hold. The most that fits is $99,999,999.99."
           : "The draft invoice amount could not be read. Try a figure like 1280 or 1280.50.",
+      field: "cost",
     };
   }
 

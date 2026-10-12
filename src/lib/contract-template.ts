@@ -40,7 +40,7 @@ export const CONTRACT_PLACEHOLDERS: { key: keyof ContractFacts; describes: strin
   { key: "job_date", describes: "The scheduled date" },
   { key: "work_type", describes: "The kind of work" },
   { key: "total", describes: "The agreed price" },
-  { key: "deposit", describes: "The deposit or diagnostic fee" },
+  { key: "deposit", describes: "The diagnostic fee, and whether it is paid" },
   { key: "scope", describes: "A paragraph describing the work" },
   { key: "today", describes: "Today's date" },
 ];
@@ -201,7 +201,7 @@ SCOPE OF WORK
 
 PRICE
 Total: {{total}}
-Deposit due before work begins: {{deposit}}
+Diagnostic fee: {{deposit}}
 
 The price above covers the scope of work described. Work found to be necessary
 beyond that scope will be quoted separately and will not begin without your

@@ -211,7 +211,7 @@ export function InvoiceDocument({ data }: { data: InvoiceDocumentData }) {
             {/* Only when there was one. A "Diagnostic credit $0.00" line on a
                 first invoice is a line that says nothing. */}
             {totals.diagnosticCreditLabel ? (
-              <TotalRow label="Diagnostic already paid" value={totals.diagnosticCreditLabel} />
+              <TotalRow label="Diagnostic fee already paid" value={totals.diagnosticCreditLabel} />
             ) : null}
             {totals.taxLabel ? <TotalRow label="Tax" value={totals.taxLabel} /> : null}
             <TotalRow label="Total" value={totals.totalLabel} emphasis="strong" />

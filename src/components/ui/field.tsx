@@ -16,11 +16,14 @@ export function Field({
   label,
   hint,
   group,
+  error,
   children,
 }: {
   label: string;
   /** Sits under the control, where it is read after the thing it describes. */
   hint?: string;
+  /** What is wrong with this box, said beside it rather than only at the bottom of the form. */
+  error?: string;
   /**
    * Set when the caption covers more than one control, like a day and a time.
    *
@@ -42,6 +45,7 @@ export function Field({
   const body = (
     <>
       <span className="mt-2 block">{children}</span>
+      {error ? <span className="mt-2 block text-sm font-medium leading-5 text-critical">{error}</span> : null}
       {hint ? <span className="mt-2 block text-xs leading-5 text-ink-faint">{hint}</span> : null}
     </>
   );
