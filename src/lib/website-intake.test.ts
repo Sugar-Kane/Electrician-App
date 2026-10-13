@@ -6,6 +6,7 @@ import {
   hashWebsiteKey,
   newWebsiteKey,
   parseWebsiteRequest,
+  websiteCallDecision,
   websiteOpenerFallback,
   websiteTextDecision,
 } from "./website-intake.ts";
@@ -96,4 +97,13 @@ test("the first text says who is writing and how to stop", () => {
     assert.match(text, /Pacific Plains Electric/);
     assert.match(text, /Reply STOP to opt out\./);
   }
+});
+
+test("Maya rings only someone who asked for a call, and a resent request rings nobody twice", () => {
+  const asked = { duplicate: false, contactMethod: "phone", callingConfigured: true };
+  assert.deepEqual(websiteCallDecision(asked), { call: true });
+  assert.deepEqual(websiteCallDecision({ ...asked, contactMethod: "text" }), { call: false, reason: "not_asked" });
+  assert.deepEqual(websiteCallDecision({ ...asked, contactMethod: "email" }), { call: false, reason: "not_asked" });
+  assert.deepEqual(websiteCallDecision({ ...asked, duplicate: true }), { call: false, reason: "duplicate" });
+  assert.deepEqual(websiteCallDecision({ ...asked, callingConfigured: false }), { call: false, reason: "calling_not_set_up" });
 });

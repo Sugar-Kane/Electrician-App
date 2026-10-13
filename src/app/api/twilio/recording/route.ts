@@ -52,15 +52,19 @@ export async function POST(request: Request) {
   }
 
   const database = getSupabaseAdmin();
-  const organizationId = await organizationForPhoneNumber(database, call.to);
+  // A call the business placed (Maya calling a customer back) runs the other
+  // way: the business is the caller and the customer is the number dialled.
+  const inboundOrganization = await organizationForPhoneNumber(database, call.to);
+  const organizationId = inboundOrganization ?? (await organizationForPhoneNumber(database, call.from));
   if (!organizationId) {
     return new NextResponse("No organization owns the called number", { status: 404 });
   }
+  const customerPhone = inboundOrganization ? call.from : call.to;
 
   const customerId = await findOrCreateCustomerByPhone({
     database,
     organizationId,
-    phone: call.from,
+    phone: customerPhone,
     note: "Created from an inbound recorded phone call.",
     channel: "phone",
   });
@@ -73,7 +77,7 @@ export async function POST(request: Request) {
     .upsert(
       {
         organization_id: organizationId,
-        contact_phone: call.from,
+        contact_phone: customerPhone,
         ...(customerId ? { customer_id: customerId } : {}),
         last_channel: "voice",
         last_message_at: call.endedAt ?? new Date().toISOString(),

@@ -346,7 +346,7 @@ export type WebsiteRequestFacts = {
   town: string;
   preferredTimes: string;
   /** What happens next on the customer's side, which decides what the owner does. */
-  texting: "texting" | "no_consent" | "opted_out" | "not_set_up";
+  texting: "calling" | "texting" | "no_consent" | "opted_out" | "not_set_up";
   /** The booking-requests list, for the owner's email. */
   link?: string;
 };
@@ -354,6 +354,8 @@ export type WebsiteRequestFacts = {
 /** The one sentence that tells the owner whether this is theirs to chase. */
 function websiteNextStep(texting: WebsiteRequestFacts["texting"]): string {
   switch (texting) {
+    case "calling":
+      return "They asked for a call, so Maya is calling them now to get the details and book a visit.";
     case "texting":
       return "The assistant is texting them now to get the details and book a visit.";
     case "opted_out":
@@ -384,6 +386,54 @@ export function ownerWebsiteRequestSms(facts: WebsiteRequestFacts): string {
       .join(" "),
     SMS_LIMIT,
   );
+}
+
+export type CallbackOutcomeFacts = {
+  contactName: string;
+  customerPhone: string;
+  outcome: "voicemail" | "no_answer" | "busy" | "failed" | "not_booked";
+  link?: string;
+};
+
+function callbackOutcomeSentence(outcome: CallbackOutcomeFacts["outcome"]): string {
+  switch (outcome) {
+    case "voicemail":
+      return "They didn't pick up, so she left a voicemail with your number.";
+    case "not_booked":
+      return "She reached them, but nothing was booked.";
+    case "busy":
+      return "The line was busy.";
+    case "failed":
+      return "The call didn't go through.";
+    default:
+      return "They didn't pick up.";
+  }
+}
+
+/** After Maya's call back, when it is the owner's turn: nobody reached, or nothing booked. */
+export function ownerCallbackOutcomeSms(facts: CallbackOutcomeFacts): string {
+  const who = squash(facts.contactName) || "the customer";
+  return clip(
+    `Maya called ${who} (${facts.customerPhone}) about their website request. ${callbackOutcomeSentence(facts.outcome)} Please call them back.`,
+    SMS_LIMIT,
+  );
+}
+
+export function ownerCallbackOutcomeEmail(facts: CallbackOutcomeFacts): EmailBody {
+  const who = squash(facts.contactName) || "the customer";
+  const heading = `Call ${who} back about their website request`;
+  const sentence = `Maya called them. ${callbackOutcomeSentence(facts.outcome)}`;
+  const tel = facts.customerPhone.replace(/[^\d+]/g, "");
+  return {
+    subject: heading,
+    text: [heading, facts.customerPhone, "", sentence, facts.link ? `Open the request: ${facts.link}` : ""].filter(Boolean).join("\n"),
+    html: [
+      `<p style="font-size:18px;margin:0 0 4px"><strong>${escapeHtml(heading)}</strong></p>`,
+      `<p style="margin:0 0 16px"><a href="tel:${escapeHtml(tel)}">${escapeHtml(facts.customerPhone)}</a></p>`,
+      `<p>${escapeHtml(sentence)}</p>`,
+      facts.link ? `<p><a href="${escapeHtml(facts.link)}">Open the request</a></p>` : "",
+    ].join(""),
+  };
 }
 
 export function ownerWebsiteRequestEmail(facts: WebsiteRequestFacts): EmailBody {

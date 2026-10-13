@@ -1,6 +1,7 @@
 import "server-only";
 
 import { sendWebsiteRequestAlert } from "@/lib/booking-notifications";
+import { isMcpConfigured } from "@/lib/mcp-session";
 import { readInboundText } from "@/lib/claude";
 import { loadIntakeContext, openWebsiteRequest } from "@/lib/intake-shared";
 import { consentIsActive } from "@/lib/messaging-rules";
@@ -8,7 +9,9 @@ import { toE164 } from "@/lib/phone-format";
 import { buildIntakeSystemPrompt, decideIntakeAction } from "@/lib/sms-intake";
 import { replyToCustomer } from "@/lib/sms-intake-runner";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isTwilioConfigured, placeCall } from "@/lib/twilio";
 import {
+  websiteCallDecision,
   websiteOpener,
   websiteOpenerFallback,
   websiteTextDecision,
@@ -24,7 +27,7 @@ import {
  * saved and nothing here may unmake it.
  */
 
-export type WebsiteFollowUp = { texted: boolean; reason?: string };
+export type WebsiteFollowUp = { texted: boolean; called?: boolean; reason?: string };
 
 export async function followUpWebsiteRequest(input: {
   organizationId: string;
@@ -34,6 +37,8 @@ export async function followUpWebsiteRequest(input: {
   facts: {
     contactName: string;
     phone: string;
+    /** What they chose on the form: "phone", "text" or "email". */
+    contactMethod: string;
     serviceName: string;
     description: string;
     town: string;
@@ -75,6 +80,16 @@ export async function followUpWebsiteRequest(input: {
       textingConfigured: Boolean(loaded.messagingServiceSid && to),
     });
 
+    // They asked for a phone call: Maya rings them now, from the business's
+    // number, and the call takes the place of the first text.
+    const called = await callBack({
+      database,
+      organizationId: input.organizationId,
+      requestId: input.requestId,
+      contactMethod: input.facts.contactMethod,
+      to,
+    });
+
     await sendWebsiteRequestAlert({
       requestId: input.requestId,
       organizationId: input.organizationId,
@@ -88,7 +103,9 @@ export async function followUpWebsiteRequest(input: {
         description: input.facts.description,
         town: input.facts.town,
         preferredTimes: input.facts.preferredTimes,
-        texting: decision.send
+        texting: called
+          ? "calling"
+          : decision.send
           ? "texting"
           : decision.reason === "opted_out"
             ? "opted_out"
@@ -101,6 +118,7 @@ export async function followUpWebsiteRequest(input: {
       },
     });
 
+    if (called) return { texted: false, called: true };
     if (!decision.send) return { texted: false, reason: decision.reason };
 
     // The thread an inbound reply from this number will land in: the newest
@@ -179,4 +197,56 @@ export async function followUpWebsiteRequest(input: {
     console.error("website request follow-up failed", { requestId: input.requestId, error: String(error) });
     return { texted: false, reason: "failed" };
   }
+}
+
+/**
+ * Ring a customer who asked for a call, and note the call on the request.
+ *
+ * Returns whether a call was placed. Calling needs Maya's line to be set up on
+ * this deployment: Twilio, a business number, and the voice session secret.
+ */
+async function callBack(input: {
+  database: ReturnType<typeof getSupabaseAdmin>;
+  organizationId: string;
+  requestId: string;
+  contactMethod: string;
+  to: string;
+}): Promise<boolean> {
+  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+  const { data: organization } = await input.database
+    .from("organizations")
+    .select("phone")
+    .eq("id", input.organizationId)
+    .maybeSingle();
+  const from = toE164(String(organization?.phone ?? ""));
+
+  const decision = websiteCallDecision({
+    duplicate: false,
+    contactMethod: input.contactMethod,
+    callingConfigured: Boolean(
+      isTwilioConfigured() && isMcpConfigured() && process.env.XAI_WEBHOOK_SECRET && origin && from && input.to,
+    ),
+  });
+  if (!decision.call) return false;
+
+  const placed = await placeCall({
+    to: input.to,
+    from,
+    twimlUrl: `${origin}/api/twilio/website-callback?request=${encodeURIComponent(input.requestId)}`,
+    statusCallbackUrl: `${origin}/api/twilio/website-callback/status`,
+  });
+  if (!placed.ok) {
+    console.error("website call back was not placed", { requestId: input.requestId, error: placed.errorCode });
+    return false;
+  }
+
+  await input.database
+    .from("booking_requests")
+    .update({
+      callback_call_sid: placed.callSid,
+      callback_called_at: new Date().toISOString(),
+      callback_outcome: "calling",
+    })
+    .eq("id", input.requestId);
+  return true;
 }

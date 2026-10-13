@@ -278,6 +278,61 @@ export async function sendSms(input: {
   }
 }
 
+export type TwilioCallResult =
+  | { ok: true; callSid: string }
+  | { ok: false; errorCode: string; errorDetail: string };
+
+/**
+ * Ring a customer from the business's number.
+ *
+ * Twilio fetches `twimlUrl` once they pick up, with `AnsweredBy` set, because
+ * answering-machine detection is on: a person is handed to the assistant and a
+ * voicemail gets a short message instead of an assistant talking to a beep.
+ */
+export async function placeCall(input: {
+  to: string;
+  from: string;
+  twimlUrl: string;
+  statusCallbackUrl: string;
+}): Promise<TwilioCallResult> {
+  const auth = credentials();
+  if (!auth) {
+    return { ok: false, errorCode: "not_configured", errorDetail: "Twilio credentials are not configured for this deployment." };
+  }
+
+  const form = new URLSearchParams({
+    To: input.to,
+    From: input.from,
+    Url: input.twimlUrl,
+    Method: "POST",
+    StatusCallback: input.statusCallbackUrl,
+    StatusCallbackMethod: "POST",
+    MachineDetection: "DetectMessageEnd",
+    Timeout: "25",
+  });
+  form.append("StatusCallbackEvent", "completed");
+
+  try {
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls.json`, {
+      method: "POST",
+      headers: { Authorization: twilioAuthorization(auth), "Content-Type": "application/x-www-form-urlencoded" },
+      body: form,
+      signal: AbortSignal.timeout(10_000),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { sid?: string; code?: number; message?: string };
+    if (!response.ok || !payload.sid) {
+      return {
+        ok: false,
+        errorCode: String(payload.code ?? response.status),
+        errorDetail: payload.message ?? "Twilio refused the call.",
+      };
+    }
+    return { ok: true, callSid: payload.sid };
+  } catch {
+    return { ok: false, errorCode: "network_error", errorDetail: "Could not reach Twilio." };
+  }
+}
+
 export type TwilioMessageStatus =
   | { known: true; status: string; errorCode: string; errorMessage: string }
   | { known: false; reason: string };

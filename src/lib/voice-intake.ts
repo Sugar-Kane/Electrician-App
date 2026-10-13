@@ -47,6 +47,19 @@ export function buildGreeting(businessName: string, language: string = "en"): st
     : `Hi, this is ${RECEPTIONIST_NAME} with ${businessName}. ${RECORDING_NOTICE} How can I help you today?`;
 }
 
+/**
+ * The opening line when the assistant is the one calling: a call back to
+ * somebody who asked for one on the business's website. It says who is calling
+ * and why before anything else, so it is not mistaken for a sales call.
+ */
+export function buildCallbackGreeting(businessName: string, firstName: string, language: string = "en"): string {
+  const trimmed = firstName.trim();
+  const name = trimmed === trimmed.toLowerCase() ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : trimmed;
+  return isSpanish(language)
+    ? `Hola${name ? ` ${name}` : ""}, le habla ${RECEPTIONIST_NAME} de ${businessName}. Le llamo por la solicitud de servicio que nos envió desde nuestro sitio web. ${RECORDING_NOTICE_ES} ¿Tiene un momento?`
+    : `Hi${name ? ` ${name}` : ""}, this is ${RECEPTIONIST_NAME} with ${businessName}, calling about the service request you sent through our website. ${RECORDING_NOTICE} Do you have a minute?`;
+}
+
 function slotSpoken(action: Extract<IntakeAction, { kind: "book" | "propose" }>): string {
   const label = isSpanish(action.language) ? action.slot.labels?.es ?? action.slot.label : action.slot.label;
   return spoken(label);

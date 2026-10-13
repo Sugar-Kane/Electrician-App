@@ -45,6 +45,17 @@ const intentStyles: Record<BookingRequest["intent"], { label: string; className:
  * a text booking and a web booking look identical once they are rows, and the
  * difference decides what the customer has already been told.
  */
+/** Maya's call back to a website request that asked for a phone call. */
+const CALLBACK_WORDS: Record<string, string> = {
+  calling: "Maya is calling them now.",
+  answered: "Maya is on the phone with them.",
+  completed: "Maya spoke with them.",
+  voicemail: "Maya left a voicemail: call them back.",
+  no_answer: "Maya couldn't reach them: call them back.",
+  busy: "Maya couldn't reach them: call them back.",
+  failed: "Maya's call didn't go through: call them.",
+};
+
 const SOURCE_LABELS: Record<string, string> = {
   sms: "Text",
   voice: "Phone call",
@@ -106,7 +117,15 @@ function RequestCard({ request }: { request: BookingRequest }) {
           {request.preferredTimes ? (
             <p className="mt-1 text-xs text-ink-muted">Good times: {request.preferredTimes}</p>
           ) : null}
-          {request.origin === "website" && !request.conversationId && !handled ? (
+          {request.origin === "website" && request.callbackOutcome && !handled ? (
+            <p
+              className={`mt-2 text-xs font-semibold ${
+                ["voicemail", "no_answer", "busy", "failed"].includes(request.callbackOutcome) ? "text-caution" : "text-ink-muted"
+              }`}
+            >
+              {CALLBACK_WORDS[request.callbackOutcome] ?? ""}
+            </p>
+          ) : request.origin === "website" && !request.conversationId && !handled ? (
             <p className="mt-2 text-xs font-semibold text-caution">
               {request.smsConsent
                 ? "Not texted: call them."
