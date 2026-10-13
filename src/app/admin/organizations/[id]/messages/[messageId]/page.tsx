@@ -8,16 +8,18 @@ import { Card, Pill, RevealBar } from "@/components/admin-ui";
 import {
   getMessageFacts,
   getOrganizationDetail,
+  type MessageFacts,
   myAdminRole,
   recordOrganizationTab,
+  requirePlatformAdmin,
   revealIsValid,
-  type MessageFacts,
 } from "@/lib/admin-console";
 import { maskBody, maskPhone } from "@/lib/admin-mask";
 import { deliveryState, failureReason } from "@/lib/message-errors";
 import { formatForDisplay } from "@/lib/phone-format";
 import { hashed } from "@/lib/recovery/fingerprint";
 import { retryRefusal, textFingerprint } from "@/lib/recovery/text-recovery";
+import { openCaseHref } from "@/lib/support-cases";
 
 import { applyRecipient, checkDelivery, previewRecipient, retryText } from "./actions";
 
@@ -106,6 +108,7 @@ export default async function AdminMessagePage({
   params: Promise<{ id: string; messageId: string }>;
   searchParams: Promise<{ reveal?: string; op?: string; error?: string; why?: string; fix?: string }>;
 }) {
+  await requirePlatformAdmin();
   const [{ id, messageId }, query] = await Promise.all([params, searchParams]);
   if (!UUID.test(id) || !UUID.test(messageId)) notFound();
 
@@ -176,6 +179,13 @@ export default async function AdminMessagePage({
               </Link>
             </>
           ) : null}
+          {" · "}
+          <Link
+            href={openCaseHref({ organizationId: id, type: "message", id: messageId, label: `Text to ${customer?.name ?? "a customer"}` })}
+            className="font-semibold text-ink-muted underline underline-offset-2"
+          >
+            Open a case
+          </Link>
         </p>
       </header>
 

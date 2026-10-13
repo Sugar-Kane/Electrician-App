@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 
 import { SiteVideoManager } from "@/components/site-video-manager";
+import { requirePlatformAdmin } from "@/lib/admin-console";
 import { listSiteVideos, videoStorageConnected } from "@/lib/site-video-data";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
  * Volteira's, not any one business's.
  */
 export default async function AdminFrontPage() {
+  await requirePlatformAdmin();
   const videos = await listSiteVideos();
 
   return (

@@ -6,6 +6,9 @@
  * shapes and formatting rather than any decision about who may look.
  */
 
+import { notFound } from "next/navigation";
+import { cache } from "react";
+
 import type { ActivityRow } from "@/lib/activity-timeline";
 import type { DeliveryEvidence } from "@/lib/admin-health";
 import { parseTrace, type JobTrace } from "@/lib/admin-trace";
@@ -95,14 +98,26 @@ async function client() {
 /**
  * Whether the signed-in person may use the console at all.
  *
- * Asked before anything renders. The RPC is the authority; this is not a
- * convenience check that something else enforces later, because every read
- * below refuses independently.
+ * The RPC is the authority; this is not a convenience check that something
+ * else enforces later, because every read below refuses independently. Asked
+ * once per request however many places ask.
  */
-export async function isPlatformAdmin(): Promise<boolean> {
+export const isPlatformAdmin = cache(async (): Promise<boolean> => {
   const supabase = await client();
   const { data } = await supabase.rpc("am_i_platform_admin");
   return data === true;
+});
+
+/**
+ * The first line of every console page: not found for anybody who isn't an
+ * admin, before the page reads or draws anything.
+ *
+ * The layout asks as well, but a page renders alongside its layout rather than
+ * after it. A page that didn't ask would still send a signed-in electrician
+ * its empty frame (the headings, every count at 0) beside the layout's 404.
+ */
+export async function requirePlatformAdmin(): Promise<void> {
+  if (!(await isPlatformAdmin())) notFound();
 }
 
 export async function listOrganizations(): Promise<OrganizationSummary[]> {
@@ -779,4 +794,207 @@ export async function listOperations(filter: { organizationId?: string; tool?: s
     createdAt: text(row.created_at),
     finishedAt: text(row.finished_at),
   }));
+}
+
+export type CaseRow = {
+  id: string;
+  number: string;
+  organizationId: string;
+  organizationName: string;
+  timeZone: string;
+  category: string;
+  severity: string;
+  symptom: string;
+  state: string;
+  assigneeEmail: string;
+  nextUpdateDue: string;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string;
+  linkCount: number;
+  /** The next update was owed before now. */
+  overdue: boolean;
+};
+
+/** Support cases, most urgent first. `state` is a state, "active" for everything not closed, or "" for all. */
+export async function listCases(filter: { state?: string; organizationId?: string; assignee?: string } = {}): Promise<CaseRow[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_cases", {
+    p_state: filter.state || null,
+    p_organization_id: filter.organizationId || null,
+    p_assignee: filter.assignee || null,
+    p_limit: 150,
+  });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    number: String(row.number ?? ""),
+    organizationId: text(row.organization_id),
+    organizationName: text(row.organization_name),
+    timeZone: text(row.organization_timezone) || "America/Los_Angeles",
+    category: text(row.category),
+    severity: text(row.severity),
+    symptom: text(row.symptom),
+    state: text(row.state),
+    assigneeEmail: text(row.assignee_email),
+    nextUpdateDue: text(row.next_update_due),
+    createdAt: text(row.created_at),
+    updatedAt: text(row.updated_at),
+    closedAt: text(row.closed_at),
+    linkCount: count(row.link_count),
+    overdue: row.overdue === true,
+  }));
+}
+
+export type CaseDetail = {
+  id: string;
+  number: string;
+  organizationId: string;
+  organizationName: string;
+  timeZone: string;
+  openedByEmail: string;
+  reporter: string;
+  category: string;
+  severity: string;
+  symptom: string;
+  steps: string;
+  occurredAt: string;
+  occurredZone: string;
+  assignee: string;
+  assigneeEmail: string;
+  nextUpdateDue: string;
+  rootCause: string;
+  fix: string;
+  resolutionEvidence: string;
+  state: string;
+  reopenedCount: number;
+  overdue: boolean;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string;
+  links: { type: string; id: string; label: string; jobNumber: string; createdAt: string }[];
+  events: { kind: string; body: string; fromState: string; toState: string; createdAt: string; actor: string }[];
+  operations: { id: string; tool: string; state: string; createdAt: string; reason: string }[];
+  admins: { id: string; email: string; role: string }[];
+};
+
+function records(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+}
+
+export async function getCaseDetail(id: string): Promise<CaseDetail | null> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_case_detail", { p_case_id: id });
+  if (!data || typeof data !== "object") return null;
+  const detail = data as Record<string, unknown>;
+  const row = (detail.case ?? {}) as Record<string, unknown>;
+  if (!row.id) return null;
+  return {
+    id: text(row.id),
+    number: String(row.number ?? ""),
+    organizationId: text(row.organization_id),
+    organizationName: text(row.organization_name),
+    timeZone: text(row.organization_timezone) || "America/Los_Angeles",
+    openedByEmail: text(row.opened_by_email),
+    reporter: text(row.reporter),
+    category: text(row.category),
+    severity: text(row.severity),
+    symptom: text(row.symptom),
+    steps: text(row.steps),
+    occurredAt: text(row.occurred_at),
+    occurredZone: text(row.occurred_zone),
+    assignee: text(row.assignee),
+    assigneeEmail: text(row.assignee_email),
+    nextUpdateDue: text(row.next_update_due),
+    rootCause: text(row.root_cause),
+    fix: text(row.fix),
+    resolutionEvidence: text(row.resolution_evidence),
+    state: text(row.state),
+    reopenedCount: count(row.reopened_count),
+    overdue: row.overdue === true,
+    createdAt: text(row.created_at),
+    updatedAt: text(row.updated_at),
+    closedAt: text(row.closed_at),
+    links: records(detail.links).map((link) => ({
+      type: text(link.type),
+      id: text(link.id),
+      label: text(link.label),
+      jobNumber: link.job_number === null || link.job_number === undefined ? "" : String(link.job_number),
+      createdAt: text(link.created_at),
+    })),
+    events: records(detail.events).map((event) => ({
+      kind: text(event.kind),
+      body: text(event.body),
+      fromState: text(event.from_state),
+      toState: text(event.to_state),
+      createdAt: text(event.created_at),
+      actor: text(event.actor),
+    })),
+    operations: records(detail.operations).map((operation) => ({
+      id: text(operation.id),
+      tool: text(operation.tool),
+      state: text(operation.state),
+      createdAt: text(operation.created_at),
+      reason: text(operation.reason),
+    })),
+    admins: records(detail.admins).map((admin) => ({ id: text(admin.id), email: text(admin.email), role: text(admin.role) })),
+  };
+}
+
+export type OverviewIssueRow = {
+  kind: string;
+  organizationId: string;
+  firstAt: string;
+  lastAt: string;
+  occurrences: number;
+  targetType: string;
+  targetId: string;
+};
+
+/** What only the database can see going wrong across every business. */
+export async function listOverviewIssues(): Promise<OverviewIssueRow[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_overview_issues");
+  return rows(data).map((row) => ({
+    kind: text(row.kind),
+    organizationId: text(row.organization_id),
+    firstAt: text(row.first_at),
+    lastAt: text(row.last_at),
+    occurrences: count(row.occurrences),
+    targetType: text(row.target_type),
+    targetId: text(row.target_id),
+  }));
+}
+
+export type OverdueVisitRow = {
+  id: string;
+  organizationId: string;
+  number: string;
+  customerName: string;
+  status: string;
+  category: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+};
+
+/** Unfinished jobs whose time has passed, across every business, for Today's rules to sort. */
+export async function listOverdueVisits(): Promise<OverdueVisitRow[]> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_overdue_visits", { p_limit: 1000 });
+  return rows(data).map((row) => ({
+    id: text(row.id),
+    organizationId: text(row.organization_id),
+    number: String(row.job_number ?? ""),
+    customerName: text(row.customer_name),
+    status: text(row.status),
+    category: text(row.category),
+    scheduledStart: text(row.scheduled_start),
+    scheduledEnd: text(row.scheduled_end),
+  }));
+}
+
+export async function getPlatformFacts(): Promise<{ subscriptions: number; openCases: number; overdueCases: number }> {
+  const supabase = await client();
+  const { data } = await supabase.rpc("admin_platform_facts");
+  const facts = (data ?? {}) as Record<string, unknown>;
+  return { subscriptions: count(facts.subscriptions), openCases: count(facts.open_cases), overdueCases: count(facts.overdue_cases) };
 }

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 
-import { listUsers } from "@/lib/admin-console";
+import { AccessTabs } from "@/components/admin-ui";
+import { listUsers, requirePlatformAdmin } from "@/lib/admin-console";
 
 export const metadata: Metadata = {
   title: "People | Volteira support",
@@ -25,10 +26,12 @@ function when(iso: string): string {
  * blank column.
  */
 export default async function AdminUsersPage() {
+  await requirePlatformAdmin();
   const users = await listUsers();
 
   return (
     <div className="space-y-3">
+      <AccessTabs current="users" />
       <p className="px-1 text-sm text-ink-muted">
         {users.length} {users.length === 1 ? "account" : "accounts"}
       </p>

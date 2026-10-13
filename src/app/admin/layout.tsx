@@ -1,8 +1,7 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
-import { isPlatformAdmin, myAdminRole } from "@/lib/admin-console";
+import { AdminNav } from "@/components/admin-nav";
+import { myAdminRole, requirePlatformAdmin } from "@/lib/admin-console";
 
 /**
  * The gate on the whole console.
@@ -13,10 +12,11 @@ import { isPlatformAdmin, myAdminRole } from "@/lib/admin-console";
  *
  * This is a convenience, not the security boundary. Every function underneath
  * refuses independently in the database, so a missed check here would be a
- * cosmetic bug rather than a way in.
+ * cosmetic bug rather than a way in. Each page asks too: a page renders beside
+ * its layout, not inside this check.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  if (!(await isPlatformAdmin())) notFound();
+  await requirePlatformAdmin();
   const role = await myAdminRole();
 
   return (
@@ -35,26 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </p>
             </div>
           </div>
-          <nav className="flex flex-wrap gap-2 text-sm">
-            <Link href="/admin" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
-              Businesses
-            </Link>
-            <Link href="/admin/users" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
-              People
-            </Link>
-            <Link href="/admin/recovery" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
-              Recovery
-            </Link>
-            <Link href="/admin/audit" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
-              Activity
-            </Link>
-            <Link href="/admin/front-page" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
-              Front page
-            </Link>
-            <Link href="/" className="tap-target rounded-chip border border-line px-3 py-2 font-semibold">
-              Exit
-            </Link>
-          </nav>
+          <AdminNav />
         </header>
 
         <div className="mt-5">{children}</div>

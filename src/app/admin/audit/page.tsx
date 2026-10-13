@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AdminTime } from "@/components/admin-time";
+import { AccessTabs } from "@/components/admin-ui";
 import { SelectField } from "@/components/ui/select-field";
 import { ACTIVITY_ACTIONS, activityFacts, activitySentence } from "@/lib/admin-activity";
-import { listAuditPage, listOrganizations } from "@/lib/admin-console";
+import { listAuditPage, listOrganizations, requirePlatformAdmin } from "@/lib/admin-console";
 
 export const metadata: Metadata = {
   title: "Activity | Volteira support",
@@ -27,6 +28,7 @@ export default async function AdminAuditPage({
 }: {
   searchParams: Promise<{ business?: string; action?: string; before?: string }>;
 }) {
+  await requirePlatformAdmin();
   const params = await searchParams;
   const business = UUID.test(params.business ?? "") ? params.business! : "";
   const action = ACTIVITY_ACTIONS.some((entry) => entry.value === params.action) ? params.action! : "";
@@ -49,6 +51,7 @@ export default async function AdminAuditPage({
 
   return (
     <div className="space-y-3">
+      <AccessTabs current="audit" />
       <form action="/admin/audit" className="rounded-panel border border-line bg-surface p-4">
         <p className="text-sm text-ink-muted">
           Every time a business&rsquo;s records were opened, an invitation was sent, or somebody made changes inside

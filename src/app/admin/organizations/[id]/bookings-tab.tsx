@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin-console";
 import { maskContacts, maskEmail, maskPhone } from "@/lib/admin-mask";
 import { duplicateGroups, hideRefusal, keepOne, NOT_SERVICE, notServiceLabel } from "@/lib/booking-duplicates";
+import { openCaseHref } from "@/lib/support-cases";
 
 import { checkEmailDelivery, supportHideBooking, supportKeepOneBooking, supportRestoreBooking } from "./actions";
 
@@ -209,7 +210,15 @@ export async function BookingsTab({
                     {booking.email ? ` · ${revealed ? booking.email : maskEmail(booking.email)}` : ""}
                   </p>
                   <p className="mt-1 text-sm text-ink-muted">{revealed ? booking.description : maskContacts(booking.description)}</p>
-                  <p className="mt-1 text-xs text-ink-faint">
+                  <p className="mt-1 text-xs">
+                    <Link
+                      href={openCaseHref({ organizationId: organization.id, type: "booking", id: booking.id, label: `Booking from ${booking.contactName || "a customer"}` })}
+                      className="inline-flex min-h-11 items-center font-semibold text-ink-muted underline underline-offset-2"
+                    >
+                      Open a case
+                    </Link>
+                  </p>
+                  <p className="text-xs text-ink-faint">
                     {booking.windowStart ? (
                       <>
                         Window <AdminTime iso={booking.windowStart} timeZone={zone} />

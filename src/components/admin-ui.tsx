@@ -121,3 +121,27 @@ export function RevealBar({
     </form>
   );
 }
+
+/** The two halves of Access & audit: what happened, and who can get in. */
+export function AccessTabs({ current }: { current: "audit" | "users" }) {
+  const tabs = [
+    { key: "audit", href: "/admin/audit", label: "Activity" },
+    { key: "users", href: "/admin/users", label: "People and access" },
+  ] as const;
+  return (
+    <nav aria-label="Access and audit" className="flex flex-wrap gap-2 text-sm">
+      {tabs.map((tab) => (
+        <Link
+          key={tab.key}
+          href={tab.href}
+          aria-current={tab.key === current ? "page" : undefined}
+          className={`tap-target inline-flex items-center rounded-chip px-3 font-semibold ${
+            tab.key === current ? "bg-white/10 text-ink" : "border border-line text-ink-muted"
+          }`}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}

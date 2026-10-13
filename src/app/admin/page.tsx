@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AdminTime } from "@/components/admin-time";
-import { getMessagingEvidence, listOrganizations } from "@/lib/admin-console";
+import { getMessagingEvidence, listOrganizations, requirePlatformAdmin } from "@/lib/admin-console";
 import { diagnose, headline } from "@/lib/admin-health";
 
 export const metadata: Metadata = {
@@ -29,6 +29,7 @@ export default async function AdminOrganizationsPage({
 }: {
   searchParams: Promise<{ show?: string }>;
 }) {
+  await requirePlatformAdmin();
   const [{ show = "" }, organizations, evidence] = await Promise.all([
     searchParams,
     listOrganizations(),
