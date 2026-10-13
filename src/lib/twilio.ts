@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { toE164 } from "@/lib/phone-format";
 import { publicOrigin, webhookUrlCandidates } from "@/lib/twilio-webhook-url";
 import {
   activeInboundCall,
@@ -115,6 +116,36 @@ export async function findActiveInboundTwilioCall(input: {
     );
     if (!response.ok) return null;
     return activeInboundCall(await response.json(), input);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * How many people are on an incoming call to this number right now, or null
+ * when Twilio couldn't be asked. Only callers who rang in count: a call the
+ * business placed is never "to" its own number.
+ */
+export async function countInboundCallsInProgress(input: { to: string }): Promise<number | null> {
+  const auth = credentials();
+  const to = toE164(input.to);
+  if (!auth || !to) return null;
+
+  const query = new URLSearchParams({ To: to, Status: "in-progress", PageSize: "50" });
+  try {
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls.json?${query}`, {
+      headers: { Authorization: twilioAuthorization(auth) },
+      cache: "no-store",
+      signal: AbortSignal.timeout(4_000),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { calls?: unknown };
+    if (!Array.isArray(payload.calls)) return null;
+    return payload.calls.filter((call) => {
+      if (typeof call !== "object" || call === null) return false;
+      const row = call as Record<string, unknown>;
+      return row.status === "in-progress" && row.direction === "inbound" && !row.parent_call_sid && toE164(String(row.to ?? "")) === to;
+    }).length;
   } catch {
     return null;
   }
@@ -294,6 +325,12 @@ export async function placeCall(input: {
   from: string;
   twimlUrl: string;
   statusCallbackUrl: string;
+  /**
+   * Where Twilio reports "person or machine" once it knows. With this set the
+   * call is put through the moment it is answered, instead of after a pause
+   * while Twilio listens, and a machine is dealt with when the verdict comes.
+   */
+  machineDetectionCallbackUrl?: string;
 }): Promise<TwilioCallResult> {
   const auth = credentials();
   if (!auth) {
@@ -311,6 +348,11 @@ export async function placeCall(input: {
     Timeout: "25",
   });
   form.append("StatusCallbackEvent", "completed");
+  if (input.machineDetectionCallbackUrl) {
+    form.append("AsyncAmd", "true");
+    form.append("AsyncAmdStatusCallback", input.machineDetectionCallbackUrl);
+    form.append("AsyncAmdStatusCallbackMethod", "POST");
+  }
 
   try {
     const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls.json`, {

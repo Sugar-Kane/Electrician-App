@@ -6,8 +6,10 @@ import {
   INTAKE_QUESTIONS,
   MINIMUM_INTAKE_ANSWERS,
   buildDecision,
+  callbackForCaller,
   callbackShortfall,
   callbackHandoff,
+  callerLookupReply,
   callerEmail,
   callerPhone,
   customerWords,
@@ -521,4 +523,68 @@ test("the voice tool exposes transfer or callback, never now or later", () => {
   assert.match(schema, /callback/);
   assert.doesNotMatch(schema, /"now"/);
   assert.doesNotMatch(schema, /"later"/);
+});
+
+const NOW = new Date("2026-10-13T18:30:00Z");
+const ON_THE_LINE = {
+  id: "11111111-1111-4111-8111-111111111111",
+  phone: "(805) 555-0921",
+  callbackOutcome: "answered",
+  callbackCalledAt: "2026-10-13T18:28:00Z",
+  firstName: "callie",
+  serviceName: "Electrical Problems & Repairs",
+  description: "Kitchen outlets stopped working",
+  address: "12 Elm St",
+  town: "Templeton 93465",
+  preferredTimes: "Mornings",
+};
+
+test("what a website form said is given only on the call back to that same number", () => {
+  const match = callbackForCaller([ON_THE_LINE], "+18055550921", NOW, 0);
+  assert.equal(match?.id, ON_THE_LINE.id);
+  const reply = callerLookupReply(match);
+  assert.match(reply, /You placed this call/);
+  assert.match(reply, /Hi Callie!/);
+  assert.match(reply, /Kitchen outlets stopped working/);
+
+  // Anyone else ringing in, whatever number they give, is an ordinary call.
+  for (const other of ["+18055550922", "", "not a number"]) {
+    const none = callbackForCaller([ON_THE_LINE], other, NOW, 0);
+    assert.equal(none, null, other);
+    assert.doesNotMatch(callerLookupReply(none), /Callie|Kitchen|Elm/);
+  }
+});
+
+test("a call back is only 'on the line' while connected and for a few minutes", () => {
+  for (const callbackOutcome of ["calling", "completed", "voicemail", "no_answer"]) {
+    assert.equal(callbackForCaller([{ ...ON_THE_LINE, callbackOutcome }], "+18055550921", NOW, 0), null, callbackOutcome);
+  }
+  assert.equal(
+    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "2026-10-13T18:10:00Z" }], "+18055550921", NOW, 0),
+    null,
+    "placed 20 minutes ago",
+  );
+  assert.equal(
+    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "not a time" }], "+18055550921", NOW, 0),
+    null,
+  );
+});
+
+test("while anyone has rung in, nobody is told what a website form said", () => {
+  // A caller on an incoming call could talk Maya into looking up the number
+  // she's calling back. The lookup can't tell whose call is asking, so it says
+  // nothing, and says nothing when it couldn't check.
+  assert.equal(callbackForCaller([ON_THE_LINE], "+18055550921", NOW, 1), null);
+  assert.equal(callbackForCaller([ON_THE_LINE], "+18055550921", NOW, null), null);
+});
+
+test("with two call backs on the line at once, neither customer's form is given out", () => {
+  // Either caller could talk Maya into the other one's number, and the lookup
+  // can't tell which call is asking.
+  const other = { ...ON_THE_LINE, id: "22222222-2222-4222-8222-222222222222", phone: "(805) 555-0931", firstName: "Otto" };
+  assert.equal(callbackForCaller([ON_THE_LINE, other], "+18055550921", NOW, 0), null);
+  assert.equal(callbackForCaller([ON_THE_LINE, other], "+18055550931", NOW, 0), null);
+  // The same person who sent the form twice is still one call.
+  const again = { ...ON_THE_LINE, id: "33333333-3333-4333-8333-333333333333", callbackCalledAt: "2026-10-13T18:29:00Z" };
+  assert.equal(callbackForCaller([ON_THE_LINE, again], "+18055550921", NOW, 0)?.id, again.id);
 });

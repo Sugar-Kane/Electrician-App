@@ -57,15 +57,26 @@ test("a call back presents the customer as the caller, and only a real number ge
   }
 });
 
-test("the call-back lead-in is spoken first, and a name typed on a form can't add instructions", () => {
+test("a call back says one short recording notice, still before anything is recorded", () => {
   const xml = xaiSipBridgeTwiml({
     phone: "+19165550123",
     recordingCallbackUrl: "https://www.volteira.com/api/twilio/recording",
     callerId: "+18055550142",
-    leadIn: 'Hi Jo</Say><Dial>+15550000000</Dial><Say>, this is Pacific Plains Electric.',
+    briefNotice: true,
   });
   assert.ok(xml);
-  assert.ok(xml.indexOf("Hi Jo") < xml.indexOf("This call will be recorded"));
-  assert.equal((xml.match(/<Dial/g) ?? []).length, 1, "the only Dial is ours");
-  assert.match(xml, /Hi Jo&lt;\/Say&gt;&lt;Dial&gt;/);
+  assert.equal((xml.match(/<Say/g) ?? []).length, 1);
+  assert.match(xml, /This call may be recorded\./);
+  assert.ok(xml.indexOf("This call may be recorded.") < xml.indexOf("<Dial"));
+  assert.equal((xml.match(/<Dial/g) ?? []).length, 1);
+  assert.match(xml, /callerId="\+18055550142"/);
+  assert.equal(
+    xaiSipBridgeTwiml({
+      phone: "+19165550123",
+      recordingCallbackUrl: "https://www.volteira.com/r",
+      callerId: '+1805" action="https://evil.example',
+      briefNotice: true,
+    }),
+    null,
+  );
 });

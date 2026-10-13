@@ -174,6 +174,7 @@ test("the session is given the booking tools and only the booking tools", () => 
 
   assert.equal(update.session.tools.length, 1);
   assert.deepEqual(update.session.tools[0]!.allowed_tools, [
+    "look_up_caller",
     "list_open_slots",
     "get_intake_questions",
     "book_visit",

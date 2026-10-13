@@ -236,6 +236,7 @@ async function callBack(input: {
     from,
     twimlUrl: `${origin}/api/twilio/website-callback?request=${encodeURIComponent(input.requestId)}`,
     statusCallbackUrl: `${origin}/api/twilio/website-callback/status`,
+    machineDetectionCallbackUrl: `${origin}/api/twilio/website-callback/amd?request=${encodeURIComponent(input.requestId)}`,
   });
   if (!placed.ok) {
     console.error("website call back was not placed", { requestId: input.requestId, error: placed.errorCode });
