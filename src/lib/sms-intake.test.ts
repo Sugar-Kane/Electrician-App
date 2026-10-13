@@ -453,3 +453,72 @@ test("a model-written question cannot claim the customer is penciled in", () => 
   const action = decide("ask_for", { missing: ["contact_name"], question: "You're penciled in for Wednesday. What's your name?" });
   assert.doesNotMatch(action.reply, /penciled in/i);
 });
+
+test("with a visit already held, more texts never hold again or send a second payment link", () => {
+  // "Skip", "Actually" and a photo, seconds apart, once produced two holds and
+  // three payment links. The conversation's visit is the one already held.
+  const held = context({
+    existingVisit: {
+      state: "held",
+      labels: { en: "Tomorrow (Wed, Oct 14), 8:00 AM-10:00 AM", es: "Mañana (mié, 14 de oct), 8:00 a.m.-10:00 a.m." },
+    },
+  });
+  const accept = {
+    ...INTERVIEWED,
+    contact_name: "Ada",
+    description: "no power",
+    address_line_1: "1 A St",
+    city: "Nipomo",
+    postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z",
+    urgency: "routine",
+  };
+
+  for (const tool of ["confirm_visit", "propose_visit"]) {
+    const action = decideIntakeAction({ decision: { tool, input: accept }, customerText: "[photo]", context: held });
+    assert.equal(action.kind, "ask", tool);
+    assert.match(action.reply, /payment link we texted you/);
+    assert.match(action.reply, /8:00 AM-10:00 AM/);
+    assert.doesNotMatch(action.reply, /https?:\/\//);
+  }
+
+  const spanish = decideIntakeAction({
+    decision: { tool: "confirm_visit", input: { ...accept, language: "es" } },
+    customerText: "Actually",
+    context: held,
+  });
+  assert.equal(spanish.kind, "ask");
+  assert.match(spanish.reply, /enlace de pago que le enviamos/);
+});
+
+test("a text booking asks where to email the customer's copy, and carries the address", () => {
+  const byText = context({ emailCopy: true });
+  const accept = {
+    ...INTERVIEWED,
+    contact_name: "Ada",
+    description: "no power",
+    address_line_1: "1 A St",
+    city: "Nipomo",
+    postal_code: "93444",
+    slot_start: "2026-08-11T20:00:00.000Z",
+    urgency: "routine",
+  };
+  const decide = (input: Record<string, unknown>) =>
+    decideIntakeAction({ decision: { tool: "confirm_visit", input }, customerText: "yes", context: byText });
+
+  const asks = decide({ ...accept, delivery_preference: "", email: "" });
+  assert.equal(asks.kind, "ask");
+  assert.match(asks.reply, /email .*copy of your booking and receipt/i);
+
+  // Wanting a copy without an address that can be delivered to is asked again.
+  assert.equal(decide({ ...accept, delivery_preference: "both", email: "ada at gmail" }).kind, "ask");
+
+  const withCopy = decide({ ...accept, delivery_preference: "both", email: "ada@example.com" });
+  assert.equal(withCopy.kind, "book");
+  if (withCopy.kind === "book") assert.equal(withCopy.email, "ada@example.com");
+
+  // Declining is an answer, and never blocks the booking.
+  const declined = decide({ ...accept, delivery_preference: "text", email: "" });
+  assert.equal(declined.kind, "book");
+  if (declined.kind === "book") assert.equal(declined.email, "");
+});

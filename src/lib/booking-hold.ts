@@ -164,3 +164,42 @@ export function bookingNeedsReviewReply(input: {
     `Our response time is usually within 24 hours. If you need us, call ${input.businessPhone}.`
   );
 }
+
+/** A booking request in a conversation, as much of it as says whether it is still live. */
+export type ConversationVisitRow = {
+  status: string;
+  arrival_window_start: string | null;
+  arrival_window_end: string | null;
+  expires_at: string | null;
+};
+
+export type LiveVisit = { state: "held" | "booked"; start: string; end: string };
+
+/**
+ * The visit a text conversation already has, if any.
+ *
+ * Held means a payment link has gone out and its hold has not run out. Booked
+ * means the fee was paid and the visit is still ahead. Either way the
+ * conversation is about that visit now: a customer who texts again ("ok",
+ * "actually", a photo) is not asking for a second one. Holding again would send
+ * a second payment link, and with the first window already held the second hold
+ * lands on a time the customer never agreed to.
+ *
+ * An expired hold is not live: the customer may book again once it has lapsed.
+ */
+export function liveVisit(rows: ConversationVisitRow[], now: Date): LiveVisit | null {
+  for (const row of rows) {
+    const start = row.arrival_window_start;
+    const end = row.arrival_window_end;
+    if (!start || !end) continue;
+    if (row.status === "awaiting_payment") {
+      const until = Date.parse(row.expires_at ?? "");
+      if (Number.isFinite(until) && until > now.getTime()) return { state: "held", start, end };
+      continue;
+    }
+    if ((row.status === "scheduled" || row.status === "confirmed") && Date.parse(end) > now.getTime()) {
+      return { state: "booked", start, end };
+    }
+  }
+  return null;
+}

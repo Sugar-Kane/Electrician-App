@@ -16,6 +16,7 @@ import {
   type LanguageCode,
   type LanguageSource,
 } from "./customer-language.ts";
+import { looksLikeEmail } from "./booking-confirmation.ts";
 import { phrasesFor } from "./intake-phrases.ts";
 
 /** Field names the model may say it still needs. */
@@ -106,6 +107,17 @@ export type IntakeContext = {
   /** SMS runner verifies an optional photo invitation was actually sent. */
   photoOfferHandled?: boolean;
   intakeBeforeOffer?: boolean;
+  /**
+   * A visit this conversation already has: held with its payment link sent, or
+   * paid and still ahead. While there is one, nothing here offers, holds or
+   * links another.
+   */
+  existingVisit?: { state: "held" | "booked"; labels: Record<LanguageCode, string> };
+  /**
+   * Text bookings end by asking where to email the customer's copy, rather
+   * than how they want their confirmation: they are already reading the texts.
+   */
+  emailCopy?: boolean;
 };
 
 /**
@@ -175,14 +187,18 @@ export const INTAKE_TOOLS = [
         answer_breaker: { type: "string", description: "What the customer said about the breaker panel. Empty string if not asked yet." },
         answer_property: { type: "string", description: "What the customer said about the kind and age of building. Empty string if not asked yet." },
         answer_access: { type: "string", description: "What the customer said about gate codes, dogs, parking, or being home. Empty string if not asked yet." },
+        email: {
+          type: "string",
+          description: "The email address the customer gave for a copy of their booking and receipt, exactly as written. Empty string if they have not given one or declined.",
+        },
         delivery_preference: {
           type: "string",
           enum: ["text", "email", "both", ""],
-          description: "How the customer asked for their confirmation. Empty string if they have not been asked.",
+          description: "'both' once they have given an email for their copy, 'text' if they declined to give one. Empty string if they have not been asked.",
         },
         language: LANGUAGE_ARGUMENT,
       },
-      required: ["contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency", "work_type", "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access", "delivery_preference", "language"],
+      required: ["contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency", "work_type", "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access", "email", "delivery_preference", "language"],
       additionalProperties: false,
     },
   },
@@ -207,17 +223,21 @@ export const INTAKE_TOOLS = [
         answer_breaker: { type: "string", description: "What the customer said about the breaker panel. Empty string if not asked yet." },
         answer_property: { type: "string", description: "What the customer said about the kind and age of building. Empty string if not asked yet." },
         answer_access: { type: "string", description: "What the customer said about gate codes, dogs, parking, or being home. Empty string if not asked yet." },
+        email: {
+          type: "string",
+          description: "The email address the customer gave for a copy of their booking and receipt, exactly as written. Empty string if they have not given one or declined.",
+        },
         delivery_preference: {
           type: "string",
           enum: ["text", "email", "both", ""],
-          description: "How the customer asked for their confirmation. Empty string if they have not been asked.",
+          description: "'both' once they have given an email for their copy, 'text' if they declined to give one. Empty string if they have not been asked.",
         },
         language: LANGUAGE_ARGUMENT,
       },
       required: [
         "contact_name", "description", "address_line_1", "city", "postal_code", "slot_start", "urgency",
         "work_type", "answer_scope", "answer_onset", "answer_breaker", "answer_property", "answer_access",
-        "delivery_preference", "language",
+        "email", "delivery_preference", "language",
       ],
       additionalProperties: false,
     },
@@ -281,11 +301,28 @@ export type IntakeAction = SpokenIn &
         /** What the customer was asked in the thread, and what they said. */
         intakeAnswers: IntakeAnswer[];
         deliveryPreference: DeliveryPreference;
+        /** Where to email their copy of the booking and receipt, when they gave one. */
+        email: string;
       }
   );
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * A name the customer actually gave, or nothing.
+ *
+ * Asked for a name it does not have, a model will sometimes fill the field with
+ * a placeholder rather than leave it empty. "<UNKNOWN>" then passes every check
+ * that a name was given and ends up on the booking page as "You're booked,
+ * <UNKNOWN>". Treated as no name, the intake asks for one instead.
+ */
+export function realName(value: string): string {
+  const name = value.trim();
+  if (/[<>{}[\]]/.test(name)) return "";
+  if (/^(unknown|n\/?a|none|null|undefined|customer|caller|anonymous|no name|not given|desconocid[oa]|sin nombre|an[oó]nim[oa]|cliente|[-?.\s]*)$/i.test(name)) return "";
+  return name;
 }
 
 function firstAndLast(name: string): { first: string; last: string } {
@@ -330,6 +367,7 @@ export function readDeliveryPreference(args: Record<string, unknown>): DeliveryP
 export function nextIntakeQuestion(
   args: Record<string, unknown>,
   language: LanguageCode = "en",
+  emailCopy = false,
 ): string | null {
   const phrases = phrasesFor(language);
   const answered = new Set(
@@ -351,7 +389,14 @@ export function nextIntakeQuestion(
     if (unanswered) return phrases.questions[unanswered.key] ?? unanswered.question;
   }
 
-  if (!readDeliveryPreference(args)) return phrases.deliveryQuestion;
+  const preference = readDeliveryPreference(args);
+  if (!emailCopy) return preference ? null : phrases.deliveryQuestion;
+
+  // By text, the last question is where to email their copy. Declining is an
+  // answer ('text'); wanting it by email without an address that can be
+  // delivered to is not, and is asked again.
+  if (!preference) return phrases.emailQuestion;
+  if (preference !== "text" && !looksLikeEmail(text(args.email))) return phrases.emailQuestion;
 
   return null;
 }
@@ -415,7 +460,22 @@ export function decideIntakeAction(input: {
   const spokenIn: SpokenIn = { language, languageChanged: resolved !== null };
   const phrases = phrasesFor(language);
 
+  // A visit already held or booked in this conversation is the only one it
+  // gets. What the customer says next is about that visit, so it is answered
+  // with where that visit stands, never with a second hold or payment link.
+  const visit = context.existingVisit;
+  const visitReply = visit
+    ? composeReply(
+        visit.state === "held"
+          ? phrases.alreadyHeld(context.businessName, visit.labels[language] ?? visit.labels.en, context.businessPhone)
+          : phrases.alreadyBooked(context.businessName, visit.labels[language] ?? visit.labels.en, context.businessPhone),
+        context,
+        language,
+      )
+    : "";
+
   if (!decision) {
+    if (visitReply) return { ...spokenIn, kind: "ask", missing: [], reply: visitReply };
     return {
       ...spokenIn,
       kind: "ask",
@@ -424,8 +484,9 @@ export function decideIntakeAction(input: {
     };
   }
 
-  const contactName = text(decision.input.contact_name);
+  const contactName = realName(text(decision.input.contact_name));
   const description = text(decision.input.description);
+
   const urgency = decision.input.urgency === "urgent" ? "urgent" : "routine";
 
   if (decision.tool === "ask_for") {
@@ -438,7 +499,9 @@ export function decideIntakeAction(input: {
     // language. This is the one reply it composes; every other one below is
     // written here.
     const proposedQuestion = text(decision.input.question);
-    const question = /\b(booked|penciled|pencilled|reserved|confirmed|holding|apartad[oa]|reservad[oa]|confirmad[oa])\b/i.test(proposedQuestion)
+    const claimsBooking = /\b(booked|penciled|pencilled|reserved|confirmed|holding|apartad[oa]|reservad[oa]|confirmad[oa])\b/i.test(proposedQuestion);
+    if (claimsBooking && visitReply) return { ...spokenIn, kind: "ask", missing, reply: visitReply };
+    const question = claimsBooking
       ? (language === "es" ? "Antes de reservar, necesito algunos detalles. ¿Qué trabajo necesita?" : "Before booking, I need a few details. What work do you need?")
       : proposedQuestion;
     return {
@@ -473,12 +536,14 @@ export function decideIntakeAction(input: {
   }
 
   if (decision.tool === "propose_visit" || decision.tool === "confirm_visit") {
+    if (visitReply) return { ...spokenIn, kind: "ask", missing: [], reply: visitReply };
+
     // Enforce intake before either offering or confirming a time.
     const basicQuestion = !context.intakeBeforeOffer ? null : !contactName
       ? (language === "es" ? "¿Cómo se llama?" : "What is your name?")
       : !text(decision.input.address_line_1) || !text(decision.input.city)
         ? phrases.askAddress(context.businessName)
-        : nextIntakeQuestion(decision.input, language);
+        : nextIntakeQuestion(decision.input, language, context.emailCopy);
     if (basicQuestion) return { ...spokenIn, kind: "ask", missing: ["description"],
       reply: composeReply(basicQuestion, context, language) };
     if (context.photoOfferHandled === false) return { ...spokenIn, kind: "ask", missing: ["description"],
@@ -537,7 +602,7 @@ export function decideIntakeAction(input: {
     // arrived with an address and a sentence. The model has been told to ask;
     // this is where it is required to have done so, because a booking is the
     // point after which nobody asks anything.
-    const outstanding = nextIntakeQuestion(decision.input, language);
+    const outstanding = nextIntakeQuestion(decision.input, language, context.emailCopy);
     if (outstanding) {
       return {
         ...spokenIn,
@@ -552,6 +617,7 @@ export function decideIntakeAction(input: {
     }
 
     const preference = readDeliveryPreference(decision.input);
+    const email = text(decision.input.email);
 
     return {
       ...spokenIn,
@@ -564,6 +630,7 @@ export function decideIntakeAction(input: {
       intakeAnswers: collectIntakeAnswers(decision.input),
       // nextIntakeQuestion has already refused to get here without one.
       deliveryPreference: preference || "text",
+      email: looksLikeEmail(email) ? email : "",
       reply: composeReply(
         phrases.booked(
           context.businessName,
@@ -625,7 +692,18 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     `into propose_visit AND confirm_visit as answer_<key>. At least ${MINIMUM_INTAKE_ANSWERS} must be answered:`,
     ...INTAKE_QUESTIONS.map(({ key, question }) => `- ${key}: ${question}`),
     "",
-    "Also ask how they want their confirmation — text, email, or both — and pass it as delivery_preference.",
+    context.emailCopy
+      ? "Last, ask for their email address so a copy of the booking and receipt can be emailed to them; it is optional. Pass it as email with delivery_preference 'both', or delivery_preference 'text' if they decline. If the website form already gave their email, use it and don't ask again."
+      : "Also ask how they want their confirmation — text, email, or both — and pass it as delivery_preference.",
+    ...(context.existingVisit
+      ? [
+          "",
+          context.existingVisit.state === "held"
+            ? `This customer already has a visit held for ${context.existingVisit.labels.en}, and the payment link to confirm it has already been texted to them.`
+            : `This customer already has a visit booked and paid for ${context.existingVisit.labels.en}.`,
+          "Do not propose or confirm another visit, and never send another link. Answer what they said in one short ask_for question (thank them for a photo; the electrician will see it). If they want a different time, tell them to call the business.",
+        ]
+      : []),
     "",
     /*
      * Two separate jobs, and they are told apart on purpose.

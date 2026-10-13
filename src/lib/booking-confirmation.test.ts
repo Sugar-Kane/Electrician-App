@@ -362,3 +362,24 @@ test("owner payment notice clearly differs from the unpaid hold and stays concis
   assert.ok(paid.length <= 320);
   assert.doesNotMatch(paid, /What Adam said/);
 });
+
+test("a paid booking's email is the customer's receipt, in the language they booked in", () => {
+  const answers = [
+    { question: "Have you looked at the breaker panel? Is anything tripped, and does it reset?", answer: "No ha revisado el panel." },
+  ];
+  const paid = confirmationEmail({ ...FACTS, paid: true, language: "es", intakeAnswers: answers });
+  for (const body of [paid.text, paid.html]) {
+    assert.match(body, /Tarifa de diagnóstico recibida: \$100/);
+    assert.match(body, /Su cita con Pacific Plains Electric está reservada/);
+    assert.match(body, /¿Ha revisado el panel de breakers\?/);
+    assert.match(body, /No ha revisado el panel\./);
+  }
+  assert.match(paid.subject, /^Su cita con Pacific Plains Electric/);
+
+  // An unpaid hold is never a receipt, in either language.
+  for (const language of ["en", "es"]) {
+    const held = confirmationEmail({ ...FACTS, language }, "held");
+    assert.doesNotMatch(held.text, /received|recibida/i);
+  }
+  assert.match(confirmationEmail({ ...FACTS, paid: true }).text, /Diagnostic fee received: \$100/);
+});

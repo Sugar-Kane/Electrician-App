@@ -7,8 +7,11 @@
  * business did not agree to is worse than none. Sending is a network call;
  * this is the promise.
  *
- * Import-free so every message can be read in a test rather than in an inbox.
+ * Import-free apart from the wording of the intake questions, so every message
+ * can be read in a test rather than in an inbox.
  */
+
+import { intakeQuestionIn } from "./intake-phrases.ts";
 
 export type BookingFacts = {
   paid?: boolean;
@@ -27,7 +30,93 @@ export type BookingFacts = {
   intakeAnswers?: { question: string; answer: string }[];
   /** The caller's number, so the owner can ring them back from the email. */
   customerPhone?: string;
+  /**
+   * The language the customer booked in: their own copy (text and email) is
+   * written in it. The owner's messages are always English.
+   */
+  language?: string;
 };
+
+/** The customer's copy, in English or Spanish. English is the fallback. */
+const CUSTOMER_COPY = {
+  en: {
+    smsHeld: (biz: string, slot: string) => `${biz}: your time is held for ${slot}`,
+    at: (address: string) => ` at ${address}`,
+    smsPay: (fee: string) => `. Pay the ${fee} diagnostic fee to confirm`,
+    smsCredited: (phone: string) => ` It is credited toward approved repair work. Questions? Call ${phone}.`,
+    smsReview: (biz: string, slot: string, phone: string) =>
+      `${biz}: we saved your request for ${slot}, but no appointment is confirmed. An electrician will contact you to finish scheduling, usually within 24 hours. Questions? Call ${phone}.`,
+    smsBooked: (biz: string, slot: string) => `${biz}: you're booked for ${slot}`,
+    smsFee: (fee: string, paid: boolean) =>
+      paid ? `. We received your ${fee} diagnostic fee.` : `. The diagnostic visit is ${fee}.`,
+    smsDetails: (link: string) => ` Details: ${link}`,
+    smsQuestions: (phone: string) => ` Questions? Call ${phone}.`,
+    hi: (name: string) => (name ? `Hi ${name},` : "Hi,"),
+    held: (biz: string) =>
+      `Your requested time with ${biz} is being held. It is not confirmed until the diagnostic fee is paid.`,
+    heldHtml: (biz: string) =>
+      `Your requested time with ${biz} is being held. <strong>It is not confirmed until the diagnostic fee is paid.</strong>`,
+    review: (biz: string) =>
+      `We saved your request with ${biz}, but no appointment is confirmed. An electrician will contact you to finish scheduling, usually within 24 hours.`,
+    reviewHtml: (biz: string) =>
+      `We saved your request with ${biz}, but <strong>no appointment is confirmed.</strong> An electrician will contact you to finish scheduling, usually within 24 hours.`,
+    booked: (biz: string) => `Your appointment with ${biz} is booked.`,
+    when: "When",
+    where: "Where",
+    visit: "Diagnostic visit",
+    told: "What you told us",
+    wentOver: "What we went over",
+    received: (fee: string) =>
+      `Diagnostic fee received: ${fee}. If more work is needed, this amount is credited toward the approved work order.`,
+    pay: "Pay and confirm this appointment",
+    view: "View this appointment",
+    change: (phone: string) => `Need to change it, or think something is wrong? Call ${phone}.`,
+    subjectHeld: (slot: string) => `Payment needed to confirm: ${slot}`,
+    subjectReview: (slot: string) => `We need to finish scheduling: ${slot}`,
+    subjectBooked: (biz: string, slot: string) => `Your ${biz} appointment: ${slot}`,
+  },
+  es: {
+    smsHeld: (biz: string, slot: string) => `${biz}: le estamos apartando ${slot}`,
+    at: (address: string) => ` en ${address}`,
+    smsPay: (fee: string) => `. Pague la tarifa de diagnóstico de ${fee} para confirmar`,
+    smsCredited: (phone: string) =>
+      ` Se acredita a la reparación aprobada. ¿Preguntas? Llame al ${phone}.`,
+    smsReview: (biz: string, slot: string, phone: string) =>
+      `${biz}: guardamos su solicitud para ${slot}, pero no hay una cita confirmada. Un electricista se comunicará con usted para terminar de agendar, normalmente en menos de 24 horas. ¿Preguntas? Llame al ${phone}.`,
+    smsBooked: (biz: string, slot: string) => `${biz}: su cita está reservada para ${slot}`,
+    smsFee: (fee: string, paid: boolean) =>
+      paid ? `. Recibimos su tarifa de diagnóstico de ${fee}.` : `. La visita de diagnóstico cuesta ${fee}.`,
+    smsDetails: (link: string) => ` Detalles: ${link}`,
+    smsQuestions: (phone: string) => ` ¿Preguntas? Llame al ${phone}.`,
+    hi: (name: string) => (name ? `Hola ${name}:` : "Hola:"),
+    held: (biz: string) =>
+      `Su horario con ${biz} está apartado. No queda confirmado hasta que se pague la tarifa de diagnóstico.`,
+    heldHtml: (biz: string) =>
+      `Su horario con ${biz} está apartado. <strong>No queda confirmado hasta que se pague la tarifa de diagnóstico.</strong>`,
+    review: (biz: string) =>
+      `Guardamos su solicitud con ${biz}, pero no hay una cita confirmada. Un electricista se comunicará con usted para terminar de agendar, normalmente en menos de 24 horas.`,
+    reviewHtml: (biz: string) =>
+      `Guardamos su solicitud con ${biz}, pero <strong>no hay una cita confirmada.</strong> Un electricista se comunicará con usted para terminar de agendar, normalmente en menos de 24 horas.`,
+    booked: (biz: string) => `Su cita con ${biz} está reservada.`,
+    when: "Cuándo",
+    where: "Dónde",
+    visit: "Visita de diagnóstico",
+    told: "Lo que nos dijo",
+    wentOver: "Lo que hablamos",
+    received: (fee: string) =>
+      `Tarifa de diagnóstico recibida: ${fee}. Si se necesita más trabajo, esta cantidad se acredita a la orden de trabajo aprobada.`,
+    pay: "Pagar y confirmar esta cita",
+    view: "Ver esta cita",
+    change: (phone: string) => `¿Necesita cambiarla, o cree que algo está mal? Llame al ${phone}.`,
+    subjectHeld: (slot: string) => `Pago pendiente para confirmar: ${slot}`,
+    subjectReview: (slot: string) => `Necesitamos terminar de agendar: ${slot}`,
+    subjectBooked: (biz: string, slot: string) => `Su cita con ${biz}: ${slot}`,
+  },
+};
+
+function customerCopy(language: string | undefined) {
+  return language === "es" ? CUSTOMER_COPY.es : CUSTOMER_COPY.en;
+}
 
 export type BookingMessageState = "confirmed" | "held" | "needs_review";
 
@@ -55,29 +144,28 @@ export function customerConfirmationSms(
   state: BookingMessageState = "confirmed",
 ): string {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
+  const copy = customerCopy(facts.language);
   const parts =
     state === "held"
       ? [
-          `${facts.businessName}: your time is held for ${facts.slotLabel}`,
-          address ? ` at ${address}` : "",
-          `. Pay the ${facts.diagnosticFee} diagnostic fee to confirm`,
+          copy.smsHeld(facts.businessName, facts.slotLabel),
+          address ? copy.at(address) : "",
+          copy.smsPay(facts.diagnosticFee),
           facts.link ? `: ${facts.link}` : ".",
-          ` It is credited toward approved repair work. Questions? Call ${facts.businessPhone}.`,
+          copy.smsCredited(facts.businessPhone),
         ]
       : state === "needs_review"
-        ? [
-            `${facts.businessName}: we saved your request for ${facts.slotLabel}, but no appointment is confirmed.`,
-            " An electrician will contact you to finish scheduling, usually within 24 hours.",
-            ` Questions? Call ${facts.businessPhone}.`,
-          ]
+        ? [copy.smsReview(facts.businessName, facts.slotLabel, facts.businessPhone)]
         : [
-            `${facts.businessName}: you're booked for ${facts.slotLabel}`,
-            address ? ` at ${address}` : "",
-            `. The diagnostic visit is ${facts.diagnosticFee}.`,
-            facts.link ? ` Details: ${facts.link}` : "",
-            ` Questions? Call ${facts.businessPhone}.`,
+            copy.smsBooked(facts.businessName, facts.slotLabel),
+            address ? copy.at(address) : "",
+            copy.smsFee(facts.diagnosticFee, facts.paid === true),
+            facts.link ? copy.smsDetails(facts.link) : "",
+            copy.smsQuestions(facts.businessPhone),
           ];
-  return clip(parts.join(""), SMS_LIMIT);
+  // A Spanish time ends in "a.m." or "p.m.", so the sentence's own full stop
+  // would double it.
+  return clip(parts.join("").replace(/(a\.m|p\.m)\.\./g, "$1."), SMS_LIMIT);
 }
 
 /**
@@ -497,60 +585,69 @@ export function confirmationEmail(
   facts: BookingFacts,
   state: BookingMessageState = "confirmed",
 ): EmailBody {
+  const copy = customerCopy(facts.language);
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
-  const greeting = facts.contactName ? `Hi ${squash(facts.contactName)},` : "Hi,";
+  const greeting = copy.hi(facts.contactName ? squash(facts.contactName) : "");
+  const paid = state === "confirmed" && facts.paid === true;
+  const answers = (facts.intakeAnswers ?? []).map((entry) => ({
+    question: squash(intakeQuestionIn(entry.question, facts.language ?? "en")),
+    answer: squash(entry.answer),
+  }));
 
   const lines = [
     greeting,
     "",
     state === "held"
-      ? `Your requested time with ${facts.businessName} is being held. It is not confirmed until the diagnostic fee is paid.`
+      ? copy.held(facts.businessName)
       : state === "needs_review"
-        ? `We saved your request with ${facts.businessName}, but no appointment is confirmed. An electrician will contact you to finish scheduling, usually within 24 hours.`
-        : `Your appointment with ${facts.businessName} is booked.`,
+        ? copy.review(facts.businessName)
+        : copy.booked(facts.businessName),
     "",
-    `When: ${facts.slotLabel}`,
-    address ? `Where: ${address}` : "",
-    `Diagnostic visit: ${facts.diagnosticFee}`,
-    facts.description ? `What you told us: ${squash(facts.description)}` : "",
-    ...(facts.intakeAnswers ?? []).flatMap((entry) => [
-      `${squash(entry.question)}`,
-      `  ${squash(entry.answer)}`,
-    ]),
+    `${copy.when}: ${facts.slotLabel}`,
+    address ? `${copy.where}: ${address}` : "",
+    `${copy.visit}: ${facts.diagnosticFee}`,
+    facts.description ? `${copy.told}: ${squash(facts.description)}` : "",
+    ...(answers.length ? ["", `${copy.wentOver}:`] : []),
+    ...answers.flatMap((entry) => [entry.question, `  ${entry.answer}`]),
+    ...(paid ? ["", copy.received(facts.diagnosticFee)] : []),
     "",
-    facts.link
-      ? state === "held"
-        ? `Pay and confirm this appointment: ${facts.link}`
-        : `View this appointment: ${facts.link}`
-      : "",
-    `Need to change it, or think something is wrong? Call ${facts.businessPhone}.`,
+    facts.link ? `${state === "held" ? copy.pay : copy.view}: ${facts.link}` : "",
+    copy.change(facts.businessPhone),
     "",
     facts.businessName,
-  ].filter((line) => line !== "");
+  ].filter((line, index, all) => line !== "" || (index > 0 && all[index - 1] !== ""));
 
   const html = [
     `<p>${escapeHtml(greeting)}</p>`,
     state === "held"
-      ? `<p>Your requested time with ${escapeHtml(facts.businessName)} is being held. <strong>It is not confirmed until the diagnostic fee is paid.</strong></p>`
+      ? `<p>${copy.heldHtml(escapeHtml(facts.businessName))}</p>`
       : state === "needs_review"
-        ? `<p>We saved your request with ${escapeHtml(facts.businessName)}, but <strong>no appointment is confirmed.</strong> An electrician will contact you to finish scheduling, usually within 24 hours.</p>`
-        : `<p>Your appointment with ${escapeHtml(facts.businessName)} is booked.</p>`,
+        ? `<p>${copy.reviewHtml(escapeHtml(facts.businessName))}</p>`
+        : `<p>${escapeHtml(copy.booked(facts.businessName))}</p>`,
     "<ul>",
-    `<li><strong>When:</strong> ${escapeHtml(facts.slotLabel)}</li>`,
-    address ? `<li><strong>Where:</strong> ${escapeHtml(address)}</li>` : "",
-    `<li><strong>Diagnostic visit:</strong> ${escapeHtml(facts.diagnosticFee)}</li>`,
+    `<li><strong>${copy.when}:</strong> ${escapeHtml(facts.slotLabel)}</li>`,
+    address ? `<li><strong>${copy.where}:</strong> ${escapeHtml(address)}</li>` : "",
+    `<li><strong>${copy.visit}:</strong> ${escapeHtml(facts.diagnosticFee)}</li>`,
     facts.description
-      ? `<li><strong>What you told us:</strong> ${escapeHtml(squash(facts.description))}</li>`
+      ? `<li><strong>${copy.told}:</strong> ${escapeHtml(squash(facts.description))}</li>`
       : "",
-    ...(facts.intakeAnswers ?? []).map(
-      (entry) =>
-        `<li><strong>${escapeHtml(squash(entry.question))}</strong><br />${escapeHtml(squash(entry.answer))}</li>`,
-    ),
     "</ul>",
-    facts.link
-      ? `<p><a href="${escapeHtml(facts.link)}">${state === "held" ? "Pay and confirm this appointment" : "View this appointment"}</a></p>`
+    answers.length
+      ? [
+          `<p><strong>${copy.wentOver}</strong></p>`,
+          "<ul>",
+          ...answers.map(
+            (entry) =>
+              `<li><strong>${escapeHtml(entry.question)}</strong><br />${escapeHtml(entry.answer)}</li>`,
+          ),
+          "</ul>",
+        ].join("")
       : "",
-    `<p>Need to change it, or think something is wrong? Call ${escapeHtml(facts.businessPhone)}.</p>`,
+    paid ? `<p>${escapeHtml(copy.received(facts.diagnosticFee))}</p>` : "",
+    facts.link
+      ? `<p><a href="${escapeHtml(facts.link)}">${state === "held" ? copy.pay : copy.view}</a></p>`
+      : "",
+    `<p>${escapeHtml(copy.change(facts.businessPhone))}</p>`,
     `<p>${escapeHtml(facts.businessName)}</p>`,
   ]
     .filter(Boolean)
@@ -559,11 +656,11 @@ export function confirmationEmail(
   return {
     subject:
       state === "held"
-        ? `Payment needed to confirm: ${facts.slotLabel}`
+        ? copy.subjectHeld(facts.slotLabel)
         : state === "needs_review"
-          ? `We need to finish scheduling: ${facts.slotLabel}`
-          : `Your ${facts.businessName} appointment: ${facts.slotLabel}`,
-    text: lines.join("\n"),
+          ? copy.subjectReview(facts.slotLabel)
+          : copy.subjectBooked(facts.businessName, facts.slotLabel),
+    text: lines.join("\n").trim(),
     html,
   };
 }

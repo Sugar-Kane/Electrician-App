@@ -8,8 +8,11 @@ import {
   ReceiptText,
 } from "lucide-react";
 
+import { bookingPageCopy, bookingPageLanguage } from "@/lib/booking-page-copy";
 import { bookingPageState, bookingPayNotice } from "@/lib/booking-page-state";
 import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
+import { intakeQuestionIn } from "@/lib/intake-phrases";
+import { realName } from "@/lib/sms-intake";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -47,17 +50,24 @@ type Confirmation = {
   expires_at: string | null;
 };
 
+/** How it was booked, and in what language, from the same token. */
+type BookingLocale = {
+  language: string | null;
+  channel: string | null;
+  customer_name: string | null;
+};
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function windowLabel(start: string, end: string, timeZone: string) {
-  const day = new Intl.DateTimeFormat("en-US", {
+function windowLabel(start: string, end: string, timeZone: string, locale: string) {
+  const day = new Intl.DateTimeFormat(locale, {
     timeZone,
     weekday: "long",
     month: "long",
     day: "numeric",
   }).format(new Date(start));
   const time = (value: string) =>
-    new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(
+    new Intl.DateTimeFormat(locale, { timeZone, hour: "numeric", minute: "2-digit" }).format(
       new Date(value),
     );
   return { day, window: `${time(start)} – ${time(end)}` };
@@ -73,13 +83,23 @@ export default async function BookingConfirmationPage({
   const [{ token }, query] = await Promise.all([params, searchParams]);
 
   let booking: Confirmation | null = null;
+  let locale: BookingLocale | null = null;
   // Checked before the round trip: a malformed token is a typo or a probe, and
   // neither is worth a database call.
   if (UUID.test(token)) {
     const supabase = createPublicClient();
-    const { data } = await supabase.rpc("get_phone_booking_confirmation", { p_token: token });
+    const [{ data }, { data: localeRows }] = await Promise.all([
+      supabase.rpc("get_phone_booking_confirmation", { p_token: token }),
+      supabase.rpc("get_booking_confirmation_locale", { p_token: token }),
+    ]);
     booking = Array.isArray(data) && data.length > 0 ? (data[0] as Confirmation) : null;
+    locale = Array.isArray(localeRows) && localeRows.length > 0 ? (localeRows[0] as BookingLocale) : null;
   }
+
+  // The language they booked in. A page with nothing to show still answers in
+  // English and Spanish, since there is no booking to say which.
+  const language = bookingPageLanguage(locale?.language);
+  const copy = bookingPageCopy(language);
 
   if (!booking) {
     return (
@@ -91,11 +111,10 @@ export default async function BookingConfirmationPage({
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-caution-bg text-caution">
             <Clock3 className="h-7 w-7" aria-hidden />
           </span>
-          <h1 className="mt-5 text-2xl font-semibold">We could not find that appointment</h1>
-          <p className="mt-3 text-sm leading-6 text-ink-muted">
-            The link may be old, or it may have been copied incompletely. Call the business and
-            they will find your booking.
-          </p>
+          <h1 className="mt-5 text-2xl font-semibold">{bookingPageCopy("en").notFoundTitle}</h1>
+          <p className="mt-3 text-sm leading-6 text-ink-muted">{bookingPageCopy("en").notFoundBody}</p>
+          <p lang="es" className="mt-5 text-sm font-semibold">{bookingPageCopy("es").notFoundTitle}</p>
+          <p lang="es" className="mt-1 text-sm leading-6 text-ink-muted">{bookingPageCopy("es").notFoundBody}</p>
         </section>
       </main>
     );
@@ -104,7 +123,7 @@ export default async function BookingConfirmationPage({
   const timeZone = booking.time_zone || "America/Los_Angeles";
   const labels =
     booking.arrival_window_start && booking.arrival_window_end
-      ? windowLabel(booking.arrival_window_start, booking.arrival_window_end, timeZone)
+      ? windowLabel(booking.arrival_window_start, booking.arrival_window_end, timeZone, copy.locale)
       : null;
   const address = [booking.address_line_1, booking.city, booking.postal_code]
     .filter(Boolean)
@@ -120,7 +139,13 @@ export default async function BookingConfirmationPage({
   const depositCents =
     booking.deposit_cents ?? booking.diagnostic_fee_cents ?? DEFAULT_DIAGNOSTIC_FEE_CENTS;
   const deposit = money(depositCents);
-  const answers = Array.isArray(booking.intake_answers) ? booking.intake_answers : [];
+  // Their answers are shown as they gave them; the questions in their language.
+  const answers = (Array.isArray(booking.intake_answers) ? booking.intake_answers : []).map((entry) => ({
+    question: intakeQuestionIn(entry.question, language),
+    answer: entry.answer,
+  }));
+  // A placeholder the assistant filled in is not a name.
+  const name = realName(booking.contact_name ?? "") || realName(locale?.customer_name ?? "");
   const state = bookingPageState({
     status: booking.status,
     depositPaid: booking.deposit_paid === true,
@@ -132,23 +157,20 @@ export default async function BookingConfirmationPage({
   const paymentReview = state === "payment_review";
   // A stale query string must not make a paid appointment look canceled after
   // Stripe has already finished it.
-  const notice = confirmed || paymentReview ? "" : bookingPayNotice(query.pay);
+  const notice = confirmed || paymentReview ? "" : bookingPayNotice(query.pay, language);
 
   const heading = confirmed
-    ? booking.contact_name
-      ? `You're booked, ${booking.contact_name}`
-      : "You're booked"
+    ? copy.booked(name)
     : awaitingPayment
-      ? booking.contact_name
-        ? `Your time is being held, ${booking.contact_name}`
-        : "Your time is being held"
+      ? copy.held(name)
       : paymentReview
-        ? "Payment received"
-        : "Please call to confirm this appointment";
+        ? copy.paymentReceived
+        : copy.callToConfirm;
 
   return (
     <main
       id="main-content"
+      lang={language}
       className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white"
     >
       <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 sm:p-8">
@@ -165,7 +187,7 @@ export default async function BookingConfirmationPage({
         </span>
 
         <h1 className="mt-5 text-2xl font-semibold">{heading}</h1>
-        <p className="mt-2 text-sm text-ink-muted">with {booking.business_name}</p>
+        <p className="mt-2 text-sm text-ink-muted">{copy.withBusiness(booking.business_name)}</p>
 
         {notice ? (
           <p className="mt-5 rounded-control border border-caution/40 bg-caution-bg/40 p-3 text-sm leading-6 text-caution">
@@ -174,18 +196,11 @@ export default async function BookingConfirmationPage({
         ) : null}
 
         {awaitingPayment ? (
-          <p className="mt-5 text-sm leading-6 text-ink-muted">
-            This appointment is not confirmed until the diagnostic fee is paid.
-          </p>
+          <p className="mt-5 text-sm leading-6 text-ink-muted">{copy.heldNote}</p>
         ) : paymentReview ? (
-          <p className="mt-5 text-sm leading-6 text-ink-muted">
-            Do not pay again. The business has your payment and will contact you while the
-            appointment is finalized.
-          </p>
+          <p className="mt-5 text-sm leading-6 text-ink-muted">{copy.reviewNote}</p>
         ) : !confirmed ? (
-          <p className="mt-5 text-sm leading-6 text-ink-muted">
-            This time is not currently confirmed. Call the business before planning around it.
-          </p>
+          <p className="mt-5 text-sm leading-6 text-ink-muted">{copy.unconfirmedNote}</p>
         ) : null}
 
         <dl className="mt-7 space-y-5 text-sm">
@@ -193,7 +208,7 @@ export default async function BookingConfirmationPage({
             <div className="flex gap-3">
               <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
-                <dt className="text-ink-muted">Arrival window</dt>
+                <dt className="text-ink-muted">{copy.arrivalWindow}</dt>
                 <dd className="mt-0.5 font-semibold">{labels.day}</dd>
                 <dd className="text-ink-muted">{labels.window}</dd>
               </div>
@@ -204,7 +219,7 @@ export default async function BookingConfirmationPage({
             <div className="flex gap-3">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
-                <dt className="text-ink-muted">Service address</dt>
+                <dt className="text-ink-muted">{copy.serviceAddress}</dt>
                 <dd className="mt-0.5 font-semibold">{address}</dd>
               </div>
             </div>
@@ -213,7 +228,7 @@ export default async function BookingConfirmationPage({
           <div className="flex gap-3">
             <ReceiptText className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
-              <dt className="text-ink-muted">Diagnostic visit</dt>
+              <dt className="text-ink-muted">{copy.diagnosticVisit}</dt>
               <dd className="mt-0.5 font-semibold">{fee}</dd>
             </div>
           </div>
@@ -222,7 +237,7 @@ export default async function BookingConfirmationPage({
             <div className="flex gap-3">
               <ReceiptText className="mt-0.5 h-5 w-5 shrink-0 text-transparent" aria-hidden />
               <div>
-                <dt className="text-ink-muted">What you told us</dt>
+                <dt className="text-ink-muted">{copy.toldUs}</dt>
                 <dd className="mt-0.5 text-ink">{booking.description}</dd>
               </div>
             </div>
@@ -231,7 +246,7 @@ export default async function BookingConfirmationPage({
 
         {answers.length > 0 ? (
           <section className="mt-7 rounded-control border border-line bg-white/[0.03] p-4">
-            <h2 className="text-sm font-semibold text-ink">What we went over on the call</h2>
+            <h2 className="text-sm font-semibold text-ink">{copy.wentOver(locale?.channel ?? "")}</h2>
             <dl className="mt-3 space-y-3 text-sm">
               {answers.map((entry, index) => (
                 <div key={index}>
@@ -240,29 +255,27 @@ export default async function BookingConfirmationPage({
                 </div>
               ))}
             </dl>
-            <p className="mt-3 text-xs leading-5 text-ink-faint">
-              An electrician will call to go over a few more details before the visit.
-            </p>
+            <p className="mt-3 text-xs leading-5 text-ink-faint">{copy.electricianWillCall}</p>
           </section>
         ) : null}
 
         <section className="mt-5 rounded-control border border-line bg-white/[0.03] p-4">
           <h2 className="text-sm font-semibold text-ink">
             {confirmed
-              ? "Diagnostic fee received"
+              ? copy.feeReceived
               : awaitingPayment
-                ? "Payment required to confirm"
+                ? copy.paymentRequired
                 : paymentReview
-                  ? "Payment received"
-                  : "Diagnostic fee"}
+                  ? copy.paymentReceived
+                  : copy.diagnosticFee}
           </h2>
           <p className="mt-1 text-2xl font-semibold">{deposit}</p>
           <p className="mt-2 text-xs leading-5 text-ink-muted">
             {confirmed || paymentReview
-              ? "If more work is needed, this amount is credited toward the approved work order."
+              ? copy.creditedNote
               : awaitingPayment
-                ? "Pay securely to confirm. If more work is needed, this amount is credited toward the approved work order."
-                : "Call the business to confirm whether payment is needed."}
+                ? copy.payNote
+                : copy.callNote}
           </p>
         </section>
 
@@ -272,7 +285,7 @@ export default async function BookingConfirmationPage({
             className="tap-target mt-6 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-5 font-semibold text-on-brand"
           >
             <CreditCard className="h-5 w-5" aria-hidden />
-            Pay {deposit} securely
+            {copy.payButton(deposit)}
           </a>
         ) : null}
 
@@ -286,12 +299,10 @@ export default async function BookingConfirmationPage({
             }`}
           >
             <Phone className="h-5 w-5" aria-hidden />
-            Call {booking.business_phone}
+            {copy.call(booking.business_phone)}
           </a>
         ) : null}
-        <p className="mt-3 text-center text-xs leading-5 text-ink-faint">
-          Need to change or cancel? Call and we will sort it out.
-        </p>
+        <p className="mt-3 text-center text-xs leading-5 text-ink-faint">{copy.changeNote}</p>
       </section>
     </main>
   );

@@ -85,6 +85,8 @@ export async function startBookingCheckout(input: {
   intakeId?: string;
   /** Match Stripe's lifetime to the slot hold when one already exists. */
   expiresAt?: string;
+  /** The language the customer booked in, so the payment page reads the same. */
+  language?: string;
 }): Promise<CheckoutResult> {
   const stripe = getStripe();
   if (!stripe) return { error: "Payments are not configured." };
@@ -108,6 +110,9 @@ export async function startBookingCheckout(input: {
         excluded_payment_method_types: DELAYED_PAYMENT_METHODS,
         integration_identifier: "volteira_diagnostic_booking_kqvmrjta",
         customer_email: input.email || undefined,
+        // Stripe's Latin American Spanish for a customer who booked in Spanish;
+        // otherwise the browser's own language, as before.
+        locale: input.language === "es" ? "es-419" : "auto",
         // Half an hour, the same as the hold the slot is under. A checkout that
         // outlives the reservation invites paying for a time already given away.
         expires_at: expiresAt,

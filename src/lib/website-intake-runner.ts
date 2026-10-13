@@ -163,6 +163,7 @@ export async function followUpWebsiteRequest(input: {
     // yes, so the first message never books anything.
     const context = loaded.context;
     context.intakeBeforeOffer = true;
+    context.emailCopy = true;
     context.photoOfferHandled = false;
     const modelDecision = await readInboundText({
       system: buildIntakeSystemPrompt(context),
