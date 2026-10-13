@@ -97,7 +97,6 @@ export async function POST(request: Request) {
     callingConfigured: Boolean(
       isTwilioConfigured() &&
         isMcpConfigured() &&
-        process.env.XAI_WEBHOOK_SECRET &&
         process.env.NEXT_PUBLIC_APP_URL &&
         toE164(String(organization?.phone ?? "")) &&
         toE164(input.phone),

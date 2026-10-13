@@ -203,7 +203,9 @@ export async function followUpWebsiteRequest(input: {
  * Ring a customer who asked for a call, and note the call on the request.
  *
  * Returns whether a call was placed. Calling needs Maya's line to be set up on
- * this deployment: Twilio, a business number, and the voice session secret.
+ * this deployment: Twilio, a business number, and the booking tools' secret.
+ * The call itself is answered by the agent set up in the xAI console, so no
+ * xAI secret is needed here.
  */
 async function callBack(input: {
   database: ReturnType<typeof getSupabaseAdmin>;
@@ -224,7 +226,7 @@ async function callBack(input: {
     duplicate: false,
     contactMethod: input.contactMethod,
     callingConfigured: Boolean(
-      isTwilioConfigured() && isMcpConfigured() && process.env.XAI_WEBHOOK_SECRET && origin && from && input.to,
+      isTwilioConfigured() && isMcpConfigured() && origin && from && input.to,
     ),
   });
   if (!decision.call) return false;
