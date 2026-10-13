@@ -87,7 +87,7 @@ function RequestCard({ request }: { request: BookingRequest }) {
               </span>
             ) : null}
             <span className="inline-flex min-h-7 items-center rounded-full border border-line px-2.5 text-[10px] font-semibold text-ink-muted">
-              {SOURCE_LABELS[request.source] ?? "Text"}
+              {request.origin === "website" ? "From your website" : (SOURCE_LABELS[request.source] ?? "Text")}
             </span>
             {handled ? (
               <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
@@ -102,6 +102,18 @@ function RequestCard({ request }: { request: BookingRequest }) {
           {request.address ? <p className="mt-1 text-xs text-ink-muted">{request.address}</p> : null}
           {request.arrivalWindow ? (
             <p className="mt-1 text-xs text-brand">Window: {request.arrivalWindow}</p>
+          ) : null}
+          {request.preferredTimes ? (
+            <p className="mt-1 text-xs text-ink-muted">Good times: {request.preferredTimes}</p>
+          ) : null}
+          {request.origin === "website" && !request.conversationId && !handled ? (
+            <p className="mt-2 text-xs font-semibold text-caution">
+              {request.smsConsent
+                ? "Not texted: call them."
+                : request.contactPreference === "email" && request.email
+                  ? `No text consent: email ${request.email} or call them.`
+                  : "No text consent: call them."}
+            </p>
           ) : null}
           {request.safetyFlags.length > 0 ? (
             <p className="mt-2 flex items-start gap-1.5 text-xs text-critical">

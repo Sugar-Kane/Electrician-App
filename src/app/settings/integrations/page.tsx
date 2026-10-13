@@ -11,6 +11,8 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { ChatGptConnectionCard } from "./chatgpt-connection-card";
 import { revokeChatGptConnection } from "./chatgpt-actions";
+import { revokeWebsiteKey } from "./website-actions";
+import { WebsiteFormCard } from "./website-form-card";
 
 const envLabels: Record<string, string> = {
   LOWES_PRODUCT_DISCOVERY_API_URL: "Product Discovery API URL",
@@ -30,6 +32,7 @@ export default async function IntegrationsPage() {
   const context = await currentContext();
   const canManage = context?.role === "owner";
   let connections: { id: string; createdAt: string; expiresAt: string; lastUsedAt: string }[] = [];
+  let websiteKeys: { id: string; createdAt: string; lastUsedAt: string }[] = [];
 
   if (context && canManage) {
     const supabase = asFlexibleClient(await createClient());
@@ -46,15 +49,33 @@ export default async function IntegrationsPage() {
       expiresAt: dateLabel(row.expires_at),
       lastUsedAt: dateLabel(row.last_used_at),
     }));
+
+    const { data: keys } = await supabase
+      .from("website_intake_keys")
+      .select("id, created_at, last_used_at")
+      .eq("organization_id", context.organizationId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false });
+    websiteKeys = ((keys ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id ?? ""),
+      createdAt: dateLabel(row.created_at),
+      lastUsedAt: dateLabel(row.last_used_at),
+    }));
   }
 
   const calendar = context && canManage ? await getSupabaseAdmin().from("booking_calendar_connections")
     .select("account_email,connected_at,last_error").eq("organization_id", context.organizationId).maybeSingle() : null;
   const calendarReady = Boolean(calendarConfig());
   return (
-    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT and supplier programs. Their keys stay on the server.">
+    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT, your website and supplier programs. Their keys stay on the server.">
       <div className="grid gap-4 lg:grid-cols-2">
         <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
+        <WebsiteFormCard
+          keys={websiteKeys}
+          canManage={canManage}
+          appUrl={(process.env.NEXT_PUBLIC_APP_URL || "https://www.volteira.com").replace(/\/+$/, "")}
+          revokeAction={revokeWebsiteKey}
+        />
 
         {canManage ? <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
           <h2 className="text-lg font-semibold">Google Calendar</h2>

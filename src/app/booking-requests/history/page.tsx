@@ -67,7 +67,7 @@ function HistoryCard({ request }: { request: BookingRequest }) {
               </span>
             )}
             <span className="inline-flex min-h-7 items-center rounded-full border border-line px-2.5 text-[10px] font-semibold text-ink-muted">
-              {SOURCE_LABELS[request.source] ?? "Text"}
+              {request.origin === "website" ? "From your website" : (SOURCE_LABELS[request.source] ?? "Text")}
             </span>
           </div>
           <h2 className="mt-2 text-sm font-semibold">

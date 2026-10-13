@@ -338,6 +338,91 @@ export function ownerCallbackEmail(facts: CallbackFacts): EmailBody {
   };
 }
 
+export type WebsiteRequestFacts = {
+  contactName: string;
+  customerPhone: string;
+  serviceName: string;
+  description: string;
+  town: string;
+  preferredTimes: string;
+  /** What happens next on the customer's side, which decides what the owner does. */
+  texting: "texting" | "no_consent" | "opted_out" | "not_set_up";
+  /** The booking-requests list, for the owner's email. */
+  link?: string;
+};
+
+/** The one sentence that tells the owner whether this is theirs to chase. */
+function websiteNextStep(texting: WebsiteRequestFacts["texting"]): string {
+  switch (texting) {
+    case "texting":
+      return "The assistant is texting them now to get the details and book a visit.";
+    case "opted_out":
+      return "They opted out of texts earlier, so nobody is texting them. Call them.";
+    case "not_set_up":
+      return "Texting isn't set up, so nobody is texting them. Call them.";
+    default:
+      return "They didn't agree to texts, so nobody is texting them. Call them.";
+  }
+}
+
+/**
+ * The owner's alert for a request from their own website.
+ *
+ * Says plainly whether the assistant has it or the owner does: a request that
+ * everybody assumes somebody else is handling is the one that goes cold.
+ */
+export function ownerWebsiteRequestSms(facts: WebsiteRequestFacts): string {
+  const who = squash(facts.contactName) || "Someone";
+  const what = [squash(facts.serviceName), squash(facts.town)].filter(Boolean).join(", ");
+  return clip(
+    [
+      `Website request: ${who}, ${facts.customerPhone}${what ? ` — ${what}` : ""}.`,
+      facts.description ? squash(facts.description) : "",
+      websiteNextStep(facts.texting),
+    ]
+      .filter(Boolean)
+      .join(" "),
+    SMS_LIMIT,
+  );
+}
+
+export function ownerWebsiteRequestEmail(facts: WebsiteRequestFacts): EmailBody {
+  const who = squash(facts.contactName) || "Someone";
+  const heading = `${who} sent a request on your website`;
+  const next = websiteNextStep(facts.texting);
+  const details: [string, string][] = (
+    [
+      ["Service", squash(facts.serviceName)],
+      ["Town", squash(facts.town)],
+      ["What's happening", squash(facts.description)],
+      ["Good times", squash(facts.preferredTimes)],
+    ] as [string, string][]
+  ).filter(([, value]) => value);
+
+  const lines = [
+    heading,
+    facts.customerPhone,
+    "",
+    ...details.map(([label, value]) => `${label}: ${value}`),
+    "",
+    next,
+    facts.link ? `Open the request: ${facts.link}` : "",
+  ].filter((line, index, all) => line !== "" || (index > 0 && all[index - 1] !== ""));
+
+  const tel = facts.customerPhone.replace(/[^\d+]/g, "");
+  const html = [
+    `<p style="font-size:18px;margin:0 0 4px"><strong>${escapeHtml(heading)}</strong></p>`,
+    `<p style="margin:0 0 16px"><a href="tel:${escapeHtml(tel)}">${escapeHtml(facts.customerPhone)}</a></p>`,
+    ...details.map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`),
+    `<p><strong>${escapeHtml(next)}</strong></p>`,
+    facts.link ? `<p><a href="${escapeHtml(facts.link)}">Open the request</a></p>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  return { subject: `Website request: ${who}`, text: lines.join("\n").trim(), html };
+}
+
 /**
  * The customer's copy, which has to match what they were just promised.
  *

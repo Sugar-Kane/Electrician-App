@@ -20,6 +20,14 @@ export type BookingSource = "sms" | "voice" | "web" | "owner";
 
 export type BookingRequest = {
   id: string;
+  /** "website" when it came from the request form on the business's own site. */
+  origin?: "website" | "";
+  /** When the customer said suits them, in their words, from the website form. */
+  preferredTimes?: string;
+  /** How the customer asked to be contacted on the website form. */
+  contactPreference?: "phone" | "email" | "text" | "";
+  /** Whether they ticked the box agreeing to texts. */
+  smsConsent?: boolean;
   /** How the customer asked. One table, categorised rather than duplicated. */
   source: BookingSource;
   status:
@@ -102,7 +110,7 @@ export type BookingRequestQueue = {
 };
 
 const COLUMNS =
-  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at";
+  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, preferred_times, contact_preference, sms_consent";
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -166,6 +174,10 @@ function toRequest(row: Record<string, unknown>, timezone: string, payments: Map
     archivedLabel: archivedAt ? formatWhen(archivedAt, timezone) : "",
     duplicateOf: text(row.duplicate_of),
     duplicateReviewedAt: text(row.duplicate_reviewed_at),
+    origin: text(row.origin) === "website" ? "website" : "",
+    preferredTimes: text(row.preferred_times),
+    contactPreference: (["phone", "email", "text"].includes(text(row.contact_preference)) ? text(row.contact_preference) : "") as BookingRequest["contactPreference"],
+    smsConsent: row.sms_consent === true,
   };
 }
 
