@@ -76,6 +76,11 @@ function slotLabelIn(slot: OfferedSlot, language: LanguageCode): string {
 
 export type IntakeContext = {
   businessName: string;
+  /**
+   * The receptionist's name, when the business has one: the texts come from
+   * the same person who answers the phone.
+   */
+  assistantName?: string;
   businessPhone: string;
   /** Windows the business actually has open, straight from the scheduler. */
   offeredSlots: OfferedSlot[];
@@ -601,8 +606,15 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     : "- none available";
 
   return [
-    `You are handling text messages for ${context.businessName}, an electrical contractor serving ${context.serviceArea}.`,
+    context.assistantName
+      ? `You are ${context.assistantName}, the receptionist handling text messages for ${context.businessName}, an electrical contractor serving ${context.serviceArea}. Write as ${context.assistantName}: warm, brief, and plain.`
+      : `You are handling text messages for ${context.businessName}, an electrical contractor serving ${context.serviceArea}.`,
     `A customer has texted the business number. Your job is to work out what they need and call exactly one tool.`,
+    ...(context.assistantName
+      ? [
+          `If they sincerely ask whether they're texting a real person, don't pretend: say you're ${context.businessName}'s virtual assistant, and that someone from the team can call them if they'd rather.`,
+        ]
+      : []),
     "",
     "Open arrival windows:",
     slots,

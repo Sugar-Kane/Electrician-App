@@ -6,10 +6,11 @@ import { readInboundText } from "@/lib/claude";
 import { loadIntakeContext, openWebsiteRequest } from "@/lib/intake-shared";
 import { consentIsActive } from "@/lib/messaging-rules";
 import { toE164 } from "@/lib/phone-format";
-import { buildIntakeSystemPrompt, decideIntakeAction } from "@/lib/sms-intake";
+import { buildIntakeSystemPrompt, decideIntakeAction, INTAKE_QUESTIONS } from "@/lib/sms-intake";
 import { replyToCustomer } from "@/lib/sms-intake-runner";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTwilioConfigured, placeCall } from "@/lib/twilio";
+import { RECEPTIONIST_NAME } from "@/lib/voice-intake";
 import {
   websiteCallDecision,
   websiteOpener,
@@ -169,14 +170,28 @@ export async function followUpWebsiteRequest(input: {
     });
     const action = decideIntakeAction({ decision: modelDecision, customerText: website.turn, context });
 
+    // Written as Maya, the same receptionist who answers the phone.
     const body =
       modelDecision && (action.kind === "ask" || action.kind === "propose")
-        ? websiteOpener({ businessName: context.businessName, firstName: website.firstName, reply: action.reply })
+        ? websiteOpener({
+            businessName: context.businessName,
+            assistantName: RECEPTIONIST_NAME,
+            firstName: website.firstName,
+            reply: action.reply,
+          })
         : websiteOpenerFallback({
             businessName: context.businessName,
+            assistantName: RECEPTIONIST_NAME,
             firstName: website.firstName,
-            hasAddress: website.hasAddress,
+            firstQuestion: INTAKE_QUESTIONS[0].question,
           });
+    if (!modelDecision || (action.kind !== "ask" && action.kind !== "propose")) {
+      console.error("website request opener sent the fallback", {
+        requestId: input.requestId,
+        decided: Boolean(modelDecision),
+        kind: action.kind,
+      });
+    }
 
     const sent = await replyToCustomer({
       database,

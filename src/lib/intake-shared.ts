@@ -20,6 +20,7 @@ import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/s
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
+import { RECEPTIONIST_NAME } from "@/lib/voice-intake";
 import { websiteIntakeTurn } from "@/lib/website-intake";
 
 /**
@@ -257,6 +258,7 @@ export async function loadIntakeContext(input: {
     },
     context: {
       businessName: text(organization?.name) || "Your electrician",
+      assistantName: RECEPTIONIST_NAME,
       businessPhone: text(organization?.phone) || "our office",
       offeredSlots,
       diagnosticFee:

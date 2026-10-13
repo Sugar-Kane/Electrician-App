@@ -159,10 +159,15 @@ export function websiteIntakeTurn(request: {
  * don't know needs the business's name and the reason in the first line, or it
  * reads as spam and gets a STOP.
  */
-export function websiteOpener(input: { businessName: string; firstName: string; reply: string }): string {
+export function websiteOpener(input: {
+  businessName: string;
+  assistantName: string;
+  firstName: string;
+  reply: string;
+}): string {
   const name = displayFirstName(input.firstName);
   const hello = name ? `Hi ${name}, ` : "Hi, ";
-  return `${hello}this is ${input.businessName} about your website request. ${withoutGreeting(input.reply)}`;
+  return `${hello}this is ${input.assistantName} from ${input.businessName}. I just received your request on our website and would like to get you scheduled with an electrician. ${withoutGreeting(input.reply)}`;
 }
 
 /** "adam" as typed into a form reads as "Adam"; a name typed with capitals is left alone. */
@@ -233,14 +238,23 @@ export function websiteCallbackVoicemailTwiml(message: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna-Neural">${escaped}</Say><Hangup /></Response>`;
 }
 
-/** Said when the assistant itself is unavailable, so the customer still hears from the business. */
-export function websiteOpenerFallback(input: { businessName: string; firstName: string; hasAddress: boolean }): string {
+/**
+ * Said when the assistant itself is unavailable, so the customer still hears
+ * from the business: the same introduction, and the first question a visit
+ * needs answered. Their reply goes to the assistant like any other text.
+ */
+export function websiteOpenerFallback(input: {
+  businessName: string;
+  assistantName: string;
+  firstName: string;
+  firstQuestion: string;
+}): string {
+  const question = input.firstQuestion.trim();
   return websiteOpener({
     businessName: input.businessName,
+    assistantName: input.assistantName,
     firstName: input.firstName,
-    reply: input.hasAddress
-      ? "What day and time work best for a visit? You can also text a photo of the problem. Reply STOP to opt out."
-      : "What's the address for the visit, and what day and time work best? Reply STOP to opt out.",
+    reply: `To start, ${question.charAt(0).toLowerCase()}${question.slice(1)} Reply STOP to opt out.`,
   });
 }
 
