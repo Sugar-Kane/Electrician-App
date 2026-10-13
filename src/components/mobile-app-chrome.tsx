@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { usePathname } from "next/navigation";
 
 import {
@@ -219,15 +220,14 @@ export function MobileAppChrome({
               >
                 <Search className="h-5 w-5" aria-hidden />
               </Link>
-              <Link
+              <IntentLink
                 href="/assistant"
-                prefetch
                 aria-current={pathname === "/assistant" ? "page" : undefined}
                 className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line bg-raised text-ink aria-[current=page]:border-brand/50 aria-[current=page]:text-brand"
                 aria-label="Ask Volteira"
               >
                 <MessageCircle className="h-5 w-5" aria-hidden />
-              </Link>
+              </IntentLink>
               <AccountMenu />
             </div>
           </>
@@ -280,20 +280,17 @@ export function MobileAppChrome({
             }
 
             return (
-              <Link
+              <IntentLink
                 key={label}
                 href={href}
-                // The whole route, not the loading state. Every page here is
-                // `force-dynamic`, and the default prefetch stops at the
-                // nearest loading boundary — which is the skeleton, so the
-                // wait for the data was still the whole wait.
-                prefetch
+                // The whole route, not the loading state, from the moment a
+                // finger lands on the tab (IntentLink).
                 onClick={() => toTopIfHere(href)}
                 aria-current={current ? "page" : undefined}
                 className={shell}
               >
                 {inner}
-              </Link>
+              </IntentLink>
             );
           })}
         </nav>
@@ -335,10 +332,9 @@ export function MobileAppChrome({
                   ) : null}
                   <div className="space-y-2">
                     {section.items.map((item) => (
-                      <Link
+                      <IntentLink
                         key={item.href}
                         href={item.href}
-                        prefetch
                         onClick={() => {
                           setMenuOpen(false);
                           toTopIfHere(item.href);
@@ -359,7 +355,7 @@ export function MobileAppChrome({
                             {item.description}
                           </span>
                         </span>
-                      </Link>
+                      </IntentLink>
                     ))}
                   </div>
                 </div>

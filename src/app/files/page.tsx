@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import {
   ChevronRight,
   Cloud,
@@ -76,10 +77,10 @@ function FolderBranch({
         {hasChildren ? <FolderOpen className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden /> : <Folder className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />}
       </span>
       {openable ? (
-        <Link href={`/files/${node.id}`} prefetch className="min-w-0 flex-1">
+        <IntentLink href={`/files/${node.id}`} className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold hover:text-brand">{node.name}</span>
           {node.type === "job" ? <span className="block truncate text-[10px] text-ink-faint">Standard job documentation</span> : null}
-        </Link>
+        </IntentLink>
       ) : (
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">{node.name}</span>

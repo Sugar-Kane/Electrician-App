@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle, MapPin, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
@@ -302,9 +302,8 @@ export function InventoryList({ items }: { items: InventoryRow[] }) {
               <ItemForm item={item} onDone={() => setEditing(null)} />
             ) : (
               <div className="flex items-center gap-3 p-3">
-                <Link
+                <IntentLink
                   href={`/inventory/${item.id}`}
-                  prefetch
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
                 <ItemThumb photoUrl={item.photoUrl} />
@@ -322,7 +321,7 @@ export function InventoryList({ items }: { items: InventoryRow[] }) {
                     </p>
                   ) : null}
                 </div>
-                </Link>
+                </IntentLink>
 
                 <div className="flex shrink-0 items-center gap-1.5">
                   <button

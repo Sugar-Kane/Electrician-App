@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { Bell, MessageCircle, Plus, Search } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
@@ -27,14 +28,13 @@ export function TopActions({ notifications = false }: { notifications?: boolean 
       <Link href="/search" className={button} aria-label="Search jobs and customers">
         <Search className="h-4 w-4" aria-hidden />
       </Link>
-      <Link
+      <IntentLink
         href="/assistant"
-        prefetch
         className="tap-target flex items-center gap-2 rounded-chip border border-line bg-raised px-3 text-sm font-semibold text-ink"
       >
         <MessageCircle className="h-4 w-4 text-brand" aria-hidden />
         Ask Volteira
-      </Link>
+      </IntentLink>
       {notifications ? (
         <Link href="/search?scope=notifications" className={button} aria-label="Notifications">
           <Bell className="h-4 w-4" aria-hidden />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
 import { signOut } from "@/app/account/actions";
@@ -126,11 +127,11 @@ export function AccountMenu() {
 
       <div className="mt-2 space-y-1">
         {ACCOUNT_MENU_ITEMS.map(({ label: itemLabel, description, href, icon }) => (
-          <Link key={href} href={href} role="menuitem" prefetch>
+          <IntentLink key={href} href={href} role="menuitem">
             <MenuItem icon={<NavIcon name={icon} />} description={description}>
               {itemLabel}
             </MenuItem>
-          </Link>
+          </IntentLink>
         ))}
       </div>
 
