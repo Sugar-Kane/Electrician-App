@@ -19,6 +19,7 @@ import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/s
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
+import { websiteIntakeTurn } from "@/lib/website-intake";
 
 /**
  * The parts of customer intake that do not care whether the customer typed or
@@ -35,6 +36,61 @@ function text(value: unknown): string {
 }
 
 export { slotLabel };
+
+/** A request from the business's website that this text conversation is about. */
+export type OpenWebsiteRequest = {
+  id: string;
+  firstName: string;
+  /** The form, as the customer's first message: how the assistant reads it. */
+  turn: string;
+  hasAddress: boolean;
+};
+
+/**
+ * The website request a conversation was started for, while it is still open.
+ *
+ * Open means nobody has turned it into a job or set it aside yet. Once it has
+ * been, a new text from the same customer is a new conversation about a new
+ * thing, and is handled as one.
+ */
+export async function openWebsiteRequest(
+  database: Database,
+  input: { organizationId: string; conversationId: string },
+): Promise<OpenWebsiteRequest | null> {
+  const { data } = await database
+    .from("booking_requests")
+    .select("id, first_name, contact_name, description, address_line_1, city, postal_code, category, preferred_times, email")
+    .eq("organization_id", input.organizationId)
+    .eq("conversation_id", input.conversationId)
+    .eq("origin", "website")
+    .in("status", ["new", "needs_review"])
+    .is("created_job_id", null)
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+
+  const row = data as Record<string, unknown>;
+  const address = text(row.address_line_1);
+  return {
+    id: text(row.id),
+    firstName: text(row.first_name),
+    hasAddress: Boolean(address && text(row.city)),
+    turn: websiteIntakeTurn({
+      contactName: text(row.contact_name),
+      serviceName: text(row.category),
+      // The description column falls back to "Website request: <service>" when
+      // the customer wrote nothing, which says nothing the service line doesn't.
+      description: text(row.description).startsWith("Website request: ") ? "" : text(row.description),
+      address,
+      city: text(row.city),
+      postalCode: text(row.postal_code),
+      preferredTimes: text(row.preferred_times),
+      email: text(row.email),
+    }),
+  };
+}
 
 export type LoadedContext = {
   context: IntakeContext;
@@ -450,41 +506,83 @@ export async function recordBookingRequest(input: {
     return {};
   }
 
-  const { data: created, error: insertError } = await input.database
-    .from("booking_requests")
-    .insert({
-      organization_id: input.organizationId,
-      conversation_id: input.conversationId ?? null,
-      customer_id: input.customerId,
-      communication_channel: input.channel,
-      // Both intakes that reach here are the AI receptionist. A booking typed
-      // in by the business does not come through this function at all.
-      created_by: "ai",
-      // Kept in step so anything still reading the older column agrees with the
-      // two that replaced it.
-      source: input.channel === "phone" ? "voice" : "sms",
-      intent: action.kind === "book" ? "visit" : "callback",
-      phone: input.phone,
-      contact_name: action.contactName || null,
-      description: (action.description || input.callerText).slice(0, 2000),
-      address_line_1: action.kind === "book" ? action.address.line1 : null,
-      city: action.kind === "book" ? action.address.city : null,
-      postal_code:
-        action.kind === "book" && /^[0-9]{5}(-[0-9]{4})?$/.test(action.address.postalCode)
-          ? action.address.postalCode
-          : null,
-      arrival_window_start: action.kind === "book" ? action.slot.start : null,
-      arrival_window_end: action.kind === "book" ? action.slot.end : null,
-      urgency: action.urgency ?? "routine",
-      model: input.model,
-      model_decision: input.decision ?? {},
-      email: input.email || null,
-      intake_answers: input.intakeAnswers ?? [],
-      delivery_preference: input.deliveryPreference ?? null,
-      deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
-    })
-    .select("id, public_token")
-    .maybeSingle();
+  const postalCode =
+    action.kind === "book" && /^[0-9]{5}(-[0-9]{4})?$/.test(action.address.postalCode)
+      ? action.address.postalCode
+      : null;
+
+  /*
+   * A conversation started by a request on the business's website already has
+   * its booking request: the one the form made, which the owner has been
+   * alerted about and may already be looking at. Booking or a callback from
+   * that conversation finishes that request rather than starting a second one
+   * beside it. Only what the conversation actually established is written, so
+   * the address and problem the customer typed on the form survive a reply that
+   * didn't repeat them.
+   */
+  const website = input.conversationId
+    ? await openWebsiteRequest(input.database, {
+        organizationId: input.organizationId,
+        conversationId: input.conversationId,
+      })
+    : null;
+
+  const { data: created, error: insertError } = website
+    ? await input.database
+        .from("booking_requests")
+        .update({
+          customer_id: input.customerId,
+          intent: action.kind === "book" ? "visit" : "callback",
+          contact_name: action.contactName || undefined,
+          description: action.description ? action.description.slice(0, 2000) : undefined,
+          address_line_1: action.kind === "book" ? action.address.line1 : undefined,
+          city: action.kind === "book" ? action.address.city : undefined,
+          postal_code: postalCode ?? undefined,
+          arrival_window_start: action.kind === "book" ? action.slot.start : null,
+          arrival_window_end: action.kind === "book" ? action.slot.end : null,
+          urgency: action.urgency ?? "routine",
+          model: input.model,
+          model_decision: input.decision ?? {},
+          email: input.email || undefined,
+          intake_answers: input.intakeAnswers ?? [],
+          delivery_preference: input.deliveryPreference ?? undefined,
+          deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
+        })
+        .eq("id", website.id)
+        .select("id, public_token")
+        .maybeSingle()
+    : await input.database
+        .from("booking_requests")
+        .insert({
+          organization_id: input.organizationId,
+          conversation_id: input.conversationId ?? null,
+          customer_id: input.customerId,
+          communication_channel: input.channel,
+          // Both intakes that reach here are the AI receptionist. A booking typed
+          // in by the business does not come through this function at all.
+          created_by: "ai",
+          // Kept in step so anything still reading the older column agrees with the
+          // two that replaced it.
+          source: input.channel === "phone" ? "voice" : "sms",
+          intent: action.kind === "book" ? "visit" : "callback",
+          phone: input.phone,
+          contact_name: action.contactName || null,
+          description: (action.description || input.callerText).slice(0, 2000),
+          address_line_1: action.kind === "book" ? action.address.line1 : null,
+          city: action.kind === "book" ? action.address.city : null,
+          postal_code: postalCode,
+          arrival_window_start: action.kind === "book" ? action.slot.start : null,
+          arrival_window_end: action.kind === "book" ? action.slot.end : null,
+          urgency: action.urgency ?? "routine",
+          model: input.model,
+          model_decision: input.decision ?? {},
+          email: input.email || null,
+          intake_answers: input.intakeAnswers ?? [],
+          delivery_preference: input.deliveryPreference ?? null,
+          deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
+        })
+        .select("id, public_token")
+        .maybeSingle();
 
   /*
    * The database refused a second live booking for this customer at this

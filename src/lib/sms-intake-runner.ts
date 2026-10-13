@@ -11,6 +11,7 @@ import { readLanguage, readLanguageSource } from "@/lib/customer-language";
 import { localeFor } from "@/lib/intake-phrases";
 import {
   loadIntakeContext,
+  openWebsiteRequest,
   recordBookingRequest,
   recordDetectedLanguage,
   slotLabel,
@@ -97,6 +98,15 @@ export async function handleInboundText(input: {
         text: [text(row.body), Array.isArray(row.media) && row.media.length ? `[Customer attached ${row.media.length} photo(s) for the electrician.]` : ""].filter(Boolean).join(" "),
       }))
       .filter((turn) => turn.text.length > 0);
+
+    // A conversation the assistant opened about a website request: the form is
+    // what the customer said first, and without it the assistant would ask
+    // again for the name, address and problem they have already given.
+    const website = await openWebsiteRequest(database, {
+      organizationId: input.organizationId,
+      conversationId: input.conversationId,
+    });
+    if (website) turns.unshift({ role: "user", text: website.turn });
 
     // The conversation must start with the customer, and the newest inbound
     // message is the one being answered.
@@ -293,14 +303,15 @@ async function recordExtractedName(
     .eq("id", customerId);
 }
 
-async function replyToCustomer(input: {
+/** Save the reply in the thread and send it. True when Twilio accepted it. */
+export async function replyToCustomer(input: {
   database: ReturnType<typeof getSupabaseAdmin>;
   organizationId: string;
   conversationId: string;
   to: string;
   body: string;
   messagingServiceSid: string;
-}) {
+}): Promise<boolean> {
   const { data: inserted } = await input.database
     .from("messages")
     .insert({
@@ -314,7 +325,7 @@ async function replyToCustomer(input: {
     .select("id")
     .single();
 
-  if (!inserted || !input.messagingServiceSid) return;
+  if (!inserted || !input.messagingServiceSid) return false;
   const messageId = String(inserted.id);
 
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
@@ -340,4 +351,5 @@ async function replyToCustomer(input: {
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", input.conversationId);
   }
+  return result.ok;
 }

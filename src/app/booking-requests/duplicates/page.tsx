@@ -47,7 +47,7 @@ function Candidate({ request, group }: { request: BookingRequest; group: Booking
           {STATUS_LABELS[request.status] ?? request.status}
         </span>
         <span className="inline-flex min-h-7 items-center rounded-full border border-line px-2.5 text-[10px] font-semibold text-ink-muted">
-          {SOURCE_LABELS[request.source] ?? "Text"}
+          {request.origin === "website" ? "From your website" : (SOURCE_LABELS[request.source] ?? "Text")}
         </span>
         {request.jobId ? (
           <span className="inline-flex min-h-7 items-center gap-1 rounded-full border border-positive/30 bg-positive-bg px-2.5 text-[10px] font-semibold text-positive">

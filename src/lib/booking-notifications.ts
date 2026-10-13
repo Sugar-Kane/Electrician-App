@@ -10,9 +10,12 @@ import {
   ownerBookingSms,
   ownerCallbackEmail,
   ownerCallbackSms,
+  ownerWebsiteRequestEmail,
+  ownerWebsiteRequestSms,
   type BookingFacts,
   type BookingMessageState,
   type CallbackFacts,
+  type WebsiteRequestFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import { slotLabel } from "@/lib/intake-shared";
@@ -655,5 +658,94 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
       .eq("id", input.requestId);
   } catch {
     // Deliberately silent, like its sibling.
+  }
+}
+
+export type WebsiteRequestNotification = {
+  requestId: string;
+  organizationId: string;
+  businessName: string;
+  facts: WebsiteRequestFacts;
+  /** Where this business wants booking alerts sent. */
+  owner?: { email: string; phone: string };
+  messagingServiceSid: string;
+};
+
+/**
+ * Telling the owner a request came in from their own website.
+ *
+ * Owner only: the customer hears from the assistant in their own thread, or,
+ * without consent to texts, from the owner. Sent once per request because the
+ * intake function hands out "not a duplicate" exactly once per website
+ * reference; it deliberately does not take the `confirmed_notified_at` claim
+ * the booking and callback senders use, since that would silence the owner's
+ * alert when the assistant later books this same request.
+ *
+ * Best-effort like its siblings: the request is saved either way.
+ */
+export async function sendWebsiteRequestAlert(input: WebsiteRequestNotification): Promise<void> {
+  const database = getSupabaseAdmin();
+  const attempts: Attempt[] = [];
+  const note = (attempt: Omit<Attempt, "at">) =>
+    attempts.push({ ...attempt, at: new Date().toISOString(), phase: "request" });
+
+  const ownerPhone = input.owner?.phone ?? "";
+  if (input.messagingServiceSid && ownerPhone) {
+    const sent = await sendSms({
+      to: ownerPhone,
+      body: ownerWebsiteRequestSms(input.facts),
+      messagingServiceSid: input.messagingServiceSid,
+    });
+    note({
+      channel: "sms",
+      to: ownerPhone,
+      audience: "owner",
+      ok: sent.ok,
+      ref: sent.ok ? sent.providerMessageId : undefined,
+      detail: sent.ok ? sent.status : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
+  } else if (!ownerPhone) {
+    note({
+      channel: "sms",
+      to: "",
+      audience: "owner",
+      ok: false,
+      detail: "This business has not set a booking-alert phone number. Set one at Settings → Booking alerts.",
+    });
+  }
+
+  const ownerEmail = input.owner?.email ?? "";
+  if (ownerEmail) {
+    const message = ownerWebsiteRequestEmail(input.facts);
+    const sent = await sendEmail({
+      to: ownerEmail,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      from: emailSender(input.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+    });
+    note({
+      channel: "email",
+      to: ownerEmail,
+      audience: "owner",
+      ok: sent.ok,
+      ref: sent.ok ? sent.id : undefined,
+      detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
+    });
+  }
+
+  try {
+    const { data: prior } = await database
+      .from("booking_requests")
+      .select("notification_results")
+      .eq("id", input.requestId)
+      .maybeSingle();
+    const before = Array.isArray(prior?.notification_results) ? prior.notification_results : [];
+    await database
+      .from("booking_requests")
+      .update({ notification_results: [...before, ...attempts] })
+      .eq("id", input.requestId);
+  } catch {
+    // Deliberately silent, like its siblings.
   }
 }

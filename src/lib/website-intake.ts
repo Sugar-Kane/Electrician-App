@@ -1,0 +1,176 @@
+import { createHash, randomBytes } from "node:crypto";
+
+/**
+ * Requests sent in from a business's own website.
+ *
+ * The site posts each request with a key the owner made in Settings. The key
+ * decides which business the request belongs to, so it is the whole of the
+ * security here: it is long, random, shown once, and only its hash is kept.
+ *
+ * Import-free apart from `node:crypto`, so every rule can be read in a test.
+ */
+
+export const WEBSITE_KEY_PREFIX = "vwk_";
+
+/** 32 random bytes: a key nobody guesses and nobody needs to remember. */
+export function newWebsiteKey(): string {
+  return `${WEBSITE_KEY_PREFIX}${randomBytes(32).toString("base64url")}`;
+}
+
+export function hashWebsiteKey(key: string): string {
+  return createHash("sha256").update(key, "utf8").digest("hex");
+}
+
+/** The key from an `Authorization: Bearer …` header, or null when there isn't a well-formed one. */
+export function bearerWebsiteKey(header: string | null): string | null {
+  const match = /^Bearer\s+(vwk_[A-Za-z0-9_-]{43})\s*$/.exec(header ?? "");
+  return match ? match[1]! : null;
+}
+
+export type WebsiteRequest = {
+  /** The website's own id for this request; the idempotency key. */
+  reference: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  service: string;
+  serviceName: string;
+  description: string;
+  preferredTimes: string;
+  contactMethod: "phone" | "email" | "text";
+  /** True only when the customer ticked the box beside `smsDisclosure`. */
+  smsConsent: boolean;
+  /** The words beside that box, exactly as the customer saw them. */
+  smsDisclosure: string;
+  /** Which site sent it, for the consent record. */
+  site: string;
+};
+
+function field(record: Record<string, unknown>, key: string, max: number): string {
+  const value = record[key];
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+}
+
+/** Check a request body, field by field, the way the website's form does. */
+export function parseWebsiteRequest(body: unknown): { ok: true; request: WebsiteRequest } | { ok: false; error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return { ok: false, error: "Send the request as a JSON object." };
+  const record = body as Record<string, unknown>;
+
+  const reference = field(record, "reference", 100);
+  if (!/^[A-Za-z0-9-]{8,100}$/.test(reference)) return { ok: false, error: "A request reference is required." };
+  const firstName = field(record, "firstName", 80);
+  if (!firstName) return { ok: false, error: "A first name is required." };
+  const phone = field(record, "phone", 30);
+  if (phone.replace(/\D/g, "").length < 10) return { ok: false, error: "A phone number with at least ten digits is required." };
+  const email = field(record, "email", 254);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "That email address doesn't look right." };
+
+  const method = field(record, "contactMethod", 10);
+  const contactMethod = method === "text" || method === "email" ? method : "phone";
+  const smsConsent = record.smsConsent === true;
+  const smsDisclosure = field(record, "smsDisclosure", 1000);
+  // Consent without the words it was given against is not evidence of anything.
+  if (smsConsent && !smsDisclosure) return { ok: false, error: "Text consent needs the wording the customer agreed to." };
+
+  return {
+    ok: true,
+    request: {
+      reference,
+      firstName,
+      lastName: field(record, "lastName", 80),
+      phone,
+      email,
+      address: field(record, "address", 200),
+      city: field(record, "city", 80),
+      postalCode: field(record, "postalCode", 10),
+      service: field(record, "service", 80),
+      serviceName: field(record, "serviceName", 120),
+      description: field(record, "description", 2000),
+      preferredTimes: field(record, "preferredTimes", 300),
+      contactMethod,
+      smsConsent,
+      smsDisclosure: smsConsent ? smsDisclosure : "",
+      site: field(record, "site", 120),
+    },
+  };
+}
+
+/** What `website_intake` said about consent for this request. */
+export type IntakeConsent = "recorded" | "existing" | "opted_out" | "none" | "unchanged";
+
+export type TextDecision =
+  | { send: true }
+  | { send: false; reason: "duplicate" | "no_consent" | "opted_out" | "texting_not_set_up" };
+
+/**
+ * Whether the assistant may text this customer about their website request.
+ *
+ * Only once per request, only with consent the customer gave on the form or
+ * earlier, never after a STOP, and only when the business can send texts at
+ * all. `consentActiveNow` is read again after the request is saved, so a STOP
+ * that lands in between is still honoured.
+ */
+export function websiteTextDecision(input: {
+  duplicate: boolean;
+  consent: IntakeConsent;
+  consentActiveNow: boolean;
+  textingConfigured: boolean;
+}): TextDecision {
+  if (input.duplicate || input.consent === "unchanged") return { send: false, reason: "duplicate" };
+  if (input.consent === "none") return { send: false, reason: "no_consent" };
+  if (input.consent === "opted_out" || !input.consentActiveNow) return { send: false, reason: "opted_out" };
+  if (!input.textingConfigured) return { send: false, reason: "texting_not_set_up" };
+  return { send: true };
+}
+
+/** The website request as one customer message, which is how the assistant reads a conversation. */
+export function websiteIntakeTurn(request: {
+  contactName: string;
+  serviceName: string;
+  description: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  preferredTimes: string;
+  email: string;
+}): string {
+  const where = [request.address, [request.city, request.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  return [
+    "[Sent from the request form on the business's website]",
+    request.contactName ? `My name is ${request.contactName}.` : "",
+    request.serviceName ? `I need help with: ${request.serviceName}.` : "",
+    request.description ? `What's happening: ${request.description}` : "",
+    where ? `The address is ${where}.` : "",
+    request.preferredTimes ? `Good times for me: ${request.preferredTimes}.` : "",
+    request.email ? `My email is ${request.email}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
+ * The first text, which has to say why it is arriving.
+ *
+ * Somebody who filled in a form a minute ago and gets a text from a number they
+ * don't know needs the business's name and the reason in the first line, or it
+ * reads as spam and gets a STOP.
+ */
+export function websiteOpener(input: { businessName: string; firstName: string; reply: string }): string {
+  const hello = input.firstName ? `Hi ${input.firstName}, ` : "Hi, ";
+  return `${hello}this is ${input.businessName} about your website request. ${input.reply.trim()}`;
+}
+
+/** Said when the assistant itself is unavailable, so the customer still hears from the business. */
+export function websiteOpenerFallback(input: { businessName: string; firstName: string; hasAddress: boolean }): string {
+  return websiteOpener({
+    businessName: input.businessName,
+    firstName: input.firstName,
+    reply: input.hasAddress
+      ? "What day and time work best for a visit? You can also text a photo of the problem. Reply STOP to opt out."
+      : "What's the address for the visit, and what day and time work best? Reply STOP to opt out.",
+  });
+}
