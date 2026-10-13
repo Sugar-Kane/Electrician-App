@@ -36,6 +36,8 @@ export type PilotJob = {
   time: string;
   endTime: string;
   customer: string;
+  /** "es" when the customer speaks Spanish, from their record. */
+  customerLanguage?: "en" | "es";
   contactName: string;
   phone: string;
   email: string;

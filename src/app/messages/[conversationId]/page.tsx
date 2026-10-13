@@ -36,6 +36,7 @@ export default async function ConversationPage({
       bar={
         <ConversationBar
           customerName={thread.customerName}
+          customerLanguage={thread.customerLanguage}
           initials={thread.initials}
           phone={thread.phone}
         />

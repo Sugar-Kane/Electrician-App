@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronLeft, PhoneCall } from "lucide-react";
 
+import { SpanishBadge } from "@/components/language-badge";
+
 /**
  * Who you are texting, and the way back to everyone else.
  *
@@ -15,10 +17,12 @@ import { ChevronLeft, PhoneCall } from "lucide-react";
  */
 export function ConversationBar({
   customerName,
+  customerLanguage,
   initials,
   phone,
 }: {
   customerName: string;
+  customerLanguage?: string;
   initials: string;
   phone: string;
 }) {
@@ -40,8 +44,9 @@ export function ConversationBar({
       </span>
 
       <span className="ml-2 min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold leading-5 text-ink">
-          {customerName}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-semibold leading-5 text-ink">{customerName}</span>
+          <SpanishBadge language={customerLanguage} />
         </span>
         {phone ? (
           <span className="block truncate text-[11px] leading-4 text-ink-muted">{phone}</span>

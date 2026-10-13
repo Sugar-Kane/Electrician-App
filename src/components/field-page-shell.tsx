@@ -15,6 +15,7 @@ import { TopActions } from "@/components/top-actions";
  */
 export function FieldPageShell({
   title,
+  titleBadge,
   eyebrow,
   description,
   backHref = "/",
@@ -26,6 +27,8 @@ export function FieldPageShell({
   children,
 }: {
   title: string;
+  /** Beside the title: a mark about who the page is about, such as the Spanish label. */
+  titleBadge?: React.ReactNode;
   eyebrow: string;
   description?: string;
   backHref?: string;
@@ -110,6 +113,7 @@ export function FieldPageShell({
                   {eyebrow}
                 </p>
                 <h1 className="mt-1 text-2xl font-semibold tracking-tight lg:text-3xl">{title}</h1>
+                {titleBadge ? <div className="mt-1.5">{titleBadge}</div> : null}
               </div>
             )}
             {children}
@@ -163,6 +167,7 @@ export function FieldPageShell({
               >
                 {title}
               </h1>
+              {titleBadge ? <div className="mt-1.5">{titleBadge}</div> : null}
               {description ? (
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-muted">{description}</p>
               ) : null}

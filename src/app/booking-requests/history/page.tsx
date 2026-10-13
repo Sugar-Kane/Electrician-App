@@ -5,6 +5,7 @@ import { Check, EyeOff, RotateCcw, Search } from "lucide-react";
 
 import { restoreRequest } from "@/app/booking-requests/actions";
 import { FieldPageShell } from "@/components/field-page-shell";
+import { SpanishBadge } from "@/components/language-badge";
 import { Banner } from "@/components/ui/banner";
 import { DateField } from "@/components/ui/date-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -70,8 +71,11 @@ function HistoryCard({ request }: { request: BookingRequest }) {
               {request.origin === "website" ? "From your website" : (SOURCE_LABELS[request.source] ?? "Text")}
             </span>
           </div>
-          <h2 className="mt-2 text-sm font-semibold">
-            {request.contactName || "Unnamed"} · {request.phone}
+          <h2 className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-semibold">
+            <span>
+              {request.contactName || "Unnamed"} · {request.phone}
+            </span>
+            <SpanishBadge language={request.customerLanguage} />
           </h2>
           <p className="mt-1 line-clamp-3 text-sm leading-6 text-ink-muted">{request.description}</p>
           {request.address ? <p className="mt-1 text-xs text-ink-muted">{request.address}</p> : null}

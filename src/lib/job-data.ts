@@ -141,6 +141,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
     time: inZone(row.scheduled_start, timeZone, { hour: "numeric", minute: "2-digit" }),
     endTime: inZone(row.scheduled_end, timeZone, { hour: "numeric", minute: "2-digit" }),
     customer: customerName,
+    customerLanguage: customer.preferred_language === "es" ? "es" : "en",
     contactName: [customer.first_name, customer.last_name].filter(Boolean).join(" ") || customerName,
     phone: customer.phone ?? "",
     email: customer.email ?? "",
@@ -182,7 +183,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
 const JOB_SELECT = `
   id, job_number, status, category, customer_description, ai_summary,
   scheduled_start, scheduled_end,
-  customers ( first_name, last_name, company_name, phone, email ),
+  customers ( first_name, last_name, company_name, phone, email, preferred_language ),
   properties ( address_line_1, address_line_2, city, latitude, longitude, access_notes ),
   technicians ( display_name ),
   booking_requests ( communication_channel )

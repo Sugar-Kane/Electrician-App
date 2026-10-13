@@ -45,6 +45,8 @@ export type BookingRequest = {
   intent: "callback" | "visit" | "emergency";
   phone: string;
   contactName: string;
+  /** "es" when the customer behind the request speaks Spanish. */
+  customerLanguage: "en" | "es";
   description: string;
   address: string;
   urgency: "routine" | "urgent";
@@ -112,7 +114,7 @@ export type BookingRequestQueue = {
 };
 
 const COLUMNS =
-  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, preferred_times, contact_preference, sms_consent, callback_outcome";
+  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, preferred_times, contact_preference, sms_consent, callback_outcome, customers ( preferred_language )";
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -153,6 +155,7 @@ function toRequest(row: Record<string, unknown>, timezone: string, payments: Map
     intent: (text(row.intent) || "callback") as BookingRequest["intent"],
     phone: text(row.phone),
     contactName: text(row.contact_name),
+    customerLanguage: (row.customers as { preferred_language?: unknown } | null)?.preferred_language === "es" ? "es" : "en",
     description: text(row.description),
     address: [text(row.address_line_1), text(row.city), text(row.postal_code)]
       .filter(Boolean)
