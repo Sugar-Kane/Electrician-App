@@ -410,5 +410,5 @@ async function logNonServiceCall(input: {
     ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
     metadata: { kind, summary, ...(input.session.phone ? { phone: input.session.phone } : {}) },
   });
-  return { text: "Noted. Nothing was saved for the owner. Say a polite goodbye and end the call." };
+  return { text: "Noted. Nothing was saved for the owner. If you have not yet closed, say: Whenever you're ready to schedule electrical work, just give us a call back. Have a great day! Then end the call." };
 }
