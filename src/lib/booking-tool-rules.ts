@@ -62,6 +62,23 @@ const CALLER_PHONE = {
 
 export const BOOKING_TOOLS: McpTool[] = [
   {
+    name: "look_up_caller",
+    title: "Check who's on the line",
+    description:
+      "Use this on your first turn of every call, before anything else, with the caller ID number you were given. It says whether you placed this call to someone who asked on the business's website to be called (their first name, what they wrote, and why you're calling) or whether it is an ordinary incoming call. Follow what it says, and never mention that you looked anything up.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        caller_phone: {
+          type: "string",
+          description: "The caller ID number you were given for this call. Never a number the caller says out loud.",
+        },
+      },
+      required: ["caller_phone"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "list_open_slots",
     title: "List open arrival windows",
     description:
@@ -227,6 +244,78 @@ export const BOOKING_TOOLS: McpTool[] = [
 ];
 
 export const BOOKING_TOOL_NAMES = BOOKING_TOOLS.map((tool) => tool.name);
+
+/** How long after the call is placed a call back still counts as the call in progress. */
+export const CALLBACK_LOOKUP_MINUTES = 15;
+
+/** A website request with a call back placed, as `look_up_caller` reads it. */
+export type CallbackCandidate = {
+  id: string;
+  phone: string;
+  callbackOutcome: string;
+  callbackCalledAt: string;
+  firstName: string;
+  serviceName: string;
+  description: string;
+  address: string;
+  town: string;
+  preferredTimes: string;
+};
+
+/**
+ * The call back Maya is on right now with this caller, if any.
+ *
+ * What a website form said is only given out on the call the business placed
+ * to that same number, while that call is connected and only for a few minutes
+ * after it was placed. Anyone else who rings in, whatever number they claim,
+ * gets an ordinary call.
+ */
+export function callbackForCaller(
+  rows: CallbackCandidate[],
+  callerPhoneNumber: string,
+  now: Date,
+): CallbackCandidate | null {
+  const caller = toE164(callerPhoneNumber);
+  if (!caller) return null;
+  const since = now.getTime() - CALLBACK_LOOKUP_MINUTES * 60_000;
+  return (
+    rows.find((row) => {
+      const calledAt = Date.parse(row.callbackCalledAt);
+      return (
+        row.callbackOutcome === "answered" &&
+        Number.isFinite(calledAt) &&
+        calledAt >= since &&
+        calledAt <= now.getTime() &&
+        toE164(row.phone) === caller
+      );
+    }) ?? null
+  );
+}
+
+/** What `look_up_caller` tells Maya. */
+export function callerLookupReply(match: CallbackCandidate | null): string {
+  if (!match) {
+    return "An ordinary incoming call: they rang the business. Help them with what they called about; if they haven't said yet, ask how you can help today.";
+  }
+  const typed = match.firstName.trim();
+  const name = typed && typed === typed.toLowerCase() ? typed.charAt(0).toUpperCase() + typed.slice(1) : typed;
+  const about = match.serviceName ? `, about ${match.serviceName.toLowerCase()}` : "";
+  const said = [
+    match.serviceName ? `- What they need help with: ${match.serviceName}` : "",
+    match.description ? `- What they wrote: ${match.description}` : "",
+    match.address ? `- Address: ${match.address}` : "",
+    match.town ? `- Town or ZIP: ${match.town}` : "",
+    match.preferredTimes ? `- Times they said suit them: ${match.preferredTimes}` : "",
+  ].filter(Boolean);
+  return [
+    `You placed this call. ${name || "This customer"} asked on the business's website to be called about a service request, and they have just picked up and heard your greeting.`,
+    `Tell them why you're calling, in your own words, for example: "Hi${name ? ` ${name}` : ""}! I'm calling about the request you sent us on our website${about}. Is now a good time to get you scheduled?"`,
+    "If now isn't good, offer to have someone call them back at a better time (request_callback).",
+    "What they put on the form:",
+    ...(said.length ? said : ["- Nothing beyond their name and number."]),
+    "Don't ask again for anything above; confirm it instead. Ask for whatever a booking still needs, such as the street address.",
+  ].join("\n");
+}
 
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";

@@ -218,6 +218,21 @@ export function websiteCallbackVoicemail(input: { businessName: string; firstNam
   ].join(" ");
 }
 
+/**
+ * The voicemail as Twilio plays it, then hangs up. A neural voice, the closest
+ * Twilio has to a person; the message is the business's own words, escaped so
+ * a name typed on the form can't add instructions.
+ */
+export function websiteCallbackVoicemailTwiml(message: string): string {
+  const escaped = message
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna-Neural">${escaped}</Say><Hangup /></Response>`;
+}
+
 /** Said when the assistant itself is unavailable, so the customer still hears from the business. */
 export function websiteOpenerFallback(input: { businessName: string; firstName: string; hasAddress: boolean }): string {
   return websiteOpener({

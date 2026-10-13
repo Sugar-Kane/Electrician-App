@@ -5,8 +5,11 @@ import { after } from "next/server";
 import {
   BOOKING_TOOLS,
   buildDecision,
+  callbackForCaller,
   callbackShortfall,
   callbackHandoff,
+  callerLookupReply,
+  CALLBACK_LOOKUP_MINUTES,
   callerEmail,
   callerPhone,
   customerWords,
@@ -88,12 +91,59 @@ async function resolveCustomer(input: {
   return { customerId: customerId ?? "", phone };
 }
 
+/**
+ * Whether Maya is calling this person back about their website request.
+ *
+ * Answered first thing on every call, so it reads only the few call backs
+ * connected right now and writes nothing: no customer is created for a number
+ * that merely rang in.
+ */
+async function lookUpCaller(input: {
+  database: Database;
+  session: McpSession;
+  args: Record<string, unknown>;
+}): Promise<ToolResult> {
+  const phone = callerPhone(input.args);
+  if (!phone) return { text: callerLookupReply(null) };
+  const now = new Date();
+  const { data } = await input.database
+    .from("booking_requests")
+    .select("id, phone, callback_outcome, callback_called_at, first_name, category, description, address_line_1, city, postal_code, preferred_times")
+    .eq("organization_id", input.session.organizationId)
+    .eq("origin", "website")
+    .eq("callback_outcome", "answered")
+    .gte("callback_called_at", new Date(now.getTime() - CALLBACK_LOOKUP_MINUTES * 60_000).toISOString())
+    .is("created_job_id", null)
+    .is("archived_at", null)
+    .order("callback_called_at", { ascending: false })
+    .limit(10);
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((row) => {
+    const value = (key: string) => (typeof row[key] === "string" ? (row[key] as string).trim() : "");
+    return {
+      id: value("id"),
+      phone: value("phone"),
+      callbackOutcome: value("callback_outcome"),
+      callbackCalledAt: value("callback_called_at"),
+      firstName: value("first_name"),
+      serviceName: value("category"),
+      description: value("description").startsWith("Website request: ") ? "" : value("description"),
+      address: value("address_line_1"),
+      town: [value("city"), value("postal_code")].filter(Boolean).join(" "),
+      preferredTimes: value("preferred_times"),
+    };
+  });
+  return { text: callerLookupReply(callbackForCaller(rows, phone, now)) };
+}
+
 export async function runBookingTool(input: {
   database: Database;
   session: McpSession;
   name: string;
   args: Record<string, unknown>;
 }): Promise<ToolResult> {
+  // First thing on every call, so it answers before any schedule is loaded.
+  if (input.name === "look_up_caller") return lookUpCaller(input);
+
   const { context, timeZone, owner, organizationSlug, diagnosticMinutes } =
     await loadIntakeContext({
     database: input.database,

@@ -9,16 +9,17 @@ import {
   verifyTwilioSignature,
 } from "@/lib/twilio";
 import { xaiSipBridgeTwiml } from "@/lib/twilio-sip";
-import { websiteCallbackVoicemail } from "@/lib/website-intake";
+import { websiteCallbackVoicemail, websiteCallbackVoicemailTwiml } from "@/lib/website-intake";
 
 /**
  * What a call back does once the customer's phone is answered.
  *
- * Twilio asks here after answering-machine detection has decided. A person is
- * handed to Maya, presented as the caller so her side knows who it is; a
- * voicemail gets a short message with the business's number. The request id in
- * the URL is covered by Twilio's signature, and the call has to be the one
- * placed for that request.
+ * Twilio asks here the moment the call is picked up, and the call goes straight
+ * to Maya: no recorded voice first, so the person hears her, and her greeting
+ * says the call may be recorded. She is presented as a call from the customer
+ * so her side can tell who it is. Whether a machine answered is decided in the
+ * background and handled by the amd route. The request id in the URL is covered
+ * by Twilio's signature, and the call has to be the one placed for that request.
  */
 
 export const runtime = "nodejs";
@@ -79,19 +80,20 @@ export async function POST(request: Request) {
   const businessName = String(organization?.name ?? "");
   const businessPhone = toE164(String(organization?.phone ?? ""));
   const customerPhone = toE164(String(row.phone ?? ""));
-  const typedName = String(row.first_name ?? "").trim();
-  const firstName = typedName === typedName.toLowerCase() ? typedName.charAt(0).toUpperCase() + typedName.slice(1) : typedName;
 
+  // Only when Twilio was asked to decide before answering; a call placed with
+  // background detection never arrives here with a verdict.
   const answeredBy = params.AnsweredBy ?? "";
   if (/^(machine|fax)/.test(answeredBy)) {
     // The outcome is written when the call ends, by the status callback.
-    const message = websiteCallbackVoicemail({
-      businessName,
-      firstName: String(row.first_name ?? ""),
-      businessPhone: String(organization?.phone ?? ""),
-    });
     return twiml(
-      `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">${escapeXml(message)}</Say><Hangup /></Response>`,
+      websiteCallbackVoicemailTwiml(
+        websiteCallbackVoicemail({
+          businessName,
+          firstName: String(row.first_name ?? ""),
+          businessPhone: String(organization?.phone ?? ""),
+        }),
+      ),
     );
   }
 
@@ -100,9 +102,9 @@ export async function POST(request: Request) {
         phone: businessPhone,
         recordingCallbackUrl: `${twilioPublicOrigin(request)}/api/twilio/recording`,
         callerId: customerPhone,
-        // Whatever Maya opens with, the person who just picked up knows why
-        // the business is calling before she does.
-        leadIn: `Hi${firstName ? ` ${firstName}` : ""}, this is ${businessName || "the electrician"}, calling back about the service request you sent through our website. I'm connecting you with Maya now.`,
+        // Maya's own greeting carries the recording notice, so the person who
+        // picks up hears her first, not a recorded voice.
+        assistantGivesNotice: true,
       })
     : null;
   if (!bridge) {

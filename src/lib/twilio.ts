@@ -294,6 +294,12 @@ export async function placeCall(input: {
   from: string;
   twimlUrl: string;
   statusCallbackUrl: string;
+  /**
+   * Where Twilio reports "person or machine" once it knows. With this set the
+   * call is put through the moment it is answered, instead of after a pause
+   * while Twilio listens, and a machine is dealt with when the verdict comes.
+   */
+  machineDetectionCallbackUrl?: string;
 }): Promise<TwilioCallResult> {
   const auth = credentials();
   if (!auth) {
@@ -311,6 +317,11 @@ export async function placeCall(input: {
     Timeout: "25",
   });
   form.append("StatusCallbackEvent", "completed");
+  if (input.machineDetectionCallbackUrl) {
+    form.append("AsyncAmd", "true");
+    form.append("AsyncAmdStatusCallback", input.machineDetectionCallbackUrl);
+    form.append("AsyncAmdStatusCallbackMethod", "POST");
+  }
 
   try {
     const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${auth.accountSid}/Calls.json`, {

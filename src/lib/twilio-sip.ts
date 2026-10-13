@@ -32,8 +32,13 @@ export function xaiSipBridgeTwiml(input: {
    * present the customer as the caller rather than the business.
    */
   callerId?: string;
-  /** Said before the recording notice, on a call the business placed: why we are calling. */
-  leadIn?: string;
+  /**
+   * The assistant's own first words carry the recording notice, so nothing is
+   * said before she speaks. For a call the business placed: the person who
+   * picks up should hear Maya, not a recording, and her greeting tells them the
+   * call may be recorded before anything else is said.
+   */
+  assistantGivesNotice?: boolean;
 }): string | null {
   const sipUri = xaiSipUriForPhone(input.phone);
   if (!sipUri) return null;
@@ -49,9 +54,12 @@ export function xaiSipBridgeTwiml(input: {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<Response>",
-    ...(input.leadIn ? [`  <Say voice="Polly.Joanna">${escapeXml(input.leadIn)}</Say>`] : []),
-    '  <Say voice="Polly.Joanna">This call will be recorded to document your service request. By staying on the line, you consent to the recording.</Say>',
-    '  <Say voice="Polly.Lupe" language="es-US">Esta llamada será grabada para documentar su solicitud de servicio. Al permanecer en la línea, usted acepta la grabación.</Say>',
+    ...(input.assistantGivesNotice
+      ? []
+      : [
+          '  <Say voice="Polly.Joanna">This call will be recorded to document your service request. By staying on the line, you consent to the recording.</Say>',
+          '  <Say voice="Polly.Lupe" language="es-US">Esta llamada será grabada para documentar su solicitud de servicio. Al permanecer en la línea, usted acepta la grabación.</Say>',
+        ]),
     `  <Dial answerOnBridge="true" record="record-from-answer-dual"${input.callerId ? ` callerId="${escapeXml(input.callerId)}"` : ""}`,
     `        recordingStatusCallback="${escapeXml(callbackUrl)}"`,
     '        recordingStatusCallbackMethod="POST"',

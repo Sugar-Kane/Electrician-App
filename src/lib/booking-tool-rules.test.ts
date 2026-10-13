@@ -6,8 +6,10 @@ import {
   INTAKE_QUESTIONS,
   MINIMUM_INTAKE_ANSWERS,
   buildDecision,
+  callbackForCaller,
   callbackShortfall,
   callbackHandoff,
+  callerLookupReply,
   callerEmail,
   callerPhone,
   customerWords,
@@ -521,4 +523,49 @@ test("the voice tool exposes transfer or callback, never now or later", () => {
   assert.match(schema, /callback/);
   assert.doesNotMatch(schema, /"now"/);
   assert.doesNotMatch(schema, /"later"/);
+});
+
+const NOW = new Date("2026-10-13T18:30:00Z");
+const ON_THE_LINE = {
+  id: "11111111-1111-4111-8111-111111111111",
+  phone: "(805) 555-0921",
+  callbackOutcome: "answered",
+  callbackCalledAt: "2026-10-13T18:28:00Z",
+  firstName: "callie",
+  serviceName: "Electrical Problems & Repairs",
+  description: "Kitchen outlets stopped working",
+  address: "12 Elm St",
+  town: "Templeton 93465",
+  preferredTimes: "Mornings",
+};
+
+test("what a website form said is given only on the call back to that same number", () => {
+  const match = callbackForCaller([ON_THE_LINE], "+18055550921", NOW);
+  assert.equal(match?.id, ON_THE_LINE.id);
+  const reply = callerLookupReply(match);
+  assert.match(reply, /You placed this call/);
+  assert.match(reply, /Hi Callie!/);
+  assert.match(reply, /Kitchen outlets stopped working/);
+
+  // Anyone else ringing in, whatever number they give, is an ordinary call.
+  for (const other of ["+18055550922", "", "not a number"]) {
+    const none = callbackForCaller([ON_THE_LINE], other, NOW);
+    assert.equal(none, null, other);
+    assert.doesNotMatch(callerLookupReply(none), /Callie|Kitchen|Elm/);
+  }
+});
+
+test("a call back is only 'on the line' while connected and for a few minutes", () => {
+  for (const callbackOutcome of ["calling", "completed", "voicemail", "no_answer"]) {
+    assert.equal(callbackForCaller([{ ...ON_THE_LINE, callbackOutcome }], "+18055550921", NOW), null, callbackOutcome);
+  }
+  assert.equal(
+    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "2026-10-13T18:10:00Z" }], "+18055550921", NOW),
+    null,
+    "placed 20 minutes ago",
+  );
+  assert.equal(
+    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "not a time" }], "+18055550921", NOW),
+    null,
+  );
 });
