@@ -92,11 +92,15 @@ test("the assistant texts once, only with consent, never after a STOP", () => {
 });
 
 test("the first text says who is writing and how to stop", () => {
-  for (const hasAddress of [true, false]) {
-    const text = websiteOpenerFallback({ businessName: "Pacific Plains Electric", firstName: "Jane", hasAddress });
-    assert.match(text, /Pacific Plains Electric/);
-    assert.match(text, /Reply STOP to opt out\./);
-  }
+  const text = websiteOpenerFallback({
+    businessName: "Pacific Plains Electric",
+    assistantName: "Maya",
+    firstName: "jane",
+    firstQuestion: "Is this affecting the whole house, one room, or a single outlet or fixture?",
+  });
+  assert.match(text, /^Hi Jane, this is Maya from Pacific Plains Electric\./);
+  assert.match(text, /To start, is this affecting the whole house/);
+  assert.match(text, /Reply STOP to opt out\.$/);
 });
 
 test("Maya rings only someone who asked for a call, and a resent request rings nobody twice", () => {

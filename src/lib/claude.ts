@@ -59,15 +59,28 @@ export async function readInboundText(input: {
       messages: input.turns.map((turn) => ({ role: turn.role, content: turn.text })),
     });
 
-    if (response.stop_reason === "refusal") return null;
+    if (response.stop_reason === "refusal") {
+      console.error("text assistant gave no decision", { reason: "refusal" });
+      return null;
+    }
 
     const call = response.content.find((block) => block.type === "tool_use");
-    if (!call || call.type !== "tool_use") return null;
+    if (!call || call.type !== "tool_use") {
+      console.error("text assistant gave no decision", { reason: "no_tool_call", stopReason: response.stop_reason });
+      return null;
+    }
 
     return { tool: call.name, input: (call.input ?? {}) as Record<string, unknown> };
-  } catch {
+  } catch (error) {
     // Rate limits, outages, a malformed schema — all the same to the caller:
-    // no decision, fall back to asking the customer a question.
+    // no decision, fall back to asking the customer a question. Logged, so a
+    // fallback text can be traced to why the model didn't answer.
+    const failure = error as { status?: number; name?: string; message?: string };
+    console.error("text assistant call failed", {
+      status: failure?.status,
+      type: failure?.name,
+      message: String(failure?.message ?? "").slice(0, 300),
+    });
     return null;
   }
 }
