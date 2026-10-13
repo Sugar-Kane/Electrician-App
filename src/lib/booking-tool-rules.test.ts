@@ -540,7 +540,7 @@ const ON_THE_LINE = {
 };
 
 test("what a website form said is given only on the call back to that same number", () => {
-  const match = callbackForCaller([ON_THE_LINE], "+18055550921", NOW);
+  const match = callbackForCaller([ON_THE_LINE], "+18055550921", NOW, 0);
   assert.equal(match?.id, ON_THE_LINE.id);
   const reply = callerLookupReply(match);
   assert.match(reply, /You placed this call/);
@@ -549,7 +549,7 @@ test("what a website form said is given only on the call back to that same numbe
 
   // Anyone else ringing in, whatever number they give, is an ordinary call.
   for (const other of ["+18055550922", "", "not a number"]) {
-    const none = callbackForCaller([ON_THE_LINE], other, NOW);
+    const none = callbackForCaller([ON_THE_LINE], other, NOW, 0);
     assert.equal(none, null, other);
     assert.doesNotMatch(callerLookupReply(none), /Callie|Kitchen|Elm/);
   }
@@ -557,15 +557,23 @@ test("what a website form said is given only on the call back to that same numbe
 
 test("a call back is only 'on the line' while connected and for a few minutes", () => {
   for (const callbackOutcome of ["calling", "completed", "voicemail", "no_answer"]) {
-    assert.equal(callbackForCaller([{ ...ON_THE_LINE, callbackOutcome }], "+18055550921", NOW), null, callbackOutcome);
+    assert.equal(callbackForCaller([{ ...ON_THE_LINE, callbackOutcome }], "+18055550921", NOW, 0), null, callbackOutcome);
   }
   assert.equal(
-    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "2026-10-13T18:10:00Z" }], "+18055550921", NOW),
+    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "2026-10-13T18:10:00Z" }], "+18055550921", NOW, 0),
     null,
     "placed 20 minutes ago",
   );
   assert.equal(
-    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "not a time" }], "+18055550921", NOW),
+    callbackForCaller([{ ...ON_THE_LINE, callbackCalledAt: "not a time" }], "+18055550921", NOW, 0),
     null,
   );
+});
+
+test("while anyone has rung in, nobody is told what a website form said", () => {
+  // A caller on an incoming call could talk Maya into looking up the number
+  // she's calling back. The lookup can't tell whose call is asking, so it says
+  // nothing, and says nothing when it couldn't check.
+  assert.equal(callbackForCaller([ON_THE_LINE], "+18055550921", NOW, 1), null);
+  assert.equal(callbackForCaller([ON_THE_LINE], "+18055550921", NOW, null), null);
 });

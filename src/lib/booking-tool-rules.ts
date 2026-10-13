@@ -267,14 +267,21 @@ export type CallbackCandidate = {
  *
  * What a website form said is only given out on the call the business placed
  * to that same number, while that call is connected and only for a few minutes
- * after it was placed. Anyone else who rings in, whatever number they claim,
- * gets an ordinary call.
+ * after it was placed.
+ *
+ * The number comes from the model, and a caller can talk a model into using a
+ * number of their choosing. So while anyone has rung in to the business and is
+ * on the line, the lookup can't tell whose call is asking, and nobody gets a
+ * form's details; nor when it couldn't be checked (`null`). Maya then carries
+ * on as with any caller.
  */
 export function callbackForCaller(
   rows: CallbackCandidate[],
   callerPhoneNumber: string,
   now: Date,
+  inboundCallsInProgress: number | null,
 ): CallbackCandidate | null {
+  if (inboundCallsInProgress !== 0) return null;
   const caller = toE164(callerPhoneNumber);
   if (!caller) return null;
   const since = now.getTime() - CALLBACK_LOOKUP_MINUTES * 60_000;

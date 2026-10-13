@@ -57,15 +57,17 @@ test("a call back presents the customer as the caller, and only a real number ge
   }
 });
 
-test("a call back where Maya gives the notice herself has no recorded voice before her, and the caller ID guard still holds", () => {
+test("a call back says one short recording notice, still before anything is recorded", () => {
   const xml = xaiSipBridgeTwiml({
     phone: "+19165550123",
     recordingCallbackUrl: "https://www.volteira.com/api/twilio/recording",
     callerId: "+18055550142",
-    assistantGivesNotice: true,
+    briefNotice: true,
   });
   assert.ok(xml);
-  assert.doesNotMatch(xml, /<Say/);
+  assert.equal((xml.match(/<Say/g) ?? []).length, 1);
+  assert.match(xml, /This call may be recorded\./);
+  assert.ok(xml.indexOf("This call may be recorded.") < xml.indexOf("<Dial"));
   assert.equal((xml.match(/<Dial/g) ?? []).length, 1);
   assert.match(xml, /callerId="\+18055550142"/);
   assert.equal(
@@ -73,7 +75,7 @@ test("a call back where Maya gives the notice herself has no recorded voice befo
       phone: "+19165550123",
       recordingCallbackUrl: "https://www.volteira.com/r",
       callerId: '+1805" action="https://evil.example',
-      assistantGivesNotice: true,
+      briefNotice: true,
     }),
     null,
   );

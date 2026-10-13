@@ -33,12 +33,12 @@ export function xaiSipBridgeTwiml(input: {
    */
   callerId?: string;
   /**
-   * The assistant's own first words carry the recording notice, so nothing is
-   * said before she speaks. For a call the business placed: the person who
-   * picks up should hear Maya, not a recording, and her greeting tells them the
-   * call may be recorded before anything else is said.
+   * One short notice instead of the full one in two languages. For a call the
+   * business placed: the person who picks up should hear Maya almost at once,
+   * but the notice is still said by us, before anything is recorded, whatever
+   * the assistant has been set up to say.
    */
-  assistantGivesNotice?: boolean;
+  briefNotice?: boolean;
 }): string | null {
   const sipUri = xaiSipUriForPhone(input.phone);
   if (!sipUri) return null;
@@ -54,8 +54,8 @@ export function xaiSipBridgeTwiml(input: {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<Response>",
-    ...(input.assistantGivesNotice
-      ? []
+    ...(input.briefNotice
+      ? ['  <Say voice="Polly.Joanna-Neural">This call may be recorded.</Say>']
       : [
           '  <Say voice="Polly.Joanna">This call will be recorded to document your service request. By staying on the line, you consent to the recording.</Say>',
           '  <Say voice="Polly.Lupe" language="es-US">Esta llamada será grabada para documentar su solicitud de servicio. Al permanecer en la línea, usted acepta la grabación.</Say>',

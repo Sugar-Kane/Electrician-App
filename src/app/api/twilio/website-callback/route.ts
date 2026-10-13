@@ -14,12 +14,12 @@ import { websiteCallbackVoicemail, websiteCallbackVoicemailTwiml } from "@/lib/w
 /**
  * What a call back does once the customer's phone is answered.
  *
- * Twilio asks here the moment the call is picked up, and the call goes straight
- * to Maya: no recorded voice first, so the person hears her, and her greeting
- * says the call may be recorded. She is presented as a call from the customer
- * so her side can tell who it is. Whether a machine answered is decided in the
- * background and handled by the amd route. The request id in the URL is covered
- * by Twilio's signature, and the call has to be the one placed for that request.
+ * Twilio asks here the moment the call is picked up, and the call goes to Maya
+ * after one short "This call may be recorded." She is presented as a call from
+ * the customer so her side can tell who it is. Whether a machine answered is
+ * decided in the background and handled by the amd route. The request id in the
+ * URL is covered by Twilio's signature, and the call has to be the one placed
+ * for that request.
  */
 
 export const runtime = "nodejs";
@@ -102,9 +102,8 @@ export async function POST(request: Request) {
         phone: businessPhone,
         recordingCallbackUrl: `${twilioPublicOrigin(request)}/api/twilio/recording`,
         callerId: customerPhone,
-        // Maya's own greeting carries the recording notice, so the person who
-        // picks up hears her first, not a recorded voice.
-        assistantGivesNotice: true,
+        // One short line, said by us whatever Maya's greeting says, then her.
+        briefNotice: true,
       })
     : null;
   if (!bridge) {

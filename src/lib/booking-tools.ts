@@ -38,7 +38,7 @@ import { decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/activity";
 import { toE164 } from "@/lib/phone-format";
-import { findActiveInboundTwilioCall, redirectTwilioCall } from "@/lib/twilio";
+import { countInboundCallsInProgress, findActiveInboundTwilioCall, redirectTwilioCall } from "@/lib/twilio";
 import { liveTransferTwiml, transferActionUrl } from "@/lib/twilio-transfer";
 
 /**
@@ -132,7 +132,17 @@ async function lookUpCaller(input: {
       preferredTimes: value("preferred_times"),
     };
   });
-  return { text: callerLookupReply(callbackForCaller(rows, phone, now)) };
+  if (!rows.length) return { text: callerLookupReply(null) };
+
+  // Whether anyone rang in and is on the line now: then the number asked
+  // about can't be trusted to be the caller's own.
+  const { data: organization } = await input.database
+    .from("organizations")
+    .select("phone")
+    .eq("id", input.session.organizationId)
+    .maybeSingle();
+  const inbound = await countInboundCallsInProgress({ to: String(organization?.phone ?? "") });
+  return { text: callerLookupReply(callbackForCaller(rows, phone, now, inbound)) };
 }
 
 export async function runBookingTool(input: {
