@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { usePathname } from "next/navigation";
 import { Zap } from "lucide-react";
 
@@ -29,21 +30,17 @@ function Brand() {
 
 export function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
-    <Link
+    <IntentLink
       href={item.href}
       /*
-       * The whole route, not just the loading state.
-       *
-       * Every page in this app is `force-dynamic`, and prefetch's default for a
-       * dynamic route stops at the nearest `loading.tsx` — so the skeleton
-       * arrived early and the two-second wait for the data was still the whole
-       * two seconds. `prefetch` fetches the page itself, in the background,
-       * while the menu sits on screen.
+       * The whole route, not just the loading state, once the pointer or a
+       * finger is on the entry (IntentLink). Fetching every entry while the
+       * menu merely sat on screen rendered the whole product in the background
+       * on each page load.
        *
        * Only in production. The dev server does not prefetch at all, so this
        * cannot be measured with `npm run dev`.
        */
-      prefetch
       // Clicking the entry you are already on has nowhere to navigate to, so
       // the page stays wherever it was scrolled to. Going back to the top is
       // what the click meant.
@@ -57,7 +54,7 @@ export function NavLink({ item, active }: { item: NavItem; active: boolean }) {
     >
       <NavIcon name={item.icon} />
       <span>{item.label}</span>
-    </Link>
+    </IntentLink>
   );
 }
 

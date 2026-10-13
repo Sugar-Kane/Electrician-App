@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { Boxes, ChevronRight, ExternalLink, PackageSearch, Search, Store, TriangleAlert } from "lucide-react";
 
 import { AddToBuyList, BuyItemRow, BuyThisForJob } from "@/components/buy-list";
@@ -270,9 +271,8 @@ function VanStock({
           <ul className="mt-3 space-y-2">
             {found.slice(0, 40).map((item) => (
               <li key={item.id}>
-                <Link
+                <IntentLink
                   href={`/inventory/${item.id}`}
-                  prefetch
                   className="tap-row flex min-h-14 items-center gap-3 rounded-control border border-line bg-raised px-3"
                 >
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-chip bg-white/5 text-brand">
@@ -295,7 +295,7 @@ function VanStock({
                       </span>
                     ) : null}
                   </span>
-                </Link>
+                </IntentLink>
               </li>
             ))}
           </ul>
@@ -386,10 +386,9 @@ function SupplyStops({ stops, jobId }: { stops: Awaited<ReturnType<typeof getSup
       <div className="mt-4 space-y-2">
         {stops.length > 0
           ? stops.slice(0, 3).map((stop) => (
-              <Link
+              <IntentLink
                 key={stop.id}
                 href={jobId ? `/route?job=${jobId}&stop=add` : "/route?stop=add"}
-                prefetch
                 className="tap-target flex min-h-13 items-center justify-between rounded-control border border-line px-4 text-sm font-semibold"
               >
                 <span className="flex min-w-0 items-center gap-2">
@@ -397,7 +396,7 @@ function SupplyStops({ stops, jobId }: { stops: Awaited<ReturnType<typeof getSup
                   <span className="truncate">Route through {stop.name}</span>
                 </span>
                 {stop.isDefault ? <span className="shrink-0 text-[10px] text-ink-faint">usual</span> : null}
-              </Link>
+              </IntentLink>
             ))
           : (
               <>
@@ -421,14 +420,13 @@ function SupplyStops({ stops, jobId }: { stops: Awaited<ReturnType<typeof getSup
                 </Link>
               </>
             )}
-        <Link
+        <IntentLink
           href="/supply-stops"
-          prefetch
           className="tap-target flex min-h-13 items-center gap-2 rounded-control border border-dashed border-line px-4 text-sm font-semibold text-ink-muted"
         >
           <Store className="h-4 w-4 shrink-0" aria-hidden />
           {stops.length > 0 ? "Change your stops" : "Set your own stops"}
-        </Link>
+        </IntentLink>
       </div>
     </section>
   );

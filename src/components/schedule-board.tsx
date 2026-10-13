@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { IntentLink } from "@/components/intent-link";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 import { DayView, MonthView, WeekView } from "@/components/schedule-views";
@@ -144,16 +145,15 @@ export function ScheduleBoard({
             // navigation. Leaving it is not — these jobs came back with it.
             if (option.value === "crew" && !selected) {
               return (
-                <Link
+                <IntentLink
                   key={option.value}
                   href={scheduleHref(date, "crew")}
-                  prefetch
                   role="tab"
                   aria-selected={false}
                   className={className}
                 >
                   {option.label}
-                </Link>
+                </IntentLink>
               );
             }
 
@@ -172,14 +172,13 @@ export function ScheduleBoard({
           })}
         </div>
 
-        <Link
+        <IntentLink
           href="/jobs/new"
-          prefetch
           className="tap-target inline-flex items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand"
         >
           <Plus className="h-4 w-4" aria-hidden />
           Job
-        </Link>
+        </IntentLink>
       </div>
 
       <section className="rounded-panel border border-line bg-surface p-3 sm:p-5">
