@@ -17,8 +17,9 @@ import { websiteCallbackVoicemail, websiteCallbackVoicemailTwiml } from "@/lib/w
  * machine, the verdict comes at the end of the greeting, at the beep: the call
  * is taken back from Maya and the voicemail is left instead, and the owner is
  * told nobody was reached. A person, or a verdict Twilio couldn't reach, leaves
- * the call with Maya. The request id in the URL is covered by Twilio's
- * signature, and the call has to be the one placed for that request.
+ * the call with Maya, and so does a voicemail Twilio wouldn't let us leave. The
+ * request id in the URL is covered by Twilio's signature, and the call has to
+ * be the one placed for that request.
  */
 
 export const runtime = "nodejs";
@@ -75,10 +76,12 @@ export async function POST(request: Request) {
     ),
   });
   if (!redirected.ok) {
-    // The call stays with Maya; the owner still hears that nobody was reached.
+    // No voicemail was left (the call may already have ended): the call's own
+    // final status settles it, rather than telling the owner it was.
     console.error("call back voicemail could not be left", { requestId, error: redirected.errorCode });
+    return NextResponse.json({ ok: true, voicemail: false });
   }
 
   await finishWebsiteCallback({ database, callSid, outcome: "voicemail" });
-  return NextResponse.json({ ok: true, voicemail: redirected.ok });
+  return NextResponse.json({ ok: true, voicemail: true });
 }
