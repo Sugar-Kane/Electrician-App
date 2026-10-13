@@ -612,20 +612,25 @@ as $$
       and request.created_job_id is null
       and request.status not in ('confirmed', 'scheduled')
   )
-  select 'text_failing', organization_id, min(created_at), max(created_at), count(*)::integer,
-         'message', (array_agg(id order by created_at desc))[1]
-  from failed_texts group by organization_id
-  union all
-  select 'alert_failing', organization_id, min(created_at), max(created_at), count(*)::integer,
-         'booking', (array_agg(id order by created_at desc))[1]
-  from failed_alerts group by organization_id
-  union all
-  select 'assistant_problem', organization_id, min(created_at), max(created_at), count(*)::integer,
-         'assistant', (array_agg(id order by created_at desc))[1]
-  from assistant_problems group by organization_id
-  union all
-  select 'paid_unbooked', organization_id, at, at, 1, 'booking', id
-  from paid_unbooked
+  -- The admin check is on the whole union: a where clause after the last
+  -- branch of a union would guard that branch alone.
+  select issue.*
+  from (
+    select 'text_failing' as kind, organization_id, min(created_at) as first_at, max(created_at) as last_at,
+           count(*)::integer as occurrences, 'message' as target_type, (array_agg(id order by created_at desc))[1] as target_id
+    from failed_texts group by organization_id
+    union all
+    select 'alert_failing', organization_id, min(created_at), max(created_at), count(*)::integer,
+           'booking', (array_agg(id order by created_at desc))[1]
+    from failed_alerts group by organization_id
+    union all
+    select 'assistant_problem', organization_id, min(created_at), max(created_at), count(*)::integer,
+           'assistant', (array_agg(id order by created_at desc))[1]
+    from assistant_problems group by organization_id
+    union all
+    select 'paid_unbooked', organization_id, at, at, 1, 'booking', id
+    from paid_unbooked
+  ) as issue
   where (select private.is_platform_admin());
 $$;
 
