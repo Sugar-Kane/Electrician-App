@@ -14,6 +14,7 @@ import {
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { CustomerLanguageControl } from "@/components/customer-language-control";
 import { FieldPageShell } from "@/components/field-page-shell";
+import { SpanishBadge } from "@/components/language-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
 import { getCustomerProfile } from "@/lib/customer-profile";
@@ -69,6 +70,7 @@ export default async function CustomerPage({
   return (
     <FieldPageShell
       title={profile.name}
+      titleBadge={<SpanishBadge language={profile.language.language} />}
       eyebrow="Customer"
       description={profile.address || "No service address on file yet."}
       backHref="/customers"

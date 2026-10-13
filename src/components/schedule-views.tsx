@@ -10,6 +10,7 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { SpanishBadge } from "@/components/language-badge";
 import type { CalendarDay, MonthCell } from "@/lib/calendar";
 import { formatDayLabel } from "@/lib/calendar";
 import { lateLabel, type Lateness } from "@/lib/follow-ups";
@@ -249,7 +250,10 @@ export function DayView({
             <div className="min-w-0 flex-1 border-l border-line pl-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-base font-semibold">{job.customer}</p>
+                  <p className="flex flex-wrap items-center gap-1.5 text-base font-semibold">
+                    {job.customer}
+                    <SpanishBadge language={job.customerLanguage} />
+                  </p>
                   <p className="mt-0.5 text-xs text-ink-muted">
                     #{job.id} · {job.workType}
                   </p>

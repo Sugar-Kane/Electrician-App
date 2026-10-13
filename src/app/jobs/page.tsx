@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDays, ChevronRight, MapPin, Plus, Search } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { SpanishBadge } from "@/components/language-badge";
 import { RevealCurrent } from "@/components/ui/reveal-current";
 import { followUps, isPastVisit } from "@/lib/follow-ups";
 import { getAgreementStates, getJobs } from "@/lib/job-data";
@@ -252,7 +253,10 @@ export default async function JobsPage({
                 >
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="min-w-0 truncate text-sm font-semibold">{job.customer}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate text-sm font-semibold">{job.customer}</span>
+                        <SpanishBadge language={job.customerLanguage} />
+                      </span>
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STAGE_STYLES[rowStage]}`}
                       >

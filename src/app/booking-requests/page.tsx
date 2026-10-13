@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { SpanishBadge } from "@/components/language-badge";
 import { getBookingRequests, hideable, type BookingRequest } from "@/lib/booking-requests";
 import { hideRefusal, NOT_SERVICE } from "@/lib/booking-duplicates";
 import { isOpenRequest } from "@/lib/booking-queue";
@@ -106,8 +107,11 @@ function RequestCard({ request }: { request: BookingRequest }) {
               </span>
             ) : null}
           </div>
-          <h2 className="mt-2 text-base font-semibold">
-            {request.contactName || "Unnamed"} · {request.phone}
+          <h2 className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base font-semibold">
+            <span>
+              {request.contactName || "Unnamed"} · {request.phone}
+            </span>
+            <SpanishBadge language={request.customerLanguage} />
           </h2>
           <p className="mt-1 text-sm leading-6 text-ink-muted">{request.description}</p>
           {request.address ? <p className="mt-1 text-xs text-ink-muted">{request.address}</p> : null}

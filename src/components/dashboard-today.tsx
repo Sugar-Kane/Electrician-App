@@ -13,6 +13,7 @@ import {
   Receipt,
 } from "lucide-react";
 
+import { SpanishBadge } from "@/components/language-badge";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { statusTone } from "@/components/ui/status-badge";
@@ -109,6 +110,7 @@ export function NextJobCard({
       <p className="mt-3 text-lg font-semibold leading-tight">
         {isToday ? job.time : `${job.dateLabel} · ${job.time}`} · {job.customer}
       </p>
+      <SpanishBadge language={job.customerLanguage} className="mt-1.5" />
 
       {job.summary ? (
         <p className="mt-1 text-sm leading-6 text-ink-muted">{job.summary}</p>
@@ -241,7 +243,10 @@ export function TodaysJobs({
                   <span className="mt-0.5 block text-xs text-ink-faint">{job.endTime}</span>
                 </span>
                 <span className="min-w-0 flex-1 border-l border-line pl-3">
-                  <span className="block truncate text-sm font-semibold">{job.customer}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="min-w-0 truncate text-sm font-semibold">{job.customer}</span>
+                    <SpanishBadge language={job.customerLanguage} />
+                  </span>
                   <span className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
                     <span className="min-w-0 truncate">
                       {/* Which of the two visits it is, rather than what it

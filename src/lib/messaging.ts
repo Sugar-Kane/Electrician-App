@@ -16,6 +16,8 @@ export type ConversationSummary = {
   id: string;
   customerId: string;
   customerName: string;
+  /** "es" when the customer speaks Spanish. */
+  customerLanguage: "en" | "es";
   initials: string;
   phone: string;
   status: string;
@@ -47,6 +49,8 @@ export type ConversationThread = {
   id: string;
   customerId: string;
   customerName: string;
+  /** "es" when the customer speaks Spanish. */
+  customerLanguage: "en" | "es";
   initials: string;
   phone: string;
   status: string;
@@ -218,7 +222,7 @@ export async function listConversations(
   const { data } = await conversationsInView(
     context,
     view,
-    "id, customer_id, status, last_message_at, archived_at, deleted_at, job_id, customers(first_name, last_name, company_name, phone)",
+    "id, customer_id, status, last_message_at, archived_at, deleted_at, job_id, customers(first_name, last_name, company_name, phone, preferred_language)",
   );
 
   const conversations = (data ?? []) as Record<string, unknown>[];
@@ -252,6 +256,7 @@ export async function listConversations(
       id: text(row.id),
       customerId: text(row.customer_id),
       customerName: displayNameFor(customer),
+      customerLanguage: customer.preferred_language === "es" ? "es" : "en",
       initials: initialsFor(customer),
       phone: text(customer.phone),
       status: text(row.status),
@@ -275,7 +280,7 @@ export async function getConversationThread(
   const { data: conversationRow } = await context.database
     .from("conversations")
     .select(
-      "id, customer_id, status, customers(first_name, last_name, company_name, phone)",
+      "id, customer_id, status, customers(first_name, last_name, company_name, phone, preferred_language)",
     )
     .eq("organization_id", context.organizationId)
     .eq("id", conversationId)
@@ -331,6 +336,7 @@ export async function getConversationThread(
     id: text(conversation.id),
     customerId,
     customerName: displayNameFor(customer),
+    customerLanguage: customer.preferred_language === "es" ? "es" : "en",
     initials: initialsFor(customer),
     phone: text(customer.phone),
     status: text(conversation.status),

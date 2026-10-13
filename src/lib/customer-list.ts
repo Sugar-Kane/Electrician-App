@@ -15,6 +15,8 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 export type CustomerListItem = {
   id: string;
   name: string;
+  /** "es" when the customer speaks Spanish. */
+  language: "en" | "es";
   phone: string;
   email: string;
   address: string;
@@ -34,7 +36,7 @@ export async function getCustomerList(): Promise<CustomerListItem[]> {
   const { data, error } = await supabase
     .from("customers")
     .select(
-      `id, first_name, last_name, company_name, phone, email, created_at,
+      `id, first_name, last_name, company_name, phone, email, created_at, preferred_language,
        properties ( address_line_1, city, archived_at ),
        jobs ( job_number, scheduled_start, created_at, archived_at )`,
     )
@@ -70,6 +72,7 @@ export async function getCustomerList(): Promise<CustomerListItem[]> {
         text(row.company_name) ||
         [text(row.first_name), text(row.last_name)].filter(Boolean).join(" ") ||
         "Unnamed customer",
+      language: row.preferred_language === "es" ? "es" : "en",
       phone: text(row.phone),
       email: text(row.email),
       address: property ? [text(property.address_line_1), text(property.city)].filter(Boolean).join(", ") : "",

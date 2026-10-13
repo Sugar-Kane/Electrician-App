@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { SpanishBadge } from "@/components/language-badge";
 import {
   archiveConversation,
   deleteConversation,
@@ -130,7 +131,8 @@ export function ConversationRow({
               >
                 {conversation.customerName}
               </span>
-              <span className="shrink-0 text-[11px] text-ink-faint">{when}</span>
+              <SpanishBadge language={conversation.customerLanguage} className="self-center" />
+              <span className="ml-auto shrink-0 text-[11px] text-ink-faint">{when}</span>
             </span>
             <span className="mt-1 flex items-center gap-1.5">
               {conversation.lastMessageDirection === "outbound" ? (

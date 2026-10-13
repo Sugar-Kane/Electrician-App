@@ -4,6 +4,7 @@ import { Ban, ChevronDown, ChevronRight, Link2, MapPin, ShieldAlert } from "luci
 
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
+import { SpanishBadge } from "@/components/language-badge";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobFollowUps } from "@/components/job-follow-ups";
@@ -247,6 +248,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
     <FieldPageShell
       compact
       title={job.contactName || job.customer}
+      titleBadge={<SpanishBadge language={job.customerLanguage} />}
       eyebrow={`Job #${job.id}`}
       backHref="/jobs"
       action={
