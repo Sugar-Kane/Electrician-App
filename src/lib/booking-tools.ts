@@ -27,6 +27,7 @@ import {
   findOrCreateCustomerByPhone,
   loadIntakeContext,
   recordBookingRequest,
+  websiteCallbackInProgress,
 } from "@/lib/intake-shared";
 import { type ToolResult } from "@/lib/mcp-protocol";
 import { type McpSession } from "@/lib/mcp-session-token";
@@ -174,6 +175,18 @@ export async function runBookingTool(input: {
     };
   }
 
+  // The website request a call back is about. A per-call session carries it;
+  // a session minted once for the line does not, so it is found by the caller:
+  // the number Maya was just put through to call back about their request.
+  const websiteRequestId =
+    input.session.websiteRequestId ??
+    (
+      await websiteCallbackInProgress(input.database, {
+        organizationId: input.session.organizationId,
+        customerId,
+      })
+    )?.id;
+
   const email = callerEmail(input.args);
   const answers = intakeAnswers(input.args);
   const preference = deliveryPreference(input.args);
@@ -187,7 +200,7 @@ export async function runBookingTool(input: {
     // The realtime voice model books through these tools, so this is a
     // call however the words got to it.
     channel: "phone",
-    websiteRequestId: input.session.websiteRequestId,
+    websiteRequestId,
     action,
     callerText,
     model: "grok-voice",
