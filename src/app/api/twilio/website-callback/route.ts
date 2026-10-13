@@ -79,6 +79,8 @@ export async function POST(request: Request) {
   const businessName = String(organization?.name ?? "");
   const businessPhone = toE164(String(organization?.phone ?? ""));
   const customerPhone = toE164(String(row.phone ?? ""));
+  const typedName = String(row.first_name ?? "").trim();
+  const firstName = typedName === typedName.toLowerCase() ? typedName.charAt(0).toUpperCase() + typedName.slice(1) : typedName;
 
   const answeredBy = params.AnsweredBy ?? "";
   if (/^(machine|fax)/.test(answeredBy)) {
@@ -98,6 +100,9 @@ export async function POST(request: Request) {
         phone: businessPhone,
         recordingCallbackUrl: `${twilioPublicOrigin(request)}/api/twilio/recording`,
         callerId: customerPhone,
+        // Whatever Maya opens with, the person who just picked up knows why
+        // the business is calling before she does.
+        leadIn: `Hi${firstName ? ` ${firstName}` : ""}, this is ${businessName || "the electrician"}, calling back about the service request you sent through our website. I'm connecting you with Maya now.`,
       })
     : null;
   if (!bridge) {
