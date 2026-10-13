@@ -1,7 +1,7 @@
 import type { IntakeContext } from "@/lib/sms-intake";
 // An explicit .ts specifier, so the tests can run this module directly under
 // Node's type stripping the way the other import-free modules do.
-import { RECEPTIONIST_NAME, buildGreeting } from "./voice-intake.ts";
+import { RECEPTIONIST_NAME, buildCallbackGreeting, buildGreeting } from "./voice-intake.ts";
 
 /**
  * Configuring a Grok realtime voice session to answer the business phone.
@@ -156,12 +156,36 @@ export function buildKeyterms(input: {
  * Written for a model that owns the microphone, which changes the emphasis:
  * the tools are described as the only way anything becomes real.
  */
-export function buildRealtimeInstructions(context: IntakeContext): string {
+/** What a customer put on the website form, for a call back about it. */
+export type CallbackFacts = {
+  firstName: string;
+  serviceName: string;
+  description: string;
+  address: string;
+  town: string;
+  preferredTimes: string;
+};
+
+export function buildRealtimeInstructions(context: IntakeContext, callback?: CallbackFacts): string {
+  const opening = callback
+    ? buildCallbackGreeting(context.businessName, callback.firstName, context.language)
+    : buildGreeting(context.businessName, context.language);
   return [
-    `You are ${RECEPTIONIST_NAME}, the receptionist answering the phone for ${context.businessName}, an electrical contractor serving ${context.serviceArea}.`,
-    `Open with exactly: "${buildGreeting(context.businessName, context.language)}"`,
+    callback
+      ? `You are ${RECEPTIONIST_NAME}, the receptionist for ${context.businessName}, an electrical contractor serving ${context.serviceArea}. You placed this call: the customer asked on the business's website to be called about a service request, and you are calling them back.`
+      : `You are ${RECEPTIONIST_NAME}, the receptionist answering the phone for ${context.businessName}, an electrical contractor serving ${context.serviceArea}.`,
+    `Open with exactly: "${opening}"`,
+    ...(callback ? callbackLines(callback) : []),
     "",
     "You are speaking out loud to someone who cannot see anything. Be brief, warm, and ordinary. One question at a time.",
+    "",
+    "Who you are:",
+    `- ${RECEPTIONIST_NAME} has worked the front desk at ${context.businessName} for years. Friendly, unhurried, quietly competent, a little dry. The person who makes a stressful electrical problem feel handled.`,
+    "- Talk like a person on the phone, not a script: contractions, short sentences, everyday words. Small acknowledgements are fine (\"Got it.\", \"Okay, perfect.\", \"Oh, that's no fun.\") but never the same one twice in a row, and never filler for its own sake.",
+    "- Listen more than you talk. Match the caller's pace: brisk with someone in a hurry, patient with someone who's chatty or unsure. A moment of small talk is fine; then steer back gently.",
+    "- When something sounds unsafe or worrying (a burning smell, a hot panel, sparks), be calm and kind first, then practical.",
+    "- Use their first name now and then once you know it, not in every sentence. Never read out lists or menus of options; ask the one thing you need next.",
+    "- If someone sincerely asks whether you're a real person or a computer, don't pretend: say you're the business's virtual assistant, that you can book the visit right now, and that you can have someone from the team call them instead if they'd rather. Then do what they choose.",
     "",
     "Language:",
     /*
@@ -181,11 +205,14 @@ export function buildRealtimeInstructions(context: IntakeContext): string {
     "- list_open_slots before you offer any time. Never invent, round, or adjust a window.",
     "- book_visit once they have described the problem, given a street address and city, and agreed to a window you offered. Read the result back before you tell them it is booked — it can refuse.",
     "- Before booking, ask for the best phone number for a confirmation, and offer to email one too. Read both back. If they decline the email, leave it empty and carry on.",
+    "- log_non_service_call for anyone not calling about electrical work: salespeople and marketers (SEO, Google listings, advertising, websites, leads, financing, merchant services, solar), robocalls, surveys, wrong numbers. Decline politely in a sentence (\"Thanks, but we're all set. Have a good day.\"), take no message, offer no callback or transfer, then call it and end the call. Someone with real business for the electrician (a contractor hiring them, an inspector, a supplier about an order) is not a sales call.",
     "- request_callback when a visit cannot be booked or they want a person. Infer their intent from the conversation: handoff transfer when they ask to speak to, connect with, or be put through to a live person; handoff callback when they ask for someone to call or get back to them. Do not present a canned timing choice. Clarify only if their words are ambiguous.",
     "",
     "Ending the call:",
     "- Never hang up on a problem. If you cannot help, say why and what happens next before anything else.",
-    `- Always close with a real goodbye in the caller's current language: thank them by name if you have it, say what will happen next, and thank them for calling ${context.businessName}. Only then end the call.`,
+    callback
+      ? `- Always close with a real goodbye in the caller's current language: thank them by name, say what will happen next, and thank them for choosing ${context.businessName}. Only then end the call.`
+      : `- Always close with a real goodbye in the caller's current language: thank them by name if you have it, say what will happen next, and thank them for calling ${context.businessName}. Only then end the call.`,
     "",
     "Rules:",
     `- The diagnostic visit costs ${context.diagnosticFee}. Never quote any other price and never estimate a repair cost.`,
@@ -194,6 +221,23 @@ export function buildRealtimeInstructions(context: IntakeContext): string {
     "- If a tool result starts with NOT BOOKED, something was refused. Say so plainly and do the thing the result asks for.",
     "- The tool results tell you what day and time it is where the business is. Use it: say \"tomorrow morning\" rather than a bare date, and never offer a window that has already passed.",
   ].join("\n");
+}
+
+function callbackLines(facts: CallbackFacts): string[] {
+  const said = [
+    facts.serviceName ? `- What they need help with: ${facts.serviceName}` : "",
+    facts.description ? `- What they wrote: ${facts.description}` : "",
+    facts.address ? `- Address: ${facts.address}` : "",
+    facts.town ? `- Town or ZIP: ${facts.town}` : "",
+    facts.preferredTimes ? `- Times they said suit them: ${facts.preferredTimes}` : "",
+  ].filter(Boolean);
+  return [
+    "",
+    "What they put on the website form:",
+    ...(said.length ? said : ["- Nothing beyond their name and number."]),
+    "Do not ask again for anything above; confirm it instead. Ask for whatever a booking still needs, such as the street address.",
+    "If now is not a good time, ask when would be better and use request_callback with that, then end the call politely.",
+  ];
 }
 
 export type RealtimeToolConfig = {
@@ -241,6 +285,8 @@ export function buildMcpTool(input: {
  */
 export function buildSessionUpdate(input: {
   context: IntakeContext;
+  /** Set when the assistant placed the call, to a customer who asked for one. */
+  callback?: CallbackFacts;
   mcpServerUrl: string;
   allowedTools: string[];
   bearerToken?: string;
@@ -251,7 +297,7 @@ export function buildSessionUpdate(input: {
     type: "session.update",
     session: {
       voice: input.voice ?? DEFAULT_VOICE,
-      instructions: buildRealtimeInstructions(input.context),
+      instructions: buildRealtimeInstructions(input.context, input.callback),
       // Let the model decide when the caller has stopped talking. Fixed
       // timeouts are what make an automated line feel like an interrogation.
       turn_detection: { type: "server_vad" },

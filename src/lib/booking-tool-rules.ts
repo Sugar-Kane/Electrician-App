@@ -174,10 +174,29 @@ export const BOOKING_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "log_non_service_call",
+    title: "Note a call that isn't about electrical work",
+    description:
+      "For a caller who is not a customer wanting electrical work: someone selling something (marketing, SEO, Google listings or reviews, advertising, websites, leads, financing, loans, insurance, merchant or payment services, solar or equipment sales, staffing), a robocall or recorded message, a survey, or a wrong number. First decline politely and briefly (\"Thanks, but we're all set. Have a good day.\"), without taking a message, offering a callback, or transferring. Then call this and end the call. Never use request_callback or book_visit for these calls. Someone from another business calling about real work for this business (a contractor who wants to hire the electrician, an inspector, a supplier about an existing order) is not a sales call: take a message with request_callback.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kind: {
+          type: "string",
+          enum: ["sales", "spam", "wrong_number", "other"],
+          description: '"sales" for anyone selling a product or service, "spam" for robocalls and recordings, "wrong_number" for a call meant for someone else.',
+        },
+        summary: { type: "string", description: "One short line on who called and what they wanted." },
+      },
+      required: ["kind", "summary"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "request_callback",
     title: "Transfer to a person or request a callback",
     description:
-      "Hand the conversation to a person. Infer the customer's intent from what they already said: use transfer when they ask to speak, talk, connect, or be put through to a live person; use callback when they ask for someone to call, ring, or get back to them. Do not present a canned timing choice. Ask one natural clarifying question only when their words do not distinguish a live transfer from a returned call.",
+      "Only for customers and people with real business for this electrician; never for sales calls, robocalls or wrong numbers (use log_non_service_call). Hand the conversation to a person. Infer the customer's intent from what they already said: use transfer when they ask to speak, talk, connect, or be put through to a live person; use callback when they ask for someone to call, ring, or get back to them. Do not present a canned timing choice. Ask one natural clarifying question only when their words do not distinguish a live transfer from a returned call.",
     inputSchema: {
       type: "object",
       properties: {
@@ -351,6 +370,18 @@ export function intakeShortfall(args: Record<string, unknown>): string {
  *
  * Returns null for tools that propose nothing — `list_open_slots` only reads.
  */
+/**
+ * A callback the assistant itself described as not being about electrical
+ * work: a sales pitch it should have declined. Matched only on how the model
+ * labels such a call, not on topics a customer might mention, so "lights for my
+ * marketing office" is still a customer.
+ */
+export function looksLikeSolicitation(description: string): boolean {
+  return /\b(solicitation|soliciting|telemarket\w*|robocall|sales (?:call|pitch)|cold call|not an? (?:electrical )?(?:service )?request|not (?:an? )?(?:electrical )?(?:service|work) (?:request|inquiry))\b/i.test(
+    description,
+  );
+}
+
 export function buildDecision(
   name: string,
   args: Record<string, unknown>,

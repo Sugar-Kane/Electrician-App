@@ -101,3 +101,17 @@ test("editing the organization out of a static token breaks the signature", () =
 
   assert.equal(readMcpSessionToken({ token: `${forged}.${signature}`, secret: SECRET }), null);
 });
+
+test("a call back's request is pinned in the token, and pointing it at another request breaks it", () => {
+  const session = { ...SESSION, websiteRequestId: "33333333-3333-3333-3333-333333333333" };
+  const token = signMcpSessionToken({ session, secret: SECRET });
+  assert.equal(readMcpSessionToken({ token, secret: SECRET })?.websiteRequestId, session.websiteRequestId);
+  assert.equal(readMcpSessionToken({ token: signMcpSessionToken({ session: SESSION, secret: SECRET }), secret: SECRET })?.websiteRequestId, undefined);
+
+  const [, signature] = token.split(".");
+  const forged = Buffer.from(
+    JSON.stringify({ ...session, scope: "booking", websiteRequestId: "44444444-4444-4444-4444-444444444444", expiresAt: 9_999_999_999 }),
+    "utf-8",
+  ).toString("base64url");
+  assert.equal(readMcpSessionToken({ token: `${forged}.${signature}`, secret: SECRET }), null);
+});

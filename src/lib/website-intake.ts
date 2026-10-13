@@ -160,8 +160,62 @@ export function websiteIntakeTurn(request: {
  * reads as spam and gets a STOP.
  */
 export function websiteOpener(input: { businessName: string; firstName: string; reply: string }): string {
-  const hello = input.firstName ? `Hi ${input.firstName}, ` : "Hi, ";
-  return `${hello}this is ${input.businessName} about your website request. ${input.reply.trim()}`;
+  const name = displayFirstName(input.firstName);
+  const hello = name ? `Hi ${name}, ` : "Hi, ";
+  return `${hello}this is ${input.businessName} about your website request. ${withoutGreeting(input.reply)}`;
+}
+
+/** "adam" as typed into a form reads as "Adam"; a name typed with capitals is left alone. */
+function displayFirstName(name: string): string {
+  const trimmed = name.trim();
+  return trimmed === trimmed.toLowerCase() ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : trimmed;
+}
+
+/**
+ * The assistant's reply without its own "Hi Adam —": the opener has already
+ * said hello, and a text that greets twice reads like two systems talking.
+ */
+function withoutGreeting(reply: string): string {
+  const trimmed = reply.trim();
+  const stripped = trimmed.replace(/^(hi|hello|hey|hola)\b[^.!?,\u2014\u2013-]{0,40}[,!.\u2014\u2013-]+\s*/i, "");
+  if (!stripped || stripped === trimmed) return trimmed;
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
+export type CallDecision = { call: true } | { call: false; reason: "duplicate" | "not_asked" | "calling_not_set_up" };
+
+/**
+ * Whether the assistant rings someone back about their website request.
+ *
+ * Only when they chose a phone call on the form, which together with the form's
+ * required "I agree to be contacted about this service request" is them asking
+ * to be called about it. A resent request rings nobody a second time.
+ */
+export function websiteCallDecision(input: {
+  duplicate: boolean;
+  contactMethod: string;
+  callingConfigured: boolean;
+}): CallDecision {
+  if (input.duplicate) return { call: false, reason: "duplicate" };
+  if (input.contactMethod !== "phone") return { call: false, reason: "not_asked" };
+  if (!input.callingConfigured) return { call: false, reason: "calling_not_set_up" };
+  return { call: true };
+}
+
+/** Left on a voicemail: who called, why, and the number to ring back. */
+export function websiteCallbackVoicemail(input: { businessName: string; firstName: string; businessPhone: string }): string {
+  const name = displayFirstName(input.firstName);
+  const digits = input.businessPhone.replace(/\D/g, "").slice(-10);
+  // Read out in groups, the way a person would say it, not as one long number.
+  const say = (part: string) => part.split("").join(" ");
+  const spokenNumber = digits.length === 10 ? `${say(digits.slice(0, 3))}, ${say(digits.slice(3, 6))}, ${say(digits.slice(6))}` : "";
+  return [
+    `Hi${name ? ` ${name}` : ""}, this is Maya with ${input.businessName}, calling about the service request you sent through our website.`,
+    spokenNumber
+      ? `Please call us back at ${spokenNumber} and we'll get you scheduled. Again, that's ${spokenNumber}.`
+      : "Please call us back and we'll get you scheduled.",
+    "Thank you.",
+  ].join(" ");
 }
 
 /** Said when the assistant itself is unavailable, so the customer still hears from the business. */
@@ -173,4 +227,39 @@ export function websiteOpenerFallback(input: { businessName: string; firstName: 
       ? "What day and time work best for a visit? You can also text a photo of the problem. Reply STOP to opt out."
       : "What's the address for the visit, and what day and time work best? Reply STOP to opt out.",
   });
+}
+
+export type CallbackOutcome = "completed" | "voicemail" | "no_answer" | "busy" | "failed";
+
+/**
+ * How a call back ended, from Twilio's final status. Null while it is still
+ * going: only an ended call is claimed and acted on.
+ */
+export function callbackOutcomeFor(input: { callStatus: string; answeredBy: string }): CallbackOutcome | null {
+  switch (input.callStatus) {
+    case "completed":
+      return /^(machine|fax)/.test(input.answeredBy) ? "voicemail" : "completed";
+    case "no-answer":
+      return "no_answer";
+    case "busy":
+      return "busy";
+    case "failed":
+    case "canceled":
+      return "failed";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Whether the owner needs to pick it up after the call: anybody not reached,
+ * and anybody reached who ended the call with nothing booked and no callback
+ * asked for. A booking or a callback request tells the owner itself.
+ */
+export function callbackNeedsOwner(
+  outcome: CallbackOutcome,
+  request: { booked: boolean; handedOff: boolean },
+): "voicemail" | "no_answer" | "busy" | "failed" | "not_booked" | null {
+  if (outcome === "completed") return request.booked || request.handedOff ? null : "not_booked";
+  return outcome;
 }

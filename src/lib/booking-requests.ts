@@ -28,6 +28,8 @@ export type BookingRequest = {
   contactPreference?: "phone" | "email" | "text" | "";
   /** Whether they ticked the box agreeing to texts. */
   smsConsent?: boolean;
+  /** How Maya's call back went, for a website request that asked for a call. */
+  callbackOutcome?: string;
   /** How the customer asked. One table, categorised rather than duplicated. */
   source: BookingSource;
   status:
@@ -110,7 +112,7 @@ export type BookingRequestQueue = {
 };
 
 const COLUMNS =
-  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, preferred_times, contact_preference, sms_consent";
+  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, preferred_times, contact_preference, sms_consent, callback_outcome";
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -178,6 +180,7 @@ function toRequest(row: Record<string, unknown>, timezone: string, payments: Map
     preferredTimes: text(row.preferred_times),
     contactPreference: (["phone", "email", "text"].includes(text(row.contact_preference)) ? text(row.contact_preference) : "") as BookingRequest["contactPreference"],
     smsConsent: row.sms_consent === true,
+    callbackOutcome: text(row.callback_outcome),
   };
 }
 

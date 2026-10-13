@@ -9,12 +9,15 @@ import {
   ownerBookingEmail,
   ownerBookingSms,
   ownerCallbackEmail,
+  ownerCallbackOutcomeEmail,
+  ownerCallbackOutcomeSms,
   ownerCallbackSms,
   ownerWebsiteRequestEmail,
   ownerWebsiteRequestSms,
   type BookingFacts,
   type BookingMessageState,
   type CallbackFacts,
+  type CallbackOutcomeFacts,
   type WebsiteRequestFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
@@ -684,6 +687,47 @@ export type WebsiteRequestNotification = {
  * Best-effort like its siblings: the request is saved either way.
  */
 export async function sendWebsiteRequestAlert(input: WebsiteRequestNotification): Promise<void> {
+  await sendOwnerRequestAlert({
+    requestId: input.requestId,
+    businessName: input.businessName,
+    owner: input.owner,
+    messagingServiceSid: input.messagingServiceSid,
+    sms: ownerWebsiteRequestSms(input.facts),
+    email: ownerWebsiteRequestEmail(input.facts),
+  });
+}
+
+/**
+ * Telling the owner how Maya's call back went, when it is theirs to pick up:
+ * nobody answered, or she reached them and nothing was booked. A call that
+ * booked a visit is announced by the booking itself.
+ */
+export async function sendCallbackOutcomeAlert(input: {
+  requestId: string;
+  businessName: string;
+  owner?: { email: string; phone: string };
+  messagingServiceSid: string;
+  facts: CallbackOutcomeFacts;
+}): Promise<void> {
+  await sendOwnerRequestAlert({
+    requestId: input.requestId,
+    businessName: input.businessName,
+    owner: input.owner,
+    messagingServiceSid: input.messagingServiceSid,
+    sms: ownerCallbackOutcomeSms(input.facts),
+    email: ownerCallbackOutcomeEmail(input.facts),
+  });
+}
+
+/** One owner alert about a request, by text and email, written down on the request. */
+async function sendOwnerRequestAlert(input: {
+  requestId: string;
+  businessName: string;
+  owner?: { email: string; phone: string };
+  messagingServiceSid: string;
+  sms: string;
+  email: { subject: string; text: string; html: string };
+}): Promise<void> {
   const database = getSupabaseAdmin();
   const attempts: Attempt[] = [];
   const note = (attempt: Omit<Attempt, "at">) =>
@@ -693,7 +737,7 @@ export async function sendWebsiteRequestAlert(input: WebsiteRequestNotification)
   if (input.messagingServiceSid && ownerPhone) {
     const sent = await sendSms({
       to: ownerPhone,
-      body: ownerWebsiteRequestSms(input.facts),
+      body: input.sms,
       messagingServiceSid: input.messagingServiceSid,
     });
     note({
@@ -716,12 +760,11 @@ export async function sendWebsiteRequestAlert(input: WebsiteRequestNotification)
 
   const ownerEmail = input.owner?.email ?? "";
   if (ownerEmail) {
-    const message = ownerWebsiteRequestEmail(input.facts);
     const sent = await sendEmail({
       to: ownerEmail,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
+      subject: input.email.subject,
+      text: input.email.text,
+      html: input.email.html,
       from: emailSender(input.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
     });
     note({

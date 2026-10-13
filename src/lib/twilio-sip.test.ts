@@ -39,3 +39,20 @@ test("requires a valid recording callback URL", () => {
     null,
   );
 });
+
+test("a call back presents the customer as the caller, and only a real number gets in", () => {
+  const xml = xaiSipBridgeTwiml({
+    phone: "+19165550123",
+    recordingCallbackUrl: "https://www.volteira.com/api/twilio/recording",
+    callerId: "+18055550142",
+  });
+  assert.ok(xml);
+  assert.match(xml, /<Dial answerOnBridge="true" record="record-from-answer-dual" callerId="\+18055550142"/);
+  for (const callerId of ['+1805" action="https://evil.example', "8055550142", "+18055550142;x=1", ""]) {
+    assert.equal(
+      xaiSipBridgeTwiml({ phone: "+19165550123", recordingCallbackUrl: "https://www.volteira.com/r", callerId }),
+      null,
+      `${callerId} is refused`,
+    );
+  }
+});

@@ -26,9 +26,16 @@ export function xaiSipUriForPhone(phone: string): string | null {
 export function xaiSipBridgeTwiml(input: {
   phone: string;
   recordingCallbackUrl: string;
+  /**
+   * The customer's number, on a call the business placed. The assistant's side
+   * knows who it is talking to by the caller, so an outbound call has to
+   * present the customer as the caller rather than the business.
+   */
+  callerId?: string;
 }): string | null {
   const sipUri = xaiSipUriForPhone(input.phone);
   if (!sipUri) return null;
+  if (input.callerId !== undefined && !E164_PATTERN.test(input.callerId)) return null;
 
   let callbackUrl: string;
   try {
@@ -42,7 +49,7 @@ export function xaiSipBridgeTwiml(input: {
     "<Response>",
     '  <Say voice="Polly.Joanna">This call will be recorded to document your service request. By staying on the line, you consent to the recording.</Say>',
     '  <Say voice="Polly.Lupe" language="es-US">Esta llamada será grabada para documentar su solicitud de servicio. Al permanecer en la línea, usted acepta la grabación.</Say>',
-    '  <Dial answerOnBridge="true" record="record-from-answer-dual"',
+    `  <Dial answerOnBridge="true" record="record-from-answer-dual"${input.callerId ? ` callerId="${escapeXml(input.callerId)}"` : ""}`,
     `        recordingStatusCallback="${escapeXml(callbackUrl)}"`,
     '        recordingStatusCallbackMethod="POST"',
     '        recordingStatusCallbackEvent="completed absent">',

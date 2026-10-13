@@ -1,10 +1,14 @@
 import { after, NextResponse } from "next/server";
 
+import { isMcpConfigured } from "@/lib/mcp-session";
+import { toE164 } from "@/lib/phone-format";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isTwilioConfigured } from "@/lib/twilio";
 import {
   bearerWebsiteKey,
   hashWebsiteKey,
   parseWebsiteRequest,
+  websiteCallDecision,
   websiteTextDecision,
   type IntakeConsent,
 } from "@/lib/website-intake";
@@ -81,11 +85,24 @@ export async function POST(request: Request) {
   const duplicate = result.duplicate === true;
   const consent = (result.consent ?? "none") as IntakeConsent;
 
-  const { data: messaging } = await database
-    .from("messaging_settings")
-    .select("messaging_service_sid")
-    .eq("organization_id", organizationId)
-    .maybeSingle();
+  const [{ data: messaging }, { data: organization }] = await Promise.all([
+    database.from("messaging_settings").select("messaging_service_sid").eq("organization_id", organizationId).maybeSingle(),
+    database.from("organizations").select("phone").eq("id", organizationId).maybeSingle(),
+  ]);
+  // What the website can tell the customer now: Maya calls the ones who asked
+  // for a call, and the call takes the place of the first text.
+  const call = websiteCallDecision({
+    duplicate,
+    contactMethod: input.contactMethod,
+    callingConfigured: Boolean(
+      isTwilioConfigured() &&
+        isMcpConfigured() &&
+        process.env.XAI_WEBHOOK_SECRET &&
+        process.env.NEXT_PUBLIC_APP_URL &&
+        toE164(String(organization?.phone ?? "")) &&
+        toE164(input.phone),
+    ),
+  });
   // What the website can tell the customer now. The texting itself happens a
   // moment later and checks consent again first.
   const expected = websiteTextDecision({
@@ -105,6 +122,7 @@ export async function POST(request: Request) {
         facts: {
           contactName: [input.firstName, input.lastName].filter(Boolean).join(" "),
           phone: input.phone,
+          contactMethod: input.contactMethod,
           serviceName: input.serviceName || input.service,
           description: input.description,
           town: input.city || input.postalCode,
@@ -118,7 +136,8 @@ export async function POST(request: Request) {
     {
       requestId,
       duplicate,
-      text: expected.send ? "queued" : `skipped:${expected.reason}`,
+      text: call.call ? "skipped:calling" : expected.send ? "queued" : `skipped:${expected.reason}`,
+      call: call.call ? "queued" : `skipped:${call.reason}`,
     },
     { status: duplicate ? 200 : 201 },
   );

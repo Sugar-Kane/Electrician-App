@@ -12,6 +12,11 @@ export type McpSession = {
   customerId?: string;
   /** The number the customer called from, when the token was minted for a call. */
   phone?: string;
+  /**
+   * The website request a call back is about. A booking made on the call
+   * completes that request instead of opening a second one beside it.
+   */
+  websiteRequestId?: string;
   /** Seconds since the epoch. A leaked URL stops working here. */
   expiresAt: number;
 };
@@ -36,6 +41,7 @@ export function signMcpSessionToken(input: {
     ...(input.session.credentialId ? { credentialId: input.session.credentialId } : {}),
     ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
     ...(input.session.phone ? { phone: input.session.phone } : {}),
+    ...(input.session.websiteRequestId ? { websiteRequestId: input.session.websiteRequestId } : {}),
     expiresAt:
       Math.floor(now.getTime() / 1000) + (input.ttlSeconds ?? DEFAULT_SESSION_TTL_SECONDS),
   };
@@ -77,6 +83,7 @@ export function readMcpSessionToken(input: {
   const credentialId = typeof record.credentialId === "string" ? record.credentialId : "";
   const customerId = typeof record.customerId === "string" ? record.customerId : "";
   const phone = typeof record.phone === "string" ? record.phone : "";
+  const websiteRequestId = typeof record.websiteRequestId === "string" ? record.websiteRequestId : "";
   const expiresAt = typeof record.expiresAt === "number" ? record.expiresAt : 0;
   const scope: McpScope = record.scope === "business" ? "business" : "booking";
 
@@ -91,6 +98,7 @@ export function readMcpSessionToken(input: {
     ...(credentialId ? { credentialId } : {}),
     ...(customerId ? { customerId } : {}),
     ...(phone ? { phone } : {}),
+    ...(websiteRequestId ? { websiteRequestId } : {}),
     expiresAt,
   };
 }

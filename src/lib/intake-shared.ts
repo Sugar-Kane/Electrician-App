@@ -3,6 +3,7 @@ import "server-only";
 import { recordActivity } from "@/lib/activity";
 import { startBookingCheckout } from "@/lib/booking-checkout";
 import { decideHold, payLinkFor } from "@/lib/booking-hold";
+import type { CallbackFacts } from "@/lib/grok-voice";
 import {
   readLanguage,
   readLanguageSource,
@@ -55,13 +56,20 @@ export type OpenWebsiteRequest = {
  */
 export async function openWebsiteRequest(
   database: Database,
-  input: { organizationId: string; conversationId: string },
+  input:
+    | { organizationId: string; conversationId: string }
+    // A call back: the request the call was placed for, and only while it is
+    // still this customer's.
+    | { organizationId: string; requestId: string; customerId: string },
 ): Promise<OpenWebsiteRequest | null> {
-  const { data } = await database
+  const query = database
     .from("booking_requests")
     .select("id, first_name, contact_name, description, address_line_1, city, postal_code, category, preferred_times, email")
-    .eq("organization_id", input.organizationId)
-    .eq("conversation_id", input.conversationId)
+    .eq("organization_id", input.organizationId);
+  const scoped = "conversationId" in input
+    ? query.eq("conversation_id", input.conversationId)
+    : query.eq("id", input.requestId).eq("customer_id", input.customerId);
+  const { data } = await scoped
     .eq("origin", "website")
     .in("status", ["new", "needs_review"])
     .is("created_job_id", null)
@@ -89,6 +97,45 @@ export async function openWebsiteRequest(
       preferredTimes: text(row.preferred_times),
       email: text(row.email),
     }),
+  };
+}
+
+/**
+ * The website request Maya is calling this customer back about, if a call back
+ * was placed in the last few minutes. This is how the call's setup knows it is
+ * a call back: the business rang them, presenting their own number as the
+ * caller, so the assistant's side sees an ordinary call from the customer.
+ */
+export async function websiteCallbackInProgress(
+  database: Database,
+  input: { organizationId: string; customerId: string; now?: Date },
+): Promise<{ id: string; facts: CallbackFacts } | null> {
+  const since = new Date((input.now ?? new Date()).getTime() - 10 * 60_000).toISOString();
+  const { data } = await database
+    .from("booking_requests")
+    .select("id, first_name, category, description, address_line_1, city, postal_code, preferred_times")
+    .eq("organization_id", input.organizationId)
+    .eq("customer_id", input.customerId)
+    .eq("origin", "website")
+    .in("callback_outcome", ["calling", "answered"])
+    .gte("callback_called_at", since)
+    .is("created_job_id", null)
+    .is("archived_at", null)
+    .order("callback_called_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  return {
+    id: text(row.id),
+    facts: {
+      firstName: text(row.first_name),
+      serviceName: text(row.category),
+      description: text(row.description).startsWith("Website request: ") ? "" : text(row.description),
+      address: text(row.address_line_1),
+      town: [text(row.city), text(row.postal_code)].filter(Boolean).join(" "),
+      preferredTimes: text(row.preferred_times),
+    },
   };
 }
 
@@ -473,6 +520,8 @@ export async function recordBookingRequest(input: {
   customerId: string;
   phone: string;
   conversationId?: string | null;
+  /** The website request a call back is about, from the call's signed session. */
+  websiteRequestId?: string;
   action: IntakeAction;
   callerText: string;
   model: string | null;
@@ -525,7 +574,13 @@ export async function recordBookingRequest(input: {
         organizationId: input.organizationId,
         conversationId: input.conversationId,
       })
-    : null;
+    : input.websiteRequestId
+      ? await openWebsiteRequest(input.database, {
+          organizationId: input.organizationId,
+          requestId: input.websiteRequestId,
+          customerId: input.customerId,
+        })
+      : null;
 
   const { data: created, error: insertError } = website
     ? await input.database

@@ -15,6 +15,7 @@ import {
   intakeAnswers,
   intakeQuestionList,
   intakeShortfall,
+  looksLikeSolicitation,
   slotList,
   unreachableCaller,
 } from "@/lib/booking-tool-rules";
@@ -101,6 +102,18 @@ export async function runBookingTool(input: {
     isFirstReply: false,
   });
 
+  if (input.name === "log_non_service_call") return logNonServiceCall(input);
+
+  // The safety net for a sales call the model filed as a callback anyway: the
+  // owner is not texted about it and nothing is saved as a request.
+  if (input.name === "request_callback" && looksLikeSolicitation(customerWords(input.args))) {
+    await logNonServiceCall({ ...input, args: { kind: "sales", summary: customerWords(input.args) } });
+    return {
+      isError: true,
+      text: "NOT SAVED. This is not a customer wanting electrical work, so nobody will call them back. Decline politely (\"Thanks, but we're all set.\"), say goodbye, and end the call.",
+    };
+  }
+
   if (input.name === "list_open_slots") return { text: slotList(context) };
   if (input.name === "get_intake_questions")
     return { text: intakeQuestionList() };
@@ -174,6 +187,7 @@ export async function runBookingTool(input: {
     // The realtime voice model books through these tools, so this is a
     // call however the words got to it.
     channel: "phone",
+    websiteRequestId: input.session.websiteRequestId,
     action,
     callerText,
     model: "grok-voice",
@@ -361,4 +375,27 @@ export async function runBookingTool(input: {
     // tell "said it was booked" from "is booked".
     record: { bookingRequestId: recorded.requestId, jobId: recorded.jobId },
   };
+}
+
+/**
+ * A call that was not about work: noted on the activity log so the owner can
+ * see it was screened, and nothing else. No request, no alert.
+ */
+async function logNonServiceCall(input: {
+  database: Database;
+  session: McpSession;
+  args: Record<string, unknown>;
+}): Promise<ToolResult> {
+  const kind = ["sales", "spam", "wrong_number", "other"].includes(String(input.args.kind))
+    ? String(input.args.kind)
+    : "other";
+  const summary = typeof input.args.summary === "string" ? input.args.summary.trim().slice(0, 300) : "";
+  await recordActivity(input.database, {
+    organizationId: input.session.organizationId,
+    eventType: "call.screened",
+    label: kind === "sales" ? "Sales call declined" : kind === "wrong_number" ? "Wrong number" : "Call screened",
+    ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
+    metadata: { kind, summary, ...(input.session.phone ? { phone: input.session.phone } : {}) },
+  });
+  return { text: "Noted. Nothing was saved for the owner. Say a polite goodbye and end the call." };
 }

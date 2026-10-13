@@ -177,6 +177,7 @@ test("the session is given the booking tools and only the booking tools", () => 
     "list_open_slots",
     "get_intake_questions",
     "book_visit",
+    "log_non_service_call",
     "request_callback",
   ]);
 });

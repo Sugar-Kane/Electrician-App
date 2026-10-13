@@ -7,6 +7,7 @@ import {
   loadCustomerLanguage,
   loadIntakeContext,
   organizationForPhoneNumber,
+  websiteCallbackInProgress,
 } from "@/lib/intake-shared";
 import { isMcpConfigured, mcpSessionUrl } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -112,9 +113,18 @@ export async function POST(request: Request) {
     { onConflict: "call_sid" },
   );
 
+  // A call Maya placed herself, back to someone who asked for one on the
+  // business's website. She opens as the caller and finishes that request.
+  const callback = await websiteCallbackInProgress(database, { organizationId, customerId });
+
   const mcpServerUrl = mcpSessionUrl({
     origin: twilioPublicOrigin(request),
-    session: { organizationId, customerId, phone: call.from },
+    session: {
+      organizationId,
+      customerId,
+      phone: call.from,
+      ...(callback ? { websiteRequestId: callback.id } : {}),
+    },
   });
   if (!mcpServerUrl) {
     return NextResponse.json({ error: "Could not mint a booking URL" }, { status: 503 });
@@ -125,6 +135,7 @@ export async function POST(request: Request) {
     realtimeUrl: realtimeUrlForCall(call.callId),
     sessionUpdate: buildSessionUpdate({
       context,
+      callback: callback?.facts,
       mcpServerUrl,
       allowedTools: BOOKING_TOOL_NAMES,
       bearerToken: process.env.MCP_BEARER_TOKEN || undefined,
