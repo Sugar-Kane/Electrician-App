@@ -577,3 +577,14 @@ test("while anyone has rung in, nobody is told what a website form said", () => 
   assert.equal(callbackForCaller([ON_THE_LINE], "+18055550921", NOW, 1), null);
   assert.equal(callbackForCaller([ON_THE_LINE], "+18055550921", NOW, null), null);
 });
+
+test("with two call backs on the line at once, neither customer's form is given out", () => {
+  // Either caller could talk Maya into the other one's number, and the lookup
+  // can't tell which call is asking.
+  const other = { ...ON_THE_LINE, id: "22222222-2222-4222-8222-222222222222", phone: "(805) 555-0931", firstName: "Otto" };
+  assert.equal(callbackForCaller([ON_THE_LINE, other], "+18055550921", NOW, 0), null);
+  assert.equal(callbackForCaller([ON_THE_LINE, other], "+18055550931", NOW, 0), null);
+  // The same person who sent the form twice is still one call.
+  const again = { ...ON_THE_LINE, id: "33333333-3333-4333-8333-333333333333", callbackCalledAt: "2026-10-13T18:29:00Z" };
+  assert.equal(callbackForCaller([ON_THE_LINE, again], "+18055550921", NOW, 0)?.id, again.id);
+});

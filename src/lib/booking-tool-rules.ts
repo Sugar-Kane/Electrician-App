@@ -270,10 +270,12 @@ export type CallbackCandidate = {
  * after it was placed.
  *
  * The number comes from the model, and a caller can talk a model into using a
- * number of their choosing. So while anyone has rung in to the business and is
- * on the line, the lookup can't tell whose call is asking, and nobody gets a
- * form's details; nor when it couldn't be checked (`null`). Maya then carries
- * on as with any caller.
+ * number of their choosing. So the details are given only when the call asking
+ * can be only one call: exactly one person being called back is on the line,
+ * and nobody has rung in to the business. With two call backs connected at once,
+ * or anyone on an incoming call, or when that couldn't be checked (`null`), the
+ * lookup can't tell whose call is asking, and nobody gets a form's details.
+ * Maya then carries on as with any caller.
  */
 export function callbackForCaller(
   rows: CallbackCandidate[],
@@ -285,18 +287,14 @@ export function callbackForCaller(
   const caller = toE164(callerPhoneNumber);
   if (!caller) return null;
   const since = now.getTime() - CALLBACK_LOOKUP_MINUTES * 60_000;
-  return (
-    rows.find((row) => {
-      const calledAt = Date.parse(row.callbackCalledAt);
-      return (
-        row.callbackOutcome === "answered" &&
-        Number.isFinite(calledAt) &&
-        calledAt >= since &&
-        calledAt <= now.getTime() &&
-        toE164(row.phone) === caller
-      );
-    }) ?? null
-  );
+  const onTheLine = rows.filter((row) => {
+    const calledAt = Date.parse(row.callbackCalledAt);
+    return row.callbackOutcome === "answered" && Number.isFinite(calledAt) && calledAt >= since && calledAt <= now.getTime();
+  });
+  // One person, even if they sent the form twice.
+  const numbers = new Set(onTheLine.map((row) => toE164(row.phone)));
+  if (numbers.size !== 1 || !numbers.has(caller)) return null;
+  return onTheLine.sort((a, b) => Date.parse(b.callbackCalledAt) - Date.parse(a.callbackCalledAt))[0] ?? null;
 }
 
 /** What `look_up_caller` tells Maya. */
