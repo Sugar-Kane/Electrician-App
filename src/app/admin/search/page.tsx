@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 
 import { AdminTime } from "@/components/admin-time";
 import { Empty } from "@/components/admin-ui";
-import { listOrganizations, searchConsole, type SearchHit } from "@/lib/admin-console";
+import { listOrganizations, requirePlatformAdmin, searchConsole, type SearchHit } from "@/lib/admin-console";
 
 export const metadata: Metadata = {
   title: "Search | Volteira support",
@@ -48,6 +48,7 @@ function hrefFor(hit: SearchHit): string {
  * business at once.
  */
 export default async function AdminSearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  await requirePlatformAdmin();
   const { q = "" } = await searchParams;
   const query = q.trim().slice(0, 80);
   const [hits, organizations] = await Promise.all([

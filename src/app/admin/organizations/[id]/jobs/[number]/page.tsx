@@ -6,7 +6,7 @@ import { ChevronLeft, TriangleAlert } from "lucide-react";
 import { AdminTime } from "@/components/admin-time";
 import { Card, Empty, Pill, RevealBar, type Tone } from "@/components/admin-ui";
 import { buildTimeline } from "@/lib/activity-timeline";
-import { getJobTrace, getOrganizationDetail, recordOrganizationTab, revealIsValid } from "@/lib/admin-console";
+import { getJobTrace, getOrganizationDetail, recordOrganizationTab, requirePlatformAdmin, revealIsValid } from "@/lib/admin-console";
 import { maskBody, maskContacts, maskEmail, maskPhone } from "@/lib/admin-mask";
 import { traceProblems, traceStates, type SendAttempt } from "@/lib/admin-trace";
 import { todayInZone } from "@/lib/calendar";
@@ -14,6 +14,7 @@ import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { formatCents, formatQuantity, lineTotalCents } from "@/lib/job-lines";
 import { deliveryState } from "@/lib/message-errors";
 import { kindOfWork } from "@/lib/new-job-input";
+import { openCaseHref } from "@/lib/support-cases";
 
 export const metadata: Metadata = {
   title: "Job trace | Volteira support",
@@ -59,6 +60,7 @@ export default async function AdminJobTracePage({
   params: Promise<{ id: string; number: string }>;
   searchParams: Promise<{ reveal?: string }>;
 }) {
+  await requirePlatformAdmin();
   const [{ id, number }, query] = await Promise.all([params, searchParams]);
   const jobNumber = Number(number);
   if (!UUID.test(id) || !Number.isSafeInteger(jobNumber) || jobNumber <= 0) notFound();
@@ -104,6 +106,13 @@ export default async function AdminJobTracePage({
               </Link>
             </>
           ) : null}
+          {" · "}
+          <Link
+            href={openCaseHref({ organizationId: id, type: "job", id: trace.job.id, label: `Job #${trace.job.number}` })}
+            className="font-semibold text-ink-muted underline underline-offset-2"
+          >
+            Open a case
+          </Link>
         </p>
       </header>
 

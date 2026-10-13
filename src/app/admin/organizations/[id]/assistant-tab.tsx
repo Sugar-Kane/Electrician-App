@@ -6,6 +6,7 @@ import { Card, Empty, Pill, type Tone } from "@/components/admin-ui";
 import { listAssistantRows, type OrganizationDetail } from "@/lib/admin-console";
 import { maskContacts } from "@/lib/admin-mask";
 import { assistantCalls, type AssistantCall, type LinkState } from "@/lib/assistant-trace";
+import { openCaseHref } from "@/lib/support-cases";
 
 const LINK_STYLE: Record<LinkState, { Icon: typeof CheckCircle2; className: string; word: string }> = {
   ok: { Icon: CheckCircle2, className: "text-positive", word: "Yes" },
@@ -68,14 +69,27 @@ export async function AssistantTab({ organization, revealed }: { organization: O
               ) : null}
 
               {call.problems.length > 0 ? (
-                <ul className="mt-3 space-y-1">
-                  {call.problems.map((problem) => (
-                    <li key={problem} className="flex items-start gap-2 rounded-chip bg-critical-bg px-3 py-2 text-xs text-critical">
-                      <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                      {problem}
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="mt-3 space-y-1">
+                    {call.problems.map((problem) => (
+                      <li key={problem} className="flex items-start gap-2 rounded-chip bg-critical-bg px-3 py-2 text-xs text-critical">
+                        <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                        {problem}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={openCaseHref({
+                      organizationId: organization.id,
+                      type: "assistant",
+                      id: (call.actions[0]?.row ?? call.steps[0] ?? call.protocol[0])?.id,
+                      label: `Phone assistant call: ${call.problems[0]}`.slice(0, 120),
+                    })}
+                    className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-ink-muted underline underline-offset-2"
+                  >
+                    Open a case
+                  </Link>
+                </>
               ) : null}
 
               {call.actions.map((action) => (

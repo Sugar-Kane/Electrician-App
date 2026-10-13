@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { AdminTime } from "@/components/admin-time";
 import { RevealBar } from "@/components/admin-ui";
 import { RevealCurrent } from "@/components/ui/reveal-current";
-import { getOrganizationDetail, myAdminRole, recordOrganizationTab, revealIsValid } from "@/lib/admin-console";
+import { getOrganizationDetail, myAdminRole, recordOrganizationTab, requirePlatformAdmin, revealIsValid } from "@/lib/admin-console";
 import { zoneAbbreviation } from "@/lib/admin-time";
 
 import { ActivityTab } from "./activity-tab";
@@ -63,6 +63,7 @@ export default async function AdminOrganizationPage({
     why?: string;
   }>;
 }) {
+  await requirePlatformAdmin();
   const [{ id }, query] = await Promise.all([params, searchParams]);
   if (!UUID.test(id)) notFound();
 

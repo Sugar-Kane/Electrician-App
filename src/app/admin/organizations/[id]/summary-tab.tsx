@@ -15,6 +15,7 @@ import { diagnose, failingNow, type Finding } from "@/lib/admin-health";
 import { followUps, isPastVisit } from "@/lib/follow-ups";
 import { failureReason } from "@/lib/message-errors";
 import { kindOfWork } from "@/lib/new-job-input";
+import { openCaseHref } from "@/lib/support-cases";
 
 const FINDING_STYLE: Record<Finding["severity"], string> = {
   blocking: "border-critical/30 bg-critical-bg text-critical",
@@ -99,7 +100,7 @@ export async function SummaryTab({
         )}
       </Card>
 
-      <Card title="Past visits with no outcome" aside={pastVisits.length ? `${pastVisits.length}` : undefined}>
+      <Card title="Past visits with no outcome" id="past-visits" aside={pastVisits.length ? `${pastVisits.length}` : undefined}>
         {pastVisits.length === 0 ? (
           <p className="flex items-center gap-2 text-sm text-positive">
             <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
@@ -110,7 +111,7 @@ export async function SummaryTab({
             <p className="text-sm leading-6 text-ink-muted">
               The same list the business sees on Today. Nothing here is completed on its own: each choice opens the job as
               the business, for an hour, so the normal steps run — a reschedule texts the customer, a completion asks for
-              the work done. Not sure what happened? Ask the business before changing anything.
+              the work done. Not sure what happened? Open a case and ask the business before changing anything.
             </p>
             <ul className="mt-3 space-y-2">
               {pastVisits.slice(0, 12).map((visit) => (
@@ -121,7 +122,21 @@ export async function SummaryTab({
                     </Link>
                     {visit.kindOfWork ? <span className="text-xs text-ink-faint">{visit.kindOfWork}</span> : null}
                   </div>
-                  <p className="mt-1 text-sm text-ink-muted">{visit.detail}</p>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    {visit.detail} ·{" "}
+                    <Link
+                      href={openCaseHref({
+                        organizationId: id,
+                        type: "job",
+                        id: jobs.find((job) => job.number === visit.jobNumber)?.id,
+                        label: `Job #${visit.jobNumber}: past visit, outcome unknown`,
+                        category: "schedule",
+                      })}
+                      className="text-xs font-semibold text-ink-muted underline underline-offset-2"
+                    >
+                      Not sure? Open a case
+                    </Link>
+                  </p>
                   {owner ? (
                     <details className="mt-2 rounded-control border border-line">
                       <summary className="tap-target flex cursor-pointer list-none items-center px-3 text-xs font-semibold text-ink-muted">

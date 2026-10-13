@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AdminTime } from "@/components/admin-time";
 import { Empty, Pill, type Tone } from "@/components/admin-ui";
 import { SelectField } from "@/components/ui/select-field";
-import { listOperations, listOrganizations } from "@/lib/admin-console";
+import { listOperations, listOrganizations, requirePlatformAdmin } from "@/lib/admin-console";
 
 export const metadata: Metadata = {
   title: "Recovery | Volteira support",
@@ -40,6 +40,7 @@ export default async function AdminRecoveryPage({
 }: {
   searchParams: Promise<{ business?: string; tool?: string }>;
 }) {
+  await requirePlatformAdmin();
   const params = await searchParams;
   const business = UUID.test(params.business ?? "") ? params.business! : "";
   const tool = TOOLS.some((entry) => entry.value === params.tool) ? params.tool! : "";

@@ -70,7 +70,7 @@ export async function dismissBookingRequest(formData: FormData) {
 
 /** The database's own refusal when it is one meant for people, else a plain fallback. */
 function refusal(error: { code?: string; message?: string } | null, fallback: string): string {
-  if (error && ["40001", "22023", "23505"].includes(error.code ?? "") && error.message) return error.message;
+  if (error && ["PT409", "22023", "23505"].includes(error.code ?? "") && error.message) return error.message;
   return fallback;
 }
 

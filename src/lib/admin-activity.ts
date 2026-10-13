@@ -20,7 +20,16 @@ export const ACTIVITY_ACTIONS: readonly ActivityAction[] = [
   { value: "impersonation.started", label: "Started making changes" },
   { value: "impersonation.ended", label: "Stopped making changes" },
   { value: "invitation.sent", label: "Sent an invitation" },
+  { value: "case.opened", label: "Opened a case" },
+  { value: "case.moved", label: "Moved a case" },
 ];
+
+const CASE_STATE_WORDS: Record<string, string> = {
+  open: "open",
+  waiting: "waiting on someone",
+  verifying: "fix ready to verify",
+  closed: "closed",
+};
 
 const TOOL_WORDS: Record<string, string> = {
   check_delivery: "checked a text's delivery",
@@ -65,6 +74,10 @@ export function activitySentence(action: string, business: string, detail: Recor
       const tool = TOOL_WORDS[str(detail.tool)] ?? str(detail.tool).replace(/_/g, " ");
       return `Finished (${str(detail.outcome)}): ${tool} · ${where}`;
     }
+    case "case.opened":
+      return `Opened case #${str(detail.number)} (${str(detail.severity)}) · ${business || "platform-wide"}`;
+    case "case.moved":
+      return `Moved case #${str(detail.number)} from ${CASE_STATE_WORDS[str(detail.from)] ?? str(detail.from)} to ${CASE_STATE_WORDS[str(detail.to)] ?? str(detail.to)} · ${business || "platform-wide"}`;
     case "impersonation.started":
       return `Started making changes as ${where}`;
     case "impersonation.ended":
