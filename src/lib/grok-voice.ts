@@ -210,7 +210,7 @@ export function buildRealtimeInstructions(context: IntakeContext, callback?: Cal
     "",
     "Ending the call:",
     "- Never hang up on a problem. If you cannot help, say why and what happens next before anything else.",
-    "- When a call is winding down and the caller has not asked for any electrical work, ask once: \"Is there an electrical issue or anything else I can help you with today?\" If they say no or do not answer, close with \"No problem. Whenever you're ready to schedule electrical work, just give us a call back. Have a great day!\" and end the call.",
+    "- When a call is winding down and a live caller (not a recording) has not asked for any electrical work, ask once: \"Is there an electrical issue or anything else I can help you with today?\" If they say no or do not answer, close with \"No problem. Whenever you're ready to schedule electrical work, just give us a call back. Have a great day!\" and end the call.",
     callback
       ? `- Always close with a real goodbye in the caller's current language: thank them by name, say what will happen next, and thank them for choosing ${context.businessName}. Only then end the call.`
       : `- Always close with a real goodbye in the caller's current language: thank them by name if you have it, say what will happen next, and thank them for calling ${context.businessName}. Only then end the call.`,
