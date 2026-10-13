@@ -16,7 +16,7 @@ import {
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import { slotLabel } from "@/lib/intake-shared";
-import { consentIsActive } from "@/lib/messaging-rules";
+import { callbackConsentStep, consentIsActive } from "@/lib/messaging-rules";
 import { type IntakeContext } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
@@ -573,37 +573,79 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
       detail: "Confirmed in the text thread itself; a second copy was not sent.",
     });
   } else if (messagingServiceSid && input.phone) {
-    await database.from("messaging_consent").upsert(
-      {
-        organization_id: input.organizationId,
-        customer_id: input.customerId,
-        channel: "sms",
-        scope: "transactional",
-        opted_in_at: new Date().toISOString(),
-        opted_out_at: null,
-        source: "phone_callback",
-        proof_text: "Caller gave this number on a phone call and asked to be called back.",
-      },
-      { onConflict: "customer_id,channel,scope" },
+    /*
+     * Consent first, and only then the text.
+     *
+     * This used to write the consent with a source the database does not
+     * accept, ignore the refusal, and text anyway, so these confirmations went
+     * out with nothing on file behind them. It also wrote `opted_out_at: null`,
+     * which would have quietly undone a customer's earlier STOP.
+     */
+    const { data: existing } = await database
+      .from("messaging_consent")
+      .select("opted_in_at, opted_out_at")
+      .eq("organization_id", input.organizationId)
+      .eq("customer_id", input.customerId)
+      .eq("channel", "sms")
+      .eq("scope", "transactional")
+      .maybeSingle();
+
+    const step = callbackConsentStep(
+      existing
+        ? {
+            optedInAt: existing.opted_in_at ? String(existing.opted_in_at) : null,
+            optedOutAt: existing.opted_out_at ? String(existing.opted_out_at) : null,
+          }
+        : null,
     );
 
-    const body = customerCallbackSms(facts);
-    const result = await sendSms({ to: input.phone, body, messagingServiceSid });
-    note({
-      channel: "sms",
-      to: input.phone,
-      audience: "customer",
-      ok: result.ok,
-      ref: result.ok ? result.providerMessageId : undefined,
-      detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
-    });
-    await recordOutbound({
-      database,
-      organizationId: input.organizationId,
-      customerId: input.customerId,
-      body,
-      result,
-    });
+    let consentOnFile = !step.record;
+    if (step.mayText && step.record) {
+      const { error } = await database.from("messaging_consent").upsert(
+        {
+          organization_id: input.organizationId,
+          customer_id: input.customerId,
+          channel: "sms",
+          scope: "transactional",
+          opted_in_at: new Date().toISOString(),
+          opted_out_at: null,
+          source: "verbal",
+          proof_text: "Caller gave this number on a phone call and asked to be called back.",
+        },
+        { onConflict: "customer_id,channel,scope" },
+      );
+      consentOnFile = !error;
+    }
+
+    if (!step.mayText) {
+      note({ channel: "sms", to: input.phone, audience: "customer", ok: false, detail: step.reason });
+    } else if (!consentOnFile) {
+      note({
+        channel: "sms",
+        to: input.phone,
+        audience: "customer",
+        ok: false,
+        detail: "Not texted: their consent could not be recorded.",
+      });
+    } else {
+      const body = customerCallbackSms(facts);
+      const result = await sendSms({ to: input.phone, body, messagingServiceSid });
+      note({
+        channel: "sms",
+        to: input.phone,
+        audience: "customer",
+        ok: result.ok,
+        ref: result.ok ? result.providerMessageId : undefined,
+        detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
+      });
+      await recordOutbound({
+        database,
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        body,
+        result,
+      });
+    }
   }
 
   try {

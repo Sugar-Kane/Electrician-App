@@ -22,6 +22,26 @@ export function consentIsActive(consent: ConsentFacts): boolean {
   return Boolean(consent.optedInAt) && !consent.optedOutAt;
 }
 
+export type CallbackConsentStep =
+  | { record: boolean; mayText: true }
+  | { record: false; mayText: false; reason: string };
+
+/**
+ * Before texting a caller that their callback is noted.
+ *
+ * Somebody who rang the business and asked to be called back has given their
+ * number for that, which is recorded as verbal consent when nothing is on file.
+ * It never undoes a STOP: the row's opt-out stands until the customer texts
+ * START themselves. `existing` is the customer's current row, or null.
+ */
+export function callbackConsentStep(existing: ConsentFacts | null): CallbackConsentStep {
+  if (existing?.optedOutAt) {
+    return { record: false, mayText: false, reason: "They replied STOP earlier, so the confirmation was not texted." };
+  }
+  if (existing && consentIsActive(existing)) return { record: false, mayText: true };
+  return { record: true, mayText: true };
+}
+
 /**
  * Why this customer cannot be texted, or null when they can.
  *

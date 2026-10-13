@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   blockedReasonFor,
+  callbackConsentStep,
   consentIsActive,
   deliveryStatusApplies,
   displayNameFor,
@@ -24,6 +25,23 @@ test("consent needs an opt-in that has not been withdrawn", () => {
     consentIsActive({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: "2026-08-02T00:00:00Z" }),
     false,
     "a STOP after an opt-in wins",
+  );
+});
+
+test("a callback confirmation never undoes a STOP, and records consent only when none is on file", () => {
+  assert.deepEqual(callbackConsentStep(null), { record: true, mayText: true }, "a first-time caller is recorded, then texted");
+  assert.deepEqual(
+    callbackConsentStep({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: null }),
+    { record: false, mayText: true },
+    "an existing opt-in is left as it is",
+  );
+  const stopped = callbackConsentStep({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: "2026-08-02T00:00:00Z" });
+  assert.equal(stopped.mayText, false, "a customer who replied STOP is not texted");
+  assert.equal(stopped.record, false, "and their opt-out is not overwritten");
+  assert.deepEqual(
+    callbackConsentStep({ optedInAt: null, optedOutAt: null }),
+    { record: true, mayText: true },
+    "a row with neither date is not consent until recorded",
   );
 });
 
