@@ -355,6 +355,10 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   const writing = liveText !== null;
   const shown = writing ? parseMaterialList(liveText ?? "", "live") : list;
   const items = listItems(list);
+  // What can be priced, and which of those are ticked: only ever items on the
+  // list as it is now, so a stale pick never counts.
+  const priceable = estimateItems(list);
+  const picked = priceable.filter((item) => chosen.has(item.id));
   const listed = hasContent(list);
 
   // Writes to the saved list go one at a time, in the order they were made, so
@@ -384,6 +388,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
     unsaved.current = false;
     setList(current.list);
     setMessages(current.messages);
+    setChosen(new Set());
     setEditingId(null);
     setAddingTo(null);
   }
@@ -438,6 +443,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
         version.current = null;
         setList({ intro: "", title: "", sections: [], closing: "" });
         setMessages([]);
+        setChosen(new Set());
       } catch {
         unsaved.current = true;
         setError("The list could not be cleared. Try again.");
@@ -515,6 +521,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
       version.current = result.updatedAt ?? version.current;
       setList(result.list);
       setMessages(result.messages ?? []);
+      setChosen(new Set());
     } catch (problem) {
       if (controller.signal.aborted) return;
       setError(problem instanceof Error ? problem.message : "The list could not be written just now. Try again.");
@@ -628,7 +635,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
             pricing ? (
               <PricingSheet
                 jobNumber={jobNumber}
-                items={estimateItems(list).filter((item) => chosen.has(item.id))}
+                items={picked}
                 onCancel={() => setPricing(false)}
                 onDone={(message) => {
                   setPricing(false);
@@ -639,21 +646,21 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
               />
             ) : (
               <div className="sticky bottom-20 mt-3 flex flex-wrap items-center gap-2 rounded-control border border-brand/40 bg-surface p-2.5 shadow-lg lg:bottom-4">
-                <span className="text-sm">{chosen.size} chosen</span>
+                <span className="text-sm">{picked.length} chosen</span>
                 <button
                   type="button"
-                  onClick={() => setChosen(chosen.size === items.length ? new Set() : new Set(items.map((item) => item.id)))}
+                  onClick={() => setChosen(picked.length > 0 && picked.length === priceable.length ? new Set() : new Set(priceable.map((item) => item.id)))}
                   className="tap-target inline-flex min-h-11 items-center px-2 text-sm font-semibold text-ink-muted"
                 >
-                  {chosen.size === items.length ? "Clear" : "Choose all"}
+                  {picked.length > 0 && picked.length === priceable.length ? "Clear" : "Choose all"}
                 </button>
                 <button
                   type="button"
-                  disabled={chosen.size === 0}
+                  disabled={picked.length === 0}
                   onClick={() => setPricing(true)}
                   className="tap-target ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
                 >
-                  Price {chosen.size || ""} for the estimate
+                  Price {picked.length || ""} for the estimate
                 </button>
                 <button type="button" onClick={() => setChoosing(false)} aria-label="Stop choosing" className="tap-target inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted">
                   <X className="h-4 w-4" aria-hidden />
