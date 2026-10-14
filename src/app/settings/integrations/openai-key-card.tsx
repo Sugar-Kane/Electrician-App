@@ -106,6 +106,8 @@ export function OpenAiKeyCard({
       {canManage ? (
         <>
           <form action={action} className="mt-4 flex flex-col gap-2 sm:flex-row">
+            {/* The key this page shows, so the server changes only that one. */}
+            <input type="hidden" name="version" value={status?.savedAt ?? ""} />
             <label className="min-w-0 flex-1">
               <span className="sr-only">OpenAI API key</span>
               <input
@@ -124,6 +126,7 @@ export function OpenAiKeyCard({
           {justConnected ? <p className="mt-2 text-sm text-positive" role="status">OpenAI accepted the key. The materials chat now runs on it.</p> : null}
           {status ? (
             <form action={remove} className="mt-3">
+              <input type="hidden" name="version" value={status.savedAt} />
               <button
                 type="submit"
                 disabled={removing || connecting}

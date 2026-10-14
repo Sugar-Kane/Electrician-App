@@ -38,14 +38,19 @@ export async function aiKeyStatus(organizationId: string): Promise<AiKeyStatus |
   };
 }
 
+const CHANGED_ELSEWHERE = "The key was changed in another window while this was being done. This page now shows it as it is; try again if you still want to.";
+
 /**
  * Check a key with OpenAI and keep it. Nothing is stored unless OpenAI accepts
- * it and it can use a model that writes text.
+ * it and it can use a model that writes text, and only over the key the page
+ * showed (`expectedVersion`, null for none): a key removed or replaced in
+ * another window meanwhile is not overwritten.
  */
 export async function saveOpenAiKey(input: {
   organizationId: string;
   userId: string;
   key: string;
+  expectedVersion: string | null;
 }): Promise<{ ok: true; status: AiKeyStatus } | { ok: false; reason: string }> {
   const key = input.key.trim();
   if (!looksLikeOpenAiKey(key)) {
@@ -69,36 +74,65 @@ export async function saveOpenAiKey(input: {
   }
 
   const now = new Date().toISOString();
-  const { error } = await getSupabaseAdmin()
-    .from("organization_ai_keys")
-    .upsert(
-      {
-        organization_id: input.organizationId,
-        provider: "openai",
-        encrypted_key: encrypted,
-        key_hint: keyHint(key),
-        model,
-        created_by: input.userId || null,
-        updated_at: now,
-        last_used_at: null,
-        last_error: null,
-      },
-      { onConflict: "organization_id" },
-    );
-  if (error) return { ok: false, reason: "The key could not be saved. Try again." };
+  const row = {
+    organization_id: input.organizationId,
+    provider: "openai",
+    encrypted_key: encrypted,
+    key_hint: keyHint(key),
+    model,
+    created_by: input.userId || null,
+    updated_at: now,
+    last_used_at: null,
+    last_error: null,
+  };
+  const table = getSupabaseAdmin().from("organization_ai_keys");
+  if (input.expectedVersion === null) {
+    const { error } = await table.insert(row);
+    // Connected in another window first.
+    if (error?.code === "23505") return { ok: false, reason: CHANGED_ELSEWHERE };
+    if (error) return { ok: false, reason: "The key could not be saved. Try again." };
+  } else {
+    const { data, error } = await table
+      .update(row)
+      .eq("organization_id", input.organizationId)
+      .eq("updated_at", input.expectedVersion)
+      .select("organization_id");
+    if (error) return { ok: false, reason: "The key could not be saved. Try again." };
+    if (!Array.isArray(data) || data.length === 0) return { ok: false, reason: CHANGED_ELSEWHERE };
+  }
 
   return { ok: true, status: { hint: keyHint(key), model, savedAt: now, lastUsedAt: null, lastError: null } };
 }
 
-/** Forget the key. False when the database refused, so nobody is told it is gone when it is not. */
-export async function removeOpenAiKey(organizationId: string): Promise<boolean> {
-  const { error } = await getSupabaseAdmin()
+/**
+ * Forget the key the page showed (`expectedVersion`). A key replaced in
+ * another window since is left alone. Nobody is told a key is gone when the
+ * database refused, or when it is not the key they meant.
+ */
+export async function removeOpenAiKey(
+  organizationId: string,
+  expectedVersion: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
     .from("organization_ai_keys")
     .delete()
     .eq("organization_id", organizationId)
+    .eq("updated_at", expectedVersion)
     .select("organization_id");
-  if (error) console.error("OpenAI key was not removed", { organizationId, code: error.code, message: error.message });
-  return !error;
+  if (error) {
+    console.error("OpenAI key was not removed", { organizationId, code: error.code, message: error.message });
+    return { ok: false, reason: "The key could not be removed. Try again." };
+  }
+  if (Array.isArray(data) && data.length > 0) return { ok: true };
+  // Nothing matched: already gone is fine; a different key now is not.
+  const { data: current, error: lookup } = await admin
+    .from("organization_ai_keys")
+    .select("organization_id")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  if (lookup) return { ok: false, reason: "The key could not be removed. Try again." };
+  return current ? { ok: false, reason: CHANGED_ELSEWHERE } : { ok: true };
 }
 
 /**

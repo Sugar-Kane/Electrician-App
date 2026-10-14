@@ -19,12 +19,18 @@ export async function connectOpenAiKey(_previous: OpenAiKeyState, formData: Form
   const context = await currentContext();
   if (!context || context.role !== "owner") return { error: "Only the business owner can connect a ChatGPT key." };
 
+  // The key the page showed when this was asked for; empty when there was none.
+  const version = String(formData.get("version") ?? "");
   const result = await saveOpenAiKey({
     organizationId: context.organizationId,
     userId: context.userId,
     key: String(formData.get("apiKey") ?? ""),
+    expectedVersion: version || null,
   });
-  if (!result.ok) return { error: result.reason };
+  if (!result.ok) {
+    revalidatePath("/settings/integrations");
+    return { error: result.reason };
+  }
 
   await recordActivity(asFlexibleClient(await createClient()), {
     organizationId: context.organizationId,
@@ -36,10 +42,14 @@ export async function connectOpenAiKey(_previous: OpenAiKeyState, formData: Form
   return { error: "", status: result.status };
 }
 
-export async function disconnectOpenAiKey(_previous: OpenAiKeyState, _formData: FormData): Promise<OpenAiKeyState> {
+export async function disconnectOpenAiKey(_previous: OpenAiKeyState, formData: FormData): Promise<OpenAiKeyState> {
   const context = await currentContext();
   if (!context || context.role !== "owner") return { error: "Only the business owner can remove the ChatGPT key." };
-  if (!(await removeOpenAiKey(context.organizationId))) return { error: "The key could not be removed. Try again." };
+  const removed = await removeOpenAiKey(context.organizationId, String(formData.get("version") ?? ""));
+  if (!removed.ok) {
+    revalidatePath("/settings/integrations");
+    return { error: removed.reason };
+  }
   await recordActivity(asFlexibleClient(await createClient()), {
     organizationId: context.organizationId,
     eventType: "integration.openai_disconnected",
