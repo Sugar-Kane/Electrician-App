@@ -48,7 +48,10 @@ export function OpenAiKeyCard({
   disconnectAction: () => void;
 }) {
   const [state, action] = useActionState(connectOpenAiKey, initial);
-  const status = state.status ?? saved;
+  // What the server has now: both actions refresh the page, so a key removed
+  // after being connected here reads as removed, not as the key just connected.
+  const status = saved;
+  const justConnected = Boolean(state.status && saved && saved.hint === state.status.hint);
 
   return (
     <section className="rounded-panel border border-line bg-surface p-5 sm:p-6 lg:col-span-2">
@@ -115,7 +118,7 @@ export function OpenAiKeyCard({
             <SaveButton replacing={Boolean(status)} />
           </form>
           {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
-          {state.status ? <p className="mt-2 text-sm text-positive" role="status">OpenAI accepted the key. The materials chat now runs on it.</p> : null}
+          {justConnected ? <p className="mt-2 text-sm text-positive" role="status">OpenAI accepted the key. The materials chat now runs on it.</p> : null}
           {status ? (
             <form action={disconnectAction} className="mt-3">
               <button type="submit" className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted">

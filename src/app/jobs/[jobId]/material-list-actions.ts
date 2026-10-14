@@ -2,6 +2,7 @@
 
 import { normalizeMaterialList } from "@/lib/material-list";
 import { writeMaterialList } from "@/lib/material-list-server";
+import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,13 +17,11 @@ import { createClient } from "@/lib/supabase/server";
 export type MaterialListActionState = { error: string };
 
 async function jobFor(jobNumber: string) {
-  const supabase = asFlexibleClient(await createClient());
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data: membership } = await supabase.from("organization_members").select("organization_id").limit(1).maybeSingle();
-  const organizationId = typeof membership?.organization_id === "string" ? membership.organization_id : "";
+  const caller = await currentContext();
   const number = Number(jobNumber);
-  if (!organizationId || !Number.isInteger(number)) return null;
+  if (!caller || !Number.isInteger(number)) return null;
+  const { organizationId, userId } = caller;
+  const supabase = asFlexibleClient(await createClient());
   const { data: job } = await supabase
     .from("jobs")
     .select("id")
@@ -30,7 +29,7 @@ async function jobFor(jobNumber: string) {
     .eq("job_number", number)
     .maybeSingle();
   const jobId = typeof job?.id === "string" ? job.id : "";
-  return jobId ? { supabase, organizationId, jobId, userId: auth.user.id } : null;
+  return jobId ? { supabase, organizationId, jobId, userId } : null;
 }
 
 export async function saveMaterialList(jobNumber: string, raw: unknown): Promise<MaterialListActionState> {

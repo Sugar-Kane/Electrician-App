@@ -9,6 +9,7 @@ import {
 } from "@/lib/material-list";
 import { readMaterialList, writeMaterialList } from "@/lib/material-list-server";
 import { OpenAiRefusal, streamOpenAiChat } from "@/lib/openai";
+import { currentContext, currentUser } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,21 +49,14 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
   if (!prompt) return jsonError(400, "Say what the job is, or what to change.");
   if (prompt.length > 4000) return jsonError(400, "That is too long for one message. Try a shorter one.");
 
-  const supabase = asFlexibleClient(await createClient());
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return jsonError(401, "You are not signed in.");
+  // The same answer to "who is asking, for which business" as every page.
+  if (!(await currentUser())) return jsonError(401, "You are not signed in.");
+  const caller = await currentContext();
+  if (!caller) return jsonError(403, "You are not a member of a business.");
+  const { organizationId, userId } = caller;
 
-  const { data: membershipRow } = await supabase
-    .from("organization_members")
-    .select("organization_id, organizations ( name )")
-    .limit(1)
-    .maybeSingle();
-  const membership = (membershipRow ?? null) as Record<string, unknown> | null;
-  const organizationId = typeof membership?.organization_id === "string" ? membership.organization_id : "";
-  if (!organizationId) return jsonError(403, "You are not a member of a business.");
-  const organization = (Array.isArray(membership?.organizations) ? membership.organizations[0] : membership?.organizations) as
-    | { name?: unknown }
-    | null;
+  const supabase = asFlexibleClient(await createClient());
+  const { data: organization } = await supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle();
   const businessName = typeof organization?.name === "string" ? organization.name : "";
 
   const { data: jobRow } = await supabase
@@ -168,7 +162,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
       const kept = await writeMaterialList(supabase, {
         organizationId,
         jobId,
-        userId: auth.user.id,
+        userId,
         list,
         messages,
         source,

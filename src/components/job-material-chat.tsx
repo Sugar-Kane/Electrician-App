@@ -348,12 +348,25 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   const items = listItems(list);
   const listed = hasContent(list);
 
+  // Writes to the saved list go one at a time, in the order they were made, so
+  // an earlier edit can never land after a later one, and a revision waits for
+  // the last edit before the server reads the list it revises.
+  const saving = useRef<Promise<unknown>>(Promise.resolve());
+  function inOrder<T>(write: () => Promise<T>): Promise<T> {
+    const next = saving.current.then(write);
+    saving.current = next.catch(() => undefined);
+    return next;
+  }
+
   // Keep a hand edit, and say so if it did not stick.
   function persist(next: MaterialList) {
     setList(next);
-    void saveMaterialList(jobNumber, next).then((result) => {
-      if (result.error) setError(result.error);
-    });
+    void inOrder(() => saveMaterialList(jobNumber, next)).then(
+      (result) => {
+        if (result.error) setError(result.error);
+      },
+      () => setError("The change could not be saved. Try again."),
+    );
   }
 
   async function send(prompt: string) {
@@ -372,6 +385,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
     abort.current = controller;
 
     try {
+      await saving.current;
       const response = await fetch(`/api/jobs/${encodeURIComponent(jobNumber)}/materials-chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -575,14 +589,17 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
                 type="button"
                 onClick={() => {
                   if (!window.confirm("Clear this list and the chat, and start again?")) return;
-                  void clearMaterialList(jobNumber).then((result) => {
-                    if (result.error) {
-                      setError(result.error);
-                      return;
-                    }
-                    setList({ intro: "", title: "", sections: [], closing: "" });
-                    setMessages([]);
-                  });
+                  void inOrder(() => clearMaterialList(jobNumber)).then(
+                    (result) => {
+                      if (result.error) {
+                        setError(result.error);
+                        return;
+                      }
+                      setList({ intro: "", title: "", sections: [], closing: "" });
+                      setMessages([]);
+                    },
+                    () => setError("The list could not be cleared. Try again."),
+                  );
                 }}
                 className="tap-target inline-flex min-h-11 items-center gap-1.5 px-2 text-sm font-semibold text-ink-muted"
               >
