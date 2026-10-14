@@ -1,6 +1,7 @@
 import "server-only";
 
 import { describeKeyRefusal } from "@/lib/ai-key-rules";
+import { ReplyCutOff } from "@/lib/reply-cut-off";
 
 /**
  * Talking to OpenAI on a business's own key. Plain HTTPS rather than a client
@@ -53,7 +54,8 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 
 /**
  * A chat reply, as it is written. Yields text as it arrives; throws an
- * `OpenAiRefusal` when OpenAI says no before anything was written.
+ * `OpenAiRefusal` when OpenAI says no before anything was written, and a
+ * `ReplyCutOff` when the reply stopped short of finishing.
  */
 export async function* streamOpenAiChat(input: {
   key: string;
@@ -100,7 +102,10 @@ export async function* streamOpenAiChat(input: {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  for (;;) {
+  // Why the reply ended: "stop" when it finished, "length" when it ran out of
+  // room, or nothing at all when the connection dropped first.
+  let finish = "";
+  reading: for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
@@ -110,14 +115,20 @@ export async function* streamOpenAiChat(input: {
       buffer = buffer.slice(end + 1);
       if (!line.startsWith("data:")) continue;
       const data = line.slice(5).trim();
-      if (data === "[DONE]") return;
+      if (data === "[DONE]") break reading;
       try {
-        const chunk = JSON.parse(data) as { choices?: { delta?: { content?: string | null } }[] };
+        const chunk = JSON.parse(data) as {
+          choices?: { delta?: { content?: string | null }; finish_reason?: string | null }[];
+        };
         const text = chunk.choices?.[0]?.delta?.content;
         if (text) yield text;
+        const reason = chunk.choices?.[0]?.finish_reason;
+        if (reason) finish = reason;
       } catch {
         // A keep-alive or a partial line; the next one carries on.
       }
     }
   }
+  if (finish === "length") throw new ReplyCutOff();
+  if (finish !== "stop") throw new Error(`the reply ended without finishing (${finish || "no finish reason"})`);
 }

@@ -9,6 +9,7 @@ import {
 } from "@/lib/material-list";
 import { readMaterialList, writeMaterialList } from "@/lib/material-list-server";
 import { OpenAiRefusal, streamOpenAiChat } from "@/lib/openai";
+import { ReplyCutOff } from "@/lib/reply-cut-off";
 import { currentContext, currentUser } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -135,14 +136,17 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
           controller.close();
           return;
         }
-        const reason =
-          error instanceof OpenAiRefusal
+        // A reply that ran out of room is not the key's fault: the key worked.
+        const cutOff = error instanceof ReplyCutOff;
+        const reason = cutOff
+          ? "The list was too long to finish in one answer, so it was not kept. Ask for a shorter list, or for one part of the job at a time."
+          : error instanceof OpenAiRefusal
             ? error.message
             : ownKey
               ? "ChatGPT stopped before the list was finished. Try again."
               : "The list could not be written just now. Try again.";
         console.error("materials chat failed", { jobId, source, error: String(error) });
-        if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, reason);
+        if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, cutOff ? null : reason);
         finish({ error: reason });
         return;
       }
