@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { toE164 } from "@/lib/phone-format";
+import { readMarkupPercent } from "@/lib/store-price-rules";
 import { isSupportedTimezone } from "@/lib/timezones";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -46,6 +47,13 @@ export async function saveBusinessDetails(
     return { error: "That is not a timezone this app knows about." };
   }
 
+  // Missing from a form that predates it: leave the markup as it is.
+  const rawMarkup = formData.has("materialsMarkup") ? field(formData, "materialsMarkup") : null;
+  const markup = rawMarkup === null ? null : readMarkupPercent(rawMarkup);
+  if (rawMarkup !== null && markup === null) {
+    return { error: "The materials markup needs to be a percent from 0 to 500, like 20." };
+  }
+
   const supabase = asFlexibleClient(await createClient());
 
   const { data: membership } = await supabase
@@ -77,6 +85,7 @@ export async function saveBusinessDetails(
       base_state: field(formData, "state") || null,
       base_postal_code: field(formData, "postalCode") || null,
       ...(timezone ? { timezone } : {}),
+      ...(markup !== null ? { materials_markup_percent: markup } : {}),
     })
     .eq("id", organizationId);
 

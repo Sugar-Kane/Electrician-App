@@ -5,6 +5,7 @@ import { BookingPageSettings, type BookingDomain } from "@/components/booking-pa
 import { BusinessDetailsForm, type BusinessDetails } from "@/components/business-details-form";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { logoUrl } from "@/lib/branding-storage";
+import { readMarkupPercent } from "@/lib/store-price-rules";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -30,6 +31,7 @@ export default async function BusinessSettingsPage() {
     state: "",
     postalCode: "",
     timezone: DEFAULT_TIMEZONE,
+    materialsMarkup: "20",
   };
 
   let details = empty;
@@ -48,7 +50,7 @@ export default async function BusinessSettingsPage() {
     const { data } = await supabase
       .from("organizations")
       .select(
-        "name, phone, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color",
+        "name, phone, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color, materials_markup_percent",
       )
       .eq("id", context.organizationId)
       .maybeSingle();
@@ -64,6 +66,7 @@ export default async function BusinessSettingsPage() {
       state: text(row.base_state),
       postalCode: text(row.base_postal_code),
       timezone: text(row.timezone) || DEFAULT_TIMEZONE,
+      materialsMarkup: String(readMarkupPercent(row.materials_markup_percent) ?? 20),
     };
 
     logo = logoUrl(text(row.logo_path));
@@ -90,7 +93,7 @@ export default async function BusinessSettingsPage() {
     <FieldPageShell
       title="Business details"
       eyebrow="Settings"
-      description="Name, phone, timezone and where you work from."
+      description="Name, phone, timezone, where you work from, and your materials markup."
       backHref="/settings"
     >
       <BusinessDetailsForm details={details} canManage={canManage} />

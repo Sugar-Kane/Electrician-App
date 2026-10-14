@@ -3,6 +3,7 @@ import "server-only";
 import { EMPTY_LIST, keptTurns, normalizeMaterialList, type ChatTurn, type MaterialList } from "@/lib/material-list";
 import { aiKeyStatus } from "@/lib/ai-key";
 import { currentContext } from "@/lib/request-context";
+import { readMarkupPercent } from "@/lib/store-price-rules";
 import { asFlexibleClient, type FlexibleSupabaseClient as FlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -108,20 +109,30 @@ export async function writeMaterialList(
   return { status: "saved", updatedAt };
 }
 
-/** What the job page's materials chat starts from: the saved list, and which AI will answer. */
+/**
+ * What the job page's materials chat starts from: the saved list, which AI
+ * will answer, and the markup that turns a store price into the customer's.
+ */
 export async function loadJobMaterialChat(jobId: string): Promise<{
   saved: SavedMaterialList;
   ai: { connected: boolean; label: string };
   canConnect: boolean;
+  markupPercent: number;
 }> {
   const context = await currentContext();
-  const [saved, key] = await Promise.all([
-    readMaterialList(asFlexibleClient(await createClient()), jobId),
+  const supabase = asFlexibleClient(await createClient());
+  const [saved, key, organization] = await Promise.all([
+    readMaterialList(supabase, jobId),
     context ? aiKeyStatus(context.organizationId) : Promise.resolve(null),
+    context
+      ? supabase.from("organizations").select("materials_markup_percent").eq("id", context.organizationId).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  const markup = readMarkupPercent((organization.data as Record<string, unknown> | null)?.materials_markup_percent);
   return {
     saved,
     ai: key ? { connected: true, label: `your ChatGPT key (${key.model})` } : { connected: false, label: "Volteira's built-in AI" },
     canConnect: context?.role === "owner",
+    markupPercent: markup ?? 20,
   };
 }

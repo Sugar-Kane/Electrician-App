@@ -37,6 +37,8 @@ export type BusinessDetails = {
   state: string;
   postalCode: string;
   timezone: string;
+  /** "20" for 20%. */
+  materialsMarkup: string;
 };
 
 export function BusinessDetailsForm({
@@ -113,6 +115,19 @@ export function BusinessDetailsForm({
               maxLength={10}
               defaultValue={details.postalCode}
             />
+          </Field>
+        </div>
+      </section>
+
+      <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
+        <h2 className="text-sm font-semibold">Materials pricing</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          When the materials chat finds an item at Home Depot or Lowe&apos;s, the store price is kept as your cost and the
+          customer&apos;s price is that plus this markup. You can change any price before it goes on an estimate.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field label="Materials markup (%)" hint="0 to 500. 20 adds $2 to a $10 part.">
+            <TextInput name="materialsMarkup" inputMode="decimal" defaultValue={details.materialsMarkup} required />
           </Field>
         </div>
       </section>
