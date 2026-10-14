@@ -53,6 +53,20 @@ export type IntakePhrases = {
   /** The five intake questions, keyed as `INTAKE_QUESTIONS` keys them. */
   questions: Record<string, string>;
   deliveryQuestion: string;
+  /**
+   * The last question before a text booking: where to email their copy of the
+   * booking and receipt. Optional, and the customer is told so.
+   */
+  emailQuestion: string;
+  /**
+   * A visit already held, or already booked, in this conversation.
+   *
+   * Said instead of anything that would hold a second time or send a second
+   * payment link. A customer who texts again after the link went out ("ok",
+   * "actually", a photo) is still talking about the same visit.
+   */
+  alreadyHeld: (business: string, slotLabel: string, phone: string) => string;
+  alreadyBooked: (business: string, slotLabel: string, phone: string) => string;
   /** The held-booking reply, which never goes through `composeReply`. */
   holding: (business: string, slotLabel: string) => string;
   holdSentence: (fee: string, payUrl: string, minutes: number) => string;
@@ -90,11 +104,25 @@ const EN: IntakePhrases = {
       "Is there anything the electrician needs to get in — a gate code, a dog, parking, or someone home?",
   },
   deliveryQuestion: "Would you like your confirmation by text, email, or both?",
+  emailQuestion:
+    "What email should we send a copy of your booking and receipt to? You can also reply 'skip'.",
+  alreadyHeld: (business, slotLabel, phone) =>
+    `${business}: thanks! We're holding ${slotLabel} for you. Use the payment link we texted you to confirm it. Need a different time? Call ${phone}.`,
+  alreadyBooked: (business, slotLabel, phone) =>
+    `${business}: thanks! You're all set for ${slotLabel}. Need to change it? Call ${phone}.`,
   holding: (business, slotLabel) => `${business}: holding ${slotLabel} for you.`,
   holdSentence: (fee, payUrl, minutes) =>
     `To confirm this time, pay the ${fee} diagnostic fee here: ${payUrl} — we are holding it for ${minutes} minutes.`,
   questionsAt: (phone) => `Questions? ${phone}`,
 };
+
+/**
+ * A sentence ending in a time, with one full stop. A Spanish time already ends
+ * in one ("10:00 a.m."), and a second reads as a typo.
+ */
+function endSentence(label: string): string {
+  return label.endsWith(".") ? label : `${label}.`;
+}
 
 /*
  * Written the way this business's customers speak rather than the way a
@@ -134,7 +162,13 @@ const ES: IntakePhrases = {
       "¿Hay algo que el electricista necesite para entrar? Código del portón, un perro, estacionamiento, o alguien en casa.",
   },
   deliveryQuestion: "¿Prefiere su confirmación por mensaje, por correo electrónico, o las dos?",
-  holding: (business, slotLabel) => `${business}: le estamos apartando ${slotLabel}.`,
+  emailQuestion:
+    "¿A qué correo electrónico le enviamos una copia de su cita y su recibo? También puede responder 'omitir'.",
+  alreadyHeld: (business, slotLabel, phone) =>
+    `${business}: ¡gracias! Le estamos apartando ${slotLabel}; use el enlace de pago que le enviamos por mensaje para confirmar. ¿Necesita otro horario? Llame al ${phone}.`,
+  alreadyBooked: (business, slotLabel, phone) =>
+    `${business}: ¡gracias! Ya tiene su cita para ${slotLabel}; si necesita cambiarla, llame al ${phone}.`,
+  holding: (business, slotLabel) => `${business}: le estamos apartando ${endSentence(slotLabel)}`,
   holdSentence: (fee, payUrl, minutes) =>
     `Para confirmar este horario, pague la tarifa de diagnóstico de ${fee} aquí: ${payUrl} — se lo apartamos por ${minutes} minutos.`,
   questionsAt: (phone) => `¿Preguntas? ${phone}`,
@@ -162,4 +196,19 @@ export function phrasesFor(language: string): IntakePhrases {
  */
 export function localeFor(language: string): string {
   return language === "es" ? "es-US" : "en-US";
+}
+
+/**
+ * An intake question as it was stored, in the language a customer reads.
+ *
+ * Answers are stored beside the English wording of the question they answer,
+ * because that is what the electrician reads. The customer's own copy (the
+ * booking page, the confirmation email) shows the question in their language.
+ * A question this list does not know is shown as it was stored.
+ */
+export function intakeQuestionIn(question: string, language: string): string {
+  const target = phrasesFor(language);
+  if (target === EN) return question;
+  const key = Object.entries(EN.questions).find(([, english]) => english === question.trim())?.[0];
+  return (key && target.questions[key]) || question;
 }

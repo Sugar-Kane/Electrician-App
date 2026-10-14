@@ -199,17 +199,23 @@ export async function POST(request: Request) {
 
   const conversationId = String(conversation.id);
 
+  let receivedAt = "";
   if (body.length > 0) {
-    const { error: messageError } = await database.from("messages").insert({
-      organization_id: organizationId,
-      conversation_id: conversationId,
-      direction: "inbound",
-      body: body.slice(0, 1600),
-      status: "received",
-      provider_message_id: providerMessageId || null,
-      media: photos,
-    });
+    const { data: saved, error: messageError } = await database
+      .from("messages")
+      .insert({
+        organization_id: organizationId,
+        conversation_id: conversationId,
+        direction: "inbound",
+        body: body.slice(0, 1600),
+        status: "received",
+        provider_message_id: providerMessageId || null,
+        media: photos,
+      })
+      .select("created_at")
+      .single();
     if (messageError) return new NextResponse("Could not save message", { status: 500 });
+    receivedAt = saved?.created_at ? String(saved.created_at) : "";
   }
 
   await database
@@ -236,6 +242,7 @@ export async function POST(request: Request) {
       customerId,
       phone: from,
       body,
+      receivedAt,
     });
   }
 

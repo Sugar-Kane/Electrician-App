@@ -8,8 +8,9 @@ import {
   heldReply,
 } from "@/lib/booking-hold";
 import { readLanguage, readLanguageSource } from "@/lib/customer-language";
-import { localeFor } from "@/lib/intake-phrases";
+import { localeFor, phrasesFor } from "@/lib/intake-phrases";
 import {
+  conversationVisit,
   loadIntakeContext,
   openWebsiteRequest,
   recordBookingRequest,
@@ -54,6 +55,12 @@ export async function handleInboundText(input: {
   customerId: string;
   phone: string;
   body: string;
+  /**
+   * When this message was saved. Several texts sent seconds apart ("skip",
+   * "actually", a photo) each start a run; only the newest is answered, with
+   * all of them in its history.
+   */
+  receivedAt?: string;
 }): Promise<IntakeOutcome> {
   try {
     const database = getSupabaseAdmin();
@@ -116,19 +123,53 @@ export async function handleInboundText(input: {
     }
 
     context.intakeBeforeOffer = true;
+    context.emailCopy = true;
     context.photoOfferHandled = turns.some((turn) => turn.role === "assistant" &&
       (turn.text.includes(photoInvitation("en")) || turn.text.includes(photoInvitation("es"))));
+
+    // A visit this conversation already holds or has booked. While there is
+    // one, the reply is about that visit: never a second hold or payment link.
+    const visit = await conversationVisit(database, {
+      organizationId: input.organizationId,
+      conversationId: input.conversationId,
+    });
+    if (visit) {
+      const nowIso = new Date().toISOString();
+      context.existingVisit = {
+        state: visit.state,
+        labels: {
+          en: slotLabel(visit.start, visit.end, timeZone, nowIso, localeFor("en")),
+          es: slotLabel(visit.start, visit.end, timeZone, nowIso, localeFor("es")),
+        },
+      };
+    }
 
     const decision = await readInboundText({
       system: buildIntakeSystemPrompt(context),
       turns,
     });
 
+    // A newer text arrived while the model was reading this one. That run
+    // answers both, so this one says nothing rather than a second reply.
+    if (input.receivedAt) {
+      const { data: newer } = await database
+        .from("messages")
+        .select("id")
+        .eq("conversation_id", input.conversationId)
+        .eq("direction", "inbound")
+        .gt("created_at", input.receivedAt)
+        .limit(1);
+      if (newer && newer.length > 0) return { handled: false, reason: "A newer message is being answered." };
+    }
+
     const action = decideIntakeAction({ decision, customerText: input.body, context });
 
     await Promise.all([
       recordExtractedName(database, input.customerId, action),
       recordDetectedLanguage(database, input.customerId, action),
+      action.kind === "book" && action.email
+        ? recordCustomerEmail(database, input.customerId, action.email)
+        : Promise.resolve(),
     ]);
 
     const recorded = await recordBookingRequest({
@@ -147,6 +188,7 @@ export async function handleInboundText(input: {
       // sentence.
       intakeAnswers: action.kind === "book" ? action.intakeAnswers : undefined,
       deliveryPreference: action.kind === "book" ? action.deliveryPreference : undefined,
+      email: action.kind === "book" ? action.email || undefined : undefined,
       // Quoted here so it is frozen against this booking. Without it the fee
       // was stated in the conversation, agreed to in principle, and recorded
       // nowhere — which is also why nothing was ever held for payment.
@@ -161,13 +203,41 @@ export async function handleInboundText(input: {
     const { requestId, jobId, publicToken } = recorded;
 
     /*
+     * Already held a moment ago, by a reply to an earlier text. Its payment
+     * link has gone out once and is not sent again: the customer is told
+     * where that visit stands instead.
+     */
+    const alreadyHeld =
+      action.kind === "book" && recorded.alreadyExisted
+        ? await conversationVisit(database, {
+            organizationId: input.organizationId,
+            conversationId: input.conversationId,
+          })
+        : null;
+    const alreadyHeldReply = alreadyHeld
+      ? (() => {
+          const phrases = phrasesFor(action.language);
+          const label = slotLabel(
+            alreadyHeld.start,
+            alreadyHeld.end,
+            timeZone,
+            new Date().toISOString(),
+            localeFor(action.language),
+          );
+          return alreadyHeld.state === "held"
+            ? phrases.alreadyHeld(context.businessName, label, context.businessPhone)
+            : phrases.alreadyBooked(context.businessName, label, context.businessPhone);
+        })()
+      : "";
+
+    /*
      * A held time is not a booked one, and must not be told to the customer as
      * though it were. The intake composes "booked for Thursday 8-10am"; when
      * the slot is only reserved until the fee is paid, that sentence is
      * replaced rather than appended to.
      */
     const held =
-      action.kind === "book" && recorded.payUrl && recorded.feeCents
+      !recorded.alreadyExisted && action.kind === "book" && recorded.payUrl && recorded.feeCents
         ? heldReply({
             businessName: context.businessName,
             slotLabel: slotLabel(
@@ -198,7 +268,7 @@ export async function handleInboundText(input: {
       organizationId: input.organizationId,
       conversationId: input.conversationId,
       to: input.phone,
-      body: paymentProblem || held || action.reply,
+      body: paymentProblem || alreadyHeldReply || held || action.reply,
       messagingServiceSid,
     });
 
@@ -207,7 +277,7 @@ export async function handleInboundText(input: {
     // found out by opening the app, which for a job at 8am the next morning is
     // too late to be a notification. The customer's copy is suppressed because
     // they have just read it in this very conversation.
-    if (action.kind === "book" && requestId && publicToken) {
+    if (action.kind === "book" && requestId && publicToken && !recorded.alreadyExisted) {
       await sendBookingConfirmations({
         requestId,
         organizationId: input.organizationId,
@@ -225,6 +295,8 @@ export async function handleInboundText(input: {
         owner,
         intakeAnswers: action.intakeAnswers,
         deliveryPreference: action.deliveryPreference,
+        email: action.email || undefined,
+        language: action.language,
         customerAlreadyToldBySms: true,
         held: Boolean(recorded.payUrl),
         needsReview: recorded.needsReview,
@@ -301,6 +373,18 @@ async function recordExtractedName(
     .from("customers")
     .update({ first_name: first || "Text", last_name: last || null })
     .eq("id", customerId);
+}
+
+/**
+ * Keep the email a customer gave for their copy, when the record has none.
+ * Never overwrites one the business entered.
+ */
+async function recordCustomerEmail(
+  database: ReturnType<typeof getSupabaseAdmin>,
+  customerId: string,
+  email: string,
+) {
+  await database.from("customers").update({ email }).eq("id", customerId).is("email", null);
 }
 
 /** Save the reply in the thread and send it. True when Twilio accepted it. */

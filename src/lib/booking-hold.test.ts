@@ -10,6 +10,7 @@ import {
   bookingNeedsReviewReply,
   payLinkFor,
   HOLD_MINUTES,
+  liveVisit,
 } from "./booking-hold.ts";
 
 test("a booked visit with a fee is held, not scheduled", () => {
@@ -154,4 +155,29 @@ test("a failed payment setup promises review, never a booking", () => {
   });
   assert.match(spanish, /No pude confirmar/);
   assert.match(spanish, /dentro de 24 horas/);
+});
+
+test("a conversation with a live hold or a paid visit ahead gets no second hold", () => {
+  const now = new Date("2026-10-13T21:49:00Z");
+  const held = {
+    status: "awaiting_payment",
+    arrival_window_start: "2026-10-14T15:00:00Z",
+    arrival_window_end: "2026-10-14T17:00:00Z",
+    expires_at: "2026-10-13T22:19:00Z",
+  };
+
+  assert.deepEqual(liveVisit([held], now), {
+    state: "held",
+    start: held.arrival_window_start,
+    end: held.arrival_window_end,
+  });
+  // A paid visit still ahead is the conversation's visit too.
+  assert.equal(liveVisit([{ ...held, status: "scheduled", expires_at: null }], now)?.state, "booked");
+
+  // A lapsed hold, or a visit already in the past, frees the customer to book again.
+  assert.equal(liveVisit([{ ...held, expires_at: "2026-10-13T21:30:00Z" }], now), null);
+  assert.equal(
+    liveVisit([{ ...held, status: "scheduled", arrival_window_end: "2026-10-13T20:00:00Z" }], now),
+    null,
+  );
 });

@@ -26,7 +26,7 @@ async function sendPaidBookingConfirmations(input: {
     const { data } = await database
       .from("booking_requests")
       .select(
-        "id, organization_id, customer_id, public_token, phone, email, contact_name, first_name, last_name, description, address_line_1, city, arrival_window_start, arrival_window_end, intake_answers, delivery_preference, source, sms_consent",
+        "id, organization_id, customer_id, public_token, phone, email, contact_name, first_name, last_name, description, address_line_1, city, arrival_window_start, arrival_window_end, intake_answers, delivery_preference, source, sms_consent, language",
       )
       .eq("public_token", input.bookingToken)
       .eq("deposit_checkout_session_id", input.checkoutSessionId)
@@ -64,13 +64,25 @@ async function sendPaidBookingConfirmations(input: {
       : [];
     const named = [text(row.first_name), text(row.last_name)].filter(Boolean).join(" ");
 
+    // Their copy goes to the email they gave for this booking, or failing that
+    // the one already on their record.
+    let email = text(row.email);
+    if (!email) {
+      const { data: customer } = await database
+        .from("customers")
+        .select("email")
+        .eq("id", customerId)
+        .maybeSingle();
+      email = text(customer?.email);
+    }
+
     await sendBookingConfirmations({
       requestId,
       organizationId,
       customerId,
       publicToken,
       phone: text(row.phone),
-      email: text(row.email) || undefined,
+      email: email || undefined,
       context,
       contactName: text(row.contact_name) || named,
       description: text(row.description),
@@ -86,6 +98,7 @@ async function sendPaidBookingConfirmations(input: {
       // The payment path only reads consent recorded by the originating
       // channel. It never treats payment itself as a fresh SMS opt-in.
       customerSmsConsent: "existing",
+      language: text(row.language) || undefined,
     });
   } catch (error) {
     // The job and payment are already durable. Stripe must not retry the charge

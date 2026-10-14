@@ -21,6 +21,7 @@ import {
   type WebsiteRequestFacts,
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
+import { localeFor } from "@/lib/intake-phrases";
 import { slotLabel } from "@/lib/intake-shared";
 import { callbackConsentStep, consentIsActive } from "@/lib/messaging-rules";
 import { type IntakeContext } from "@/lib/sms-intake";
@@ -99,7 +100,19 @@ export type BookingNotification = {
    * original payment link.
    */
   customerSmsConsent?: "phone_booking" | "existing" | "none";
+  /** The language the customer booked in; their own copy is written in it. */
+  language?: string;
 };
+
+/** The same facts, worded for the customer: their language, their date format. */
+function customerFactsFor(input: BookingNotification, facts: BookingFacts): BookingFacts {
+  const language = input.language === "es" ? "es" : "en";
+  return {
+    ...facts,
+    language,
+    slotLabel: slotLabel(input.slot.start, input.slot.end, input.timeZone, undefined, localeFor(language)),
+  };
+}
 
 function factsFor(input: BookingNotification): BookingFacts {
   const bookingLink = input.origin
@@ -195,6 +208,7 @@ type Attempt = {
 export async function sendBookingConfirmations(input: BookingNotification): Promise<void> {
   const database = getSupabaseAdmin();
   const facts = factsFor(input);
+  const customerFacts = customerFactsFor(input, facts);
   const messageState: BookingMessageState = input.needsReview
     ? "needs_review"
     : input.held
@@ -239,7 +253,10 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // same evidence an inbound text leaves.
   const preference = input.deliveryPreference ?? "text";
   const wantsText = preference === "text" || preference === "both";
-  const wantsEmail = preference === "email" || preference === "both";
+  // A copy of a paid booking goes to any email the customer gave: it is their
+  // receipt. Before payment, only when they asked for their link by email.
+  const wantsEmail =
+    preference === "email" || preference === "both" || notificationPhase === "payment";
 
   if (input.customerAlreadyToldBySms) {
     note({
@@ -295,7 +312,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
         detail: "Customer transactional SMS consent is not active.",
       });
     } else {
-      const body = customerConfirmationSms(facts, messageState);
+      const body = customerConfirmationSms(customerFacts, messageState);
       const result = await sendSms({ to: input.phone, body, messagingServiceSid });
       note({
         channel: "sms",
@@ -395,8 +412,12 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   }
 
   // The email, when the caller gave one that could plausibly be delivered to.
-  if (input.email && wantsEmail && looksLikeEmail(input.email)) {
-    const message = confirmationEmail(facts, messageState);
+  //
+  // Not while a text thread already carries the payment link: one hold, one
+  // link. Their copy arrives once the fee is paid.
+  const linkAlreadyTexted = input.customerAlreadyToldBySms && messageState === "held";
+  if (input.email && wantsEmail && looksLikeEmail(input.email) && !linkAlreadyTexted) {
+    const message = confirmationEmail(customerFacts, messageState);
     const sent = await sendEmail({
       to: input.email,
       subject: message.subject,

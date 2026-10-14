@@ -7,6 +7,8 @@
  * scheduling review is resolved.
  */
 
+import { bookingPageCopy, type BookingPageLanguage } from "./booking-page-copy.ts";
+
 export type BookingPageState =
   | "awaiting_payment"
   | "confirmed"
@@ -37,15 +39,13 @@ export function bookingPageState(input: {
   return "contact_business";
 }
 
-export function bookingPayNotice(value: string | undefined): string {
-  if (value === "canceled") {
-    return "Checkout was canceled. Your appointment is not confirmed yet.";
-  }
-  if (value === "unavailable") {
-    return "Secure checkout could not be started. Please try again or call the business.";
-  }
-  if (value === "expired") {
-    return "That payment link is no longer active. Call the business to choose another time.";
-  }
+export function bookingPayNotice(
+  value: string | undefined,
+  language: BookingPageLanguage = "en",
+): string {
+  const notices = bookingPageCopy(language).payNotice;
+  if (value === "canceled") return notices.canceled;
+  if (value === "unavailable") return notices.unavailable;
+  if (value === "expired") return notices.expired;
   return "";
 }

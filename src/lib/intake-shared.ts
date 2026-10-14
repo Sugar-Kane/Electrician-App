@@ -2,7 +2,7 @@ import "server-only";
 
 import { recordActivity } from "@/lib/activity";
 import { startBookingCheckout } from "@/lib/booking-checkout";
-import { decideHold, payLinkFor } from "@/lib/booking-hold";
+import { decideHold, liveVisit, payLinkFor, type ConversationVisitRow, type LiveVisit } from "@/lib/booking-hold";
 import type { CallbackFacts } from "@/lib/grok-voice";
 import {
   readLanguage,
@@ -99,6 +99,27 @@ export async function openWebsiteRequest(
       email: text(row.email),
     }),
   };
+}
+
+/**
+ * The visit a text conversation already has: held with its link sent, or paid
+ * and still ahead. See `liveVisit`.
+ */
+export async function conversationVisit(
+  database: Database,
+  input: { organizationId: string; conversationId: string; now?: Date },
+): Promise<LiveVisit | null> {
+  const { data } = await database
+    .from("booking_requests")
+    .select("status, arrival_window_start, arrival_window_end, expires_at")
+    .eq("organization_id", input.organizationId)
+    .eq("conversation_id", input.conversationId)
+    .eq("intent", "visit")
+    .in("status", ["awaiting_payment", "confirmed", "scheduled"])
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  return liveVisit((data ?? []) as ConversationVisitRow[], input.now ?? new Date());
 }
 
 /**
@@ -604,8 +625,12 @@ export async function recordBookingRequest(input: {
           intake_answers: input.intakeAnswers ?? [],
           delivery_preference: input.deliveryPreference ?? undefined,
           deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
+          language: action.language,
         })
         .eq("id", website.id)
+        // Only while it is still open. A second reply racing the first must not
+        // move a window that has already been held and linked.
+        .in("status", ["new", "needs_review"])
         .select("id, public_token")
         .maybeSingle()
     : await input.database
@@ -637,6 +662,7 @@ export async function recordBookingRequest(input: {
           intake_answers: input.intakeAnswers ?? [],
           delivery_preference: input.deliveryPreference ?? null,
           deposit_cents: action.kind === "book" ? (input.depositCents ?? null) : null,
+          language: action.language,
         })
         .select("id, public_token")
         .maybeSingle();
@@ -660,6 +686,12 @@ export async function recordBookingRequest(input: {
   if (insertError) {
     console.error("booking request insert failed", insertError);
     return {};
+  }
+
+  // The website request was held by another reply a moment ago. That hold, and
+  // the one link it sent, stand.
+  if (website && !created) {
+    return { requestId: website.id, alreadyExisted: true };
   }
 
   const requestId = created?.id ? String(created.id) : undefined;
@@ -752,12 +784,17 @@ export async function recordBookingRequest(input: {
         Date.now() + decision.holdMinutes * 60_000 + 60_000,
       ).toISOString();
 
-      const { error: holdError } = await input.database
+      const { data: holding, error: holdError } = await input.database
         .from("booking_requests")
         .update({ status: "awaiting_payment", expires_at: heldUntil })
-        .eq("id", requestId);
+        .eq("id", requestId)
+        .in("status", ["new", "needs_review"])
+        .select("id")
+        .maybeSingle();
 
       if (holdError) return markNeedsReview("the appointment hold could not be saved");
+      // Already held by another reply: one hold, one payment link.
+      if (!holding) return { requestId, publicToken, alreadyExisted: true };
 
       const checkout = await startBookingCheckout({
         bookingToken: publicToken!,
@@ -769,6 +806,7 @@ export async function recordBookingRequest(input: {
         diagnosticMinutes: input.checkout.diagnosticMinutes,
         origin: input.checkout.origin,
         expiresAt: heldUntil,
+        language: action.language,
       });
 
       if ("error" in checkout) return markNeedsReview(checkout.error);
