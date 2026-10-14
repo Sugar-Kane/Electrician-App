@@ -641,6 +641,8 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
 
   // Keep a hand edit, and say so if it did not stick.
   function persist(next: MaterialList) {
+    // Before the screen catches up, so prices arriving in between land on this list.
+    listNow.current = next;
     setList(next);
     void saveList(next);
   }
