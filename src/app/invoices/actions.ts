@@ -8,6 +8,7 @@ import { deliverInvoice } from "@/lib/invoice-delivery";
 import {
   describeDelivery,
   invoiceCanBeSent,
+  invoiceViewUrl,
   type DeliveryChannel,
 } from "@/lib/invoice-messages";
 import { checkPayment } from "@/lib/invoice-payment";
@@ -75,8 +76,6 @@ async function loadInvoiceForCustomer(
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
   const timeZone = text(organization?.timezone) || "America/Los_Angeles";
   const dueAt = text(row.due_at);
-  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
-  const token = text(row.preview_token);
 
   return {
     row,
@@ -102,7 +101,7 @@ async function loadInvoiceForCustomer(
         : "",
       payUrl: text(row.stripe_hosted_invoice_url) || undefined,
       workSummary: text(job?.customer_description) || undefined,
-      viewUrl: origin && token ? `${origin}/invoice/${token}` : undefined,
+      viewUrl: invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", text(row.preview_token)),
     },
   };
 }
@@ -140,7 +139,6 @@ export async function sendInvoice(
     channels,
     customerPhone: text(customer?.phone),
     customerEmail: text(customer?.email),
-    customerId: text(job?.customer_id) || undefined,
     facts,
   });
 
@@ -220,7 +218,6 @@ export async function sendInvoicePreview(
     channels,
     customerPhone: text(customer?.phone),
     customerEmail: text(customer?.email),
-    customerId: text(job?.customer_id) || undefined,
     facts,
     kind: "preview",
   });
@@ -274,7 +271,7 @@ export async function recordInvoicePayment(
   if (!check.ok) return { error: check.reason };
 
   const note = String(formData.get("note") ?? "").trim().slice(0, 500);
-  const { error } = await supabase.rpc("record_invoice_payment", {
+  const { data: recorded, error } = await supabase.rpc("record_invoice_payment", {
     p_invoice_id: invoiceId,
     p_method: check.method,
     p_amount_cents: check.amountCents,
@@ -285,10 +282,15 @@ export async function recordInvoicePayment(
     return { error: error.code === "22023" ? `Not recorded: ${error.message}.` : "The payment could not be recorded. Try again." };
   }
 
+  // What the database says now, after it locked the invoice. Another payment
+  // recorded a moment earlier can have left less owed than this form saw.
+  const after = (Array.isArray(recorded) ? recorded[0] : recorded) as { status?: unknown; balance_due_cents?: unknown } | null;
+  const status = after?.status === "paid" || after?.status === "partially_paid" ? after.status : check.status;
+
   await recordActivity(supabase, {
     organizationId: text(row.organization_id),
-    eventType: check.status === "paid" ? "invoice.paid" : "invoice.partially_paid",
-    label: check.status === "paid" ? "Invoice paid" : "Part payment recorded",
+    eventType: status === "paid" ? "invoice.paid" : "invoice.partially_paid",
+    label: status === "paid" ? "Invoice paid" : "Part payment recorded",
     jobId: text(job?.id) || null,
     metadata: { amount_cents: check.amountCents, method: check.method, invoice_id: invoiceId },
   });
@@ -302,7 +304,7 @@ export async function recordInvoicePayment(
   const dollars = (check.amountCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
   return {
     error: "",
-    notice: check.status === "paid" ? `${dollars} recorded. The invoice is paid.` : `${dollars} recorded. Part of the invoice is still owed.`,
+    notice: status === "paid" ? `${dollars} recorded. The invoice is paid.` : `${dollars} recorded. Part of the invoice is still owed.`,
   };
 }
 

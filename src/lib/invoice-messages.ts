@@ -234,6 +234,24 @@ export type DeliveryAttempt = {
  * mobile — and it is neither a success nor a failure, so it must not be
  * reported as either.
  */
+/**
+ * Whether a customer's last word on texts was STOP. No consent row is not an
+ * opt-out: invoices go to customers the business already works for. A later
+ * opt-in (they texted START) undoes an earlier STOP.
+ */
+export function repliedStop(consent: { optedInAt: string | null; optedOutAt: string | null } | null): boolean {
+  if (!consent?.optedOutAt) return false;
+  const out = Date.parse(consent.optedOutAt);
+  const back = consent.optedInAt ? Date.parse(consent.optedInAt) : Number.NaN;
+  return !(Number.isFinite(back) && back > out);
+}
+
+/** The customer's link to read the invoice, or nothing when it cannot be built. */
+export function invoiceViewUrl(origin: string, token: string): string | undefined {
+  const base = origin.replace(/\/+$/, "");
+  return base && /^[0-9a-f-]{36}$/i.test(token) ? `${base}/invoice/${token}` : undefined;
+}
+
 export function describeDelivery(
   attempts: DeliveryAttempt[],
   what = "Invoice",

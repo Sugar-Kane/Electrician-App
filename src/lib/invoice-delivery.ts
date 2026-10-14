@@ -7,6 +7,8 @@ import {
   invoicePreviewEmail,
   invoicePreviewSms,
   invoiceSms,
+  invoiceViewUrl,
+  repliedStop,
   type DeliveryAttempt,
   type DeliveryChannel,
   type InvoiceFacts,
@@ -40,11 +42,35 @@ export async function deliverInvoice(input: {
    * records only that the customer has seen what they will be billed.
    */
   kind?: "invoice" | "preview";
-  /** Checked so a customer who replied STOP is never texted. */
+  /**
+   * Whose invoice it is, when the caller already knows. Found from the
+   * invoice otherwise: every send checks STOP, whoever started it.
+   */
   customerId?: string;
 }): Promise<DeliveryAttempt[]> {
   const preview = input.kind === "preview";
   const database = getSupabaseAdmin();
+
+  // Read off the invoice itself, so the link and the STOP check do not depend
+  // on every caller (the screen, the assistant, ChatGPT) remembering them.
+  const { data: owner } = await database
+    .from("invoices")
+    .select("preview_token, jobs ( customer_id )")
+    .eq("id", input.invoiceId)
+    .eq("organization_id", input.organizationId)
+    .maybeSingle();
+  const ownerRow = (owner ?? null) as Record<string, unknown> | null;
+  const ownerJob = (Array.isArray(ownerRow?.jobs) ? ownerRow?.jobs[0] : ownerRow?.jobs) as { customer_id?: unknown } | null;
+  const customerId =
+    input.customerId ||
+    (typeof ownerJob?.customer_id === "string" ? ownerJob.customer_id : "") ||
+    (await customerByPhone(database, input.organizationId, input.customerPhone));
+  const facts: InvoiceFacts = {
+    ...input.facts,
+    viewUrl:
+      input.facts.viewUrl ??
+      invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", typeof ownerRow?.preview_token === "string" ? ownerRow.preview_token : ""),
+  };
   const attempts: DeliveryAttempt[] = [];
   const note = (attempt: Omit<DeliveryAttempt, "at">) =>
     attempts.push({ ...attempt, at: new Date().toISOString() });
@@ -72,7 +98,7 @@ export async function deliverInvoice(input: {
       });
     } else if (!input.customerPhone) {
       note({ channel: "sms", to: "", ok: false, detail: "No phone number on this customer." });
-    } else if (input.customerId && (await optedOut(database, input.organizationId, input.customerId))) {
+    } else if (customerId && (await optedOut(database, input.organizationId, customerId))) {
       note({
         channel: "sms",
         to: input.customerPhone,
@@ -82,7 +108,7 @@ export async function deliverInvoice(input: {
     } else {
       const result = await sendSms({
         to: input.customerPhone,
-        body: preview ? invoicePreviewSms(input.facts) : invoiceSms(input.facts),
+        body: preview ? invoicePreviewSms(facts) : invoiceSms(facts),
         messagingServiceSid,
       });
       note({
@@ -105,7 +131,7 @@ export async function deliverInvoice(input: {
           : "No email address on this customer.",
       });
     } else {
-      const mail = preview ? invoicePreviewEmail(input.facts) : invoiceEmail(input.facts);
+      const mail = preview ? invoicePreviewEmail(facts) : invoiceEmail(facts);
       const sent = await sendEmail({
         to: input.customerEmail,
         subject: mail.subject,
@@ -158,7 +184,7 @@ export async function deliverInvoice(input: {
   return attempts;
 }
 
-/** A customer whose last word on texts was STOP. No row is not an opt-out. */
+/** A customer whose last word on texts was STOP. */
 async function optedOut(
   database: ReturnType<typeof getSupabaseAdmin>,
   organizationId: string,
@@ -172,10 +198,26 @@ async function optedOut(
     .eq("channel", "sms")
     .eq("scope", "transactional")
     .maybeSingle();
-  if (!data?.opted_out_at) return false;
-  const out = Date.parse(String(data.opted_out_at));
-  const back = data.opted_in_at ? Date.parse(String(data.opted_in_at)) : Number.NaN;
-  return !(Number.isFinite(back) && back > out);
+  return repliedStop(
+    data ? { optedInAt: data.opted_in_at ? String(data.opted_in_at) : null, optedOutAt: data.opted_out_at ? String(data.opted_out_at) : null } : null,
+  );
+}
+
+/** The business's customer with this number, for an invoice with no job to say whose it is. */
+async function customerByPhone(
+  database: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+  phone: string,
+): Promise<string> {
+  if (!phone) return "";
+  const { data } = await database
+    .from("customers")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("phone", phone)
+    .limit(1)
+    .maybeSingle();
+  return typeof data?.id === "string" ? data.id : "";
 }
 
 export { describeDelivery } from "@/lib/invoice-messages";
