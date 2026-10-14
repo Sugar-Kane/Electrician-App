@@ -49,6 +49,15 @@ export async function readMaterialList(supabase: FlexibleClient, jobId: string):
   };
 }
 
+export type MaterialListWrite = { status: "saved"; updatedAt: string } | { status: "changed" } | { status: "failed" };
+
+/**
+ * Keep a job's list. With `expectedUpdatedAt`, only over the version the
+ * writer started from: null means there was no list yet. When someone else
+ * has saved or cleared it since, nothing is written and the answer is
+ * "changed", so a slow reply or an edit made on an old copy never replaces
+ * a newer list.
+ */
 export async function writeMaterialList(
   supabase: FlexibleClient,
   input: {
@@ -59,22 +68,44 @@ export async function writeMaterialList(
     messages?: ChatTurn[];
     source?: "openai" | "claude";
     model?: string;
+    expectedUpdatedAt?: string | null;
   },
-): Promise<boolean> {
+): Promise<MaterialListWrite> {
+  const updatedAt = new Date().toISOString();
   const row: Record<string, unknown> = {
     organization_id: input.organizationId,
     job_id: input.jobId,
     content: input.list,
-    updated_at: new Date().toISOString(),
+    updated_at: updatedAt,
   };
   if (input.messages) row.messages = keptTurns(input.messages);
   if (input.source) row.source = input.source;
   if (input.model) row.model = input.model;
   if (input.userId) row.created_by = input.userId;
 
-  const { error } = await supabase.from("job_material_lists").upsert(row, { onConflict: "job_id" });
-  if (error) console.error("materials list was not saved", { jobId: input.jobId, code: error.code, message: error.message });
-  return !error;
+  const table = supabase.from("job_material_lists");
+  let error: { code?: string; message?: string } | null = null;
+  if (input.expectedUpdatedAt === undefined) {
+    ({ error } = await table.upsert(row, { onConflict: "job_id" }));
+  } else if (input.expectedUpdatedAt === null) {
+    ({ error } = await table.insert(row));
+    // A list made by someone else in the meantime.
+    if (error?.code === "23505") return { status: "changed" };
+  } else {
+    const result = await table
+      .update(row)
+      .eq("job_id", input.jobId)
+      .eq("organization_id", input.organizationId)
+      .eq("updated_at", input.expectedUpdatedAt)
+      .select("id");
+    error = result.error;
+    if (!error && (!Array.isArray(result.data) || result.data.length === 0)) return { status: "changed" };
+  }
+  if (error) {
+    console.error("materials list was not saved", { jobId: input.jobId, code: error.code, message: error.message });
+    return { status: "failed" };
+  }
+  return { status: "saved", updatedAt };
 }
 
 /** What the job page's materials chat starts from: the saved list, and which AI will answer. */

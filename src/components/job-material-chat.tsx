@@ -339,6 +339,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [pricing, setPricing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const abort = useRef<AbortController | null>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
@@ -361,17 +362,70 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   // Whether the list on screen holds an edit the server has not kept. Every
   // save carries the whole list, so a later one that sticks clears it.
   const unsaved = useRef(false);
+  // The saved version this screen's list was built on; each save names it,
+  // so one made on an old copy is refused rather than replacing a newer list.
+  const version = useRef<string | null>(saved.updatedAt);
+  // Bumped whenever the list on screen is replaced (cleared, or swapped for
+  // the server's newer one): saves still queued from before are dropped.
+  const generation = useRef(0);
+
+  // The list as the server has it now, in place of this screen's copy.
+  function adopt(current: SavedMaterialList) {
+    generation.current += 1;
+    version.current = current.updatedAt;
+    unsaved.current = false;
+    setList(current.list);
+    setMessages(current.messages);
+    setEditingId(null);
+    setAddingTo(null);
+  }
+
   function saveList(next: MaterialList): Promise<void> {
+    const madeOn = generation.current;
     return inOrder(async () => {
+      if (madeOn !== generation.current) return;
       try {
-        const result = await saveMaterialList(jobNumber, next);
+        const result = await saveMaterialList(jobNumber, next, version.current);
+        if (result.current) {
+          adopt(result.current);
+          setError(result.error);
+          return;
+        }
         unsaved.current = Boolean(result.error);
         if (result.error) setError(result.error);
+        else if (result.updatedAt) version.current = result.updatedAt;
       } catch {
         unsaved.current = true;
         setError("The change could not be saved. Try again.");
       }
     });
+  }
+
+  // Start over: nothing on the list can be changed until the clear settles,
+  // and an edit queued before it is dropped rather than bringing the list back.
+  function startOver() {
+    generation.current += 1;
+    setClearing(true);
+    setEditingId(null);
+    setAddingTo(null);
+    void inOrder(async () => {
+      try {
+        const result = await clearMaterialList(jobNumber);
+        if (result.error) {
+          // The list stays; whatever was dropped is saved again before the next change is asked for.
+          unsaved.current = true;
+          setError(result.error);
+          return;
+        }
+        unsaved.current = false;
+        version.current = null;
+        setList({ intro: "", title: "", sections: [], closing: "" });
+        setMessages([]);
+      } catch {
+        unsaved.current = true;
+        setError("The list could not be cleared. Try again.");
+      }
+    }).finally(() => setClearing(false));
   }
 
   // Keep a hand edit, and say so if it did not stick.
@@ -382,7 +436,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
 
   async function send(prompt: string) {
     const text = prompt.trim();
-    if (!text || writing) return;
+    if (!text || writing || clearing) return;
     setError("");
     setNotice("");
     setEditingId(null);
@@ -424,9 +478,15 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
         setLiveText(end >= 0 ? all.slice(0, end) : all);
       }
       const end = all.indexOf(END);
-      const result = end >= 0 ? (JSON.parse(all.slice(end + 1)) as { error?: string; list?: MaterialList; messages?: ChatTurn[] }) : null;
+      const result =
+        end >= 0
+          ? (JSON.parse(all.slice(end + 1)) as { error?: string; list?: MaterialList; messages?: ChatTurn[]; updatedAt?: string | null })
+          : null;
       if (!result) throw new Error("The reply stopped before it was finished. Try again.");
+      // Changed somewhere else while this was written: show it as it is now.
+      if (result.error && result.list) adopt({ list: result.list, messages: result.messages ?? [], source: null, model: null, updatedAt: result.updatedAt ?? null });
       if (result.error || !result.list) throw new Error(result.error || "No list came back. Try again.");
+      version.current = result.updatedAt ?? version.current;
       setList(result.list);
       setMessages(result.messages ?? []);
     } catch (problem) {
@@ -493,7 +553,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
             ) : (
               <ListView
                 list={shown}
-                live={writing}
+                live={writing || clearing}
                 editingId={editingId}
                 choosing={choosing}
                 chosen={chosen}
@@ -578,13 +638,14 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
+                disabled={clearing}
                 onClick={() => {
                   setEditingId(null);
                   setAddingTo(null);
                   setNotice("");
                   setChoosing(true);
                 }}
-                className="tap-target inline-flex min-h-11 items-center gap-1.5 rounded-control border border-brand px-3 text-sm font-semibold text-brand"
+                className="tap-target inline-flex min-h-11 items-center gap-1.5 rounded-control border border-brand px-3 text-sm font-semibold text-brand disabled:opacity-60"
               >
                 <ListChecks className="h-4 w-4" aria-hidden />
                 Add items to the estimate
@@ -604,28 +665,15 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
               </button>
               <button
                 type="button"
+                disabled={clearing}
                 onClick={() => {
                   if (!window.confirm("Clear this list and the chat, and start again?")) return;
-                  void inOrder(async () => {
-                    const result = await clearMaterialList(jobNumber);
-                    if (!result.error) unsaved.current = false;
-                    return result;
-                  }).then(
-                    (result) => {
-                      if (result.error) {
-                        setError(result.error);
-                        return;
-                      }
-                      setList({ intro: "", title: "", sections: [], closing: "" });
-                      setMessages([]);
-                    },
-                    () => setError("The list could not be cleared. Try again."),
-                  );
+                  startOver();
                 }}
-                className="tap-target inline-flex min-h-11 items-center gap-1.5 px-2 text-sm font-semibold text-ink-muted"
+                className="tap-target inline-flex min-h-11 items-center gap-1.5 px-2 text-sm font-semibold text-ink-muted disabled:opacity-60"
               >
-                <RotateCcw className="h-4 w-4" aria-hidden />
-                Start over
+                {clearing ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
+                {clearing ? "Clearing…" : "Start over"}
               </button>
             </div>
           )
@@ -659,7 +707,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
                   }
                 }}
                 rows={listed ? 2 : 4}
-                disabled={writing}
+                disabled={writing || clearing}
                 placeholder={
                   listed
                     ? "Ask for changes, e.g. “add a surge protector” or “the run is 50 ft”"
@@ -669,7 +717,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
               />
               <button
                 type="submit"
-                disabled={writing || !draft.trim()}
+                disabled={writing || clearing || !draft.trim()}
                 aria-label={listed ? "Send" : "Write the list"}
                 className="tap-target inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-control bg-brand text-on-brand disabled:opacity-50"
               >

@@ -159,7 +159,9 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
         { role: "user", text: prompt, at: now },
         { role: "assistant", text: list.intro || "Here is the list.", at: now },
       ];
-      const kept = await writeMaterialList(supabase, {
+      // Only over the list this answer started from: one edited or cleared
+      // somewhere else while it was being written is not replaced.
+      const write = await writeMaterialList(supabase, {
         organizationId,
         jobId,
         userId,
@@ -167,9 +169,22 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
         messages,
         source,
         model,
+        expectedUpdatedAt: saved.updatedAt,
       });
       if (ownKey) await noteOpenAiKeyUse(organizationId, null);
-      finish(kept ? { list, messages, source, model } : { error: "The list was written but could not be saved. Try again." });
+      if (write.status === "saved") {
+        finish({ list, messages, source, model, updatedAt: write.updatedAt });
+      } else if (write.status === "changed") {
+        const current = await readMaterialList(supabase, jobId);
+        finish({
+          error: "The list was changed somewhere else while this answer was being written, so it was not kept. This is the list as it is now; ask again to change it.",
+          list: current.list,
+          messages: current.messages,
+          updatedAt: current.updatedAt,
+        });
+      } else {
+        finish({ error: "The list was written but could not be saved. Try again." });
+      }
     },
   });
 

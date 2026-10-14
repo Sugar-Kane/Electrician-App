@@ -1,7 +1,7 @@
 "use server";
 
 import { normalizeMaterialList } from "@/lib/material-list";
-import { writeMaterialList } from "@/lib/material-list-server";
+import { readMaterialList, writeMaterialList, type SavedMaterialList } from "@/lib/material-list-server";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +14,13 @@ import { createClient } from "@/lib/supabase/server";
  * The browser sends the whole list; it is checked into shape before it is kept.
  */
 
-export type MaterialListActionState = { error: string };
+export type MaterialListActionState = {
+  error: string;
+  /** The version now kept, to send with the next change. */
+  updatedAt?: string | null;
+  /** The list as it is now, when it was changed somewhere else first. */
+  current?: SavedMaterialList;
+};
 
 async function jobFor(jobNumber: string) {
   const caller = await currentContext();
@@ -32,13 +38,33 @@ async function jobFor(jobNumber: string) {
   return jobId ? { supabase, organizationId, jobId, userId } : null;
 }
 
-export async function saveMaterialList(jobNumber: string, raw: unknown): Promise<MaterialListActionState> {
+/**
+ * Keep a hand edit, made on the version `expectedUpdatedAt` (null: there was
+ * no list yet). If the list was changed somewhere else since, the edit is not
+ * kept and the list as it is now comes back instead.
+ */
+export async function saveMaterialList(
+  jobNumber: string,
+  raw: unknown,
+  expectedUpdatedAt: string | null,
+): Promise<MaterialListActionState> {
   const list = normalizeMaterialList(raw);
   if (!list) return { error: "That list could not be read." };
   const context = await jobFor(jobNumber);
   if (!context) return { error: "That job could not be found." };
-  const saved = await writeMaterialList(context.supabase, { ...context, list });
-  return saved ? { error: "" } : { error: "The change could not be saved. Try again." };
+  const write = await writeMaterialList(context.supabase, {
+    ...context,
+    list,
+    expectedUpdatedAt: typeof expectedUpdatedAt === "string" ? expectedUpdatedAt : null,
+  });
+  if (write.status === "saved") return { error: "", updatedAt: write.updatedAt };
+  if (write.status === "changed") {
+    return {
+      error: "This list was changed somewhere else, so that edit was not kept. This is the list as it is now.",
+      current: await readMaterialList(context.supabase, context.jobId),
+    };
+  }
+  return { error: "The change could not be saved. Try again." };
 }
 
 export async function clearMaterialList(jobNumber: string): Promise<MaterialListActionState> {
