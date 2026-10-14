@@ -13,6 +13,8 @@ import { ChatGptConnectionCard } from "./chatgpt-connection-card";
 import { revokeChatGptConnection } from "./chatgpt-actions";
 import { revokeWebsiteKey } from "./website-actions";
 import { WebsiteFormCard } from "./website-form-card";
+import { aiKeyState } from "@/lib/ai-key";
+import { OpenAiKeyCard } from "./openai-key-card";
 
 const envLabels: Record<string, string> = {
   LOWES_PRODUCT_DISCOVERY_API_URL: "Product Discovery API URL",
@@ -66,9 +68,12 @@ export default async function IntegrationsPage() {
   const calendar = context && canManage ? await getSupabaseAdmin().from("booking_calendar_connections")
     .select("account_email,connected_at,last_error").eq("organization_id", context.organizationId).maybeSingle() : null;
   const calendarReady = Boolean(calendarConfig());
+  // Every member can see whether the key is connected; only the owner can change it.
+  const openAiKey = context ? await aiKeyState(context.organizationId) : { status: null, version: "" };
   return (
-    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect ChatGPT, your website and supplier programs. Their keys stay on the server.">
+    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Connect your ChatGPT key, your website and supplier programs. Their keys stay on the server.">
       <div className="grid gap-4 lg:grid-cols-2">
+        <OpenAiKeyCard status={openAiKey.status} version={openAiKey.version} canManage={canManage} />
         <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
         <WebsiteFormCard
           keys={websiteKeys}

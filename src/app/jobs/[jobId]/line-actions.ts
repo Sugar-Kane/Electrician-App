@@ -221,6 +221,60 @@ export async function addJobLine(
   return { error: "", notice: inventoryItemId ? "Added and reserved for this job." : "Added." };
 }
 
+/** One item from the materials list, priced by the person adding it. */
+export type ListedPart = { itemId: string; description: string; quantity: string; unit: string; unitPrice: string };
+
+/**
+ * Items chosen from the job's materials list, added as parts in one go.
+ *
+ * Each needs a customer price, as a part typed in by hand does: blank is
+ * refused, 0 is no charge. All or none: one unreadable figure stops the batch
+ * and says which item, rather than adding half the list.
+ */
+export async function addListedParts(
+  jobNumber: string,
+  parts: ListedPart[],
+): Promise<LineActionState & { added?: string[] }> {
+  if (!Array.isArray(parts) || parts.length === 0) return { error: "Choose at least one item." };
+  if (parts.length > 60) return { error: "Add up to 60 items at a time." };
+
+  const rows: Record<string, unknown>[] = [];
+  for (const part of parts) {
+    const description = String(part?.description ?? "").trim().slice(0, 300);
+    if (!description) return { error: "Every item needs a description." };
+    const quantity = parseQuantity(String(part?.quantity ?? "") || "1");
+    if (quantity === null) return { error: `The quantity for "${description}" could not be read.` };
+    const price = readPrice(String(part?.unitPrice ?? ""));
+    if (price.state === "missing") return { error: `Enter a price each for "${description}". Type 0 if there is no charge.` };
+    if (price.state === "invalid") return { error: `The price for "${description}" could not be read. Something like 12.50 works.` };
+    const unit = (PART_UNITS as readonly string[]).includes(String(part?.unit)) ? String(part.unit) : "each";
+    rows.push({ kind: "material", description, quantity, unit, unit_price_cents: price.cents, unit_cost_cents: null });
+  }
+
+  const context = await findJob(jobNumber);
+  if (!context) return { error: "That job could not be found." };
+
+  const { error } = await context.supabase
+    .from("job_line_items")
+    .insert(rows.map((row) => ({ ...row, organization_id: context.organizationId, job_id: context.jobId })));
+  if (error) return { error: "Those items could not be added. Try again." };
+
+  // New parts have not been gathered, as with a part added by hand.
+  await context.supabase
+    .from("jobs")
+    .update({ materials_ready_at: null })
+    .eq("id", context.jobId)
+    .not("materials_ready_at", "is", null);
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath("/jobs");
+  return {
+    error: "",
+    notice: `${rows.length} ${rows.length === 1 ? "item" : "items"} added to the estimate.`,
+    added: parts.map((part) => String(part.itemId ?? "")),
+  };
+}
+
 export async function removeJobLine(
   _previous: LineActionState,
   formData: FormData,

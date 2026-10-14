@@ -3,6 +3,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 
 import { scopePrompt } from "@/lib/contract-template";
+import { ReplyCutOff } from "@/lib/reply-cut-off";
 import { INTAKE_TOOLS, type IntakeDecision } from "@/lib/sms-intake";
 
 /**
@@ -1010,4 +1011,40 @@ export async function runAssistantTurn(input: {
     console.error("assistant turn failed", error);
     return null;
   }
+}
+
+/**
+ * A materials list, written as it is read, for a business that has not
+ * connected its own ChatGPT key. Same instructions and the same plain-text
+ * format as the OpenAI path, so the list reads the same whichever wrote it.
+ *
+ * Streamed because a full list is long: the electrician watches it arrive
+ * rather than a spinner. Throws when Claude is not configured or refuses.
+ */
+export async function* streamMaterialList(input: {
+  system: string;
+  turns: { role: "user" | "assistant"; content: string }[];
+  signal?: AbortSignal;
+}): AsyncGenerator<string> {
+  const anthropic = getClient();
+  if (!anthropic) throw new Error("The built-in AI is not set up on this deployment.");
+
+  const stream = anthropic.messages.stream(
+    {
+      model: "claude-opus-5",
+      max_tokens: 8000,
+      output_config: { effort: "low" },
+      system: input.system,
+      messages: input.turns,
+    },
+    { signal: input.signal, timeout: 110_000 },
+  );
+  let stopped = "";
+  for await (const event of stream) {
+    if (event.type === "content_block_delta" && event.delta.type === "text_delta") yield event.delta.text;
+    if (event.type === "message_delta" && event.delta.stop_reason) stopped = event.delta.stop_reason;
+  }
+  // Only a reply that finished is a whole list.
+  if (stopped === "max_tokens") throw new ReplyCutOff();
+  if (stopped !== "end_turn") throw new Error(`the reply ended without finishing (${stopped || "no stop reason"})`);
 }
