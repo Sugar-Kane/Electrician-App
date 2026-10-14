@@ -24,12 +24,12 @@ function dateLabel(value: string | null | undefined) {
   return Number.isNaN(at.getTime()) ? "" : at.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function SaveButton({ replacing }: { replacing: boolean }) {
+function SaveButton({ replacing, locked }: { replacing: boolean; locked: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || locked}
       className="tap-target inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-60"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <KeyRound className="h-4 w-4" aria-hidden />}
@@ -45,8 +45,11 @@ export function OpenAiKeyCard({
   status: AiKeyStatus | null;
   canManage: boolean;
 }) {
-  const [state, action] = useActionState(connectOpenAiKey, initial);
+  const [state, action, connecting] = useActionState(connectOpenAiKey, initial);
   const [removal, remove, removing] = useActionState(disconnectOpenAiKey, initial);
+  // One change to the key at a time: a replace still being checked with
+  // OpenAI must not land after a removal asked for while it ran, or the
+  // other way round.
   // What the server has now: both actions refresh the page, so a key removed
   // after being connected here reads as removed, not as the key just connected.
   const status = saved;
@@ -111,10 +114,11 @@ export function OpenAiKeyCard({
                 autoComplete="off"
                 spellCheck={false}
                 placeholder={status ? "Paste a new key to replace it" : "sk-…"}
-                className="min-h-12 w-full rounded-control border border-line bg-raised px-3 font-mono text-sm"
+                disabled={removing}
+                className="min-h-12 w-full rounded-control border border-line bg-raised px-3 font-mono text-sm disabled:opacity-60"
               />
             </label>
-            <SaveButton replacing={Boolean(status)} />
+            <SaveButton replacing={Boolean(status)} locked={removing} />
           </form>
           {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
           {justConnected ? <p className="mt-2 text-sm text-positive" role="status">OpenAI accepted the key. The materials chat now runs on it.</p> : null}
@@ -122,7 +126,7 @@ export function OpenAiKeyCard({
             <form action={remove} className="mt-3">
               <button
                 type="submit"
-                disabled={removing}
+                disabled={removing || connecting}
                 className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted disabled:opacity-60"
               >
                 {removing ? "Removing…" : "Remove key"}
