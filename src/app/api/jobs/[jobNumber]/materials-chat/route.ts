@@ -71,9 +71,9 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
 
   const saved = await readMaterialList(supabase, jobId);
   const stored = await openAiKeyFor(organizationId);
-  if (stored === "unreadable") {
+  if (stored && "unreadable" in stored) {
     const reason = "The saved ChatGPT key could not be read. The owner can reconnect it in Settings → Integrations.";
-    await noteOpenAiKeyUse(organizationId, reason);
+    await noteOpenAiKeyUse(organizationId, stored.version, reason);
     return jsonError(503, reason);
   }
   const ownKey = stored;
@@ -142,7 +142,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
               ? "ChatGPT stopped before the list was finished. Try again."
               : "The list could not be written just now. Try again.";
         console.error("materials chat failed", { jobId, source, error: String(error) });
-        if (ownKey) await noteOpenAiKeyUse(organizationId, reason);
+        if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, reason);
         finish({ error: reason });
         return;
       }
@@ -171,7 +171,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
         model,
         expectedUpdatedAt: saved.updatedAt,
       });
-      if (ownKey) await noteOpenAiKeyUse(organizationId, null);
+      if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, null);
       if (write.status === "saved") {
         finish({ list, messages, source, model, updatedAt: write.updatedAt });
       } else if (write.status === "changed") {

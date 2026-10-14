@@ -10,6 +10,8 @@ import {
   estimateLineFor,
   hasContent,
   itemLine,
+  estimateItems,
+  isChecklist,
   listItems,
   parseMaterialList,
   type ChatTurn,
@@ -159,6 +161,7 @@ function ListView({
       {list.sections.map((section) => (
         <section key={section.id} className="mt-4">
           <h4 className="font-semibold">{section.heading}</h4>
+          {choosing && isChecklist(section) ? <p className="text-xs text-ink-faint">Things to check, not to buy: not added to the estimate.</p> : null}
           {section.blocks.map((block, index) => {
             const blockKey = `${section.id}:${index}`;
             if (block.type === "text") {
@@ -175,6 +178,11 @@ function ListView({
                     editingId === item.id ? (
                       <li key={item.id} className="list-none -ml-5">
                         <ItemEditor item={item} onSave={onSaveItem} onRemove={() => onRemoveItem(item.id)} onCancel={() => onEdit(null)} />
+                      </li>
+                    ) : choosing && isChecklist(section) ? (
+                      <li key={item.id} className="py-1 text-ink-muted">
+                        {item.qty ? `${item.qty} × ` : ""}
+                        {item.name}
                       </li>
                     ) : choosing ? (
                       <li key={item.id} className="list-none -ml-5">
@@ -620,7 +628,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
             pricing ? (
               <PricingSheet
                 jobNumber={jobNumber}
-                items={items.filter((item) => chosen.has(item.id))}
+                items={estimateItems(list).filter((item) => chosen.has(item.id))}
                 onCancel={() => setPricing(false)}
                 onDone={(message) => {
                   setPricing(false);

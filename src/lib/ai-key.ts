@@ -101,25 +101,32 @@ export async function removeOpenAiKey(organizationId: string): Promise<void> {
  */
 export async function openAiKeyFor(
   organizationId: string,
-): Promise<{ key: string; model: string } | "unreadable" | null> {
+): Promise<{ key: string; model: string; version: string } | { unreadable: true; version: string } | null> {
   const { data } = await getSupabaseAdmin()
     .from("organization_ai_keys")
-    .select("encrypted_key, model")
+    .select("encrypted_key, model, updated_at")
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (!data?.encrypted_key) return null;
+  // Which saved key this is, so how it went is never written onto a key
+  // connected in its place while the request was running.
+  const version = String(data.updated_at ?? "");
   try {
-    return { key: decryptDocumentSecret(String(data.encrypted_key)), model: String(data.model) };
+    return { key: decryptDocumentSecret(String(data.encrypted_key)), model: String(data.model), version };
   } catch (error) {
     console.error("stored OpenAI key could not be decrypted", { organizationId, error: String(error) });
-    return "unreadable";
+    return { unreadable: true, version };
   }
 }
 
-/** Record how the last use went, so Settings can say the key still works. */
-export async function noteOpenAiKeyUse(organizationId: string, error: string | null): Promise<void> {
+/**
+ * Record how the last use went, so Settings can say the key still works.
+ * Only onto the key that was used: one replaced since is left as it is.
+ */
+export async function noteOpenAiKeyUse(organizationId: string, version: string, error: string | null): Promise<void> {
   await getSupabaseAdmin()
     .from("organization_ai_keys")
     .update(error ? { last_error: error.slice(0, 300) } : { last_used_at: new Date().toISOString(), last_error: null })
-    .eq("organization_id", organizationId);
+    .eq("organization_id", organizationId)
+    .eq("updated_at", version);
 }

@@ -195,6 +195,19 @@ export function listItems(list: MaterialList): MaterialItem[] {
   );
 }
 
+/**
+ * A section of things to check rather than buy, like "Before Installation
+ * Day". ("I'd Buy Before the Job" is a buying list and is not one.)
+ */
+export function isChecklist(section: Pick<MaterialSection, "heading">): boolean {
+  return /^\s*before\b|checklist|to (?:verify|check|confirm)\b/i.test(section.heading);
+}
+
+/** The items that can go on an estimate: every bullet outside the checklists. */
+export function estimateItems(list: MaterialList): MaterialItem[] {
+  return listItems({ ...list, sections: list.sections.filter((section) => !isChecklist(section)) });
+}
+
 export function hasContent(list: MaterialList): boolean {
   return list.sections.length > 0;
 }
@@ -251,6 +264,20 @@ const UNIT_WORDS: Record<string, string> = {
 
 const FRACTIONS: Record<string, number> = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅛": 0.125 };
 
+// A count at the start of the count field: "1 1/2", "1½", "1/2", "40", "2.5"
+// or "½", longest form first, so "1 1/2" is never read as 1.
+const COUNT = /^(\d+\s+\d+\/\d+|\d+\s*[½¼¾⅛]|\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅛])(?![\d./])\s*(.*)$/;
+
+function countValue(text: string): number {
+  const mixed = text.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixed) return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+  const glyph = text.match(/^(\d*)\s*([½¼¾⅛])$/);
+  if (glyph) return Number(glyph[1] || 0) + FRACTIONS[glyph[2]];
+  const fraction = text.match(/^(\d+)\/(\d+)$/);
+  if (fraction) return Number(fraction[1]) / Number(fraction[2]);
+  return Number(text);
+}
+
 /**
  * An item as an estimate line: how many, in which unit, and what it is. The
  * price is left to the person adding it.
@@ -261,15 +288,12 @@ export function estimateLineFor(item: Pick<MaterialItem, "qty" | "name">): {
   unit: string;
 } {
   const name = item.name.trim();
-  const match = item.qty.trim().match(/^(\d+(?:\.\d+)?|\d+\/\d+|[½¼¾⅛])\s*(.*)$/);
-  if (!match) return { description: name, quantity: "1", unit: "each" };
+  const match = item.qty.trim().match(COUNT);
+  const value = match ? countValue(match[1]) : NaN;
+  if (!match || !Number.isFinite(value) || value <= 0) return { description: name, quantity: "1", unit: "each" };
 
-  const [whole, rest] = [match[1], match[2].trim()];
-  const quantity = FRACTIONS[whole] !== undefined
-    ? String(FRACTIONS[whole])
-    : whole.includes("/")
-      ? String(Number(whole.split("/")[0]) / Number(whole.split("/")[1]))
-      : whole;
+  const rest = match[2].trim();
+  const quantity = String(Math.round(value * 1000) / 1000);
   const word = rest.toLowerCase().replace(/\.$/, "");
   const unit = UNIT_WORDS[word] ?? (word ? "" : /^\d+-ft sticks?\b/i.test(name) ? "stick" : "each");
   return unit
