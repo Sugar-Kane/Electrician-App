@@ -221,15 +221,27 @@ export async function addJobLine(
   return { error: "", notice: inventoryItemId ? "Added and reserved for this job." : "Added." };
 }
 
-/** One item from the materials list, priced by the person adding it. */
-export type ListedPart = { itemId: string; description: string; quantity: string; unit: string; unitPrice: string };
+/**
+ * One item from the materials list: the customer's price, and what one cost
+ * the business at the store it was priced from (blank when it was not).
+ */
+export type ListedPart = {
+  itemId: string;
+  description: string;
+  quantity: string;
+  unit: string;
+  unitPrice: string;
+  unitCost?: string;
+};
 
 /**
  * Items chosen from the job's materials list, added as parts in one go.
  *
  * Each needs a customer price, as a part typed in by hand does: blank is
- * refused, 0 is no charge. All or none: one unreadable figure stops the batch
- * and says which item, rather than adding half the list.
+ * refused, 0 is no charge. A store price, when there is one, is kept as what
+ * the part cost; blank leaves the cost unknown. All or none: one unreadable
+ * figure stops the batch and says which item, rather than adding half the
+ * list.
  */
 export async function addListedParts(
   jobNumber: string,
@@ -247,8 +259,17 @@ export async function addListedParts(
     const price = readPrice(String(part?.unitPrice ?? ""));
     if (price.state === "missing") return { error: `Enter a price each for "${description}". Type 0 if there is no charge.` };
     if (price.state === "invalid") return { error: `The price for "${description}" could not be read. Something like 12.50 works.` };
+    const cost = readPrice(String(part?.unitCost ?? ""));
+    if (cost.state === "invalid") return { error: `The store cost for "${description}" could not be read.` };
     const unit = (PART_UNITS as readonly string[]).includes(String(part?.unit)) ? String(part.unit) : "each";
-    rows.push({ kind: "material", description, quantity, unit, unit_price_cents: price.cents, unit_cost_cents: null });
+    rows.push({
+      kind: "material",
+      description,
+      quantity,
+      unit,
+      unit_price_cents: price.cents,
+      unit_cost_cents: cost.state === "set" ? cost.cents : null,
+    });
   }
 
   const context = await findJob(jobNumber);

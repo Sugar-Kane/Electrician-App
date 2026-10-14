@@ -12,6 +12,8 @@
  * Import-free, so the browser and the server read a list the same way.
  */
 
+import { priceKey, readItemPrices, type ItemPrices } from "./store-price-rules.ts";
+
 export type MaterialItem = {
   id: string;
   /** "4", "40 ft", "1 box". Empty when the line has no count. */
@@ -20,6 +22,8 @@ export type MaterialItem = {
   name: string;
   /** What to check about it, shown in brackets after the name. */
   note: string;
+  /** What one costs at Home Depot and Lowe's, when it has been looked up. */
+  prices?: ItemPrices;
 };
 
 export type MaterialBlock = { type: "text"; text: string } | { type: "items"; items: MaterialItem[] };
@@ -238,7 +242,11 @@ export function normalizeMaterialList(raw: unknown): MaterialList | null {
           const i = rawItem as Record<string, unknown>;
           const name = str(i.name, LIMITS.name);
           if (!name) continue;
-          items.push({ id: str(i.id, 40) || `e${items.length}`, qty: str(i.qty, LIMITS.qty), name, note: str(i.note, LIMITS.note) });
+          const item: MaterialItem = { id: str(i.id, 40) || `e${items.length}`, qty: str(i.qty, LIMITS.qty), name, note: str(i.note, LIMITS.note) };
+          // Prices stay only while they are still this item's, and sane.
+          const prices = readItemPrices(i.prices, itemPriceKey(item));
+          if (prices) item.prices = prices;
+          items.push(item);
         }
         if (items.length > 0) blocks.push({ type: "items", items });
       }
@@ -280,7 +288,7 @@ function countValue(text: string): number {
 
 /**
  * An item as an estimate line: how many, in which unit, and what it is. The
- * price is left to the person adding it.
+ * price comes from the store prices, or from the person adding it.
  */
 export function estimateLineFor(item: Pick<MaterialItem, "qty" | "name">): {
   description: string;
@@ -300,6 +308,72 @@ export function estimateLineFor(item: Pick<MaterialItem, "qty" | "name">): {
     ? { description: name, quantity, unit }
     // A count in some other unit ("1 tube") keeps the unit in the description.
     : { description: `${name} (${rest})`, quantity, unit: "each" };
+}
+
+/**
+ * Which item a store price is for: what it is, and what one of it is. A new
+ * count keeps the price (one still costs the same); a new name or unit does
+ * not.
+ */
+export function itemPriceKey(item: Pick<MaterialItem, "qty" | "name">): { key: string; unit: string } {
+  const line = estimateLineFor(item);
+  return { key: priceKey(line.description, line.unit), unit: line.unit };
+}
+
+/** The item without prices that belong to what it used to be. */
+export function withCurrentPrices(item: MaterialItem): MaterialItem {
+  if (!item.prices || item.prices.key === itemPriceKey(item).key) return item;
+  const rest = { ...item };
+  delete rest.prices;
+  return rest;
+}
+
+function eachItem(list: MaterialList, change: (item: MaterialItem) => MaterialItem): MaterialList {
+  return {
+    ...list,
+    sections: list.sections.map((section) => ({
+      ...section,
+      blocks: section.blocks.map((block) => (block.type === "items" ? { ...block, items: block.items.map(change) } : block)),
+    })),
+  };
+}
+
+/**
+ * Prices looked up for some items, put on the list as it is now: only on an
+ * item that is still there and still the same thing. A store picked by hand
+ * stays picked while that store still has a price.
+ */
+export function applyPrices(list: MaterialList, found: Record<string, ItemPrices>): MaterialList {
+  return eachItem(list, (item) => {
+    const prices = found[item.id];
+    if (!prices || prices.key !== itemPriceKey(item).key) return item;
+    const use = item.prices?.use;
+    const next: ItemPrices = { ...prices };
+    delete next.use;
+    if (use && prices[use]) next.use = use;
+    return { ...item, prices: next };
+  });
+}
+
+/**
+ * A revised list keeps the prices of everything that did not change, so only
+ * new or changed items are looked up again.
+ */
+export function carryPrices(previous: MaterialList, next: MaterialList): MaterialList {
+  const known = new Map<string, ItemPrices>();
+  for (const item of listItems(previous)) {
+    if (item.prices && item.prices.key === itemPriceKey(item).key) known.set(item.prices.key, item.prices);
+  }
+  if (known.size === 0) return next;
+  return eachItem(next, (item) => {
+    const prices = item.prices ? null : known.get(itemPriceKey(item).key);
+    return prices ? { ...item, prices } : item;
+  });
+}
+
+/** The items on the estimate side of the list that have not been looked up as they are now. */
+export function unpricedItems(list: MaterialList): MaterialItem[] {
+  return estimateItems(list).filter((item) => !item.prices || item.prices.key !== itemPriceKey(item).key);
 }
 
 /**

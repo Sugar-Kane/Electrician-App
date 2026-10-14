@@ -76,11 +76,12 @@ export function OpenAiKeyCard({
         </span>
       </div>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
-        The materials chat on each job runs on your own OpenAI account, the same models as ChatGPT. Create a key at{" "}
+        The materials chat on each job runs on your own OpenAI account, the same models as ChatGPT, and looks up each
+        item&apos;s Home Depot and Lowe&apos;s price. Create a key at{" "}
         <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="whitespace-nowrap font-semibold text-brand">
           platform.openai.com/api-keys
         </a>{" "}
-        and paste it here. OpenAI bills your account for what the chat uses.
+        and paste it here. OpenAI bills your account for what the chat and the price searches use.
       </p>
 
       {status ? (

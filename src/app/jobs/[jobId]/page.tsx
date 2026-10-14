@@ -452,6 +452,7 @@ export default async function JobDetailPage({
                 saved={materialChat.saved}
                 ai={materialChat.ai}
                 canConnect={materialChat.canConnect}
+                markupPercent={materialChat.markupPercent}
                 jobDescription={job.summary}
                 hasLines={lines.length > 0}
               />

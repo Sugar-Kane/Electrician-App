@@ -1,6 +1,7 @@
 import { noteOpenAiKeyUse, openAiKeyFor } from "@/lib/ai-key";
 import { claudeIsConfigured, streamMaterialList } from "@/lib/claude";
 import {
+  carryPrices,
   hasContent,
   materialListInstructions,
   materialListMarkdown,
@@ -154,7 +155,8 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
         return;
       }
 
-      const list = parseMaterialList(written, `g${Date.now().toString(36)}`);
+      // What did not change keeps its store prices; only the rest is looked up again.
+      const list = carryPrices(saved.list, parseMaterialList(written, `g${Date.now().toString(36)}`));
       if (!hasContent(list)) {
         finish({ error: "The reply did not include a list. Try saying what the job is in a little more detail." });
         return;

@@ -2,11 +2,26 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, ChevronDown, ClipboardCopy, ListChecks, LoaderCircle, Pencil, Plus, RotateCcw, SendHorizontal, Sparkles, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ClipboardCopy,
+  ExternalLink,
+  ListChecks,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  RotateCcw,
+  SendHorizontal,
+  Sparkles,
+  Tag,
+  X,
+} from "lucide-react";
 
 import { addListedParts, type ListedPart } from "@/app/jobs/[jobId]/line-actions";
 import { clearMaterialList, saveMaterialList } from "@/app/jobs/[jobId]/material-list-actions";
 import {
+  applyPrices,
   estimateLineFor,
   hasContent,
   itemLine,
@@ -14,17 +29,29 @@ import {
   isChecklist,
   listItems,
   parseMaterialList,
+  unpricedItems,
+  withCurrentPrices,
   type ChatTurn,
   type MaterialItem,
   type MaterialList,
 } from "@/lib/material-list";
 import type { SavedMaterialList } from "@/lib/material-list-server";
 import { PART_UNITS } from "@/lib/stock-reservation";
+import {
+  STORE_NAMES,
+  STORES,
+  chosenStorePrice,
+  dollarsText,
+  storePricing,
+  type ItemPrices,
+  type StoreName,
+} from "@/lib/store-price-rules";
 
 /**
  * The materials chat on a job: say what the job is, get the list back the way
  * ChatGPT writes it, ask for changes, and tap any item to fix it by hand.
- * Chosen items go onto the estimate with a price each.
+ * Each item is then looked up at Home Depot and Lowe's, and chosen items go
+ * onto the estimate already priced: the store price plus the markup.
  *
  * The reply streams in and is drawn as it arrives, sections and bullets and
  * all, so it feels like the chat the electrician already uses.
@@ -37,9 +64,42 @@ type Props = {
   saved: SavedMaterialList;
   ai: { connected: boolean; label: string };
   canConnect: boolean;
+  /** Percent added to a store price for the customer's price. */
+  markupPercent: number;
   jobDescription: string;
   hasLines: boolean;
 };
+
+/** "Home Depot $5.98/ft · Lowe's $6.48/ft", each a link to the product page. */
+function StorePrices({ prices }: { prices: ItemPrices | undefined }) {
+  if (!prices) return null;
+  if (!prices.homeDepot && !prices.lowes) {
+    return <span className="block text-xs text-ink-faint">No Home Depot or Lowe&apos;s price found</span>;
+  }
+  const chosen = chosenStorePrice(prices);
+  return (
+    <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-muted">
+      {STORE_NAMES.map((store) => {
+        const price = prices[store];
+        if (!price) return null;
+        return (
+          <a
+            key={store}
+            href={price.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={price.product || undefined}
+            className={`inline-flex min-h-6 items-center gap-1 hover:text-ink ${chosen?.store === store ? "font-semibold text-ink" : ""}`}
+          >
+            {STORES[store].label} ${dollarsText(price.cents)}
+            {price.per !== "each" ? `/${price.per}` : ""}
+            <ExternalLink className="h-3 w-3 opacity-60" aria-hidden />
+          </a>
+        );
+      })}
+    </span>
+  );
+}
 
 function copyText(list: MaterialList): string {
   const parts: string[] = [];
@@ -197,6 +257,10 @@ function ListView({
                             {item.note ? <span className="text-ink-faint"> ({item.note})</span> : null}
                           </span>
                         </label>
+                        {/* Outside the label, so opening a store's page never ticks the box. */}
+                        <div className="pl-[1.875rem]">
+                          <StorePrices prices={item.prices} />
+                        </div>
                       </li>
                     ) : (
                       <li key={item.id}>
@@ -214,6 +278,8 @@ function ListView({
                           </span>
                           {!live ? <Pencil className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-faint opacity-60 group-hover:opacity-100" aria-hidden /> : null}
                         </button>
+                        {/* Beside the button, not in it: a link inside a button is neither. */}
+                        <StorePrices prices={item.prices} />
                       </li>
                     ),
                   )}
@@ -246,33 +312,63 @@ function ListView({
   );
 }
 
+/** A row on the sheet, with the store prices it can be filled from and the store picked. */
+type PricedRow = ListedPart & { prices?: ItemPrices; pick: StoreName | null; store: StoreName | null };
+
 function PricingSheet({
   jobNumber,
   items,
+  markupPercent,
+  onPickStore,
   onDone,
   onCancel,
 }: {
   jobNumber: string;
   items: MaterialItem[];
+  markupPercent: number;
+  /** Remember which store an item is priced from. */
+  onPickStore: (itemId: string, store: StoreName) => void;
   onDone: (notice: string) => void;
   onCancel: () => void;
 }) {
-  const [rows, setRows] = useState<ListedPart[]>(() =>
+  const [rows, setRows] = useState<PricedRow[]>(() =>
     items.map((item) => {
       const line = estimateLineFor(item);
-      return { itemId: item.id, description: line.description, quantity: line.quantity, unit: line.unit, unitPrice: "" };
+      const pick = item.prices?.use ?? null;
+      return {
+        itemId: item.id,
+        description: line.description,
+        quantity: line.quantity,
+        unit: line.unit,
+        prices: item.prices,
+        pick,
+        ...storePricing(item.prices, pick, line.unit, markupPercent),
+      };
     }),
   );
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const field = "min-h-11 w-full rounded-control border border-line bg-raised px-2.5 text-sm";
-  const update = (index: number, change: Partial<ListedPart>) =>
+  const update = (index: number, change: Partial<PricedRow>) =>
     setRows((current) => current.map((row, at) => (at === index ? { ...row, ...change } : row)));
+  const anyStorePrice = rows.some((row) => row.store);
 
   return (
     <div className="mt-4 rounded-control border border-line bg-white/[0.02] p-3">
       <p className="text-sm font-semibold">Price each item for the estimate</p>
-      <p className="mt-0.5 text-xs text-ink-muted">What the customer pays for one. Type 0 for no charge.</p>
+      <p className="mt-0.5 text-xs text-ink-muted">
+        What the customer pays for one. Type 0 for no charge.
+        {anyStorePrice ? (
+          <>
+            {" "}
+            Filled in from the higher store price plus your {markupPercent}% markup (
+            <Link href="/settings/business" className="font-semibold text-brand">
+              Settings → Business
+            </Link>
+            ). Change any price before adding.
+          </>
+        ) : null}
+      </p>
       {/* Locked while adding: what is added is exactly what is shown. */}
       <fieldset disabled={pending} className="contents">
         <ul className="mt-3 space-y-3 [&_:disabled]:opacity-60">
@@ -291,7 +387,16 @@ function PricingSheet({
                 </label>
                 <label className="text-xs text-ink-muted">
                   Unit
-                  <select value={row.unit} onChange={(event) => update(index, { unit: event.target.value })} className={`${field} mt-1`}>
+                  <select
+                    value={row.unit}
+                    onChange={(event) => {
+                      const unit = event.target.value;
+                      // A store price is for one unit: in another, it is filled
+                      // again or cleared, never carried over.
+                      update(index, row.prices && (row.prices.homeDepot || row.prices.lowes) ? { unit, ...storePricing(row.prices, row.pick, unit, markupPercent) } : { unit });
+                    }}
+                    className={`${field} mt-1`}
+                  >
                     {PART_UNITS.map((unit) => (
                       <option key={unit} value={unit}>
                         {unit}
@@ -310,6 +415,52 @@ function PricingSheet({
                   />
                 </label>
               </div>
+              {row.prices && (row.prices.homeDepot || row.prices.lowes) ? (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label={`Store price for ${row.description}`}>
+                  <Tag className="h-3.5 w-3.5 text-ink-faint" aria-hidden />
+                  {STORE_NAMES.map((store) => {
+                    const price = row.prices?.[store];
+                    if (!price) return null;
+                    const picked = row.store === store;
+                    return (
+                      <span key={store} className="inline-flex items-center">
+                        <button
+                          type="button"
+                          aria-pressed={picked}
+                          onClick={() => {
+                            update(index, { pick: store, ...storePricing(row.prices, store, row.unit, markupPercent) });
+                            onPickStore(row.itemId, store);
+                          }}
+                          className={`tap-target inline-flex min-h-9 items-center rounded-l-chip border px-2.5 text-xs font-semibold ${
+                            picked ? "border-brand bg-brand/[0.12] text-ink" : "border-line text-ink-muted"
+                          }`}
+                        >
+                          {STORES[store].label} ${dollarsText(price.cents)}
+                          {price.per !== "each" ? `/${price.per}` : ""}
+                        </button>
+                        <a
+                          href={price.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Open ${STORES[store].label}'s page for ${price.product || row.description}`}
+                          className={`tap-target inline-flex min-h-9 min-w-9 items-center justify-center rounded-r-chip border border-l-0 text-ink-muted ${
+                            picked ? "border-brand" : "border-line"
+                          }`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                        </a>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : row.prices ? (
+                <p className="mt-2 text-xs text-ink-faint">No Home Depot or Lowe&apos;s price found: type the price.</p>
+              ) : null}
+              {row.prices && !row.store && chosenStorePrice(row.prices) ? (
+                <p className="mt-1.5 text-xs text-ink-faint">
+                  Store prices are per {chosenStorePrice(row.prices)?.price.per}: type the price per {row.unit}, or set the unit back.
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -321,7 +472,17 @@ function PricingSheet({
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              const result = await addListedParts(jobNumber, rows);
+              const result = await addListedParts(
+                jobNumber,
+                rows.map((row) => ({
+                  itemId: row.itemId,
+                  description: row.description,
+                  quantity: row.quantity,
+                  unit: row.unit,
+                  unitPrice: row.unitPrice,
+                  unitCost: row.unitCost,
+                })),
+              );
               if (result.error) setError(result.error);
               else onDone(result.notice ?? "Added to the estimate.");
             })
@@ -346,7 +507,7 @@ function PricingSheet({
   );
 }
 
-export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescription, hasLines }: Props) {
+export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercent, jobDescription, hasLines }: Props) {
   const [list, setList] = useState<MaterialList>(saved.list);
   const [messages, setMessages] = useState<ChatTurn[]>(saved.messages);
   const [draft, setDraft] = useState("");
@@ -361,9 +522,27 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   const [pricing, setPricing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [clearing, setClearing] = useState(false);
+  // Open or folded is decided once, as the page loads: adding items to the
+  // estimate gives the job lines, and that must not fold the chat shut under
+  // the person using it.
+  const [startsOpen] = useState(() => !hasContent(saved.list) || !hasLines);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [priceNote, setPriceNote] = useState("");
   const abort = useRef<AbortController | null>(null);
+  const lookup = useRef<AbortController | null>(null);
+  // The list as it is on screen now, for prices that arrive a minute later.
+  const listNow = useRef(list);
+  useEffect(() => {
+    listNow.current = list;
+  }, [list]);
 
-  useEffect(() => () => abort.current?.abort(), []);
+  useEffect(
+    () => () => {
+      abort.current?.abort();
+      lookup.current?.abort();
+    },
+    [],
+  );
 
   const writing = liveText !== null;
   const shown = writing ? parseMaterialList(liveText ?? "", "live") : list;
@@ -373,6 +552,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   const priceable = estimateItems(list);
   const picked = priceable.filter((item) => chosen.has(item.id));
   const listed = hasContent(list);
+  const unpriced = unpricedItems(list);
 
   // Writes to the saved list go one at a time, in the order they were made, so
   // an earlier edit can never land after a later one, and a revision waits for
@@ -432,6 +612,10 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   function startOver() {
     generation.current += 1;
     const asked = generation.current;
+    lookup.current?.abort();
+    lookup.current = null;
+    setLookingUp(false);
+    setPriceNote("");
     setClearing(true);
     setEditingId(null);
     setAddingTo(null);
@@ -466,8 +650,52 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
 
   // Keep a hand edit, and say so if it did not stick.
   function persist(next: MaterialList) {
+    // Before the screen catches up, so prices arriving in between land on this list.
+    listNow.current = next;
     setList(next);
     void saveList(next);
+  }
+
+  /*
+   * Look up Home Depot and Lowe's prices for what the list does not have a
+   * price for yet. The answer takes a while; when it comes, the prices go on
+   * the list as it is by then (only on items still there, and still the same
+   * thing) and are saved like any edit, in order, on the version this screen
+   * holds.
+   */
+  async function findPrices(from: MaterialList) {
+    if (!ai.connected) return;
+    const wanted = unpricedItems(from);
+    if (wanted.length === 0) return;
+    lookup.current?.abort();
+    const controller = new AbortController();
+    lookup.current = controller;
+    const madeOn = generation.current;
+    setLookingUp(true);
+    setPriceNote("");
+    try {
+      const response = await fetch(`/api/jobs/${encodeURIComponent(jobNumber)}/materials-prices`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items: wanted.map(({ id, qty, name, note }) => ({ id, qty, name, note })) }),
+        signal: controller.signal,
+      });
+      const body = (await response.json().catch(() => ({}))) as { prices?: Record<string, ItemPrices>; error?: string | null };
+      if (controller.signal.aborted) return;
+      const found = body.prices ?? {};
+      if (madeOn === generation.current && Object.keys(found).length > 0) {
+        persist(applyPrices(listNow.current, found));
+      }
+      if (body.error) setPriceNote(body.error);
+      else if (!response.ok) setPriceNote("Store prices could not be looked up just now. Try again.");
+    } catch {
+      if (!controller.signal.aborted) setPriceNote("Store prices could not be looked up just now. Try again.");
+    } finally {
+      if (lookup.current === controller) {
+        lookup.current = null;
+        setLookingUp(false);
+      }
+    }
   }
 
   async function send(prompt: string) {
@@ -482,8 +710,14 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
     setPendingPrompt(text);
     setLiveText("");
     setDraft("");
+    // Prices are looked up again for whatever the new answer holds.
+    lookup.current?.abort();
+    lookup.current = null;
+    setLookingUp(false);
+    setPriceNote("");
     const controller = new AbortController();
     abort.current = controller;
+    let answered: MaterialList | null = null;
 
     try {
       const askedOn = generation.current;
@@ -533,8 +767,10 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
       if (result.error || !result.list) throw new Error(result.error || "No list came back. Try again.");
       version.current = result.updatedAt ?? version.current;
       setList(result.list);
+      listNow.current = result.list;
       setMessages(result.messages ?? []);
       setChosen(new Set());
+      answered = result.list;
     } catch (problem) {
       if (controller.signal.aborted) return;
       setError(problem instanceof Error ? problem.message : "The list could not be written just now. Try again.");
@@ -544,6 +780,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
       setPendingPrompt("");
       abort.current = null;
     }
+    if (answered) void findPrices(answered);
   }
 
   // Everything before the latest request is history; the latest request sits
@@ -553,7 +790,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   const lastPrompt = lastAsked >= 0 ? messages[lastAsked] : undefined;
 
   return (
-    <details id="materials-chat" className="group scroll-mt-24" open={!listed || !hasLines}>
+    <details id="materials-chat" className="group scroll-mt-24" open={startsOpen}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 text-sm font-semibold">
@@ -616,7 +853,9 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
                     return next;
                   })
                 }
-                onSaveItem={(item) => {
+                onSaveItem={(edited) => {
+                  // A new name or unit is a different thing: its old store prices go.
+                  const item = withCurrentPrices(edited);
                   persist(mapItems(list, (blockItems) => blockItems.map((each) => (each.id === item.id ? item : each))));
                   setEditingId(null);
                 }}
@@ -644,12 +883,51 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
           </div>
         ) : null}
 
+        {/* Store prices: being looked up, why some are missing, or how to get them. */}
+        {listed && !writing ? (
+          lookingUp ? (
+            <p className="mt-2 flex items-center gap-2 text-xs text-ink-muted" role="status">
+              <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              Finding Home Depot and Lowe&apos;s prices…
+            </p>
+          ) : ai.connected ? (
+            priceNote || unpriced.length > 0 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {priceNote ? <p className="text-xs text-ink-muted">{priceNote}</p> : null}
+                {unpriced.length > 0 && !clearing && !pricing ? (
+                  <button
+                    type="button"
+                    onClick={() => void findPrices(list)}
+                    className="tap-target inline-flex min-h-10 items-center gap-1.5 text-xs font-semibold text-brand"
+                  >
+                    <Tag className="h-3.5 w-3.5" aria-hidden />
+                    Find store prices for {unpriced.length} {unpriced.length === 1 ? "item" : "items"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null
+          ) : (
+            // The link to connect one is in the line at the bottom.
+            <p className="mt-2 text-xs text-ink-faint">
+              Home Depot and Lowe&apos;s prices are filled in once {canConnect ? "you connect" : "the owner connects"} a ChatGPT key.
+            </p>
+          )
+        ) : null}
+
         {listed && !writing ? (
           choosing ? (
             pricing ? (
               <PricingSheet
                 jobNumber={jobNumber}
                 items={picked}
+                markupPercent={markupPercent}
+                onPickStore={(itemId, store) =>
+                  persist(
+                    mapItems(listNow.current, (blockItems) =>
+                      blockItems.map((each) => (each.id === itemId && each.prices ? { ...each, prices: { ...each.prices, use: store } } : each)),
+                    ),
+                  )
+                }
                 onCancel={() => setPricing(false)}
                 onDone={(message) => {
                   setPricing(false);
@@ -668,13 +946,22 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
                 >
                   {picked.length > 0 && picked.length === priceable.length ? "Clear" : "Choose all"}
                 </button>
+                {/* The sheet is filled from the prices on the list as it opens, so it
+                    waits for a lookup still running rather than open half empty. */}
                 <button
                   type="button"
-                  disabled={picked.length === 0}
+                  disabled={picked.length === 0 || lookingUp}
                   onClick={() => setPricing(true)}
                   className="tap-target ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
                 >
-                  Price {picked.length || ""} for the estimate
+                  {lookingUp ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                      Finding prices…
+                    </>
+                  ) : (
+                    `Price ${picked.length || ""} for the estimate`
+                  )}
                 </button>
                 <button type="button" onClick={() => setChoosing(false)} aria-label="Stop choosing" className="tap-target inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted">
                   <X className="h-4 w-4" aria-hidden />
