@@ -97,6 +97,14 @@ export function unbilledLines<T extends Pick<BillableLine, "invoiceId">>(
   return lines.filter((line) => !line.invoiceId || !live.has(line.invoiceId));
 }
 
+/** What the work no live invoice has billed comes to. */
+export function unbilledCents(
+  lines: readonly Pick<BillableLine, "invoiceId" | "quantity" | "unitPriceCents">[],
+  invoices: readonly Pick<InvoiceStanding, "id" | "status">[],
+): number {
+  return centsOf(unbilledLines(lines, invoices));
+}
+
 export type BillingStep =
   /** Nothing priced is waiting to be billed. */
   | { kind: "nothing" }

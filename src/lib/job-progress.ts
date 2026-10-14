@@ -50,6 +50,8 @@ export type ProgressInput = {
   materialsReadyAt?: string | null;
   agreement: { sent: boolean; signed: boolean } | null;
   invoices: { status: string; lastSentAt: string | null; paidAt: string | null; previewSentAt?: string | null }[];
+  /** Priced work no live invoice has billed yet, in cents. */
+  unbilledCents?: number;
   /** For the "Priced at" note. */
   formatMoney: (cents: number) => string;
 };
@@ -67,6 +69,9 @@ export function jobProgress(input: ProgressInput): { steps: ProgressStep[]; next
   const sent = live.filter((invoice) => invoice.status !== "draft" || Boolean(invoice.lastSentAt));
   const allPaid = live.length > 0 && live.every((invoice) => invoice.status === "paid" || Boolean(invoice.paidAt));
   const previewed = live.some((invoice) => Boolean(invoice.previewSentAt));
+  // Work added after the invoice went out: billed on its own, so the job is
+  // not finished until it is.
+  const moreToBill = sent.length > 0 && (input.unbilledCents ?? 0) > 0;
 
   const estimate: ProgressStep = diagnostic
     ? { key: "estimate", label: "Estimate", state: "done", note: "The diagnostic fee is the price", href: "#work-materials", action: null }
@@ -146,7 +151,16 @@ export function jobProgress(input: ProgressInput): { steps: ProgressStep[]; next
    * once the work is done. The step is only finished by the real one.
    */
   const invoice: ProgressStep =
-    sent.length > 0
+    moreToBill
+      ? {
+          key: "invoice",
+          label: "Invoice",
+          state: "current",
+          note: `${input.formatMoney(input.unbilledCents ?? 0)} of work added since the last invoice`,
+          href: "#billing",
+          action: go("Invoice the difference", "#billing"),
+        }
+      : sent.length > 0
       ? { key: "invoice", label: "Invoice", state: "done", note: "Sent to the customer", href: "#billing", action: null }
       : live.length > 0
         ? completed
@@ -202,7 +216,9 @@ export function jobProgress(input: ProgressInput): { steps: ProgressStep[]; next
               action: go("Add work & materials", "#work-materials"),
             };
 
-  const paid: ProgressStep = allPaid
+  const paid: ProgressStep = allPaid && moreToBill
+    ? { key: "paid", label: "Paid", state: "todo", note: "Paid so far; there is more to bill", href: "#billing", action: null }
+    : allPaid
     ? { key: "paid", label: "Paid", state: "done", note: "Paid in full", href: "#billing", action: null }
     : sent.length > 0
       ? {

@@ -26,7 +26,7 @@ import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import type { AgreementState } from "@/lib/job-stage";
 import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
-import { unbilledLines } from "@/lib/job-billing";
+import { unbilledCents, unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
 import { reservedStock } from "@/lib/job-billing-server";
 import {
@@ -414,6 +414,7 @@ export type JobProgressFacts = {
   partCount: number;
   materialsReadyAt: string | null;
   invoices: { status: string; lastSentAt: string | null; paidAt: string | null; previewSentAt: string | null }[];
+  unbilledCents: number;
 };
 
 /**
@@ -427,7 +428,7 @@ export async function getJobProgressFacts(): Promise<Record<string, JobProgressF
   const { data, error } = await context.database
     .from("jobs")
     .select(
-      "job_number, materials_ready_at, job_line_items ( kind, quantity, unit_price_cents ), invoices ( status, last_sent_at, paid_at, preview_sent_at )",
+      "job_number, materials_ready_at, job_line_items ( kind, quantity, unit_price_cents, invoice_id ), invoices ( id, status, last_sent_at, paid_at, preview_sent_at )",
     )
     .eq("organization_id", context.organizationId)
     .is("archived_at", null);
@@ -462,6 +463,14 @@ export async function getJobProgressFacts(): Promise<Record<string, JobProgressF
         paidAt: text(invoice.paid_at),
         previewSentAt: text(invoice.preview_sent_at),
       })),
+      unbilledCents: unbilledCents(
+        lines.map((line) => ({
+          invoiceId: text(line.invoice_id),
+          quantity: Number(line.quantity ?? 0),
+          unitPriceCents: Number(line.unit_price_cents ?? 0),
+        })),
+        invoices.map((invoice) => ({ id: String(invoice.id ?? ""), status: String(invoice.status ?? "") })),
+      ),
     };
   }
   return facts;

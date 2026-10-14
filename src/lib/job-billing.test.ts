@@ -10,6 +10,7 @@ import {
   type BillableLine,
   type ContractStanding,
   type InvoiceStanding,
+  unbilledCents,
 } from "./job-billing.ts";
 
 const line = (id: string, cents: number, invoiceId: string | null, createdAt: string, quantity = 1): BillableLine => ({
@@ -192,3 +193,18 @@ test("a missing name is a blank to fill in, and typed braces are not", () => {
   assert.deepEqual(filled.unfilled, ["customer_name"]);
   assert.match(filled.body, /Relabel \{customer_name\} panel/);
 });
+
+test("work added after an invoice went out is what is left to bill; a voided invoice bills nothing", () => {
+  const invoices = [
+    { id: "inv-sent", status: "sent" },
+    { id: "inv-void", status: "void" },
+  ];
+  const lines = [
+    { invoiceId: "inv-sent", quantity: 4, unitPriceCents: 12_500 },
+    { invoiceId: null, quantity: 1, unitPriceCents: 8_050 },
+    { invoiceId: "inv-void", quantity: 2, unitPriceCents: 1_000 },
+  ];
+  assert.equal(unbilledCents(lines, invoices), 10_050);
+  assert.equal(unbilledCents(lines.slice(0, 1), invoices), 0, "everything billed");
+});
+

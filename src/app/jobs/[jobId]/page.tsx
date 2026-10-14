@@ -32,7 +32,7 @@ import { getJobConversation, getMessagingContext } from "@/lib/messaging";
 import { getJobInvoices, getJobLines, getJobStock, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
-import { agreementChanges } from "@/lib/job-billing";
+import { agreementChanges, unbilledCents } from "@/lib/job-billing";
 import { isProgressKey, jobProgress } from "@/lib/job-progress";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
@@ -184,6 +184,10 @@ export default async function JobDetailPage({
       paidAt: invoice.paidAt,
       previewSentAt: invoice.previewSentAt,
     })),
+    unbilledCents: unbilledCents(
+      lines.map((line) => ({ invoiceId: line.invoiceId ?? null, quantity: line.quantity, unitPriceCents: line.unitPriceCents })),
+      invoices,
+    ),
     formatMoney: formatCents,
   });
   // The step a job card was tapped on, opened here with what finishes it.

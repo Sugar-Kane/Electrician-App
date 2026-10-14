@@ -74,6 +74,7 @@ function stepChips(job: PilotJob, stage: JobStage, facts: JobProgressFacts | und
     materialsReadyAt: facts?.materialsReadyAt ?? null,
     agreement: agreement ? { sent: agreement.sent, signed: agreement.signed } : null,
     invoices: facts?.invoices ?? [],
+    unbilledCents: facts?.unbilledCents ?? 0,
     formatMoney: formatCents,
   });
   const chips: StepChip[] = [];

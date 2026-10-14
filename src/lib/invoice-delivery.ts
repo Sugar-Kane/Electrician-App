@@ -53,7 +53,7 @@ export async function deliverInvoice(input: {
 
   // Read off the invoice itself, so the link and the STOP check do not depend
   // on every caller (the screen, the assistant, ChatGPT) remembering them.
-  const { data: owner } = await database
+  const { data: owner, error: ownerError } = await database
     .from("invoices")
     .select("preview_token, jobs ( customer_id )")
     .eq("id", input.invoiceId)
@@ -61,10 +61,12 @@ export async function deliverInvoice(input: {
     .maybeSingle();
   const ownerRow = (owner ?? null) as Record<string, unknown> | null;
   const ownerJob = (Array.isArray(ownerRow?.jobs) ? ownerRow?.jobs[0] : ownerRow?.jobs) as { customer_id?: unknown } | null;
-  const customerId =
-    input.customerId ||
-    (typeof ownerJob?.customer_id === "string" ? ownerJob.customer_id : "") ||
-    (await customerByPhone(database, input.organizationId, input.customerPhone));
+  const found =
+    input.customerId || (typeof ownerJob?.customer_id === "string" ? ownerJob.customer_id : "")
+      ? { id: input.customerId || String(ownerJob?.customer_id), unknown: false }
+      : ownerError
+        ? { id: "", unknown: true }
+        : await customerByPhone(database, input.organizationId, input.customerPhone);
   const facts: InvoiceFacts = {
     ...input.facts,
     viewUrl:
@@ -98,12 +100,19 @@ export async function deliverInvoice(input: {
       });
     } else if (!input.customerPhone) {
       note({ channel: "sms", to: "", ok: false, detail: "No phone number on this customer." });
-    } else if (customerId && (await optedOut(database, input.organizationId, customerId))) {
+    } else if (found.unknown) {
       note({
         channel: "sms",
         to: input.customerPhone,
         ok: false,
-        detail: "This customer replied STOP, so no text was sent.",
+        detail: "Could not check whether this customer replied STOP, so no text was sent. Try again.",
+      });
+    } else if (found.id && (await optedOut(database, input.organizationId, found.id)) !== "clear") {
+      note({
+        channel: "sms",
+        to: input.customerPhone,
+        ok: false,
+        detail: "This customer replied STOP, or it could not be checked, so no text was sent.",
       });
     } else {
       const result = await sendSms({
@@ -184,13 +193,17 @@ export async function deliverInvoice(input: {
   return attempts;
 }
 
-/** A customer whose last word on texts was STOP. */
+/**
+ * Whether a customer's last word on texts was STOP. "unknown" when the record
+ * could not be read, which the caller treats as STOP: a text is never sent on
+ * a guess.
+ */
 async function optedOut(
   database: ReturnType<typeof getSupabaseAdmin>,
   organizationId: string,
   customerId: string,
-): Promise<boolean> {
-  const { data } = await database
+): Promise<"stopped" | "clear" | "unknown"> {
+  const { data, error } = await database
     .from("messaging_consent")
     .select("opted_in_at, opted_out_at")
     .eq("organization_id", organizationId)
@@ -198,9 +211,12 @@ async function optedOut(
     .eq("channel", "sms")
     .eq("scope", "transactional")
     .maybeSingle();
+  if (error) return "unknown";
   return repliedStop(
     data ? { optedInAt: data.opted_in_at ? String(data.opted_in_at) : null, optedOutAt: data.opted_out_at ? String(data.opted_out_at) : null } : null,
-  );
+  )
+    ? "stopped"
+    : "clear";
 }
 
 /** The business's customer with this number, for an invoice with no job to say whose it is. */
@@ -208,16 +224,17 @@ async function customerByPhone(
   database: ReturnType<typeof getSupabaseAdmin>,
   organizationId: string,
   phone: string,
-): Promise<string> {
-  if (!phone) return "";
-  const { data } = await database
+): Promise<{ id: string; unknown: boolean }> {
+  if (!phone) return { id: "", unknown: false };
+  const { data, error } = await database
     .from("customers")
     .select("id")
     .eq("organization_id", organizationId)
     .eq("phone", phone)
     .limit(1)
     .maybeSingle();
-  return typeof data?.id === "string" ? data.id : "";
+  if (error) return { id: "", unknown: true };
+  return { id: typeof data?.id === "string" ? data.id : "", unknown: false };
 }
 
 export { describeDelivery } from "@/lib/invoice-messages";
