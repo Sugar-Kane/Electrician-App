@@ -67,13 +67,30 @@ export async function saveMaterialList(
   return { error: "The change could not be saved. Try again." };
 }
 
-export async function clearMaterialList(jobNumber: string): Promise<MaterialListActionState> {
+/**
+ * Clear the list and the chat, as they were at version `expectedUpdatedAt`.
+ * A list saved somewhere else since is not cleared; it comes back instead.
+ */
+export async function clearMaterialList(jobNumber: string, expectedUpdatedAt: string | null): Promise<MaterialListActionState> {
   const context = await jobFor(jobNumber);
   if (!context) return { error: "That job could not be found." };
-  const { error } = await context.supabase
-    .from("job_material_lists")
-    .delete()
-    .eq("job_id", context.jobId)
-    .eq("organization_id", context.organizationId);
-  return error ? { error: "The list could not be cleared. Try again." } : { error: "" };
+  if (typeof expectedUpdatedAt === "string") {
+    const { data, error } = await context.supabase
+      .from("job_material_lists")
+      .delete()
+      .eq("job_id", context.jobId)
+      .eq("organization_id", context.organizationId)
+      .eq("updated_at", expectedUpdatedAt)
+      .select("id");
+    if (error) return { error: "The list could not be cleared. Try again." };
+    if (Array.isArray(data) && data.length > 0) return { error: "", updatedAt: null };
+  }
+  // Nothing matched the version this screen had: either there is no list, or
+  // it was saved somewhere else since.
+  const current = await readMaterialList(context.supabase, context.jobId);
+  if (!current.updatedAt) return { error: "", updatedAt: null };
+  return {
+    error: "This list was changed somewhere else, so it was not cleared. This is the list as it is now.",
+    current,
+  };
 }

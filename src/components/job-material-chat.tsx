@@ -410,7 +410,12 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
     setAddingTo(null);
     void inOrder(async () => {
       try {
-        const result = await clearMaterialList(jobNumber);
+        const result = await clearMaterialList(jobNumber, version.current);
+        if (result.current) {
+          adopt(result.current);
+          setError(result.error);
+          return;
+        }
         if (result.error) {
           // The list stays; whatever was dropped is saved again before the next change is asked for.
           unsaved.current = true;
