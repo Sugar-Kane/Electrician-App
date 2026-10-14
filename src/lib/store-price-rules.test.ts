@@ -6,6 +6,7 @@ import {
   chosenStorePrice,
   customerPriceCents,
   readStorePrices,
+  storePricing,
   storeProductUrl,
   type ItemPrices,
 } from "./store-price-rules.ts";
@@ -84,6 +85,20 @@ test("the customer pays the store price plus the markup, to the nearest cent", (
   assert.equal(customerPriceCents(598, 0), 598);
   assert.equal(customerPriceCents(598, 12.5), 673);
   assert.equal(customerPriceCents(100, -20), 100);
+});
+
+test("a store price fills a row only in the unit it is for: a new unit never keeps a per-foot price", () => {
+  const prices: ItemPrices = {
+    key: "k",
+    checkedAt: "t",
+    homeDepot: { cents: 78, url: HD, product: "", per: "ft" },
+    lowes: { cents: 92, url: LOWES, product: "", per: "ft" },
+  };
+  assert.deepEqual(storePricing(prices, null, "ft", 20), { unitPrice: "1.10", unitCost: "0.92", store: "lowes" });
+  assert.deepEqual(storePricing(prices, "lowes", "roll", 20), { unitPrice: "", unitCost: "", store: null });
+  assert.deepEqual(storePricing(prices, null, "each", 20), { unitPrice: "", unitCost: "", store: null });
+  assert.deepEqual(storePricing(prices, "homeDepot", "ft", 20), { unitPrice: "0.94", unitCost: "0.78", store: "homeDepot" });
+  assert.deepEqual(storePricing(undefined, null, "ft", 20), { unitPrice: "", unitCost: "", store: null });
 });
 
 test("prices stay with an item only while it is the same thing", () => {

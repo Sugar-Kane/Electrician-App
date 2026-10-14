@@ -41,8 +41,8 @@ import {
   STORE_NAMES,
   STORES,
   chosenStorePrice,
-  customerPriceCents,
   dollarsText,
+  storePricing,
   type ItemPrices,
   type StoreName,
 } from "@/lib/store-price-rules";
@@ -312,14 +312,8 @@ function ListView({
   );
 }
 
-type PricedRow = ListedPart & { prices?: ItemPrices; store: StoreName | null };
-
-/** The customer's price and the cost, from one store's price for the item. */
-function fromStore(prices: ItemPrices | undefined, store: StoreName | null, markupPercent: number) {
-  const price = store && prices ? prices[store] : null;
-  if (!price) return { unitPrice: "", unitCost: "", store: null };
-  return { unitPrice: dollarsText(customerPriceCents(price.cents, markupPercent)), unitCost: dollarsText(price.cents), store };
-}
+/** A row on the sheet, with the store prices it can be filled from and the store picked. */
+type PricedRow = ListedPart & { prices?: ItemPrices; pick: StoreName | null; store: StoreName | null };
 
 function PricingSheet({
   jobNumber,
@@ -340,14 +334,15 @@ function PricingSheet({
   const [rows, setRows] = useState<PricedRow[]>(() =>
     items.map((item) => {
       const line = estimateLineFor(item);
-      const chosen = chosenStorePrice(item.prices);
+      const pick = item.prices?.use ?? null;
       return {
         itemId: item.id,
         description: line.description,
         quantity: line.quantity,
         unit: line.unit,
         prices: item.prices,
-        ...fromStore(item.prices, chosen?.store ?? null, markupPercent),
+        pick,
+        ...storePricing(item.prices, pick, line.unit, markupPercent),
       };
     }),
   );
@@ -392,7 +387,16 @@ function PricingSheet({
                 </label>
                 <label className="text-xs text-ink-muted">
                   Unit
-                  <select value={row.unit} onChange={(event) => update(index, { unit: event.target.value })} className={`${field} mt-1`}>
+                  <select
+                    value={row.unit}
+                    onChange={(event) => {
+                      const unit = event.target.value;
+                      // A store price is for one unit: in another, it is filled
+                      // again or cleared, never carried over.
+                      update(index, row.prices && (row.prices.homeDepot || row.prices.lowes) ? { unit, ...storePricing(row.prices, row.pick, unit, markupPercent) } : { unit });
+                    }}
+                    className={`${field} mt-1`}
+                  >
                     {PART_UNITS.map((unit) => (
                       <option key={unit} value={unit}>
                         {unit}
@@ -424,7 +428,7 @@ function PricingSheet({
                           type="button"
                           aria-pressed={picked}
                           onClick={() => {
-                            update(index, fromStore(row.prices, store, markupPercent));
+                            update(index, { pick: store, ...storePricing(row.prices, store, row.unit, markupPercent) });
                             onPickStore(row.itemId, store);
                           }}
                           className={`tap-target inline-flex min-h-9 items-center rounded-l-chip border px-2.5 text-xs font-semibold ${
@@ -451,6 +455,11 @@ function PricingSheet({
                 </div>
               ) : row.prices ? (
                 <p className="mt-2 text-xs text-ink-faint">No Home Depot or Lowe&apos;s price found: type the price.</p>
+              ) : null}
+              {row.prices && !row.store && chosenStorePrice(row.prices) ? (
+                <p className="mt-1.5 text-xs text-ink-faint">
+                  Store prices are per {chosenStorePrice(row.prices)?.price.per}: type the price per {row.unit}, or set the unit back.
+                </p>
               ) : null}
             </li>
           ))}

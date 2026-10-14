@@ -11,14 +11,20 @@ import { readStorePrices, type ItemPrices, type PriceRejection, type RequestedIt
  * and says what one of each item costs, and the rules in store-price-rules
  * decide which of those answers to believe.
  *
- * A few items to a search, a few searches at once, so a whole list comes back
- * in about the time one answer takes.
+ * A few items to a search, all the searches at once, against one deadline, so
+ * a whole list comes back in about the time one answer takes and always
+ * inside the route's limit, with whatever was found by then.
  */
 
 /** The most items looked up in one go. */
 export const MAX_PRICED_ITEMS = 40;
 const PER_SEARCH = 5;
-const AT_ONCE = 4;
+/** Every search at once: a lookup has to finish inside the route's two minutes. */
+const AT_ONCE = MAX_PRICED_ITEMS / PER_SEARCH;
+/** How long a whole lookup may take, leaving the route time to answer. */
+const LOOKUP_MS = 100_000;
+/** A search started with less time than this would only be cut off. */
+const LEAST_MS = 15_000;
 
 const INSTRUCTIONS = [
   "You look up what electrical materials cost today at Home Depot (homedepot.com) and Lowe's (lowes.com), for a licensed electrician buying them for a job.",
@@ -89,8 +95,16 @@ export async function lookUpStorePrices(input: {
   let keyRefused = false;
   let searches = 0;
   let sources = 0;
+  const deadline = Date.now() + LOOKUP_MS;
+  const tooSlow = "Some prices took too long to look up. Try again for the rest.";
 
   const run = async (batch: Asked[]) => {
+    const left = deadline - Date.now();
+    if (left < LEAST_MS) {
+      error ??= tooSlow;
+      return;
+    }
+    const timeout = AbortSignal.timeout(left);
     try {
       const answer = await searchOpenAiWeb({
         key: input.key,
@@ -100,7 +114,7 @@ export async function lookUpStorePrices(input: {
         allowedDomains: ["homedepot.com", "lowes.com"],
         place: { city: input.place.city, region: input.place.region },
         maxTokens: 12_000,
-        signal: input.signal ? AbortSignal.any([input.signal, AbortSignal.timeout(100_000)]) : AbortSignal.timeout(100_000),
+        signal: input.signal ? AbortSignal.any([input.signal, timeout]) : timeout,
       });
       if (answer.searched) searches += 1;
       sources += answer.sources.length;
@@ -110,7 +124,9 @@ export async function lookUpStorePrices(input: {
       if (!answer.searched) error ??= "ChatGPT answered without searching the stores, so those prices were not used. Try again.";
     } catch (caught) {
       if (input.signal?.aborted) return;
-      if (caught instanceof OpenAiRefusal) {
+      if (timeout.aborted) {
+        error ??= tooSlow;
+      } else if (caught instanceof OpenAiRefusal) {
         keyRefused = true;
         error = caught.message;
       } else if (caught instanceof ReplyCutOff) {
@@ -122,8 +138,6 @@ export async function lookUpStorePrices(input: {
     }
   };
 
-  // A few searches at a time: each takes a while, and a key on a low OpenAI
-  // tier is limited in how many it may run at once.
   const queue = [...batches];
   await Promise.all(
     Array.from({ length: Math.min(AT_ONCE, queue.length) }, async () => {

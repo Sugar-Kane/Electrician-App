@@ -230,3 +230,25 @@ export function customerPriceCents(costCents: number, markupPercent: number): nu
 export function dollarsText(cents: number): string {
   return (cents / 100).toFixed(2);
 }
+
+/**
+ * A pricing row filled from a store price: the customer's price and the cost,
+ * as typed figures, in the unit the row is counted in. Blank when the store's
+ * price is for something else (a price per foot is not a price per roll), so
+ * a changed unit never carries a figure meant for another one.
+ */
+export function storePricing(
+  prices: ItemPrices | null | undefined,
+  store: StoreName | null,
+  unit: string,
+  markupPercent: number,
+): { unitPrice: string; unitCost: string; store: StoreName | null } {
+  const picked = prices && store ? prices[store] : null;
+  const chosen = picked ? { store: store as StoreName, price: picked } : chosenStorePrice(prices);
+  if (!chosen || chosen.price.per !== unit) return { unitPrice: "", unitCost: "", store: null };
+  return {
+    unitPrice: dollarsText(customerPriceCents(chosen.price.cents, markupPercent)),
+    unitCost: dollarsText(chosen.price.cents),
+    store: chosen.store,
+  };
+}
