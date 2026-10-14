@@ -1,5 +1,5 @@
 import { noteOpenAiKeyUse, openAiKeyFor } from "@/lib/ai-key";
-import { claudeIsConfigured, streamMaterialList } from "@/lib/claude";
+import { builtInAiOutOfCredit, claudeIsConfigured, streamMaterialList } from "@/lib/claude";
 import {
   carryPrices,
   hasContent,
@@ -142,14 +142,17 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
         }
         // A reply that ran out of room is not the key's fault: the key worked.
         const cutOff = error instanceof ReplyCutOff;
+        const noCredit = !ownKey && builtInAiOutOfCredit(error);
         const reason = cutOff
           ? "The list was too long to finish in one answer, so it was not kept. Ask for a shorter list, or for one part of the job at a time."
           : error instanceof OpenAiRefusal
             ? error.message
-            : ownKey
-              ? "ChatGPT stopped before the list was finished. Try again."
-              : "The list could not be written just now. Try again.";
-        console.error("materials chat failed", { jobId, source, error: String(error) });
+            : noCredit
+              ? "Volteira's built-in AI is out of credit right now, so the list can't be written. Connect your ChatGPT key in Settings → Integrations to write lists on your own account."
+              : ownKey
+                ? "ChatGPT stopped before the list was finished. Try again."
+                : "The list could not be written just now. Try again.";
+        console.error(noCredit ? "materials chat failed: built-in AI out of credit" : "materials chat failed", { jobId, source, error: String(error) });
         if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, cutOff ? null : reason);
         finish({ error: reason });
         return;

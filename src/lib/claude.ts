@@ -1014,6 +1014,14 @@ export async function runAssistantTurn(input: {
 }
 
 /**
+ * Whether the built-in AI refused because its account has run out of prepaid
+ * credit: nothing a retry can fix, so the person is told what is wrong.
+ */
+export function builtInAiOutOfCredit(error: unknown): boolean {
+  return error instanceof Anthropic.APIError && /credit balance is too low/i.test(error.message);
+}
+
+/**
  * A materials list, written as it is read, for a business that has not
  * connected its own ChatGPT key. Same instructions and the same plain-text
  * format as the OpenAI path, so the list reads the same whichever wrote it.
