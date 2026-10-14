@@ -513,6 +513,10 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   const [pricing, setPricing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [clearing, setClearing] = useState(false);
+  // Open or folded is decided once, as the page loads: adding items to the
+  // estimate gives the job lines, and that must not fold the chat shut under
+  // the person using it.
+  const [startsOpen] = useState(() => !hasContent(saved.list) || !hasLines);
   const [lookingUp, setLookingUp] = useState(false);
   const [priceNote, setPriceNote] = useState("");
   const abort = useRef<AbortController | null>(null);
@@ -775,7 +779,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   const lastPrompt = lastAsked >= 0 ? messages[lastAsked] : undefined;
 
   return (
-    <details id="materials-chat" className="group scroll-mt-24" open={!listed || !hasLines}>
+    <details id="materials-chat" className="group scroll-mt-24" open={startsOpen}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 text-sm font-semibold">
