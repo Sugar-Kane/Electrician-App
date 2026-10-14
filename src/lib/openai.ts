@@ -175,6 +175,9 @@ export async function searchOpenAiWeb(input: {
     instructions: input.instructions,
     input: input.prompt,
     tools: [{ type: "web_search", filters: { allowed_domains: input.allowedDomains }, user_location: location }],
+    // Searching is the point: left to choose, a model can answer from memory,
+    // and an answer with no search behind it is thrown away.
+    tool_choice: "required",
     include: ["web_search_call.action.sources"],
     max_output_tokens: input.maxTokens,
   };
