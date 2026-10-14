@@ -80,6 +80,7 @@ export async function saveOpenAiKey(input: {
         model,
         created_by: input.userId || null,
         updated_at: now,
+        last_used_at: null,
         last_error: null,
       },
       { onConflict: "organization_id" },

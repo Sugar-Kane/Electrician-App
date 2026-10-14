@@ -405,10 +405,14 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
   // and an edit queued before it is dropped rather than bringing the list back.
   function startOver() {
     generation.current += 1;
+    const asked = generation.current;
     setClearing(true);
     setEditingId(null);
     setAddingTo(null);
     void inOrder(async () => {
+      // A save still in flight found a newer list and put it on screen: that
+      // list is not the one Start over was asked for, so it is left alone.
+      if (asked !== generation.current) return;
       try {
         const result = await clearMaterialList(jobNumber, version.current);
         if (result.current) {
@@ -455,10 +459,19 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
     abort.current = controller;
 
     try {
+      const askedOn = generation.current;
       await saving.current;
+      // The list was swapped for a newer one from somewhere else while the
+      // last edit was saving: ask about that list only once it has been seen.
+      if (askedOn !== generation.current) {
+        throw new Error("The list was changed somewhere else. This is the list as it is now; send your message again to change it.");
+      }
       // A revision starts from the list on screen, so an edit the server
       // refused is tried once more, and nothing is asked until it is kept.
       if (unsaved.current) await saveList(list);
+      if (askedOn !== generation.current) {
+        throw new Error("The list was changed somewhere else. This is the list as it is now; send your message again to change it.");
+      }
       if (unsaved.current) {
         throw new Error("Your last edit to the list was not saved, so nothing was asked yet. Try again in a moment.");
       }
