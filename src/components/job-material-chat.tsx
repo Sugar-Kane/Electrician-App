@@ -273,44 +273,47 @@ function PricingSheet({
     <div className="mt-4 rounded-control border border-line bg-white/[0.02] p-3">
       <p className="text-sm font-semibold">Price each item for the estimate</p>
       <p className="mt-0.5 text-xs text-ink-muted">What the customer pays for one. Type 0 for no charge.</p>
-      <ul className="mt-3 space-y-3">
-        {rows.map((row, index) => (
-          <li key={row.itemId} className="rounded-control border border-line p-2.5">
-            <input
-              value={row.description}
-              onChange={(event) => update(index, { description: event.target.value })}
-              aria-label="Description"
-              className={field}
-            />
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              <label className="text-xs text-ink-muted">
-                Qty
-                <input value={row.quantity} inputMode="decimal" onChange={(event) => update(index, { quantity: event.target.value })} className={`${field} mt-1`} />
-              </label>
-              <label className="text-xs text-ink-muted">
-                Unit
-                <select value={row.unit} onChange={(event) => update(index, { unit: event.target.value })} className={`${field} mt-1`}>
-                  {PART_UNITS.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs text-ink-muted">
-                Price each
-                <input
-                  value={row.unitPrice}
-                  inputMode="decimal"
-                  placeholder="$"
-                  onChange={(event) => update(index, { unitPrice: event.target.value })}
-                  className={`${field} mt-1`}
-                />
-              </label>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {/* Locked while adding: what is added is exactly what is shown. */}
+      <fieldset disabled={pending} className="contents">
+        <ul className="mt-3 space-y-3 [&_:disabled]:opacity-60">
+          {rows.map((row, index) => (
+            <li key={row.itemId} className="rounded-control border border-line p-2.5">
+              <input
+                value={row.description}
+                onChange={(event) => update(index, { description: event.target.value })}
+                aria-label="Description"
+                className={field}
+              />
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <label className="text-xs text-ink-muted">
+                  Qty
+                  <input value={row.quantity} inputMode="decimal" onChange={(event) => update(index, { quantity: event.target.value })} className={`${field} mt-1`} />
+                </label>
+                <label className="text-xs text-ink-muted">
+                  Unit
+                  <select value={row.unit} onChange={(event) => update(index, { unit: event.target.value })} className={`${field} mt-1`}>
+                    {PART_UNITS.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs text-ink-muted">
+                  Price each
+                  <input
+                    value={row.unitPrice}
+                    inputMode="decimal"
+                    placeholder="$"
+                    onChange={(event) => update(index, { unitPrice: event.target.value })}
+                    className={`${field} mt-1`}
+                  />
+                </label>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
       {error ? <p className="mt-2 text-sm text-critical">{error}</p> : null}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
