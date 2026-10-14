@@ -168,6 +168,15 @@ export async function addJobLine(
 
   if (error || !created) return { error: "That line could not be saved." };
 
+  // A part added after the materials were marked ready has not been gathered.
+  if (kind === "material") {
+    await context.supabase
+      .from("jobs")
+      .update({ materials_ready_at: null })
+      .eq("id", context.jobId)
+      .not("materials_ready_at", "is", null);
+  }
+
   /*
    * A part on a job that is still open is reserved, not taken.
    *

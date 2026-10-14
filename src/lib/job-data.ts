@@ -26,7 +26,7 @@ import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import type { AgreementState } from "@/lib/job-stage";
 import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
-import { unbilledLines } from "@/lib/job-billing";
+import { unbilledCents, unbilledLines } from "@/lib/job-billing";
 import { jobLineTotals } from "@/lib/job-lines";
 import { reservedStock } from "@/lib/job-billing-server";
 import {
@@ -408,6 +408,74 @@ export async function getUnbilledWork(): Promise<Record<string, number>> {
   return unbilled;
 }
 
+/** What the jobs list needs to show each job's unfinished steps. */
+export type JobProgressFacts = {
+  pricedCents: number;
+  partCount: number;
+  materialsReadyAt: string | null;
+  invoices: { status: string; lastSentAt: string | null; paidAt: string | null; previewSentAt: string | null }[];
+  unbilledCents: number;
+};
+
+/**
+ * Each listed job's lines, invoices and materials, by job number: the same
+ * facts the job page reads its steps from, in one trip for the whole list.
+ */
+export async function getJobProgressFacts(): Promise<Record<string, JobProgressFacts>> {
+  const context = await resolveContext();
+  if (!context) return {};
+
+  const { data, error } = await context.database
+    .from("jobs")
+    .select(
+      "job_number, materials_ready_at, job_line_items ( kind, quantity, unit_price_cents, invoice_id ), invoices ( id, status, last_sent_at, paid_at, preview_sent_at )",
+    )
+    .eq("organization_id", context.organizationId)
+    .is("archived_at", null);
+
+  if (error || !data) return {};
+
+  const facts: Record<string, JobProgressFacts> = {};
+  for (const raw of data) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = raw as any;
+    const lines: Record<string, unknown>[] = Array.isArray(row.job_line_items) ? row.job_line_items : [];
+    const invoices: Record<string, unknown>[] = Array.isArray(row.invoices) ? row.invoices : [];
+    const { subtotalCents } = jobLineTotals(
+      lines.map((line, index) => ({
+        id: String(index),
+        kind: line.kind === "labor" ? ("labor" as const) : ("material" as const),
+        description: "",
+        // numeric arrives as a string over PostgREST.
+        quantity: Number(line.quantity ?? 0),
+        unit: "each",
+        unitPriceCents: Number(line.unit_price_cents ?? 0),
+      })),
+    );
+    const text = (value: unknown) => (typeof value === "string" && value ? value : null);
+    facts[String(row.job_number)] = {
+      pricedCents: subtotalCents,
+      partCount: lines.filter((line) => line.kind === "material").length,
+      materialsReadyAt: text(row.materials_ready_at),
+      invoices: invoices.map((invoice) => ({
+        status: String(invoice.status ?? ""),
+        lastSentAt: text(invoice.last_sent_at),
+        paidAt: text(invoice.paid_at),
+        previewSentAt: text(invoice.preview_sent_at),
+      })),
+      unbilledCents: unbilledCents(
+        lines.map((line) => ({
+          invoiceId: text(line.invoice_id),
+          quantity: Number(line.quantity ?? 0),
+          unitPriceCents: Number(line.unit_price_cents ?? 0),
+        })),
+        invoices.map((invoice) => ({ id: String(invoice.id ?? ""), status: String(invoice.status ?? "") })),
+      ),
+    };
+  }
+  return facts;
+}
+
 /**
  * The raw fields the edit and cancel controls need.
  *
@@ -428,6 +496,8 @@ export async function getJobControls(jobNumber: string): Promise<{
   customerPhone: string;
   customerEmail: string;
   technicianNotes: string;
+  /** When the parts were marked gathered and ready, or null. */
+  materialsReadyAt: string | null;
   /**
    * Where the work is: the address as saved, which can be corrected, and the
    * details the street does not say, the unit and the access notes. Null when
@@ -452,7 +522,7 @@ export async function getJobControls(jobNumber: string): Promise<{
   const { data } = await context.database
     .from("jobs")
     .select(
-      `job_number, status, canceled_at, cancellation_reason, technician_notes,
+      `job_number, status, canceled_at, cancellation_reason, technician_notes, materials_ready_at,
        scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        customers ( phone, email ),
        properties ( address_line_1, address_line_2, city, state, postal_code, access_notes )`,
@@ -483,6 +553,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     customerPhone: str(customer?.phone),
     customerEmail: str(customer?.email),
     technicianNotes: str(row.technician_notes),
+    materialsReadyAt: str(row.materials_ready_at) || null,
     place: street
       ? {
           street,

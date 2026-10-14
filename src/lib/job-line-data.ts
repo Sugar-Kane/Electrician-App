@@ -120,6 +120,10 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
 export type JobInvoiceSummary = InvoiceStanding & {
   /** "INV-9", as every other screen writes it. */
   label: string;
+  /** What is still owed on it. */
+  balanceDueCents: number;
+  /** When a preview of this draft last went to the customer. */
+  previewSentAt: string | null;
   /** "Draft", "Void", or what the Invoices list would say: Unpaid, Overdue, Paid. */
   statusLabel: string;
 };
@@ -142,7 +146,7 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
 
   const { data, error } = await context.database
     .from("invoices")
-    .select("id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, created_at")
+    .select("id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, created_at, preview_sent_at")
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false });
@@ -158,6 +162,8 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
       label: `INV-${number}`,
       status,
       totalCents: num(row.total_cents),
+      balanceDueCents: num(row.balance_due_cents ?? row.total_cents),
+      previewSentAt: str(row.preview_sent_at) || null,
       lastSentAt: str(row.last_sent_at) || null,
       paidAt: str(row.paid_at) || null,
       createdAt: str(row.created_at),

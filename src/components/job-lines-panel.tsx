@@ -11,6 +11,7 @@ import {
   type LineActionState,
 } from "@/app/jobs/[jobId]/line-actions";
 import { raiseInvoice, type RaiseInvoiceState } from "@/app/jobs/[jobId]/invoice-actions";
+import { InvoiceSteps } from "@/components/invoice-steps";
 import { StockPicker } from "@/components/stock-picker";
 import { inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
@@ -415,10 +416,12 @@ function BillingSection({
   jobNumber,
   lines,
   invoices,
+  billing,
 }: {
   jobNumber: string;
   lines: JobLine[];
   invoices: JobInvoiceSummary[];
+  billing: BillingContext;
 }) {
   const [state, action] = useActionState(raiseInvoice, invoiceInitialState);
 
@@ -429,8 +432,15 @@ function BillingSection({
   );
 
   // A button offering to invoice $0.00 is a button that creates a draft nobody
-  // wanted, and a job with nothing billed has no invoices to list.
-  if (live.length === 0 && step.kind === "nothing") return null;
+  // wanted, and a job with nothing billed has no invoices to list. The section
+  // is still there, because the job's Invoice and Paid steps point at it.
+  if (live.length === 0 && step.kind === "nothing") {
+    return (
+      <div id="billing" className="mt-3 scroll-mt-24 border-t border-line pt-3">
+        <p className="text-xs leading-5 text-ink-muted">Add priced work above, then generate the invoice here.</p>
+      </div>
+    );
+  }
 
   const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
 
@@ -463,6 +473,14 @@ function BillingSection({
           ))}
         </ul>
       ) : null}
+
+      <InvoiceSteps
+        invoices={live}
+        jobCompleted={billing.jobCompleted}
+        agreementSigned={billing.agreementSigned}
+        hasPhone={billing.hasPhone}
+        hasEmail={billing.hasEmail}
+      />
 
       {step.kind === "nothing" ? null : (
         <form action={action} className={live.length > 0 ? "mt-3" : ""}>
@@ -599,6 +617,14 @@ function LineRow({
   );
 }
 
+/** What the billing section needs to know about the job around it. */
+export type BillingContext = {
+  jobCompleted: boolean;
+  agreementSigned: boolean;
+  hasPhone: boolean;
+  hasEmail: boolean;
+};
+
 export function JobLinesPanel({
   jobNumber,
   lines,
@@ -606,7 +632,10 @@ export function JobLinesPanel({
   invoices = [],
   stock,
   lineStock = {},
+  billing = { jobCompleted: false, agreementSigned: false, hasPhone: false, hasEmail: false },
 }: {
+  /** Where the job stands, for what the billing section offers next. */
+  billing?: BillingContext;
   jobNumber: string;
   lines: JobLine[];
   totals: JobLineTotals;
@@ -673,7 +702,7 @@ export function JobLinesPanel({
         </>
       )}
 
-      <BillingSection jobNumber={jobNumber} lines={lines} invoices={invoices} />
+      <BillingSection jobNumber={jobNumber} lines={lines} invoices={invoices} billing={billing} />
 
       {adding ? (
         <AddLineForm

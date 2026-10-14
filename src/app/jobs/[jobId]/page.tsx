@@ -32,8 +32,8 @@ import { getJobConversation, getMessagingContext } from "@/lib/messaging";
 import { getJobInvoices, getJobLines, getJobStock, getStockOptions } from "@/lib/job-line-data";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
-import { agreementChanges } from "@/lib/job-billing";
-import { jobProgress } from "@/lib/job-progress";
+import { agreementChanges, unbilledCents } from "@/lib/job-billing";
+import { isProgressKey, jobProgress } from "@/lib/job-progress";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 
@@ -73,8 +73,14 @@ export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
 }
 
-export default async function JobDetailPage({ params }: { params: Promise<{ jobId: string }> }) {
-  const { jobId } = await params;
+export default async function JobDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ jobId: string }>;
+  searchParams: Promise<{ step?: string }>;
+}) {
+  const [{ jobId }, { step: askedStep }] = await Promise.all([params, searchParams]);
   const { job } = await getJob(jobId);
   if (!job) notFound();
 
@@ -165,6 +171,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
     workflowState: state,
     pricedCents: totals.subtotalCents,
     partCount: lines.filter((line) => line.kind === "material").length,
+    materialsReadyAt: controls?.materialsReadyAt ?? null,
     agreement: currentAgreement
       ? {
           signed: Boolean(currentAgreement.signedAt),
@@ -175,14 +182,29 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       status: invoice.status,
       lastSentAt: invoice.lastSentAt,
       paidAt: invoice.paidAt,
+      previewSentAt: invoice.previewSentAt,
     })),
+    unbilledCents: unbilledCents(
+      lines.map((line) => ({ invoiceId: line.invoiceId ?? null, quantity: line.quantity, unitPriceCents: line.unitPriceCents })),
+      invoices,
+    ),
     formatMoney: formatCents,
   });
+  // The step a job card was tapped on, opened here with what finishes it.
+  const initialStep = isProgressKey(askedStep) ? askedStep : null;
+  // Every step points at a section that is on the page: hours and parts show
+  // whenever pricing, parts or billing is the step in front of the job.
+  const linesStepOpen = progress.steps.some(
+    (step) =>
+      (step.state === "todo" || step.state === "current") &&
+      (step.href === "#work-materials" || step.href === "#billing") &&
+      (step.key !== "invoice" || step === progress.next || step.key === initialStep),
+  );
   const workspaceOpen = showsWorkspace(state) && !canceled;
   // Hours, parts and the invoice: with the workspace, and on a work order from
   // the moment it is booked, without starting it or texting anybody.
   const workAndMaterialsOpen =
-    showsWorkAndMaterials(state, job.kindOfWork === "Work order") && !canceled;
+    (showsWorkAndMaterials(state, job.kindOfWork === "Work order") || linesStepOpen) && !canceled;
 
   /*
    * Booking the work a diagnostic found.
@@ -275,8 +297,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
         </section>
       ) : null}
 
-      {controls && !canceled ? <JobProgress steps={progress.steps} next={progress.next} /> : null}
+      {controls && !canceled ? (
+        <JobProgress
+          steps={progress.steps}
+          next={progress.next}
+          jobNumber={controls.jobNumber}
+          initialStep={initialStep}
+          canUndoMaterials={Boolean(controls.materialsReadyAt) && !showsWorkspace(state)}
+        />
+      ) : null}
 
+      <div id="work" className="scroll-mt-24">
       {workflow && !canceled ? (
         <JobWorkflow
           jobNumber={workflow.jobNumber}
@@ -318,6 +349,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
           ) : null}
         </section>
       )}
+      </div>
 
       {job.summary || job.serviceNotes || job.accessNotes ? (
         /*
@@ -415,6 +447,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
               invoices={invoices}
               stock={stock}
               lineStock={lineStock}
+              billing={{
+                jobCompleted: state === "completed",
+                agreementSigned: Boolean(currentAgreement?.signedAt),
+                hasPhone: Boolean(job.phone),
+                hasEmail: Boolean(job.email),
+              }}
             />
           </div>
           {workspaceOpen ? (
@@ -512,7 +550,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       </details>
 
       {controls ? (
-        <div className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+        <div id="contract" className="mt-3 scroll-mt-24 rounded-panel border border-line bg-surface p-4 sm:p-5">
           <JobContract
             jobNumber={controls.jobNumber}
             contracts={contracts}
