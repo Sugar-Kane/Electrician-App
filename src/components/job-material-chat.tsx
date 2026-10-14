@@ -328,7 +328,14 @@ function PricingSheet({
           {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />}
           Add {rows.length} to the estimate
         </button>
-        <button type="button" onClick={onCancel} className="tap-target inline-flex min-h-11 items-center px-3 text-sm font-semibold text-ink-muted">
+        {/* Locked while adding: leaving and coming back would let the same
+            parts be added twice. */}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onCancel}
+          className="tap-target inline-flex min-h-11 items-center px-3 text-sm font-semibold text-ink-muted disabled:opacity-50"
+        >
           Back to the list
         </button>
       </div>
