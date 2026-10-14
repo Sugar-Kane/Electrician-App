@@ -72,6 +72,9 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
 
   const saved = await readMaterialList(supabase, jobId);
   const stored = await openAiKeyFor(organizationId);
+  if (stored && "unavailable" in stored) {
+    return jsonError(503, "The saved ChatGPT key could not be checked just now. Try again in a moment.");
+  }
   if (stored && "unreadable" in stored) {
     const reason = "The saved ChatGPT key could not be read. The owner can reconnect it in Settings → Integrations.";
     await noteOpenAiKeyUse(organizationId, stored.version, reason);

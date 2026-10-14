@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Check, KeyRound, LoaderCircle, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 
 import type { AiKeyStatus } from "@/lib/ai-key";
-import { connectOpenAiKey, type OpenAiKeyState } from "./openai-actions";
+import { connectOpenAiKey, disconnectOpenAiKey, type OpenAiKeyState } from "./openai-actions";
 
 /**
  * The business's own ChatGPT (OpenAI) API key, which runs the materials chat
@@ -41,13 +41,12 @@ function SaveButton({ replacing }: { replacing: boolean }) {
 export function OpenAiKeyCard({
   status: saved,
   canManage,
-  disconnectAction,
 }: {
   status: AiKeyStatus | null;
   canManage: boolean;
-  disconnectAction: () => void;
 }) {
   const [state, action] = useActionState(connectOpenAiKey, initial);
+  const [removal, remove, removing] = useActionState(disconnectOpenAiKey, initial);
   // What the server has now: both actions refresh the page, so a key removed
   // after being connected here reads as removed, not as the key just connected.
   const status = saved;
@@ -120,12 +119,17 @@ export function OpenAiKeyCard({
           {state.error ? <p className="mt-2 text-sm text-critical">{state.error}</p> : null}
           {justConnected ? <p className="mt-2 text-sm text-positive" role="status">OpenAI accepted the key. The materials chat now runs on it.</p> : null}
           {status ? (
-            <form action={disconnectAction} className="mt-3">
-              <button type="submit" className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted">
-                Remove key
+            <form action={remove} className="mt-3">
+              <button
+                type="submit"
+                disabled={removing}
+                className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted disabled:opacity-60"
+              >
+                {removing ? "Removing…" : "Remove key"}
               </button>
             </form>
           ) : null}
+          {removal.error ? <p className="mt-2 text-sm text-critical">{removal.error}</p> : null}
         </>
       ) : (
         <p className="mt-3 text-xs text-ink-muted">Only the business owner can connect or change the key.</p>

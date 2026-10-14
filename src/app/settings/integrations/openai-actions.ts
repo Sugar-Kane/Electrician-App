@@ -36,14 +36,15 @@ export async function connectOpenAiKey(_previous: OpenAiKeyState, formData: Form
   return { error: "", status: result.status };
 }
 
-export async function disconnectOpenAiKey(): Promise<void> {
+export async function disconnectOpenAiKey(_previous: OpenAiKeyState, _formData: FormData): Promise<OpenAiKeyState> {
   const context = await currentContext();
-  if (!context || context.role !== "owner") return;
-  await removeOpenAiKey(context.organizationId);
+  if (!context || context.role !== "owner") return { error: "Only the business owner can remove the ChatGPT key." };
+  if (!(await removeOpenAiKey(context.organizationId))) return { error: "The key could not be removed. Try again." };
   await recordActivity(asFlexibleClient(await createClient()), {
     organizationId: context.organizationId,
     eventType: "integration.openai_disconnected",
     label: "ChatGPT API key removed",
   });
   revalidatePath("/settings/integrations");
+  return { error: "" };
 }

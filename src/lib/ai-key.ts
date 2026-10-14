@@ -90,23 +90,40 @@ export async function saveOpenAiKey(input: {
   return { ok: true, status: { hint: keyHint(key), model, savedAt: now, lastUsedAt: null, lastError: null } };
 }
 
-export async function removeOpenAiKey(organizationId: string): Promise<void> {
-  await getSupabaseAdmin().from("organization_ai_keys").delete().eq("organization_id", organizationId);
+/** Forget the key. False when the database refused, so nobody is told it is gone when it is not. */
+export async function removeOpenAiKey(organizationId: string): Promise<boolean> {
+  const { error } = await getSupabaseAdmin()
+    .from("organization_ai_keys")
+    .delete()
+    .eq("organization_id", organizationId)
+    .select("organization_id");
+  if (error) console.error("OpenAI key was not removed", { organizationId, code: error.code, message: error.message });
+  return !error;
 }
 
 /**
  * The key itself, for a server call on this business's behalf. Never sent to
- * a browser. "unreadable" when a key is saved but cannot be decrypted: the
- * caller says so rather than quietly using another AI.
+ * a browser. "unreadable" when a key is saved but cannot be decrypted, and
+ * "unavailable" when the lookup itself failed: either way the caller says so
+ * rather than quietly using another AI. Null only when there is no key.
  */
 export async function openAiKeyFor(
   organizationId: string,
-): Promise<{ key: string; model: string; version: string } | { unreadable: true; version: string } | null> {
-  const { data } = await getSupabaseAdmin()
+): Promise<
+  | { key: string; model: string; version: string }
+  | { unreadable: true; version: string }
+  | { unavailable: true }
+  | null
+> {
+  const { data, error } = await getSupabaseAdmin()
     .from("organization_ai_keys")
     .select("encrypted_key, model, updated_at")
     .eq("organization_id", organizationId)
     .maybeSingle();
+  if (error) {
+    console.error("OpenAI key lookup failed", { organizationId, code: error.code, message: error.message });
+    return { unavailable: true };
+  }
   if (!data?.encrypted_key) return null;
   // Which saved key this is, so how it went is never written onto a key
   // connected in its place while the request was running.
