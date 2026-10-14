@@ -22,29 +22,46 @@ export type AiKeyStatus = {
   lastError: string | null;
 };
 
-export async function aiKeyStatus(organizationId: string): Promise<AiKeyStatus | null> {
+/**
+ * The key as Settings shows it, and the version of the business's key record
+ * the page is showing. Removing a key keeps the record, emptied, with a new
+ * version: so a page that showed "no key" before someone connected and then
+ * removed one elsewhere is still recognised as showing an older state.
+ */
+export async function aiKeyState(organizationId: string): Promise<{ status: AiKeyStatus | null; version: string }> {
   const { data } = await getSupabaseAdmin()
     .from("organization_ai_keys")
     .select("key_hint, model, updated_at, last_used_at, last_error")
     .eq("organization_id", organizationId)
     .maybeSingle();
-  if (!data) return null;
+  if (!data) return { status: null, version: "" };
+  const version = String(data.updated_at ?? "");
+  // An emptied record: the key was removed.
+  if (!data.key_hint) return { status: null, version };
   return {
-    hint: String(data.key_hint ?? ""),
-    model: String(data.model ?? ""),
-    savedAt: String(data.updated_at ?? ""),
-    lastUsedAt: data.last_used_at ? String(data.last_used_at) : null,
-    lastError: data.last_error ? String(data.last_error) : null,
+    status: {
+      hint: String(data.key_hint),
+      model: String(data.model ?? ""),
+      savedAt: version,
+      lastUsedAt: data.last_used_at ? String(data.last_used_at) : null,
+      lastError: data.last_error ? String(data.last_error) : null,
+    },
+    version,
   };
+}
+
+export async function aiKeyStatus(organizationId: string): Promise<AiKeyStatus | null> {
+  return (await aiKeyState(organizationId)).status;
 }
 
 const CHANGED_ELSEWHERE = "The key was changed in another window while this was being done. This page now shows it as it is; try again if you still want to.";
 
 /**
  * Check a key with OpenAI and keep it. Nothing is stored unless OpenAI accepts
- * it and it can use a model that writes text, and only over the key the page
- * showed (`expectedVersion`, null for none): a key removed or replaced in
- * another window meanwhile is not overwritten.
+ * it and it can use a model that writes text, and only over the record the
+ * page showed (`expectedVersion`, null when the business never had one): a
+ * key connected, replaced or removed in another window meanwhile is not
+ * overwritten.
  */
 export async function saveOpenAiKey(input: {
   organizationId: string;
@@ -105,9 +122,11 @@ export async function saveOpenAiKey(input: {
 }
 
 /**
- * Forget the key the page showed (`expectedVersion`). A key replaced in
- * another window since is left alone. Nobody is told a key is gone when the
- * database refused, or when it is not the key they meant.
+ * Forget the key the page showed (`expectedVersion`). The record stays,
+ * emptied of the key, with a new version, so a slower connect started before
+ * this can't bring a key back. A key replaced in another window since is left
+ * alone. Nobody is told a key is gone when the database refused, or when it
+ * is not the key they meant.
  */
 export async function removeOpenAiKey(
   organizationId: string,
@@ -116,7 +135,14 @@ export async function removeOpenAiKey(
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("organization_ai_keys")
-    .delete()
+    .update({
+      encrypted_key: "",
+      key_hint: "",
+      model: "none",
+      updated_at: new Date().toISOString(),
+      last_used_at: null,
+      last_error: null,
+    })
     .eq("organization_id", organizationId)
     .eq("updated_at", expectedVersion)
     .select("organization_id");
@@ -128,11 +154,11 @@ export async function removeOpenAiKey(
   // Nothing matched: already gone is fine; a different key now is not.
   const { data: current, error: lookup } = await admin
     .from("organization_ai_keys")
-    .select("organization_id")
+    .select("key_hint")
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (lookup) return { ok: false, reason: "The key could not be removed. Try again." };
-  return current ? { ok: false, reason: CHANGED_ELSEWHERE } : { ok: true };
+  return current?.key_hint ? { ok: false, reason: CHANGED_ELSEWHERE } : { ok: true };
 }
 
 /**

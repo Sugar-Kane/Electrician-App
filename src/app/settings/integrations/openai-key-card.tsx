@@ -40,9 +40,12 @@ function SaveButton({ replacing, locked }: { replacing: boolean; locked: boolean
 
 export function OpenAiKeyCard({
   status: saved,
+  version,
   canManage,
 }: {
   status: AiKeyStatus | null;
+  /** The version of the key record this page shows, sent with each change. */
+  version: string;
   canManage: boolean;
 }) {
   const [state, action, connecting] = useActionState(connectOpenAiKey, initial);
@@ -107,7 +110,7 @@ export function OpenAiKeyCard({
         <>
           <form action={action} className="mt-4 flex flex-col gap-2 sm:flex-row">
             {/* The key this page shows, so the server changes only that one. */}
-            <input type="hidden" name="version" value={status?.savedAt ?? ""} />
+            <input type="hidden" name="version" value={version} />
             <label className="min-w-0 flex-1">
               <span className="sr-only">OpenAI API key</span>
               <input
@@ -126,7 +129,7 @@ export function OpenAiKeyCard({
           {justConnected ? <p className="mt-2 text-sm text-positive" role="status">OpenAI accepted the key. The materials chat now runs on it.</p> : null}
           {status ? (
             <form action={remove} className="mt-3">
-              <input type="hidden" name="version" value={status.savedAt} />
+              <input type="hidden" name="version" value={version} />
               <button
                 type="submit"
                 disabled={removing || connecting}
