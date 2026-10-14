@@ -1,0 +1,189 @@
+import { noteOpenAiKeyUse, openAiKeyFor } from "@/lib/ai-key";
+import { claudeIsConfigured, streamMaterialList } from "@/lib/claude";
+import {
+  hasContent,
+  materialListInstructions,
+  materialListMarkdown,
+  parseMaterialList,
+  type ChatTurn,
+} from "@/lib/material-list";
+import { readMaterialList, writeMaterialList } from "@/lib/material-list-server";
+import { OpenAiRefusal, streamOpenAiChat } from "@/lib/openai";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { createClient } from "@/lib/supabase/server";
+
+/**
+ * The materials chat: a request in, the list written back as it is written.
+ *
+ * Runs on the business's own ChatGPT key when the owner has connected one,
+ * and on the app's built-in AI otherwise. The reply streams as plain text in
+ * the list's format; when it ends, the list is read, saved on the job, and a
+ * record separator (U+001E) followed by JSON closes the stream with the saved
+ * list, or with why nothing was saved.
+ *
+ * Signed-in members only, on their own business's jobs: the session decides,
+ * and the job is looked up by number within the caller's business.
+ */
+
+export const maxDuration = 120;
+
+const END = "\u001e";
+
+function jsonError(status: number, error: string) {
+  return Response.json({ error }, { status, headers: { "cache-control": "no-store" } });
+}
+
+export async function POST(request: Request, context: { params: Promise<{ jobNumber: string }> }) {
+  const { jobNumber } = await context.params;
+  const number = Number(jobNumber);
+  if (!Number.isInteger(number) || number <= 0) return jsonError(404, "That job could not be found.");
+
+  let prompt = "";
+  try {
+    const body = (await request.json()) as { prompt?: unknown };
+    prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  } catch {
+    return jsonError(400, "Say what the job is.");
+  }
+  if (!prompt) return jsonError(400, "Say what the job is, or what to change.");
+  if (prompt.length > 4000) return jsonError(400, "That is too long for one message. Try a shorter one.");
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return jsonError(401, "You are not signed in.");
+
+  const { data: membershipRow } = await supabase
+    .from("organization_members")
+    .select("organization_id, organizations ( name )")
+    .limit(1)
+    .maybeSingle();
+  const membership = (membershipRow ?? null) as Record<string, unknown> | null;
+  const organizationId = typeof membership?.organization_id === "string" ? membership.organization_id : "";
+  if (!organizationId) return jsonError(403, "You are not a member of a business.");
+  const organization = (Array.isArray(membership?.organizations) ? membership.organizations[0] : membership?.organizations) as
+    | { name?: unknown }
+    | null;
+  const businessName = typeof organization?.name === "string" ? organization.name : "";
+
+  const { data: jobRow } = await supabase
+    .from("jobs")
+    .select("id, category, customer_description, technician_notes, properties ( city, state )")
+    .eq("organization_id", organizationId)
+    .eq("job_number", number)
+    .maybeSingle();
+  const job = (jobRow ?? null) as Record<string, unknown> | null;
+  const jobId = typeof job?.id === "string" ? job.id : "";
+  if (!jobId) return jsonError(404, "That job could not be found.");
+
+  const saved = await readMaterialList(supabase, jobId);
+  const stored = await openAiKeyFor(organizationId);
+  if (stored === "unreadable") {
+    const reason = "The saved ChatGPT key could not be read. The owner can reconnect it in Settings → Integrations.";
+    await noteOpenAiKeyUse(organizationId, reason);
+    return jsonError(503, reason);
+  }
+  const ownKey = stored;
+  if (!ownKey && !claudeIsConfigured()) {
+    return jsonError(503, "No AI is connected. The owner can add a ChatGPT API key in Settings → Integrations.");
+  }
+
+  // What the job page already knows, so the first message can be short.
+  const place = (Array.isArray(job?.properties) ? job.properties[0] : job?.properties) as
+    | { city?: unknown; state?: unknown }
+    | null;
+  const facts = [
+    job?.category ? `Kind of job: ${String(job.category).replace(/_/g, " ")}` : "",
+    job?.customer_description ? `What the customer asked for: ${String(job.customer_description).slice(0, 1500)}` : "",
+    job?.technician_notes ? `The electrician's notes: ${String(job.technician_notes).slice(0, 1500)}` : "",
+    place?.city ? `Where: ${[place.city, place.state].filter(Boolean).join(", ")}` : "",
+  ].filter(Boolean);
+  const system = [materialListInstructions(businessName), facts.length ? `\nThis job, from the job record:\n${facts.join("\n")}` : ""].join("\n");
+
+  // A revision sees the list as it stands now, hand edits and all, and what
+  // was asked before; a first list sees only the request.
+  const earlier = saved.messages.filter((turn) => turn.role === "user").map((turn) => turn.text);
+  const turns: { role: "user" | "assistant"; content: string }[] = hasContent(saved.list)
+    ? [
+        { role: "user", content: earlier.length ? earlier.join("\n\n") : "Write the materials list for this job." },
+        { role: "assistant", content: materialListMarkdown(saved.list) },
+        { role: "user", content: prompt },
+      ]
+    : [{ role: "user", content: prompt }];
+
+  const source: "openai" | "claude" = ownKey ? "openai" : "claude";
+  const model = ownKey ? ownKey.model : "volteira";
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let written = "";
+      const finish = (payload: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`${END}${JSON.stringify(payload)}`));
+        controller.close();
+      };
+
+      try {
+        const chunks = ownKey
+          ? streamOpenAiChat({
+              key: ownKey.key,
+              model: ownKey.model,
+              messages: [{ role: "system", content: system }, ...turns],
+              maxTokens: 8000,
+              signal: request.signal,
+            })
+          : streamMaterialList({ system, turns, signal: request.signal });
+        for await (const chunk of chunks) {
+          written += chunk;
+          controller.enqueue(encoder.encode(chunk));
+        }
+      } catch (error) {
+        if (request.signal.aborted) {
+          controller.close();
+          return;
+        }
+        const reason =
+          error instanceof OpenAiRefusal
+            ? error.message
+            : ownKey
+              ? "ChatGPT stopped before the list was finished. Try again."
+              : "The list could not be written just now. Try again.";
+        console.error("materials chat failed", { jobId, source, error: String(error) });
+        if (ownKey) await noteOpenAiKeyUse(organizationId, reason);
+        finish({ error: reason });
+        return;
+      }
+
+      const list = parseMaterialList(written, `g${Date.now().toString(36)}`);
+      if (!hasContent(list)) {
+        finish({ error: "The reply did not include a list. Try saying what the job is in a little more detail." });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const messages: ChatTurn[] = [
+        ...saved.messages,
+        { role: "user", text: prompt, at: now },
+        { role: "assistant", text: list.intro || "Here is the list.", at: now },
+      ];
+      const kept = await writeMaterialList(supabase, {
+        organizationId,
+        jobId,
+        userId: auth.user.id,
+        list,
+        messages,
+        source,
+        model,
+      });
+      if (ownKey) await noteOpenAiKeyUse(organizationId, null);
+      finish(kept ? { list, messages, source, model } : { error: "The list was written but could not be saved. Try again." });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+    },
+  });
+}

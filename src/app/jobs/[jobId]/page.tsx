@@ -36,6 +36,8 @@ import { agreementChanges, unbilledCents } from "@/lib/job-billing";
 import { isProgressKey, jobProgress } from "@/lib/job-progress";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
+import { loadJobMaterialChat } from "@/lib/material-list-server";
+import { JobMaterialChat } from "@/components/job-material-chat";
 
 /**
  * One job, in the order somebody standing outside a house needs it.
@@ -146,8 +148,10 @@ export default async function JobDetailPage({
 
   // What each stock part holds back or has taken, for the lines list and for
   // "Confirm parts used" when the job is finished.
-  const stockLines =
-    lineJobId && controls ? await getJobStock(lineJobId, !canceled && state !== "completed") : [];
+  const [stockLines, materialChat] = await Promise.all([
+    lineJobId && controls ? getJobStock(lineJobId, !canceled && state !== "completed") : Promise.resolve([]),
+    lineJobId && controls ? loadJobMaterialChat(lineJobId) : Promise.resolve(null),
+  ]);
   const lineStock = Object.fromEntries(
     stockLines.map((line) => [line.lineId, { reserved: line.reserved, taken: line.taken, itemUnit: line.itemUnit }]),
   );
@@ -439,6 +443,20 @@ export default async function JobDetailPage({
           id="work-materials"
           className="mt-3 scroll-mt-24 divide-y divide-line rounded-panel border border-line bg-surface px-4 sm:px-5"
         >
+          {/* Where the list of materials starts: a chat that writes it the way
+              ChatGPT does, on the business's own key when one is connected. */}
+          {materialChat ? (
+            <div className="py-4">
+              <JobMaterialChat
+                jobNumber={controls.jobNumber}
+                saved={materialChat.saved}
+                ai={materialChat.ai}
+                canConnect={materialChat.canConnect}
+                jobDescription={job.summary}
+                hasLines={lines.length > 0}
+              />
+            </div>
+          ) : null}
           <div className="py-4">
             <JobLinesPanel
               jobNumber={controls.jobNumber}
