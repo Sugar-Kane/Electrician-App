@@ -358,15 +358,26 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
     return next;
   }
 
+  // Whether the list on screen holds an edit the server has not kept. Every
+  // save carries the whole list, so a later one that sticks clears it.
+  const unsaved = useRef(false);
+  function saveList(next: MaterialList): Promise<void> {
+    return inOrder(async () => {
+      try {
+        const result = await saveMaterialList(jobNumber, next);
+        unsaved.current = Boolean(result.error);
+        if (result.error) setError(result.error);
+      } catch {
+        unsaved.current = true;
+        setError("The change could not be saved. Try again.");
+      }
+    });
+  }
+
   // Keep a hand edit, and say so if it did not stick.
   function persist(next: MaterialList) {
     setList(next);
-    void inOrder(() => saveMaterialList(jobNumber, next)).then(
-      (result) => {
-        if (result.error) setError(result.error);
-      },
-      () => setError("The change could not be saved. Try again."),
-    );
+    void saveList(next);
   }
 
   async function send(prompt: string) {
@@ -386,6 +397,12 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
 
     try {
       await saving.current;
+      // A revision starts from the list on screen, so an edit the server
+      // refused is tried once more, and nothing is asked until it is kept.
+      if (unsaved.current) await saveList(list);
+      if (unsaved.current) {
+        throw new Error("Your last edit to the list was not saved, so nothing was asked yet. Try again in a moment.");
+      }
       const response = await fetch(`/api/jobs/${encodeURIComponent(jobNumber)}/materials-chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -589,7 +606,11 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
                 type="button"
                 onClick={() => {
                   if (!window.confirm("Clear this list and the chat, and start again?")) return;
-                  void inOrder(() => clearMaterialList(jobNumber)).then(
+                  void inOrder(async () => {
+                    const result = await clearMaterialList(jobNumber);
+                    if (!result.error) unsaved.current = false;
+                    return result;
+                  }).then(
                     (result) => {
                       if (result.error) {
                         setError(result.error);
