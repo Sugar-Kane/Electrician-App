@@ -894,7 +894,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
             priceNote || unpriced.length > 0 ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {priceNote ? <p className="text-xs text-ink-muted">{priceNote}</p> : null}
-                {unpriced.length > 0 && !clearing ? (
+                {unpriced.length > 0 && !clearing && !pricing ? (
                   <button
                     type="button"
                     onClick={() => void findPrices(list)}
@@ -946,13 +946,22 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
                 >
                   {picked.length > 0 && picked.length === priceable.length ? "Clear" : "Choose all"}
                 </button>
+                {/* The sheet is filled from the prices on the list as it opens, so it
+                    waits for a lookup still running rather than open half empty. */}
                 <button
                   type="button"
-                  disabled={picked.length === 0}
+                  disabled={picked.length === 0 || lookingUp}
                   onClick={() => setPricing(true)}
                   className="tap-target ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
                 >
-                  Price {picked.length || ""} for the estimate
+                  {lookingUp ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                      Finding prices…
+                    </>
+                  ) : (
+                    `Price ${picked.length || ""} for the estimate`
+                  )}
                 </button>
                 <button type="button" onClick={() => setChoosing(false)} aria-label="Stop choosing" className="tap-target inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted">
                   <X className="h-4 w-4" aria-hidden />

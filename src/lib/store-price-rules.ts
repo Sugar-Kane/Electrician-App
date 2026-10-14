@@ -139,24 +139,23 @@ export type SearchEvidence = { searched: boolean; sources: string[] };
 export type RequestedItem = { id: string; key: string; unit: string };
 
 /**
- * The AI's answer, believed only where it holds up. Each item asked about
- * comes back with what was found at each store (null for nothing usable);
- * when no search ran at all, nothing comes back, since nothing was looked up.
+ * The AI's answer, believed only where it holds up. Each item the answer
+ * speaks to comes back with what was found at each store (null for nothing
+ * usable); an item it left out comes back not at all, so it can be looked up
+ * again. Without proof of a search (none ran, or it named no pages it used)
+ * nothing is believed, and `evidence` says so.
  */
 export function readStorePrices(
   raw: unknown,
   requested: RequestedItem[],
   search: SearchEvidence,
   checkedAt: string,
-): { prices: Record<string, ItemPrices>; rejected: Record<PriceRejection, number> } {
+): { prices: Record<string, ItemPrices>; rejected: Record<PriceRejection, number>; evidence: boolean } {
   const rejected: Record<PriceRejection, number> = { badUrl: 0, notInSearch: 0, wrongUnit: 0, badPrice: 0 };
   const prices: Record<string, ItemPrices> = {};
-  if (!search.searched) return { prices, rejected };
-
-  // The pages the search returned. When it returned none that could be read,
-  // the link rules alone decide.
-  const pages = new Set(search.sources.map(samePage).filter(Boolean));
-  const sources = pages.size > 0 ? pages : null;
+  // The pages the search returned: a price is believed only from one of them.
+  const sources = new Set(search.sources.map(samePage).filter(Boolean));
+  if (!search.searched || sources.size === 0) return { prices, rejected, evidence: false };
 
   const answered = new Map<string, Record<string, unknown>>();
   const list = raw && typeof raw === "object" ? (raw as { items?: unknown }).items : null;
@@ -168,15 +167,16 @@ export function readStorePrices(
 
   for (const item of requested) {
     const entry = answered.get(item.id);
+    if (!entry) continue;
     const found: ItemPrices = { key: item.key, homeDepot: null, lowes: null, checkedAt };
     for (const store of STORE_NAMES) {
-      const result = readOneStore(store, entry?.[store], item.unit, sources, "dollars");
+      const result = readOneStore(store, entry[store], item.unit, sources, "dollars");
       if (result && "price" in result) found[store] = result.price;
       else if (result) rejected[result.rejected] += 1;
     }
     prices[item.id] = found;
   }
-  return { prices, rejected };
+  return { prices, rejected, evidence: true };
 }
 
 /**

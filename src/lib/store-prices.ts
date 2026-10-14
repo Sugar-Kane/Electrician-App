@@ -121,7 +121,13 @@ export async function lookUpStorePrices(input: {
       const read = readStorePrices(readJson(answer.text), batch, answer, new Date().toISOString());
       Object.assign(prices, read.prices);
       for (const reason of Object.keys(rejected) as PriceRejection[]) rejected[reason] += read.rejected[reason];
-      if (!answer.searched) error ??= "ChatGPT answered without searching the stores, so those prices were not used. Try again.";
+      if (!read.evidence) {
+        error ??= answer.searched
+          ? "ChatGPT's search didn't say which store pages it used, so those prices were not used. Try again."
+          : "ChatGPT answered without searching the stores, so those prices were not used. Try again.";
+      } else if (batch.some((item) => !read.prices[item.id])) {
+        error ??= "Some items were not answered. Try again for the rest.";
+      }
     } catch (caught) {
       if (input.signal?.aborted) return;
       if (timeout.aborted) {

@@ -49,6 +49,21 @@ test("a price the search never saw, or with no search at all, is not believed", 
 
   const noSearch = readStorePrices(answer({ price: 0.89, per: "ft", url: HD }), [wire], { searched: false, sources: [] }, "t");
   assert.deepEqual(noSearch.prices, {});
+  assert.equal(noSearch.evidence, false);
+
+  // A search that names no pages it used is no proof of any price.
+  for (const sources of [[], ["not a link"]]) {
+    const unproven = readStorePrices(answer({ price: 0.89, per: "ft", url: HD }), [wire], { searched: true, sources }, "t");
+    assert.deepEqual(unproven.prices, {}, JSON.stringify(sources));
+    assert.equal(unproven.evidence, false);
+  }
+});
+
+test("an item the answer left out is not recorded as looked up, so it can be tried again", () => {
+  const other = { id: "o", ...itemPriceKey({ qty: "1", name: "Eaton BR220 breaker" }) };
+  const result = readStorePrices(answer({ price: 0.89, per: "ft", url: HD }), [wire, other], searched, "t");
+  assert.equal(result.prices.w.homeDepot?.cents, 89);
+  assert.equal("o" in result.prices, false);
 });
 
 test("a price is for one of what the list counts: a spool price never lands on a per-foot item", () => {
