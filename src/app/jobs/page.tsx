@@ -5,18 +5,22 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { SpanishBadge } from "@/components/language-badge";
 import { RevealCurrent } from "@/components/ui/reveal-current";
 import { followUps, isPastVisit } from "@/lib/follow-ups";
-import { getAgreementStates, getJobs } from "@/lib/job-data";
+import { getAgreementStates, getJobProgressFacts, getJobs, type JobProgressFacts } from "@/lib/job-data";
+import { formatCents } from "@/lib/job-lines";
+import { jobProgress, openSteps, type ProgressKey } from "@/lib/job-progress";
 import {
   JOB_STAGE_FILTERS,
   JOB_STAGE_LABELS,
   isJobStageFilter,
   jobStage,
   startTimePassed,
+  type AgreementState,
   type JobStage,
 } from "@/lib/job-stage";
 import type { PilotJob } from "@/lib/pilot-data";
 import { currentContext } from "@/lib/request-context";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
+import { workflowStateOf } from "@/lib/job-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +53,36 @@ const STAGE_STYLES: Record<JobStage, string> = {
   canceled: "bg-white/5 text-ink-faint",
 };
 
-type Row = { job: PilotJob; stage: JobStage; passed: boolean; toConfirm: boolean };
+type StepChip = { key: ProgressKey; label: string };
+type Row = { job: PilotJob; stage: JobStage; passed: boolean; toConfirm: boolean; steps: StepChip[] };
+
+/**
+ * What is still needed to finish a job, as buttons that open the job on that
+ * step. Read the same way as the job page's step bar, so the two always agree.
+ * Two steps finished by the same thing (pricing the job unblocks the invoice
+ * too) show as one button.
+ */
+function stepChips(job: PilotJob, stage: JobStage, facts: JobProgressFacts | undefined, agreement: AgreementState | null): StepChip[] {
+  if (stage === "canceled") return [];
+  const { steps } = jobProgress({
+    kindOfWork: job.kindOfWork,
+    scheduledLabel: job.startsAt ? `${job.dateLabel} · ${job.time}` : "",
+    scheduleHref: `/jobs/${job.id}/edit#window`,
+    workflowState: workflowStateOf(job.stage ?? ""),
+    pricedCents: facts?.pricedCents ?? 0,
+    partCount: facts?.partCount ?? 0,
+    materialsReadyAt: facts?.materialsReadyAt ?? null,
+    agreement: agreement ? { sent: agreement.sent, signed: agreement.signed } : null,
+    invoices: facts?.invoices ?? [],
+    formatMoney: formatCents,
+  });
+  const chips: StepChip[] = [];
+  for (const step of openSteps(steps)) {
+    if (!step.action || chips.some((chip) => chip.label === step.action?.label)) continue;
+    chips.push({ key: step.key, label: step.action.label });
+  }
+  return chips;
+}
 
 const TIME_PASSED = "time_passed";
 
@@ -95,10 +128,11 @@ export default async function JobsPage({
 }: {
   searchParams: Promise<{ stage?: string; q?: string }>;
 }) {
-  const [{ stage: askedStage = "", q = "" }, { jobs }, agreements, context] = await Promise.all([
+  const [{ stage: askedStage = "", q = "" }, { jobs }, agreements, progressFacts, context] = await Promise.all([
     searchParams,
     getJobs(),
     getAgreementStates(),
+    getJobProgressFacts(),
     currentContext(),
   ]);
   // "Time passed" is not a stage but a check across them: the visits Today asks
@@ -112,17 +146,22 @@ export default async function JobsPage({
     askedStage === TIME_PASSED ? TIME_PASSED : isJobStageFilter(askedStage) ? askedStage : "all";
   const query = q.slice(0, 80);
 
-  const rows: Row[] = jobs.map((job) => ({
-    job,
-    stage: jobStage({
+  const rows: Row[] = jobs.map((job) => {
+    const agreement = agreements[job.id] ?? null;
+    const stage = jobStage({
       status: job.status,
       scheduled: Boolean(job.startsAt),
       kindOfWork: job.kindOfWork,
-      agreement: agreements[job.id] ?? null,
-    }),
-    passed: startTimePassed(job.startsAt),
-    toConfirm: pastVisits.has(job.id),
-  }));
+      agreement,
+    });
+    return {
+      job,
+      stage,
+      passed: startTimePassed(job.startsAt),
+      toConfirm: pastVisits.has(job.id),
+      steps: stepChips(job, stage, progressFacts[job.id], agreement),
+    };
+  });
   const searched = rows.filter((row) => matches(row.job, query));
   const counts = new Map<string, number>();
   for (const row of searched) counts.set(row.stage, (counts.get(row.stage) ?? 0) + 1);
@@ -244,12 +283,12 @@ export default async function JobsPage({
             </p>
           ) : null}
           <ul className="mt-3 space-y-2">
-            {shown.map(({ job, stage: rowStage, passed }) => (
-              <li key={job.id}>
+            {shown.map(({ job, stage: rowStage, passed, steps }) => (
+              <li key={job.id} className="tap-row rounded-control border border-line bg-raised">
                 <Link
                   href={`/jobs/${job.id}`}
                   prefetch={false}
-                  className="tap-row flex min-h-16 items-center gap-3 rounded-control border border-line bg-raised px-3 py-2.5"
+                  className="flex min-h-16 items-center gap-3 rounded-control px-3 py-2.5"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -284,6 +323,28 @@ export default async function JobsPage({
                   </span>
                   <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
                 </Link>
+                {/* One row that scrolls sideways inside the card, so a job with
+                    several steps left is one line taller, not three. */}
+                {steps.length > 0 ? (
+                  <div
+                    role="group"
+                    aria-label={`Still needed for job ${job.id}`}
+                    className="flex gap-1.5 overflow-x-auto px-3 pb-2.5"
+                  >
+                    {steps.map((step, index) => (
+                      <Link
+                        key={step.key}
+                        href={`/jobs/${job.id}?step=${step.key}`}
+                        prefetch={false}
+                        className={`tap-target inline-flex shrink-0 items-center whitespace-nowrap rounded-chip px-3 text-xs font-semibold ${
+                          index === 0 ? "bg-brand text-on-brand" : "border border-line text-ink hover:border-brand/60"
+                        }`}
+                      >
+                        {step.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

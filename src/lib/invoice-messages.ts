@@ -27,6 +27,8 @@ export type InvoiceFacts = {
   payUrl?: string;
   /** What the work was, in the business's words. Optional. */
   workSummary?: string;
+  /** The customer's link to read the invoice itself. */
+  viewUrl?: string;
 };
 
 /** Two SMS segments. Beyond this carriers split the message and may reorder. */
@@ -78,7 +80,7 @@ export function invoiceSms(facts: InvoiceFacts): string {
 
   const settle = facts.payUrl
     ? ` Pay: ${facts.payUrl}`
-    : ` Call ${facts.businessPhone} to pay.`;
+    : ` Call ${facts.businessPhone} to pay.${facts.viewUrl ? ` View it: ${facts.viewUrl}` : ""}`;
 
   const message =
     `${opening} ${facts.businessName} invoice ${facts.invoiceNumber} for ` +
@@ -126,6 +128,7 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
     facts.payUrl
       ? `Pay online: ${facts.payUrl}`
       : `To pay, call ${facts.businessPhone}.`,
+    ...(facts.viewUrl ? ["", `View your invoice: ${facts.viewUrl}`] : []),
     "",
     `Questions about this invoice? Call ${facts.businessPhone}.`,
     "",
@@ -150,7 +153,64 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
     facts.payUrl
       ? `<p><a href="${escapeHtml(facts.payUrl)}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Pay ${escapeHtml(amount)}</a></p>`
       : `<p>To pay, call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
+    ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your invoice</a></p>`] : []),
     `<p>Questions about this invoice? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
+    `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
+  ]);
+
+  return { subject, text, html };
+}
+
+/**
+ * A preview of the invoice, sent once the customer has signed and before the
+ * work is done: what they will be billed, with nothing due yet.
+ *
+ * It must never read as a bill. No pay link, no due date, and it says in so
+ * many words that the final invoice follows when the work is complete.
+ */
+export function invoicePreviewSms(facts: InvoiceFacts): string {
+  const name = firstName(facts.contactName);
+  const opening = name ? `${name}: here is` : "Here is";
+  const link = facts.viewUrl ? ` ${facts.viewUrl}` : "";
+  return clamp(
+    `${opening} a preview of your ${facts.businessName} invoice for ${formatMoney(facts.amountDue)}:${link} ` +
+      "Nothing is due yet. We will send the final invoice when the work is complete.",
+    SMS_LIMIT,
+  );
+}
+
+export function invoicePreviewEmail(facts: InvoiceFacts): Mail {
+  const name = firstName(facts.contactName);
+  const greeting = name ? `Hi ${name},` : "Hello,";
+  const amount = formatMoney(facts.amountDue);
+  const summary = facts.workSummary?.trim() ?? "";
+  const subject = `${facts.businessName}: a preview of your invoice for ${amount}`;
+
+  const text = [
+    greeting,
+    "",
+    `Here is a preview of the invoice for your work with ${facts.businessName}.`,
+    "",
+    `Estimated total: ${amount}`,
+    ...(summary ? [`For: ${summary}`] : []),
+    "",
+    "Nothing is due yet. We will send the final invoice when the work is complete.",
+    ...(facts.viewUrl ? ["", `See the preview: ${facts.viewUrl}`] : []),
+    "",
+    `Questions? Call ${facts.businessPhone}.`,
+    "",
+    facts.businessName,
+  ].join("\n");
+
+  const telHref = facts.businessPhone.replace(/[^\d+]/g, "");
+  const html = wrap([
+    `<p>${escapeHtml(greeting)}</p>`,
+    `<p>Here is a preview of the invoice for your work with <strong>${escapeHtml(facts.businessName)}</strong>.</p>`,
+    `<p>Estimated total: <strong>${escapeHtml(amount)}</strong></p>`,
+    ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
+    "<p><strong>Nothing is due yet.</strong> We will send the final invoice when the work is complete.</p>",
+    ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">See the preview</a></p>`] : []),
+    `<p>Questions? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
   ]);
 
@@ -174,7 +234,10 @@ export type DeliveryAttempt = {
  * mobile — and it is neither a success nor a failure, so it must not be
  * reported as either.
  */
-export function describeDelivery(attempts: DeliveryAttempt[]): {
+export function describeDelivery(
+  attempts: DeliveryAttempt[],
+  what = "Invoice",
+): {
   ok: boolean;
   message: string;
 } {
@@ -188,7 +251,7 @@ export function describeDelivery(attempts: DeliveryAttempt[]): {
 
   if (failed.length === 0) {
     const channels = sent.map((attempt) => name(attempt.channel)).join(" and ");
-    return { ok: true, message: `Invoice sent by ${channels}.` };
+    return { ok: true, message: `${what} sent by ${channels}.` };
   }
 
   if (sent.length === 0) {

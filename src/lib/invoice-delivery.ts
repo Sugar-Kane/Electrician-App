@@ -4,6 +4,8 @@ import { emailSender, looksLikeEmail } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import {
   invoiceEmail,
+  invoicePreviewEmail,
+  invoicePreviewSms,
   invoiceSms,
   type DeliveryAttempt,
   type DeliveryChannel,
@@ -33,7 +35,15 @@ export async function deliverInvoice(input: {
   customerEmail: string;
   /** Which channels the sender asked for. Unknown channel strings are ignored. */
   channels: string[];
+  /**
+   * The bill, or a preview of it. A preview never makes the invoice sent: it
+   * records only that the customer has seen what they will be billed.
+   */
+  kind?: "invoice" | "preview";
+  /** Checked so a customer who replied STOP is never texted. */
+  customerId?: string;
 }): Promise<DeliveryAttempt[]> {
+  const preview = input.kind === "preview";
   const database = getSupabaseAdmin();
   const attempts: DeliveryAttempt[] = [];
   const note = (attempt: Omit<DeliveryAttempt, "at">) =>
@@ -62,10 +72,17 @@ export async function deliverInvoice(input: {
       });
     } else if (!input.customerPhone) {
       note({ channel: "sms", to: "", ok: false, detail: "No phone number on this customer." });
+    } else if (input.customerId && (await optedOut(database, input.organizationId, input.customerId))) {
+      note({
+        channel: "sms",
+        to: input.customerPhone,
+        ok: false,
+        detail: "This customer replied STOP, so no text was sent.",
+      });
     } else {
       const result = await sendSms({
         to: input.customerPhone,
-        body: invoiceSms(input.facts),
+        body: preview ? invoicePreviewSms(input.facts) : invoiceSms(input.facts),
         messagingServiceSid,
       });
       note({
@@ -88,7 +105,7 @@ export async function deliverInvoice(input: {
           : "No email address on this customer.",
       });
     } else {
-      const mail = invoiceEmail(input.facts);
+      const mail = preview ? invoicePreviewEmail(input.facts) : invoiceEmail(input.facts);
       const sent = await sendEmail({
         to: input.customerEmail,
         subject: mail.subject,
@@ -122,12 +139,14 @@ export async function deliverInvoice(input: {
     // A draft that reached the customer is sent. Recording only the time left
     // the status at draft, so the job said Draft about a bill the customer
     // had in hand. Any later status (part paid, paid) is left as it is.
-    const nowSent = succeeded && existing?.status === "draft";
+    const nowSent = !preview && succeeded && existing?.status === "draft";
+    const recorded = attempts.map((attempt) => (preview ? { ...attempt, kind: "preview" } : attempt));
     await database
       .from("invoices")
       .update({
-        deliveries: [...previous, ...attempts],
-        ...(succeeded ? { last_sent_at: new Date().toISOString() } : {}),
+        deliveries: [...previous, ...recorded],
+        ...(succeeded && !preview ? { last_sent_at: new Date().toISOString() } : {}),
+        ...(succeeded && preview ? { preview_sent_at: new Date().toISOString() } : {}),
         ...(nowSent ? { status: "sent" } : {}),
       })
       .eq("id", input.invoiceId);
@@ -137,6 +156,26 @@ export async function deliverInvoice(input: {
   }
 
   return attempts;
+}
+
+/** A customer whose last word on texts was STOP. No row is not an opt-out. */
+async function optedOut(
+  database: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+  customerId: string,
+): Promise<boolean> {
+  const { data } = await database
+    .from("messaging_consent")
+    .select("opted_in_at, opted_out_at")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .eq("channel", "sms")
+    .eq("scope", "transactional")
+    .maybeSingle();
+  if (!data?.opted_out_at) return false;
+  const out = Date.parse(String(data.opted_out_at));
+  const back = data.opted_in_at ? Date.parse(String(data.opted_in_at)) : Number.NaN;
+  return !(Number.isFinite(back) && back > out);
 }
 
 export { describeDelivery } from "@/lib/invoice-messages";

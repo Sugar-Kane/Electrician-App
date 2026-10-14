@@ -6,6 +6,8 @@ import {
   formatMoney,
   invoiceCanBeSent,
   invoiceEmail,
+  invoicePreviewEmail,
+  invoicePreviewSms,
   invoiceSms,
   type DeliveryAttempt,
   type InvoiceFacts,
@@ -198,4 +200,20 @@ test("sending with nothing selected is a fault, not a quiet success", () => {
 
   assert.equal(result.ok, false);
   assert.match(result.message, /no delivery method was chosen/);
+});
+
+test("a preview never reads as a bill: nothing due, no pay link, the final invoice follows", () => {
+  const facts = { ...base, payUrl: "https://pay.stripe.com/i/abc123", viewUrl: "https://www.volteira.com/invoice/2f1b" };
+  const text = invoicePreviewSms(facts);
+  const mail = invoicePreviewEmail(facts);
+
+  for (const body of [text, mail.text, mail.html]) {
+    assert.match(body, /Nothing is due yet/);
+    assert.match(body, /final invoice when the work is complete/);
+    assert.ok(body.includes("https://www.volteira.com/invoice/2f1b"), "the customer can read the preview");
+    assert.ok(!body.includes("pay.stripe.com"), "a preview never carries a way to pay");
+    assert.ok(!/due Aug/.test(body), "a preview has no due date");
+  }
+  assert.ok(text.length <= 320, `${text.length}`);
+  assert.match(mail.subject, /preview/i);
 });

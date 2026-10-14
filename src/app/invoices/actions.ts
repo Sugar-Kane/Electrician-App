@@ -10,6 +10,7 @@ import {
   invoiceCanBeSent,
   type DeliveryChannel,
 } from "@/lib/invoice-messages";
+import { checkPayment } from "@/lib/invoice-payment";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -40,65 +41,57 @@ function customerName(customer: Record<string, unknown> | null): string {
   return [text(customer.first_name), text(customer.last_name)].filter(Boolean).join(" ").trim();
 }
 
-export async function sendInvoice(
-  _previousState: InvoiceActionState,
-  formData: FormData,
-): Promise<InvoiceActionState> {
-  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-  if (!invoiceId) return { error: "That invoice could not be found." };
+type LoadedInvoice = {
+  row: Record<string, unknown>;
+  job: Record<string, unknown> | null;
+  customer: Record<string, unknown> | null;
+  facts: Parameters<typeof deliverInvoice>[0]["facts"];
+};
 
-  const channels: DeliveryChannel[] = [];
-  if (formData.get("sendSms") === "on") channels.push("sms");
-  if (formData.get("sendEmail") === "on") channels.push("email");
-
-  if (channels.length === 0) {
-    return { error: "Choose whether to send this by text, email, or both." };
-  }
-
-  const supabase = asFlexibleClient(await createClient());
-
+/**
+ * The invoice and what the customer is told about it, read through the
+ * caller's session so RLS decides whether they may see it at all.
+ */
+async function loadInvoiceForCustomer(
+  supabase: ReturnType<typeof asFlexibleClient>,
+  invoiceId: string,
+): Promise<LoadedInvoice | null> {
   const { data } = await supabase
     .from("invoices")
     .select(
-      `id, invoice_number, status, total_cents, balance_due_cents, due_at,
-       stripe_hosted_invoice_url, organization_id,
-       jobs ( id, job_number, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
+      `id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
+       stripe_hosted_invoice_url, organization_id, preview_token,
+       jobs ( id, job_number, customer_id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
     )
     .eq("id", invoiceId)
     .maybeSingle();
 
-  if (!data) return { error: "That invoice could not be found." };
+  if (!data) return null;
 
   const row = data as Record<string, unknown>;
   const job = (row.jobs ?? null) as Record<string, unknown> | null;
   const customer = (job?.customers ?? null) as Record<string, unknown> | null;
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
-
-  // The invoice total, which is what the business asked for. A partly-paid
-  // invoice therefore still shows its full figure rather than the remainder —
-  // the owner's call, so that the number in the message matches the number on
-  // the invoice the customer is holding.
-  const amountDue = Number(row.total_cents ?? 0) / 100;
-
-  const permitted = invoiceCanBeSent({ status: text(row.status), amountDue });
-  if (!permitted.ok) return { error: permitted.reason };
-
   const timeZone = text(organization?.timezone) || "America/Los_Angeles";
   const dueAt = text(row.due_at);
+  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+  const token = text(row.preview_token);
 
-  const attempts = await deliverInvoice({
-    invoiceId: text(row.id),
-    organizationId: text(row.organization_id),
-    channels,
-    customerPhone: text(customer?.phone),
-    customerEmail: text(customer?.email),
+  return {
+    row,
+    job,
+    customer,
     facts: {
       businessName: text(organization?.name) || "Your electrician",
       businessPhone: text(organization?.phone) || "our office",
       contactName: customerName(customer),
       invoiceNumber: `INV-${text(row.invoice_number) || String(row.invoice_number ?? "")}`,
-      amountDue,
+      // The invoice total, which is what the business asked for. A partly-paid
+      // invoice therefore still shows its full figure rather than the remainder —
+      // the owner's call, so that the number in the message matches the number on
+      // the invoice the customer is holding.
+      amountDue: Number(row.total_cents ?? 0) / 100,
       dueLabel: dueAt
         ? new Intl.DateTimeFormat("en-US", {
             timeZone,
@@ -109,7 +102,46 @@ export async function sendInvoice(
         : "",
       payUrl: text(row.stripe_hosted_invoice_url) || undefined,
       workSummary: text(job?.customer_description) || undefined,
+      viewUrl: origin && token ? `${origin}/invoice/${token}` : undefined,
     },
+  };
+}
+
+function chosenChannels(formData: FormData): DeliveryChannel[] {
+  const channels: DeliveryChannel[] = [];
+  if (formData.get("sendSms") === "on") channels.push("sms");
+  if (formData.get("sendEmail") === "on") channels.push("email");
+  return channels;
+}
+
+export async function sendInvoice(
+  _previousState: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return { error: "That invoice could not be found." };
+
+  const channels = chosenChannels(formData);
+  if (channels.length === 0) {
+    return { error: "Choose whether to send this by text, email, or both." };
+  }
+
+  const supabase = asFlexibleClient(await createClient());
+  const loaded = await loadInvoiceForCustomer(supabase, invoiceId);
+  if (!loaded) return { error: "That invoice could not be found." };
+  const { row, job, customer, facts } = loaded;
+
+  const permitted = invoiceCanBeSent({ status: text(row.status), amountDue: facts.amountDue });
+  if (!permitted.ok) return { error: permitted.reason };
+
+  const attempts = await deliverInvoice({
+    invoiceId: text(row.id),
+    organizationId: text(row.organization_id),
+    channels,
+    customerPhone: text(customer?.phone),
+    customerEmail: text(customer?.email),
+    customerId: text(job?.customer_id) || undefined,
+    facts,
   });
 
   const outcome = describeDelivery(attempts);
@@ -151,6 +183,127 @@ export async function sendInvoice(
   if (text(job?.job_number)) revalidatePath(`/jobs/${text(job?.job_number)}`);
 
   return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };
+}
+
+/**
+ * A preview of a draft invoice, once the customer has signed: what they will
+ * be billed, with nothing due yet. The invoice stays a draft (its lines can
+ * still change) and is not marked sent; the final invoice goes when the work
+ * is complete.
+ */
+export async function sendInvoicePreview(
+  _previousState: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return { error: "That invoice could not be found." };
+
+  const channels = chosenChannels(formData);
+  if (channels.length === 0) {
+    return { error: "Choose whether to send the preview by text, email, or both." };
+  }
+
+  const supabase = asFlexibleClient(await createClient());
+  const loaded = await loadInvoiceForCustomer(supabase, invoiceId);
+  if (!loaded) return { error: "That invoice could not be found." };
+  const { row, job, customer, facts } = loaded;
+
+  if (text(row.status) !== "draft" || text(row.last_sent_at)) {
+    return { error: "This invoice has already gone to the customer, so there is nothing to preview." };
+  }
+  if (!(facts.amountDue > 0)) return { error: "This invoice has nothing on it to preview." };
+  if (!facts.viewUrl) return { error: "This deployment has no public address, so no link can be sent." };
+
+  const attempts = await deliverInvoice({
+    invoiceId: text(row.id),
+    organizationId: text(row.organization_id),
+    channels,
+    customerPhone: text(customer?.phone),
+    customerEmail: text(customer?.email),
+    customerId: text(job?.customer_id) || undefined,
+    facts,
+    kind: "preview",
+  });
+  const outcome = describeDelivery(attempts, "Preview");
+
+  await recordActivity(supabase, {
+    organizationId: text(row.organization_id),
+    eventType: outcome.ok ? "invoice.preview_sent" : "invoice.preview_failed",
+    label: outcome.ok ? "Invoice preview sent" : "Invoice preview not sent",
+    jobId: text(job?.id) || null,
+    metadata: { amount_cents: Number(row.total_cents) || 0, invoice_id: text(row.id), ...(outcome.ok ? {} : { reason: outcome.message }) },
+  });
+
+  revalidatePath("/invoices");
+  if (text(job?.job_number)) revalidatePath(`/jobs/${text(job?.job_number)}`);
+  return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };
+}
+
+/**
+ * A payment taken in hand: cash, a check, a card run outside the app. The
+ * database function records it and moves the balance and status in one
+ * transaction, and refuses anything this check would have.
+ */
+export async function recordInvoicePayment(
+  _previousState: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return { error: "That invoice could not be found." };
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data } = await supabase
+    .from("invoices")
+    .select("id, organization_id, status, total_cents, balance_due_cents, stripe_invoice_id, jobs ( id, job_number )")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (!data) return { error: "That invoice could not be found." };
+  const row = data as Record<string, unknown>;
+  const job = (row.jobs ?? null) as Record<string, unknown> | null;
+
+  const check = checkPayment({
+    invoice: {
+      status: text(row.status),
+      totalCents: Number(row.total_cents ?? 0),
+      balanceDueCents: row.balance_due_cents === null || row.balance_due_cents === undefined ? null : Number(row.balance_due_cents),
+      stripeInvoiceId: text(row.stripe_invoice_id) || null,
+    },
+    method: String(formData.get("method") ?? ""),
+    amountText: String(formData.get("amount") ?? ""),
+  });
+  if (!check.ok) return { error: check.reason };
+
+  const note = String(formData.get("note") ?? "").trim().slice(0, 500);
+  const { error } = await supabase.rpc("record_invoice_payment", {
+    p_invoice_id: invoiceId,
+    p_method: check.method,
+    p_amount_cents: check.amountCents,
+    p_note: note || null,
+  });
+  if (error) {
+    console.error("record invoice payment failed", { invoiceId, code: error.code, message: error.message });
+    return { error: error.code === "22023" ? `Not recorded: ${error.message}.` : "The payment could not be recorded. Try again." };
+  }
+
+  await recordActivity(supabase, {
+    organizationId: text(row.organization_id),
+    eventType: check.status === "paid" ? "invoice.paid" : "invoice.partially_paid",
+    label: check.status === "paid" ? "Invoice paid" : "Part payment recorded",
+    jobId: text(job?.id) || null,
+    metadata: { amount_cents: check.amountCents, method: check.method, invoice_id: invoiceId },
+  });
+
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
+  if (text(job?.job_number)) {
+    revalidatePath(`/jobs/${text(job?.job_number)}`);
+    revalidatePath("/jobs");
+  }
+  const dollars = (check.amountCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  return {
+    error: "",
+    notice: check.status === "paid" ? `${dollars} recorded. The invoice is paid.` : `${dollars} recorded. Part of the invoice is still owed.`,
+  };
 }
 
 /*
