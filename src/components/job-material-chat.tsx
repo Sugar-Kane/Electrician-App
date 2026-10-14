@@ -133,6 +133,7 @@ function ListView({
   editingId,
   choosing,
   chosen,
+  frozen,
   onEdit,
   onToggle,
   onSaveItem,
@@ -146,6 +147,8 @@ function ListView({
   editingId: string | null;
   choosing: boolean;
   chosen: Set<string>;
+  /** The picks are being priced: they stay as they are until the sheet closes. */
+  frozen: boolean;
   onEdit: (id: string | null) => void;
   onToggle: (id: string) => void;
   onSaveItem: (item: MaterialItem) => void;
@@ -187,7 +190,7 @@ function ListView({
                     ) : choosing ? (
                       <li key={item.id} className="list-none -ml-5">
                         <label className="flex min-h-10 cursor-pointer items-start gap-2.5 rounded-control px-1 py-1.5 hover:bg-white/[0.04]">
-                          <input type="checkbox" checked={chosen.has(item.id)} onChange={() => onToggle(item.id)} className="mt-1 h-4 w-4 shrink-0" />
+                          <input type="checkbox" checked={chosen.has(item.id)} disabled={frozen} onChange={() => onToggle(item.id)} className="mt-1 h-4 w-4 shrink-0 disabled:opacity-60" />
                           <span>
                             {item.qty ? `${item.qty} × ` : ""}
                             {item.name}
@@ -590,6 +593,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, jobDescripti
                 editingId={editingId}
                 choosing={choosing}
                 chosen={chosen}
+                frozen={pricing}
                 onEdit={(id) => {
                   setAddingTo(null);
                   setEditingId(id);
