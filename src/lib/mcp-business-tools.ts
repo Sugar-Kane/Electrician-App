@@ -200,15 +200,16 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "save_materials_list",
     title: "Save a materials list to a job",
     description:
-      "Save a materials list onto an existing job, replacing the job's saved list. Write the whole list in the format get_job_materials gives, with every item, including ones kept from the saved list. Nothing is ordered or sent to the customer: the electrician reviews, prices and adds the items to the estimate in Volteira.",
+      "Save a materials list onto an existing job, replacing the job's saved list. Write the whole list in the format get_job_materials gives, with every item, including ones kept from the saved list, and pass the list_version get_job_materials gave. If the list was changed in Volteira since, nothing is saved. Nothing is ordered or sent to the customer: the electrician reviews, prices and adds the items to the estimate in Volteira.",
     inputSchema: {
       type: "object",
       properties: {
         job_number: str("The existing job number."),
         list: str("The whole materials list, in the format get_job_materials gives."),
+        list_version: str("The list_version from get_job_materials, or from the last save_materials_list on this job."),
         request: str("In a few words, what the electrician asked for, e.g. 'EV charger in the garage, 40 ft run'."),
       },
-      required: ["job_number", "list"],
+      required: ["job_number", "list", "list_version"],
       additionalProperties: false,
     },
     // It replaces the job's saved list.
@@ -268,6 +269,9 @@ async function findCustomer(
   }
   return { row: matches[0] };
 }
+
+/** The list_version of a job with no saved list yet. */
+const NO_LIST_VERSION = "none";
 
 /** A job of this business by its number, with its saved materials list. */
 async function materialsJob(
@@ -714,7 +718,9 @@ export async function runBusinessMcpTool(input: {
             ? `THE JOB'S SAVED LIST (start from this one when asked for changes; items edited by hand in Volteira are in it)\n\n${materialListMarkdown(saved.list)}`
             : "THE JOB'S SAVED LIST: none yet.",
           "",
-          `When the list is written, show it, then save it with save_materials_list (job_number ${job.job_number}, the whole list). If saving is not possible here, tell the electrician to tap Copy under your answer and use "Paste from ChatGPT" in the job's Materials chat in Volteira.`,
+          `list_version: ${saved.updatedAt ?? NO_LIST_VERSION}`,
+          "",
+          `When the list is written, show it, then save it with save_materials_list (job_number ${job.job_number}, the whole list, and list_version above). If saving is not possible here, tell the electrician to tap Copy under your answer and use "Write it in ChatGPT instead" in the job's Materials chat in Volteira.`,
         ].join("\n"),
         record: { jobId: text(job.id) },
       };
@@ -724,6 +730,12 @@ export async function runBusinessMcpTool(input: {
       const written = typeof args.list === "string" ? args.list : "";
       if (!written.trim()) return { isError: true, text: "The list was empty. Nothing was saved." };
       if (written.length > 40_000) return { isError: true, text: "That list is too long to save. Nothing was saved." };
+      // The version the list was written from: saving over any other would
+      // drop a change made in Volteira while ChatGPT was writing.
+      const readVersion = text(args.list_version).slice(0, 64);
+      if (!readVersion || (readVersion !== NO_LIST_VERSION && Number.isNaN(Date.parse(readVersion)))) {
+        return { isError: true, text: "Call get_job_materials first and pass the list_version it gives. Nothing was saved." };
+      }
       const found = await materialsJob(database, organizationId, args.job_number);
       if (!found) return { isError: true, text: `Job #${String(args.job_number ?? "")} was not found. Nothing was saved.` };
       const { job, saved } = found;
@@ -755,19 +767,19 @@ export async function runBusinessMcpTool(input: {
         messages,
         source: "openai",
         model: "chatgpt",
-        expectedUpdatedAt: saved.updatedAt,
+        expectedUpdatedAt: readVersion === NO_LIST_VERSION ? null : readVersion,
       });
       if (write.status === "changed") {
         return {
           isError: true,
-          text: `The list on job #${job.job_number} was changed in Volteira at the same moment, so this one was not saved. Call get_job_materials again and start from the list as it is now.`,
+          text: `The list on job #${job.job_number} was changed in Volteira since it was read, so this one was not saved. Call get_job_materials again and start from the list as it is now.`,
           record: { jobId },
         };
       }
       if (write.status === "failed") return { isError: true, text: "The list could not be saved just now. Try again.", record: { jobId } };
       const count = estimateItems(list).length;
       return {
-        text: `Saved ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}. Nothing was ordered or sent to the customer. In Volteira, open job #${job.job_number} → Materials chat to change items, price them and add them to the estimate.`,
+        text: `Saved ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}. Nothing was ordered or sent to the customer. In Volteira, open job #${job.job_number} → Materials chat to change items, price them and add them to the estimate.\nlist_version for the next change: ${write.updatedAt}`,
         record: { jobId },
       };
     }
