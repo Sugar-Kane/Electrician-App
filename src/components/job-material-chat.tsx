@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   ClipboardCopy,
+  ClipboardPaste,
   ExternalLink,
   ListChecks,
   LoaderCircle,
@@ -22,6 +23,8 @@ import { addListedParts, type ListedPart } from "@/app/jobs/[jobId]/line-actions
 import { clearMaterialList, saveMaterialList } from "@/app/jobs/[jobId]/material-list-actions";
 import {
   applyPrices,
+  carryPrices,
+  chatGptMaterialPrompt,
   estimateLineFor,
   hasContent,
   itemLine,
@@ -29,6 +32,7 @@ import {
   isChecklist,
   listItems,
   parseMaterialList,
+  readPastedMaterialList,
   unpricedItems,
   withCurrentPrices,
   type ChatTurn,
@@ -66,6 +70,8 @@ type Props = {
   canConnect: boolean;
   /** Percent added to a store price for the customer's price. */
   markupPercent: number;
+  /** What a prompt for ChatGPT's own chat says about the business and the job. */
+  forChatGpt: { businessName: string; facts: string[] };
   jobDescription: string;
   hasLines: boolean;
 };
@@ -507,7 +513,83 @@ function PricingSheet({
   );
 }
 
-export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercent, jobDescription, hasLines }: Props) {
+/**
+ * Writing the list in ChatGPT's own chat, on the electrician's ChatGPT plan:
+ * copy a prompt with the format and the job, and paste back what ChatGPT
+ * writes. It becomes the same list as one written here.
+ */
+function FromChatGpt({
+  prompt,
+  listed,
+  busy,
+  onUse,
+  onClose,
+}: {
+  prompt: string;
+  listed: boolean;
+  busy: boolean;
+  /** Takes ChatGPT's answer; says why it could not be used, or nothing. */
+  onUse: (answer: string) => string;
+  onClose: () => void;
+}) {
+  const [answer, setAnswer] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [problem, setProblem] = useState("");
+  return (
+    <div className="mt-4 rounded-control border border-line bg-white/[0.015] p-3 sm:p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold">Write it in ChatGPT</p>
+        <button type="button" onClick={onClose} aria-label="Close" className="tap-target -m-2 inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted">
+          <X className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+      <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm text-ink-muted">
+        <li>Copy the prompt. It has the list format{listed ? ", this job and the list as it is now" : " and this job"}.</li>
+        <li>Paste it into ChatGPT, add {listed ? "what to change" : "what the job is"} at the end, and send.</li>
+        <li>Tap the copy button under ChatGPT&apos;s answer, then paste the answer here.</li>
+      </ol>
+      <button
+        type="button"
+        onClick={() => {
+          void navigator.clipboard.writeText(prompt).then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          });
+        }}
+        className="tap-target mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line px-3 text-sm font-semibold"
+      >
+        {copied ? <Check className="h-4 w-4 text-positive" aria-hidden /> : <ClipboardCopy className="h-4 w-4" aria-hidden />}
+        {copied ? "Prompt copied" : "Copy prompt for ChatGPT"}
+      </button>
+      <label htmlFor="materials-from-chatgpt" className="mt-3 block text-xs font-semibold text-ink-muted">
+        ChatGPT&apos;s answer
+      </label>
+      <textarea
+        id="materials-from-chatgpt"
+        value={answer}
+        onChange={(event) => {
+          setAnswer(event.target.value);
+          setProblem("");
+        }}
+        rows={5}
+        placeholder="Paste the list ChatGPT wrote"
+        className="mt-1 block min-h-24 w-full resize-y rounded-control border border-line bg-raised px-3 py-2 text-base leading-6 outline-none placeholder:text-ink-faint focus:border-brand/60"
+      />
+      {problem ? <p className="mt-2 text-sm text-critical">{problem}</p> : null}
+      <button
+        type="button"
+        disabled={busy || !answer.trim()}
+        onClick={() => setProblem(onUse(answer))}
+        className="tap-target mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
+      >
+        <ClipboardPaste className="h-4 w-4" aria-hidden />
+        {listed ? "Replace the list with this" : "Use this list"}
+      </button>
+    </div>
+  );
+}
+
+export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercent, forChatGpt, jobDescription, hasLines }: Props) {
   const [list, setList] = useState<MaterialList>(saved.list);
   const [messages, setMessages] = useState<ChatTurn[]>(saved.messages);
   const [draft, setDraft] = useState("");
@@ -528,6 +610,7 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   const [startsOpen] = useState(() => !hasContent(saved.list) || !hasLines);
   const [lookingUp, setLookingUp] = useState(false);
   const [priceNote, setPriceNote] = useState("");
+  const [fromChatGpt, setFromChatGpt] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const lookup = useRef<AbortController | null>(null);
   // The list as it is on screen now, for prices that arrive a minute later.
@@ -781,6 +864,35 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
       abort.current = null;
     }
     if (answered) void findPrices(answered);
+  }
+
+  /*
+   * A list ChatGPT wrote in its own chat, pasted in: it replaces the list like
+   * an answer written here, keeps the store prices of what did not change, and
+   * is saved like any edit, in order, on the version this screen holds.
+   */
+  function takeFromChatGpt(answer: string): string {
+    if (writing || clearing) return "";
+    const pasted = readPastedMaterialList(answer, `p${Date.now().toString(36)}`);
+    // A heading with no items under it is not a list, and would leave the job with none.
+    if (listItems(pasted).length === 0) {
+      return "That doesn't read as a list: it needs headings with bullets under them. Tap the copy button under ChatGPT's answer and paste that.";
+    }
+    if (listed && !window.confirm("Replace the list on this job with the one from ChatGPT?")) return "";
+    lookup.current?.abort();
+    lookup.current = null;
+    setLookingUp(false);
+    setPriceNote("");
+    setError("");
+    setNotice("");
+    setEditingId(null);
+    setAddingTo(null);
+    setChosen(new Set());
+    const next = carryPrices(list, pasted);
+    persist(next);
+    setFromChatGpt(false);
+    void findPrices(next);
+    return "";
   }
 
   // Everything before the latest request is history; the latest request sits
@@ -1071,6 +1183,16 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
         ) : null}
         {error ? <p className="mt-2 text-sm text-critical">{error}</p> : null}
 
+        {!choosing && fromChatGpt ? (
+          <FromChatGpt
+            prompt={chatGptMaterialPrompt({ ...forChatGpt, list })}
+            listed={listed}
+            busy={writing || clearing}
+            onUse={takeFromChatGpt}
+            onClose={() => setFromChatGpt(false)}
+          />
+        ) : null}
+
         <p className="mt-2 text-xs text-ink-faint">
           Runs on {ai.label}.
           {!ai.connected && canConnect ? (
@@ -1082,6 +1204,17 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
             </>
           ) : null}
         </p>
+        {!choosing && !fromChatGpt ? (
+          <button
+            type="button"
+            disabled={writing || clearing}
+            onClick={() => setFromChatGpt(true)}
+            className="tap-target mt-1 inline-flex min-h-10 items-center gap-1.5 text-xs font-semibold text-brand disabled:opacity-50"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" aria-hidden />
+            Write it in ChatGPT instead
+          </button>
+        ) : null}
       </div>
     </details>
   );

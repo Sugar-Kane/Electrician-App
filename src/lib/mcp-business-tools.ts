@@ -7,6 +7,18 @@ import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import { claimUnbilledLines, jobInvoices } from "@/lib/job-billing-server";
+import {
+  carryPrices,
+  estimateItems,
+  hasContent,
+  listItems,
+  materialJobFacts,
+  materialListInstructions,
+  materialListMarkdown,
+  readPastedMaterialList,
+  type ChatTurn,
+} from "@/lib/material-list";
+import { readMaterialList, writeMaterialList, type SavedMaterialList } from "@/lib/material-list-server";
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { McpSession } from "@/lib/mcp-session-token";
 import { parseCostToCents } from "@/lib/new-job-input";
@@ -171,6 +183,39 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
       "Show whether Lowe's and Home Depot supplier integrations have the credentials needed for live product/order capabilities.",
     inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
   },
+  {
+    name: "get_job_materials",
+    title: "Get a job's materials list",
+    description:
+      "Read what a job is (the kind of work, what the customer asked for, the electrician's notes, the town), the exact format a materials list must be written in, and the job's saved materials list if it has one. Call this before writing or changing a job's materials list.",
+    inputSchema: {
+      type: "object",
+      properties: { job_number: str("The existing job number.") },
+      required: ["job_number"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  {
+    name: "save_materials_list",
+    title: "Save a materials list to a job",
+    description:
+      "Save a materials list onto an existing job, replacing the job's saved list. Write the whole list in the format get_job_materials gives, with every item, including ones kept from the saved list, and pass the list_version get_job_materials gave. If the list was changed in Volteira since, nothing is saved. Nothing is ordered or sent to the customer: the electrician reviews, prices and adds the items to the estimate in Volteira. Explicit owner approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The existing job number."),
+        list: str("The whole materials list, in the format get_job_materials gives."),
+        list_version: str("The list_version from get_job_materials, or from the last save_materials_list on this job."),
+        request: str("In a few words, what the electrician asked for, e.g. 'EV charger in the garage, 40 ft run'."),
+        confirmed,
+      },
+      required: ["job_number", "list", "list_version", "confirmed"],
+      additionalProperties: false,
+    },
+    // It replaces the job's saved list.
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  },
 ];
 
 function text(value: unknown): string {
@@ -224,6 +269,29 @@ async function findCustomer(
     };
   }
   return { row: matches[0] };
+}
+
+/** The list_version of a job with no saved list yet. */
+const NO_LIST_VERSION = "none";
+
+/** A job of this business by its number, with its saved materials list. */
+async function materialsJob(
+  database: ReturnType<typeof getSupabaseAdmin>,
+  organizationId: string,
+  rawNumber: unknown,
+): Promise<{ job: Record<string, unknown>; saved: SavedMaterialList } | null> {
+  // Asked for as text, but a client may send it as a number.
+  const number = Number((typeof rawNumber === "number" ? String(rawNumber) : text(rawNumber)).replace(/^#/, ""));
+  if (!Number.isInteger(number) || number <= 0) return null;
+  const { data } = await database
+    .from("jobs")
+    .select("id, job_number, category, customer_description, technician_notes, properties ( city, state )")
+    .eq("organization_id", organizationId)
+    .eq("job_number", number)
+    .maybeSingle();
+  const job = (data ?? null) as Record<string, unknown> | null;
+  if (!job || !text(job.id)) return null;
+  return { job, saved: await readMaterialList(asFlexibleClient(database), text(job.id)) };
 }
 
 export async function runBusinessMcpTool(input: {
@@ -623,6 +691,104 @@ export async function runBusinessMcpTool(input: {
         text: getSupplierIntegrations()
           .map((supplier) => `${supplier.name}: ${supplier.statusLabel}. ${supplier.capabilities.join(", ")}. ${supplier.caveat}`)
           .join("\n\n"),
+      };
+    }
+
+    case "get_job_materials": {
+      const found = await materialsJob(database, organizationId, args.job_number);
+      if (!found) return { isError: true, text: `Job #${String(args.job_number ?? "")} was not found.` };
+      const { job, saved } = found;
+      const { data: organization } = await database.from("organizations").select("name").eq("id", organizationId).maybeSingle();
+      const place = record(Array.isArray(job.properties) ? job.properties[0] : job.properties);
+      const facts = materialJobFacts({
+        category: job.category,
+        customerDescription: job.customer_description,
+        technicianNotes: job.technician_notes,
+        city: place.city,
+        state: place.state,
+      });
+      return {
+        text: [
+          `JOB #${job.job_number}`,
+          facts.length ? facts.join("\n") : "The job record says nothing about the work yet: ask the electrician what the job is.",
+          "",
+          "HOW TO WRITE THE LIST",
+          materialListInstructions(text(organization?.name)),
+          "",
+          hasContent(saved.list)
+            ? `THE JOB'S SAVED LIST (start from this one when asked for changes; items edited by hand in Volteira are in it)\n\n${materialListMarkdown(saved.list)}`
+            : "THE JOB'S SAVED LIST: none yet.",
+          "",
+          `list_version: ${saved.updatedAt ?? NO_LIST_VERSION}`,
+          "",
+          `When the list is written, show it and ask the electrician whether to save it to the job. Once they say yes, save it with save_materials_list (job_number ${job.job_number}, the whole list, list_version above, confirmed true). If saving is not possible here, tell the electrician to tap Copy under your answer and use "Write it in ChatGPT instead" in the job's Materials chat in Volteira.`,
+        ].join("\n"),
+        record: { jobId: text(job.id) },
+      };
+    }
+
+    case "save_materials_list": {
+      const written = typeof args.list === "string" ? args.list : "";
+      if (!written.trim()) return { isError: true, text: "The list was empty. Nothing was saved." };
+      if (written.length > 40_000) return { isError: true, text: "That list is too long to save. Nothing was saved." };
+      // The version the list was written from: saving over any other would
+      // drop a change made in Volteira while ChatGPT was writing.
+      const readVersion = text(args.list_version).slice(0, 64);
+      if (!readVersion || (readVersion !== NO_LIST_VERSION && Number.isNaN(Date.parse(readVersion)))) {
+        return { isError: true, text: "Call get_job_materials first and pass the list_version it gives. Nothing was saved." };
+      }
+      const found = await materialsJob(database, organizationId, args.job_number);
+      if (!found) return { isError: true, text: `Job #${String(args.job_number ?? "")} was not found. Nothing was saved.` };
+      const { job, saved } = found;
+      const jobId = text(job.id);
+
+      // What did not change keeps its store prices, as with a list written in Volteira.
+      const list = carryPrices(saved.list, readPastedMaterialList(written, `c${Date.now().toString(36)}`));
+      // A heading with no items under it is not a list, and would leave the job with none.
+      if (listItems(list).length === 0) {
+        return {
+          isError: true,
+          text: "That is not in the list format: it needs \"## \" section headings with \"- \" bullets under them, as get_job_materials describes. Nothing was saved.",
+        };
+      }
+      // Like every tool that changes the business's records: the job's text
+      // can carry a customer's words, so the owner says yes to this save.
+      const count = estimateItems(list).length;
+      const gate = requireConfirmation(
+        args,
+        `Save ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}'s materials list${hasContent(saved.list) ? ", replacing the list saved there now" : ""}.`,
+      );
+      if (gate) return gate;
+      const asked = text(args.request).slice(0, 500);
+      const now = new Date().toISOString();
+      const messages: ChatTurn[] = [
+        ...saved.messages,
+        { role: "user", text: asked ? `In ChatGPT: ${asked}` : "Written in ChatGPT.", at: now },
+        { role: "assistant", text: list.intro || "Here is the list.", at: now },
+      ];
+      // Only over the list it was read from: one changed in Volteira since is
+      // not replaced.
+      const write = await writeMaterialList(asFlexibleClient(database), {
+        organizationId,
+        jobId,
+        userId: "",
+        list,
+        messages,
+        source: "openai",
+        model: "chatgpt",
+        expectedUpdatedAt: readVersion === NO_LIST_VERSION ? null : readVersion,
+      });
+      if (write.status === "changed") {
+        return {
+          isError: true,
+          text: `The list on job #${job.job_number} was changed in Volteira since it was read, so this one was not saved. Call get_job_materials again and start from the list as it is now.`,
+          record: { jobId },
+        };
+      }
+      if (write.status === "failed") return { isError: true, text: "The list could not be saved just now. Try again.", record: { jobId } };
+      return {
+        text: `Saved ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}. Nothing was ordered or sent to the customer. In Volteira, open job #${job.job_number} → Materials chat to change items, price them and add them to the estimate.\nlist_version for the next change: ${write.updatedAt}`,
+        record: { jobId },
       };
     }
 

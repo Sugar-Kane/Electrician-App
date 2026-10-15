@@ -1,6 +1,6 @@
 import "server-only";
 
-import { EMPTY_LIST, keptTurns, normalizeMaterialList, type ChatTurn, type MaterialList } from "@/lib/material-list";
+import { EMPTY_LIST, keptTurns, materialJobFacts, normalizeMaterialList, type ChatTurn, type MaterialList } from "@/lib/material-list";
 import { aiKeyStatus } from "@/lib/ai-key";
 import { currentContext } from "@/lib/request-context";
 import { readMarkupPercent } from "@/lib/store-price-rules";
@@ -111,28 +111,48 @@ export async function writeMaterialList(
 
 /**
  * What the job page's materials chat starts from: the saved list, which AI
- * will answer, and the markup that turns a store price into the customer's.
+ * will answer, the markup that turns a store price into the customer's, and
+ * what a prompt for ChatGPT's own chat says about the job.
  */
 export async function loadJobMaterialChat(jobId: string): Promise<{
   saved: SavedMaterialList;
   ai: { connected: boolean; label: string };
   canConnect: boolean;
   markupPercent: number;
+  forChatGpt: { businessName: string; facts: string[] };
 }> {
   const context = await currentContext();
   const supabase = asFlexibleClient(await createClient());
-  const [saved, key, organization] = await Promise.all([
+  const [saved, key, organization, job] = await Promise.all([
     readMaterialList(supabase, jobId),
     context ? aiKeyStatus(context.organizationId) : Promise.resolve(null),
     context
-      ? supabase.from("organizations").select("materials_markup_percent").eq("id", context.organizationId).maybeSingle()
+      ? supabase.from("organizations").select("name, materials_markup_percent").eq("id", context.organizationId).maybeSingle()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("jobs")
+      .select("category, customer_description, technician_notes, properties ( city, state )")
+      .eq("id", jobId)
+      .maybeSingle(),
   ]);
-  const markup = readMarkupPercent((organization.data as Record<string, unknown> | null)?.materials_markup_percent);
+  const business = (organization.data as Record<string, unknown> | null) ?? {};
+  const row = (job.data as Record<string, unknown> | null) ?? {};
+  const place = ((Array.isArray(row.properties) ? row.properties[0] : row.properties) ?? {}) as Record<string, unknown>;
+  const markup = readMarkupPercent(business.materials_markup_percent);
   return {
     saved,
     ai: key ? { connected: true, label: `your ChatGPT key (${key.model})` } : { connected: false, label: "Volteira's built-in AI" },
     canConnect: context?.role === "owner",
     markupPercent: markup ?? 20,
+    forChatGpt: {
+      businessName: typeof business.name === "string" ? business.name : "",
+      facts: materialJobFacts({
+        category: row.category,
+        customerDescription: row.customer_description,
+        technicianNotes: row.technician_notes,
+        city: place.city,
+        state: place.state,
+      }),
+    },
   };
 }

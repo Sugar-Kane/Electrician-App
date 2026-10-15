@@ -26,10 +26,10 @@ export function ChatGptConnectionCard({
           <div>
             <p className="text-xs text-ink-faint">Business MCP</p>
             <h2 className="text-lg font-semibold">ChatGPT</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">Connect ChatGPT to Volteira so it can search jobs and customers, book visits, prepare estimates, manage invoices, draft contracts, update hours, send approved customer messages, and prepare supplier orders.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">Connect ChatGPT to Volteira so it can write and save a job&apos;s materials list, search jobs and customers, book visits, prepare estimates, manage invoices, draft contracts, update hours, send approved customer messages, and prepare supplier orders. It runs on your ChatGPT plan, with no API key.</p>
           </div>
         </div>
-        <span className="rounded-full bg-positive-bg px-3 py-1.5 text-[10px] font-semibold text-positive"><ShieldCheck className="mr-1 inline h-3.5 w-3.5" aria-hidden />Owner only</span>
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-positive-bg px-3 py-1.5 text-[10px] font-semibold text-positive"><ShieldCheck className="mr-1 inline h-3.5 w-3.5" aria-hidden />Owner only</span>
       </div>
 
       {state.url ? (
@@ -40,6 +40,13 @@ export function ChatGptConnectionCard({
             <input readOnly value={state.url} className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3 py-2 text-xs" aria-label="ChatGPT MCP URL" />
             <button type="button" onClick={() => navigator.clipboard.writeText(state.url ?? "")} className="tap-target rounded-control border border-line px-3" aria-label="Copy MCP URL"><Copy className="h-4 w-4" /></button>
           </div>
+          <p className="mt-4 text-xs font-semibold text-ink">Then, in ChatGPT on the web:</p>
+          <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs leading-5 text-ink-muted">
+            <li>Settings → Apps &amp; Connectors → Advanced settings: turn on Developer mode.</li>
+            <li>Back in Apps &amp; Connectors, choose Create. Name it Volteira, paste this URL as the MCP server URL, set Authentication to No authentication, and create it.</li>
+            <li>In a new chat, turn on Volteira (the + button → Developer mode → Volteira) and ask, for example: “Write the materials list for job 12 and save it.”</li>
+          </ol>
+          <p className="mt-2 text-xs leading-5 text-ink-muted">On some ChatGPT plans connectors can only read. If ChatGPT can&apos;t save the list, copy its answer and use “Write it in ChatGPT instead” in the job&apos;s Materials chat.</p>
         </div>
       ) : null}
 
@@ -61,7 +68,7 @@ export function ChatGptConnectionCard({
             {connections.map((connection) => (
               <div key={connection.id} className="flex items-center justify-between gap-3 rounded-control bg-white/[0.025] px-3 py-3 text-xs">
                 <div><p className="font-semibold text-ink">ChatGPT</p><p className="mt-1 text-ink-muted">Created {connection.createdAt} · Expires {connection.expiresAt}{connection.lastUsedAt ? ` · Last used ${connection.lastUsedAt}` : " · Not used yet"}</p></div>
-                <form action={revokeAction}><input type="hidden" name="credentialId" value={connection.id} /><button className="tap-target flex min-h-9 items-center gap-2 rounded-control border border-line px-3 font-semibold"><Link2Off className="h-3.5 w-3.5" />Disconnect</button></form>
+                <form action={revokeAction}><input type="hidden" name="credentialId" value={connection.id} /><button className="tap-target flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-control border border-line px-3 font-semibold"><Link2Off className="h-3.5 w-3.5" />Disconnect</button></form>
               </div>
             ))}
           </div>

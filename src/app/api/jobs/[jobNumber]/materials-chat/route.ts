@@ -3,6 +3,7 @@ import { builtInAiOutOfCredit, claudeIsConfigured, streamMaterialList } from "@/
 import {
   carryPrices,
   hasContent,
+  materialJobFacts,
   materialListInstructions,
   materialListMarkdown,
   parseMaterialList,
@@ -90,12 +91,13 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
   const place = (Array.isArray(job?.properties) ? job.properties[0] : job?.properties) as
     | { city?: unknown; state?: unknown }
     | null;
-  const facts = [
-    job?.category ? `Kind of job: ${String(job.category).replace(/_/g, " ")}` : "",
-    job?.customer_description ? `What the customer asked for: ${String(job.customer_description).slice(0, 1500)}` : "",
-    job?.technician_notes ? `The electrician's notes: ${String(job.technician_notes).slice(0, 1500)}` : "",
-    place?.city ? `Where: ${[place.city, place.state].filter(Boolean).join(", ")}` : "",
-  ].filter(Boolean);
+  const facts = materialJobFacts({
+    category: job?.category,
+    customerDescription: job?.customer_description,
+    technicianNotes: job?.technician_notes,
+    city: place?.city,
+    state: place?.state,
+  });
   const system = [materialListInstructions(businessName), facts.length ? `\nThis job, from the job record:\n${facts.join("\n")}` : ""].join("\n");
 
   // A revision sees the list as it stands now, hand edits and all, and what
@@ -148,7 +150,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
           : error instanceof OpenAiRefusal
             ? error.message
             : noCredit
-              ? "Volteira's built-in AI is out of credit right now, so the list can't be written. Connect your ChatGPT key in Settings → Integrations to write lists on your own account."
+              ? "Volteira's built-in AI is out of credit right now, so the list can't be written here. Tap “Write it in ChatGPT instead” below to write it in your own ChatGPT, or connect a ChatGPT key in Settings → Integrations."
               : ownKey
                 ? "ChatGPT stopped before the list was finished. Try again."
                 : "The list could not be written just now. Try again.";

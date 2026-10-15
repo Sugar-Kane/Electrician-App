@@ -34,6 +34,16 @@ export type McpTool = {
   description: string;
   /** JSON Schema. Objects only — MCP tool arguments are always an object. */
   inputSchema: Record<string, unknown>;
+  /**
+   * What the tool does to the business's records, for clients that ask before
+   * running a tool that changes something. Hints only: never a permission.
+   */
+  annotations?: {
+    readOnlyHint?: boolean;
+    destructiveHint?: boolean;
+    idempotentHint?: boolean;
+    openWorldHint?: boolean;
+  };
 };
 
 /**

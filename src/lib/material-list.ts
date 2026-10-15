@@ -170,6 +170,63 @@ export function parseMaterialList(markdown: string, idPrefix = "m"): MaterialLis
   return list;
 }
 
+/** A short line that names something rather than says something. */
+function readsAsHeading(line: string): boolean {
+  const text = plain(line);
+  return (
+    text.length >= 2 &&
+    text.length <= 70 &&
+    text.split(" ").length <= 9 &&
+    !/[.!?:;,]$/.test(text) &&
+    !text.includes("×") &&
+    /^[\p{Lu}\d]/u.test(text)
+  );
+}
+
+/**
+ * ChatGPT's closing offer ("If you want, I can:" and its suggestions) is
+ * not part of the list. Only a tail is cut: the offer line and nothing but
+ * bullets after it, so a line like "If you'd like a cleaner look, …" in the
+ * middle of the list keeps everything after it.
+ */
+function withoutClosingOffer(lines: string[]): string[] {
+  for (let at = lines.length - 1; at > 0; at -= 1) {
+    const line = lines[at];
+    if (!line.trim() || BULLET.test(line)) continue;
+    return /^\s*(?:if you(?:'d| would)? (?:like|want)|want me to|would you like)\b/i.test(plain(line)) ? lines.slice(0, at) : lines;
+  }
+  return lines;
+}
+
+/**
+ * A list pasted from ChatGPT's own chat. Copied from the page rather than
+ * with its copy button, it loses the "#" marks, and its headings come out as
+ * plain short lines. When the text marks no headings, a short line that is
+ * not a sentence and not a bullet is read as one (the first, before any
+ * bullet, as the title when it names a list). Either way, ChatGPT's closing
+ * offer is left off.
+ */
+export function readPastedMaterialList(text: string, idPrefix = "p"): MaterialList {
+  const lines = withoutClosingOffer(text.replace(/\r/g, "").split("\n"));
+  const marked = parseMaterialList(lines.join("\n"), idPrefix);
+  if (hasContent(marked)) return marked;
+  let seenBullet = false;
+  let titled = false;
+  const headed = lines.map((line) => {
+    if (BULLET.test(line)) {
+      seenBullet = true;
+      return line;
+    }
+    if (!line.trim() || RULE.test(line) || !readsAsHeading(line)) return line;
+    if (!titled && !seenBullet && /\blist\b/i.test(line)) {
+      titled = true;
+      return `# ${line.trim()}`;
+    }
+    return `## ${line.trim()}`;
+  });
+  return parseMaterialList(headed.join("\n"), idPrefix);
+}
+
 /** One item as it reads in the list: "4 × 10-ft sticks ¾" EMT (note)". */
 export function itemLine(item: Pick<MaterialItem, "qty" | "name" | "note">): string {
   const counted = item.qty ? `${item.qty} × ${item.name}` : item.name;
@@ -409,6 +466,40 @@ export function materialListInstructions(businessName: string): string {
     "- Do not end with offers like \"If you want, I can…\".",
     "- When asked for changes, write the whole list again with the changes made, keeping everything else exactly as it was, including any item the electrician edited by hand.",
   ].join("\n");
+}
+
+/** What the job record says about the work, so the first request can be short. */
+export function materialJobFacts(job: {
+  category?: unknown;
+  customerDescription?: unknown;
+  technicianNotes?: unknown;
+  city?: unknown;
+  state?: unknown;
+}): string[] {
+  const say = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  return [
+    say(job.category) ? `Kind of job: ${say(job.category).replace(/_/g, " ")}` : "",
+    say(job.customerDescription) ? `What the customer asked for: ${say(job.customerDescription).slice(0, 1500)}` : "",
+    say(job.technicianNotes) ? `The electrician's notes: ${say(job.technicianNotes).slice(0, 1500)}` : "",
+    say(job.city) ? `Where: ${[say(job.city), say(job.state)].filter(Boolean).join(", ")}` : "",
+  ].filter(Boolean);
+}
+
+/**
+ * Everything ChatGPT needs to write or revise this job's list in its own
+ * chat: the format, the job, and the list as it stands. The electrician adds
+ * what they want after the last line.
+ */
+export function chatGptMaterialPrompt(input: { businessName: string; facts: string[]; list: MaterialList }): string {
+  const revising = hasContent(input.list);
+  return [
+    materialListInstructions(input.businessName),
+    input.facts.length ? `\nThis job, from the job record:\n${input.facts.join("\n")}` : "",
+    revising ? `\nThe list as it stands now:\n\n${materialListMarkdown(input.list)}` : "",
+    revising ? "\nWhat I want changed:" : "\nThe job:",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** The last few turns of the chat, the most a list keeps. */
