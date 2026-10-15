@@ -184,21 +184,35 @@ function readsAsHeading(line: string): boolean {
 }
 
 /**
+ * ChatGPT's closing offer ("If you want, I can:" and its suggestions) is
+ * not part of the list. Only a tail is cut: the offer line and nothing but
+ * bullets after it, so a line like "If you'd like a cleaner look, …" in the
+ * middle of the list keeps everything after it.
+ */
+function withoutClosingOffer(lines: string[]): string[] {
+  for (let at = lines.length - 1; at > 0; at -= 1) {
+    const line = lines[at];
+    if (!line.trim() || BULLET.test(line)) continue;
+    return /^\s*(?:if you(?:'d| would)? (?:like|want)|want me to|would you like)\b/i.test(plain(line)) ? lines.slice(0, at) : lines;
+  }
+  return lines;
+}
+
+/**
  * A list pasted from ChatGPT's own chat. Copied from the page rather than
  * with its copy button, it loses the "#" marks, and its headings come out as
  * plain short lines. When the text marks no headings, a short line that is
  * not a sentence and not a bullet is read as one (the first, before any
- * bullet, as the title when it names a list), and ChatGPT's closing offer
- * ("If you want, I can: …") is left off.
+ * bullet, as the title when it names a list). Either way, ChatGPT's closing
+ * offer is left off.
  */
 export function readPastedMaterialList(text: string, idPrefix = "p"): MaterialList {
-  const marked = parseMaterialList(text, idPrefix);
+  const lines = withoutClosingOffer(text.replace(/\r/g, "").split("\n"));
+  const marked = parseMaterialList(lines.join("\n"), idPrefix);
   if (hasContent(marked)) return marked;
-  const lines = text.replace(/\r/g, "").split("\n");
-  const offer = lines.findIndex((line, index) => index > 0 && /^\s*(?:if you(?:'d| would)? (?:like|want)|want me to|would you like)\b/i.test(line));
   let seenBullet = false;
   let titled = false;
-  const headed = (offer > 0 ? lines.slice(0, offer) : lines).map((line) => {
+  const headed = lines.map((line) => {
     if (BULLET.test(line)) {
       seenBullet = true;
       return line;
