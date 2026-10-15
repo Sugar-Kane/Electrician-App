@@ -200,7 +200,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "save_materials_list",
     title: "Save a materials list to a job",
     description:
-      "Save a materials list onto an existing job, replacing the job's saved list. Write the whole list in the format get_job_materials gives, with every item, including ones kept from the saved list, and pass the list_version get_job_materials gave. If the list was changed in Volteira since, nothing is saved. Nothing is ordered or sent to the customer: the electrician reviews, prices and adds the items to the estimate in Volteira.",
+      "Save a materials list onto an existing job, replacing the job's saved list. Write the whole list in the format get_job_materials gives, with every item, including ones kept from the saved list, and pass the list_version get_job_materials gave. If the list was changed in Volteira since, nothing is saved. Nothing is ordered or sent to the customer: the electrician reviews, prices and adds the items to the estimate in Volteira. Explicit owner approval is required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -208,8 +208,9 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
         list: str("The whole materials list, in the format get_job_materials gives."),
         list_version: str("The list_version from get_job_materials, or from the last save_materials_list on this job."),
         request: str("In a few words, what the electrician asked for, e.g. 'EV charger in the garage, 40 ft run'."),
+        confirmed,
       },
-      required: ["job_number", "list", "list_version"],
+      required: ["job_number", "list", "list_version", "confirmed"],
       additionalProperties: false,
     },
     // It replaces the job's saved list.
@@ -720,7 +721,7 @@ export async function runBusinessMcpTool(input: {
           "",
           `list_version: ${saved.updatedAt ?? NO_LIST_VERSION}`,
           "",
-          `When the list is written, show it, then save it with save_materials_list (job_number ${job.job_number}, the whole list, and list_version above). If saving is not possible here, tell the electrician to tap Copy under your answer and use "Write it in ChatGPT instead" in the job's Materials chat in Volteira.`,
+          `When the list is written, show it and ask the electrician whether to save it to the job. Once they say yes, save it with save_materials_list (job_number ${job.job_number}, the whole list, list_version above, confirmed true). If saving is not possible here, tell the electrician to tap Copy under your answer and use "Write it in ChatGPT instead" in the job's Materials chat in Volteira.`,
         ].join("\n"),
         record: { jobId: text(job.id) },
       };
@@ -750,6 +751,14 @@ export async function runBusinessMcpTool(input: {
           text: "That is not in the list format: it needs \"## \" section headings with \"- \" bullets under them, as get_job_materials describes. Nothing was saved.",
         };
       }
+      // Like every tool that changes the business's records: the job's text
+      // can carry a customer's words, so the owner says yes to this save.
+      const count = estimateItems(list).length;
+      const gate = requireConfirmation(
+        args,
+        `Save ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}'s materials list${hasContent(saved.list) ? ", replacing the list saved there now" : ""}.`,
+      );
+      if (gate) return gate;
       const asked = text(args.request).slice(0, 500);
       const now = new Date().toISOString();
       const messages: ChatTurn[] = [
@@ -777,7 +786,6 @@ export async function runBusinessMcpTool(input: {
         };
       }
       if (write.status === "failed") return { isError: true, text: "The list could not be saved just now. Try again.", record: { jobId } };
-      const count = estimateItems(list).length;
       return {
         text: `Saved ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}. Nothing was ordered or sent to the customer. In Volteira, open job #${job.job_number} → Materials chat to change items, price them and add them to the estimate.\nlist_version for the next change: ${write.updatedAt}`,
         record: { jobId },
