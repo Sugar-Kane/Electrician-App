@@ -874,7 +874,8 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   function takeFromChatGpt(answer: string): string {
     if (writing || clearing) return "";
     const pasted = readPastedMaterialList(answer, `p${Date.now().toString(36)}`);
-    if (!hasContent(pasted)) {
+    // A heading with no items under it is not a list, and would leave the job with none.
+    if (listItems(pasted).length === 0) {
       return "That doesn't read as a list: it needs headings with bullets under them. Tap the copy button under ChatGPT's answer and paste that.";
     }
     if (listed && !window.confirm("Replace the list on this job with the one from ChatGPT?")) return "";

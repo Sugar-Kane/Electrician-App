@@ -11,6 +11,7 @@ import {
   carryPrices,
   estimateItems,
   hasContent,
+  listItems,
   materialJobFacts,
   materialListInstructions,
   materialListMarkdown,
@@ -730,7 +731,8 @@ export async function runBusinessMcpTool(input: {
 
       // What did not change keeps its store prices, as with a list written in Volteira.
       const list = carryPrices(saved.list, readPastedMaterialList(written, `c${Date.now().toString(36)}`));
-      if (!hasContent(list)) {
+      // A heading with no items under it is not a list, and would leave the job with none.
+      if (listItems(list).length === 0) {
         return {
           isError: true,
           text: "That is not in the list format: it needs \"## \" section headings with \"- \" bullets under them, as get_job_materials describes. Nothing was saved.",
