@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { scopePrompt } from "@/lib/contract-template";
 import { ReplyCutOff } from "@/lib/reply-cut-off";
 import { INTAKE_TOOLS, type IntakeDecision } from "@/lib/sms-intake";
+import { grokTextConfigured, readInboundTextWithGrok } from "@/lib/xai-text";
 
 /**
  * The one place this app talks to Claude.
@@ -44,6 +45,9 @@ export async function readInboundText(input: {
   system: string;
   turns: IntakeTurn[];
 }): Promise<IntakeDecision | null> {
+  // Customer texts run on Grok, the xAI account the phone assistant uses,
+  // whenever that key is set; on Claude otherwise.
+  if (grokTextConfigured()) return readInboundTextWithGrok(input);
   const anthropic = getClient();
   if (!anthropic) return null;
 
