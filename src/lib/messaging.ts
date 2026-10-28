@@ -54,6 +54,8 @@ export type ConversationThread = {
   initials: string;
   phone: string;
   status: string;
+  /** Somebody at the business has taken over: the assistant does not reply. */
+  assistantPaused: boolean;
   messages: ThreadMessage[];
   consent: ConsentState;
   quietHours: { start: string; end: string; timezone: string; currentlyQuiet: boolean };
@@ -280,7 +282,7 @@ export async function getConversationThread(
   const { data: conversationRow } = await context.database
     .from("conversations")
     .select(
-      "id, customer_id, status, customers(first_name, last_name, company_name, phone, preferred_language)",
+      "id, customer_id, status, assistant_paused_at, customers(first_name, last_name, company_name, phone, preferred_language)",
     )
     .eq("organization_id", context.organizationId)
     .eq("id", conversationId)
@@ -340,6 +342,7 @@ export async function getConversationThread(
     initials: initialsFor(customer),
     phone: text(customer.phone),
     status: text(conversation.status),
+    assistantPaused: Boolean(conversation.assistant_paused_at),
     messages,
     consent,
     quietHours,

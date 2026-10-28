@@ -112,6 +112,7 @@ export async function findActiveInboundTwilioCall(input: {
       {
         headers: { Authorization: twilioAuthorization(auth) },
         cache: "no-store",
+        signal: AbortSignal.timeout(4_000),
       },
     );
     if (!response.ok) return null;

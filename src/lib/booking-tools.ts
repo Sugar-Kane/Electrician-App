@@ -37,6 +37,8 @@ import { type McpSession } from "@/lib/mcp-session-token";
 import { decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/activity";
+import { callsFor, customerForPhone, textsFor } from "@/lib/customer-context";
+import { earlierContactForCall } from "@/lib/customer-context-rules";
 import { toE164 } from "@/lib/phone-format";
 import { countInboundCallsInProgress, findActiveInboundTwilioCall, redirectTwilioCall } from "@/lib/twilio";
 import { liveTransferTwiml, transferActionUrl } from "@/lib/twilio-transfer";
@@ -104,8 +106,50 @@ async function lookUpCaller(input: {
   args: Record<string, unknown>;
 }): Promise<ToolResult> {
   const phone = callerPhone(input.args);
-  if (!phone) return { text: callerLookupReply(null) };
   const now = new Date();
+  const { data: organization } = await input.database
+    .from("organizations")
+    .select("phone, timezone")
+    .eq("id", input.session.organizationId)
+    .maybeSingle();
+  const business = String(organization?.phone ?? "");
+  const timeZone = String(organization?.timezone ?? "") || "America/Los_Angeles";
+
+  const match = phone ? await callbackOnTheLine({ ...input, phone, business, now }) : null;
+
+  /*
+   * What they have already said by text and on earlier calls, so the call
+   * picks up from there. Only for somebody known to be on this call: the
+   * caller a per-call link was made for, the person Maya called back, or a
+   * number Twilio has on a live call to the business right now. A number the
+   * model was talked into asking about gets nothing.
+   */
+  let customerId = input.session.customerId ?? null;
+  if (!customerId && phone) {
+    const onTheLine = Boolean(match) || Boolean(business && (await findActiveInboundTwilioCall({ from: phone, to: business })));
+    if (onTheLine) customerId = await customerForPhone(input.database, input.session.organizationId, phone);
+  }
+  const earlier = customerId
+    ? earlierContactForCall({
+        texts: await textsFor(input.database, input.session.organizationId, customerId),
+        calls: await callsFor(input.database, input.session.organizationId, customerId),
+        timeZone,
+        now,
+      })
+    : "";
+
+  return { text: callerLookupReply(match, earlier) };
+}
+
+/** The website request whose call back is this call, if it is one. */
+async function callbackOnTheLine(input: {
+  database: Database;
+  session: McpSession;
+  phone: string;
+  business: string;
+  now: Date;
+}) {
+  const { phone, now } = input;
   const { data } = await input.database
     .from("booking_requests")
     .select("id, phone, callback_outcome, callback_called_at, first_name, category, description, address_line_1, city, postal_code, preferred_times")
@@ -132,17 +176,12 @@ async function lookUpCaller(input: {
       preferredTimes: value("preferred_times"),
     };
   });
-  if (!rows.length) return { text: callerLookupReply(null) };
+  if (!rows.length) return null;
 
   // Whether anyone rang in and is on the line now: then the number asked
   // about can't be trusted to be the caller's own.
-  const { data: organization } = await input.database
-    .from("organizations")
-    .select("phone")
-    .eq("id", input.session.organizationId)
-    .maybeSingle();
-  const inbound = await countInboundCallsInProgress({ to: String(organization?.phone ?? "") });
-  return { text: callerLookupReply(callbackForCaller(rows, phone, now, inbound)) };
+  const inbound = await countInboundCallsInProgress({ to: input.business });
+  return callbackForCaller(rows, phone, now, inbound);
 }
 
 export async function runBookingTool(input: {

@@ -67,6 +67,17 @@ export async function sendConversationMessage(
     return { error: "This customer has no phone number on file." };
   }
 
+  // A person answering takes the conversation over, before the send, so an
+  // assistant reply being written right now stands down rather than talking
+  // over them. It stays theirs until they hand it back on the thread.
+  if (!thread.assistantPaused) {
+    await context.database
+      .from("conversations")
+      .update({ assistant_paused_at: new Date().toISOString(), assistant_paused_by: context.userId })
+      .eq("organization_id", context.organizationId)
+      .eq("id", conversationId);
+  }
+
   // Recorded before the send, so a message that leaves Twilio but never returns
   // a response is still visible rather than silently lost.
   const { data: inserted, error: insertError } = await context.database
@@ -287,4 +298,38 @@ export async function restoreConversation(
     deleted_at: null,
     deleted_by: null,
   });
+}
+
+export type AssistantSwitchState = { error: string };
+
+/**
+ * Take a conversation over from the assistant, or hand it back. Taken over,
+ * the assistant reads and answers nothing in it; handed back, it answers the
+ * customer's next text.
+ */
+export async function setConversationAssistant(
+  conversationId: string,
+  on: boolean,
+  _previousState: AssistantSwitchState,
+  _formData: FormData,
+): Promise<AssistantSwitchState> {
+  const context = await getMessagingContext();
+  if (!context) return { error: "Sign in to change this." };
+  const thread = await getConversationThread(context, conversationId);
+  if (!thread) return { error: "That conversation could not be found." };
+
+  const { error } = await context.database
+    .from("conversations")
+    .update(
+      on
+        ? { assistant_paused_at: null, assistant_paused_by: null }
+        : { assistant_paused_at: new Date().toISOString(), assistant_paused_by: context.userId },
+    )
+    .eq("organization_id", context.organizationId)
+    .eq("id", conversationId);
+  if (error) return { error: "That could not be changed. Try again." };
+
+  revalidatePath(`/messages/${conversationId}`);
+  revalidatePath("/messages");
+  return { error: "" };
 }

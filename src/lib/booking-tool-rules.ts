@@ -65,7 +65,7 @@ export const BOOKING_TOOLS: McpTool[] = [
     name: "look_up_caller",
     title: "Check who's on the line",
     description:
-      "Use this on your first turn of every call, before anything else, with the caller ID number you were given. It says whether you placed this call to someone who asked on the business's website to be called (their first name, what they wrote, and why you're calling) or whether it is an ordinary incoming call. Follow what it says, and never mention that you looked anything up.",
+      "Use this on your first turn of every call, before anything else, with the caller ID number you were given. It says whether you placed this call to someone who asked on the business's website to be called (their first name, what they wrote, and why you're calling) or whether it is an ordinary incoming call, and what the caller has already said to the business by text or on recent calls, so you can pick up from there instead of starting over. Follow what it says, and never mention that you looked anything up.",
     inputSchema: {
       type: "object",
       properties: {
@@ -298,7 +298,12 @@ export function callbackForCaller(
 }
 
 /** What `look_up_caller` tells Maya. */
-export function callerLookupReply(match: CallbackCandidate | null): string {
+export function callerLookupReply(match: CallbackCandidate | null, earlier = ""): string {
+  const reply = callbackReply(match);
+  return earlier ? `${reply}\n\n${earlier}` : reply;
+}
+
+function callbackReply(match: CallbackCandidate | null): string {
   if (!match) {
     return "An ordinary incoming call: they rang the business. Help them with what they called about; if they haven't said yet, ask how you can help today.";
   }

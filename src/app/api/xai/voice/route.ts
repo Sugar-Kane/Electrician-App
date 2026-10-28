@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { BOOKING_TOOL_NAMES } from "@/lib/booking-tool-rules";
+import { callsFor, textsFor } from "@/lib/customer-context";
+import { earlierContactForCall } from "@/lib/customer-context-rules";
 import { buildSessionUpdate, realtimeUrlForCall } from "@/lib/grok-voice";
 import {
   findOrCreateCustomerByPhone,
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
    */
   const { language, languageSource } = await loadCustomerLanguage(database, customerId);
 
-  const { context } = await loadIntakeContext({
+  const { context, timeZone } = await loadIntakeContext({
     database,
     organizationId,
     isFirstReply: false,
@@ -130,12 +132,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not mint a booking URL" }, { status: 503 });
   }
 
+  // What this caller has already said by text and on earlier calls. The number
+  // is the carrier's caller ID for this very call, not something said on it.
+  const [texts, calls] = await Promise.all([
+    textsFor(database, organizationId, customerId),
+    callsFor(database, organizationId, customerId),
+  ]);
+  const earlier = earlierContactForCall({ texts, calls, timeZone, now: new Date() });
+
   return NextResponse.json({
     callId: call.callId,
     realtimeUrl: realtimeUrlForCall(call.callId),
     sessionUpdate: buildSessionUpdate({
       context,
       callback: callback?.facts,
+      earlier,
       mcpServerUrl,
       allowedTools: BOOKING_TOOL_NAMES,
       bearerToken: process.env.MCP_BEARER_TOKEN || undefined,
