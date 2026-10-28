@@ -13,6 +13,7 @@ import {
   type DeliveryChannel,
   type InvoiceFacts,
 } from "@/lib/invoice-messages";
+import { onlinePaymentsEnabled } from "@/lib/invoice-online-pay";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
 
@@ -67,11 +68,15 @@ export async function deliverInvoice(input: {
       : ownerError
         ? { id: "", unknown: true }
         : await customerByPhone(database, input.organizationId, input.customerPhone);
+  const viewUrl =
+    input.facts.viewUrl ??
+    invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", typeof ownerRow?.preview_token === "string" ? ownerRow.preview_token : "");
   const facts: InvoiceFacts = {
     ...input.facts,
-    viewUrl:
-      input.facts.viewUrl ??
-      invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", typeof ownerRow?.preview_token === "string" ? ownerRow.preview_token : ""),
+    viewUrl,
+    // The invoice link is where the customer pays, by bank or card, whenever
+    // Stripe is set up; a Stripe-hosted invoice page, where one exists, still wins.
+    payUrl: input.facts.payUrl || (!preview && onlinePaymentsEnabled() && viewUrl ? viewUrl : undefined),
   };
   const attempts: DeliveryAttempt[] = [];
   const note = (attempt: Omit<DeliveryAttempt, "at">) =>

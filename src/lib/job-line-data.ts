@@ -126,6 +126,8 @@ export type JobInvoiceSummary = InvoiceStanding & {
   previewSentAt: string | null;
   /** "Draft", "Void", or what the Invoices list would say: Unpaid, Overdue, Paid. */
   statusLabel: string;
+  /** A bank payment the customer made online that is still clearing. */
+  onlineProcessingCents?: number;
 };
 
 /**
@@ -153,7 +155,21 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
 
   if (error || !data) return [];
 
-  return (data as Record<string, unknown>[]).map((row) => {
+  const rows = data as Record<string, unknown>[];
+  const processing = new Map<string, number>();
+  if (rows.length > 0) {
+    const { data: online } = await context.database
+      .from("invoice_online_payments")
+      .select("invoice_id, amount_cents")
+      .eq("organization_id", context.organizationId)
+      .eq("status", "processing")
+      .in("invoice_id", rows.map((row) => str(row.id)));
+    for (const payment of (online ?? []) as Record<string, unknown>[]) {
+      processing.set(str(payment.invoice_id), (processing.get(str(payment.invoice_id)) ?? 0) + num(payment.amount_cents));
+    }
+  }
+
+  return rows.map((row) => {
     const status = str(row.status) || "draft";
     const number = String(row.invoice_number ?? "");
     return {
@@ -167,6 +183,7 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
       lastSentAt: str(row.last_sent_at) || null,
       paidAt: str(row.paid_at) || null,
       createdAt: str(row.created_at),
+      onlineProcessingCents: processing.get(str(row.id)) ?? 0,
       // The same words as the Invoices list: a draft the customer has been
       // texted is sent, and one nobody has sent never reads as owed.
       statusLabel: invoiceStatusLabel({

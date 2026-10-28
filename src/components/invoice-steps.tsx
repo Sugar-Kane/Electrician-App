@@ -132,8 +132,15 @@ function PaymentForm({ invoice }: { invoice: JobInvoiceSummary }) {
   return (
     <form action={action}>
       <input type="hidden" name="invoiceId" value={invoice.id} />
+      {invoice.onlineProcessingCents ? (
+        <p className="mb-2 rounded-control border border-info/40 bg-info-bg/40 p-2 text-xs leading-5">
+          The customer paid {formatCents(invoice.onlineProcessingCents)} online by bank transfer. It is clearing, which usually
+          takes 3–5 business days, and the invoice will be marked paid when it does. Don&apos;t record it here as well.
+        </p>
+      ) : null}
       <p className="mb-2 text-xs leading-5 text-ink-muted">
-        {formatCents(invoice.balanceDueCents)} owed on {invoice.label}. Record it when they pay.
+        {formatCents(invoice.balanceDueCents)} owed on {invoice.label}. The customer can pay online from their invoice link,
+        by bank transfer or card, and that is recorded for you. Record a payment here when they pay you another way.
       </p>
       <div className="grid grid-cols-2 gap-2">
         <SelectField name="method" defaultValue="check" label="How they paid" choices={PAYMENT_METHODS} />

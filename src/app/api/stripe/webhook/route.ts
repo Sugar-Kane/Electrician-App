@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 
+import { handleInvoiceCheckoutEvent } from "@/lib/invoice-online-pay";
 import { fulfillPaidBooking, releaseExpiredBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -27,6 +28,24 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch {
     return Response.json({ error: "Invalid Stripe signature." }, { status: 400 });
+  }
+
+  // An invoice paid online, by bank or card. Its checkouts are tagged, so the
+  // booking and subscription handlers below never see one.
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded" ||
+    event.type === "checkout.session.async_payment_failed" ||
+    event.type === "checkout.session.expired"
+  ) {
+    try {
+      if (await handleInvoiceCheckoutEvent(event.type, event.data.object)) {
+        return Response.json({ received: true });
+      }
+    } catch (error) {
+      console.error("invoice payment webhook failed", { type: event.type, message: String(error).slice(0, 300) });
+      return Response.json({ error: "Invoice payment update failed." }, { status: 500 });
+    }
   }
 
   if (
