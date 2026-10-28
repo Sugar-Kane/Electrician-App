@@ -169,7 +169,7 @@ export async function POST(request: Request) {
 
   let { data: conversation } = await database
     .from("conversations")
-    .select("id")
+    .select("id, assistant_paused_at")
     .eq("organization_id", organizationId)
     .eq("customer_id", customerId)
     .eq("channel", "sms")
@@ -188,7 +188,7 @@ export async function POST(request: Request) {
         status: "open",
         last_message_at: now,
       })
-      .select("id")
+      .select("id, assistant_paused_at")
       .single();
     conversation = created ?? null;
   }
@@ -234,7 +234,10 @@ export async function POST(request: Request) {
   // YES also confirms an offered appointment. Preserve its consent update
   // above, but let intake read the conversation and continue the booking.
   // START/UNSTOP remain consent-only commands.
-  if (body.length > 0 && !OPT_OUT_KEYWORDS.has(keyword) &&
+  // Not in a conversation somebody at the business has taken over: their
+  // customer's text waits for them, marked as needing a person, above.
+  const takenOver = Boolean(conversation.assistant_paused_at);
+  if (body.length > 0 && !takenOver && !OPT_OUT_KEYWORDS.has(keyword) &&
     (!OPT_IN_KEYWORDS.has(keyword) || keyword === "yes")) {
     await handleInboundText({
       organizationId,

@@ -4,18 +4,22 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   AlertTriangle,
+  Bot,
   Check,
   CheckCheck,
   Clock3,
   LoaderCircle,
   MoonStar,
   SendHorizontal,
+  UserRound,
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 
 import {
   sendConversationMessage,
+  setConversationAssistant,
+  type AssistantSwitchState,
   type SendMessageState,
 } from "@/app/messages/actions";
 import type { ConversationThread } from "@/lib/messaging";
@@ -24,6 +28,46 @@ import { DictateButton } from "@/components/dictate-button";
 import { useRefreshOnChange } from "@/components/refresh-on-change";
 
 const initialState: SendMessageState = { error: "" };
+const switchInitial: AssistantSwitchState = { error: "" };
+
+/**
+ * Who answers this customer: the AI assistant, or the person who took over.
+ * Sending a message takes over on its own; this hands it back, or takes over
+ * before anything has been typed.
+ */
+function AssistantSwitch({ conversationId, paused }: { conversationId: string; paused: boolean }) {
+  const [state, action, pending] = useActionState(
+    setConversationAssistant.bind(null, conversationId, paused),
+    switchInitial,
+  );
+  return (
+    <div className="mb-3">
+      <form
+        action={action}
+        className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control border px-3 py-2 text-xs leading-5 ${
+          paused ? "border-line bg-white/[0.03] text-ink-muted" : "border-brand/30 bg-brand/[0.06] text-ink"
+        }`}
+      >
+        <p className="flex min-w-0 items-center gap-2">
+          {paused ? <UserRound className="h-4 w-4 shrink-0" aria-hidden /> : <Bot className="h-4 w-4 shrink-0 text-brand" aria-hidden />}
+          <span>
+            {paused
+              ? "You’re handling this conversation. The AI assistant won’t reply."
+              : "The AI assistant answers this customer. Sending a message takes over."}
+          </span>
+        </p>
+        <button
+          type="submit"
+          disabled={pending}
+          className="tap-target inline-flex min-h-9 shrink-0 items-center rounded-control border border-line px-3 font-semibold text-ink disabled:opacity-60"
+        >
+          {pending ? "…" : paused ? "Turn AI back on" : "Take over"}
+        </button>
+      </form>
+      {state.error ? <p className="mt-1 text-xs text-critical">{state.error}</p> : null}
+    </div>
+  );
+}
 
 /** How often an open thread asks whether anything has arrived. */
 const CHECK_EVERY_MS = 3000;
@@ -243,6 +287,7 @@ export function MessageThread({ thread }: { thread: ConversationThread }) {
         rather than inheriting clearance from a nav that is no longer there.
       */}
       <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
+        <AssistantSwitch conversationId={thread.id} paused={thread.assistantPaused} />
         {thread.canSend ? (
           <>
             {thread.quietHours.currentlyQuiet ? (

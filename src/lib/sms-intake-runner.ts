@@ -7,6 +7,8 @@ import {
   bookingNeedsReviewReply,
   heldReply,
 } from "@/lib/booking-hold";
+import { callsFor } from "@/lib/customer-context";
+import { earlierCallsForText } from "@/lib/customer-context-rules";
 import { readLanguage, readLanguageSource } from "@/lib/customer-language";
 import { localeFor, phrasesFor } from "@/lib/intake-phrases";
 import {
@@ -114,6 +116,15 @@ export async function handleInboundText(input: {
       conversationId: input.conversationId,
     });
     if (website) turns.unshift({ role: "user", text: website.turn });
+
+    // A customer who phoned before texting: what came of the call goes first,
+    // so the text picks up from it rather than asking everything again.
+    const calls = earlierCallsForText({
+      calls: await callsFor(database, input.organizationId, input.customerId),
+      timeZone,
+      now: new Date(),
+    });
+    if (calls) turns.unshift({ role: "user", text: calls });
 
     // The conversation must start with the customer, and the newest inbound
     // message is the one being answered.
@@ -396,6 +407,15 @@ export async function replyToCustomer(input: {
   body: string;
   messagingServiceSid: string;
 }): Promise<boolean> {
+  // Somebody took the conversation over while this reply was being written:
+  // theirs is the next word, not the assistant's.
+  const { data: conversation } = await input.database
+    .from("conversations")
+    .select("assistant_paused_at")
+    .eq("id", input.conversationId)
+    .maybeSingle();
+  if (conversation?.assistant_paused_at) return false;
+
   const { data: inserted } = await input.database
     .from("messages")
     .insert({

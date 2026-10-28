@@ -166,7 +166,7 @@ export type CallbackFacts = {
   preferredTimes: string;
 };
 
-export function buildRealtimeInstructions(context: IntakeContext, callback?: CallbackFacts): string {
+export function buildRealtimeInstructions(context: IntakeContext, callback?: CallbackFacts, earlier = ""): string {
   const opening = callback
     ? buildCallbackGreeting(context.businessName, callback.firstName, context.language)
     : buildGreeting(context.businessName, context.language);
@@ -176,6 +176,8 @@ export function buildRealtimeInstructions(context: IntakeContext, callback?: Cal
       : `You are ${RECEPTIONIST_NAME}, the receptionist answering the phone for ${context.businessName}, an electrical contractor serving ${context.serviceArea}.`,
     `Open with exactly: "${opening}"`,
     ...(callback ? callbackLines(callback) : []),
+    // Their texts and earlier calls, so the call picks up where those left off.
+    ...(earlier ? ["", earlier] : []),
     "",
     "You are speaking out loud to someone who cannot see anything. Be brief, warm, and ordinary. One question at a time.",
     "",
@@ -288,6 +290,8 @@ export function buildSessionUpdate(input: {
   context: IntakeContext;
   /** Set when the assistant placed the call, to a customer who asked for one. */
   callback?: CallbackFacts;
+  /** What they have already said by text and on earlier calls (customer-context-rules). */
+  earlier?: string;
   mcpServerUrl: string;
   allowedTools: string[];
   bearerToken?: string;
@@ -298,7 +302,7 @@ export function buildSessionUpdate(input: {
     type: "session.update",
     session: {
       voice: input.voice ?? DEFAULT_VOICE,
-      instructions: buildRealtimeInstructions(input.context, input.callback),
+      instructions: buildRealtimeInstructions(input.context, input.callback, input.earlier),
       // Let the model decide when the caller has stopped talking. Fixed
       // timeouts are what make an automated line feel like an interrogation.
       turn_detection: { type: "server_vad" },
