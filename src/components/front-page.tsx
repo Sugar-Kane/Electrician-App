@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import {
+  ArrowDown,
   ArrowRight,
   Boxes,
   Calculator,
   CalendarCheck2,
   CalendarDays,
   Camera,
-  Check,
   FileSignature,
   NotebookPen,
   Package,
@@ -19,18 +19,18 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { BrowserFrame } from "@/components/browser-frame";
 import { JobHeader, LineRows, StageTrack, WORKFLOW_PRIMARY, WorkflowHeadline } from "@/components/demo-job-parts";
+import { FrontPageSteps } from "@/components/front-page-steps";
 import { ButtonLink } from "@/components/ui/button";
 import { VideoCarousel } from "@/components/video-carousel";
 import {
   DEMO_CUSTOMER,
   DEMO_JOB,
   DEMO_LINES,
-  JOB_STAGES,
   demoEstimateLabel,
   demoTotals,
   jobStatusAt,
-  type JobStage,
 } from "@/lib/demo-job";
 import { formatCents } from "@/lib/job-lines";
 import type { SiteVideo } from "@/lib/site-videos";
@@ -48,41 +48,6 @@ import type { SiteVideo } from "@/lib/site-videos";
  * is why the stages say what each one does: "estimate" is the job's priced
  * lines, and "paid" is what is still owed, until the app can record a payment.
  */
-
-type Phase = {
-  title: string;
-  body: string;
-  points: string[];
-  stages: [JobStage, JobStage];
-};
-
-/**
- * The six stages in pairs, each pair with what it does for the business.
- *
- * Under its two stages rather than in a section of its own, so the workflow
- * and what it is worth are read once, together. On a phone that is half the
- * scrolling of saying them separately.
- */
-const PHASES: Phase[] = [
-  {
-    title: "Quote the job",
-    body: "Price it once. The same lines carry into the contract and the invoice.",
-    points: ["Labor pricing", "Material pricing", "Contracts"],
-    stages: [JOB_STAGES[0], JOB_STAGES[1]],
-  },
-  {
-    title: "Run the job",
-    body: "Schedule the work and keep what your team needs attached to the job.",
-    points: ["Scheduling", "Materials", "Photos and notes", "Job records"],
-    stages: [JOB_STAGES[2], JOB_STAGES[3]],
-  },
-  {
-    title: "Get paid",
-    body: "Bill from the job without rebuilding it from scratch.",
-    points: ["Invoices", "Sent by text or email", "Customer history"],
-    stages: [JOB_STAGES[4], JOB_STAGES[5]],
-  },
-];
 
 const CONNECTED: { icon: LucideIcon; name: string; line: string }[] = [
   { icon: Calculator, name: "Pricing", line: "Labor and parts, line by line." },
@@ -124,17 +89,17 @@ export function Logo({ small = false }: { small?: boolean }) {
   );
 }
 
-/** The demo's job, part-way through: priced, signed, on the calendar. */
+/** The demo's job, part-way through: priced, signed, on the calendar, in the app's window. */
 function HeroPreview() {
   const totals = demoTotals();
   const shown = DEMO_LINES.slice(0, 3);
 
   return (
-    <div className="relative mx-auto mt-9 max-w-4xl motion-safe:animate-rise sm:mt-14">
-      <div
-        role="img"
-        aria-label={`A job in Volteira: ${DEMO_CUSTOMER.name}’s ${DEMO_JOB.work}, estimated at ${demoEstimateLabel()}. The estimate and contract are done, and the work is scheduled for Tuesday.`}
-        className="rounded-panel border border-line bg-surface p-4 text-left shadow-2xl shadow-black/40 sm:p-6"
+    <div className="relative min-w-0 motion-safe:animate-rise">
+      <BrowserFrame
+        path={`jobs/${DEMO_JOB.number}`}
+        active="Jobs"
+        label={`A job in Volteira: ${DEMO_CUSTOMER.name}’s ${DEMO_JOB.work}, estimated at ${demoEstimateLabel()}. The estimate and contract are done, and the work is scheduled for Tuesday.`}
       >
         <JobHeader status={jobStatusAt("schedule")} />
 
@@ -161,7 +126,7 @@ function HeroPreview() {
             <Fact icon={CalendarCheck2} title="Diagnostic fee paid online" detail="$180.00, taken off the invoice" />
           </ul>
         </div>
-      </div>
+      </BrowserFrame>
     </div>
   );
 }
@@ -285,108 +250,62 @@ export function FrontPage({ videos, preview = false }: { videos: Promise<SiteVid
       </header>
 
       <main id="main-content">
-        <section className="relative overflow-hidden px-4 pb-12 pt-7 sm:px-6 sm:pb-20 sm:pt-16" aria-labelledby="hero-heading">
+        <section className="relative overflow-hidden px-4 pb-12 pt-7 sm:px-6 sm:pb-20 sm:pt-16 lg:pt-20" aria-labelledby="hero-heading">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,194,28,.11),transparent_62%)]"
+            className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(ellipse_at_70%_0%,rgba(255,194,28,.10),transparent_62%)]"
           />
-          <div className="relative mx-auto max-w-3xl text-center">
-            <p className={EYEBROW}>For electrical contractors</p>
-            <h1 id="hero-heading" className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-              Run the business.
-              <br />
-              Power every job.
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-pretty text-ink-muted sm:text-lg sm:leading-8">
-              Volteira keeps estimates, materials, contracts, scheduling, job records, invoices, and payments together
-              in one place built for electrical contractors.
-            </p>
-            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-              <ButtonLink href="/signup" size="lg" className="px-6">
-                Create free account <ArrowRight className="h-4 w-4" aria-hidden />
-              </ButtonLink>
-              <ButtonLink href="/demo" variant="secondary" size="lg" className="px-6">
-                Try the demo
-              </ButtonLink>
-            </div>
-            <p className="mt-4 text-sm text-ink-muted">No credit card required</p>
-          </div>
-
-          <HeroPreview />
-        </section>
-
-        <section id="workflow" className="px-4 py-12 sm:px-6 sm:py-14 lg:py-20" aria-labelledby="workflow-heading">
-          <div className="mx-auto max-w-6xl">
-            <div className="max-w-2xl">
-              <p className={EYEBROW}>One job. One workflow.</p>
-              <h2 id="workflow-heading" className={SECTION_HEADING}>
-                From estimate to paid.
-              </h2>
-              <p className="mt-4 text-base leading-7 text-pretty text-ink-muted">
-                Everything your team needs follows the job from the first quote to the final payment.
+          {/* Words on the left and the app on the right from a laptop up;
+              one above the other, centred, on anything narrower. */}
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14">
+            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-ink-muted">For electrical contractors.</p>
+              <h1 id="hero-heading" className="mt-5 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+                Run the business.
+                <br />
+                <span className="text-ink-muted">Power every job.</span>
+              </h1>
+              <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-pretty text-ink-muted sm:text-lg sm:leading-8 lg:mx-0">
+                <span className="text-ink">Volteira books the customer, prices the job and gets it signed.</span> Then it
+                schedules the work, sends the invoice and keeps every record in one place, built for electrical contractors.
+              </p>
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <ButtonLink href="/signup" size="lg" className="px-6">
+                  Create free account <ArrowRight className="h-4 w-4" aria-hidden />
+                </ButtonLink>
+                <a
+                  href="#workflow"
+                  className="inline-flex min-h-12 items-center gap-2 px-3 font-mono text-sm text-ink transition hover:text-brand"
+                >
+                  See how it works <ArrowDown className="h-4 w-4" aria-hidden />
+                </a>
+              </div>
+              <p className="mt-4 text-sm text-ink-muted">
+                No credit card required ·{" "}
+                <Link href="/demo" className="font-semibold text-brand">
+                  Try the demo
+                </Link>
               </p>
             </div>
 
-            <div className="relative mt-8 lg:mt-10">
-              {/* One line under all six stages, on a screen wide enough to put
-                  them in a row: from the first circle to the last. */}
-              <span
-                aria-hidden
-                className="workflow-line pointer-events-none absolute left-5 right-[calc((100%_-_3rem)/6_-_1.625rem)] top-5 hidden h-0.5 rounded-full bg-gradient-to-r from-brand via-brand/60 to-brand/25 lg:block"
-              />
-              {/*
-                Two shapes from one list. On a wide screen the six stages run
-                in a row with each pair's card underneath, the rows shared
-                across the three columns (subgrid) so the cards line up. Below
-                that each pair is one card, the stages inside it, which is half
-                the height of stacking stages and cards separately.
-              */}
-              <ol className="grid gap-3 lg:grid-cols-3 lg:grid-rows-[auto_1fr] lg:gap-x-6 lg:gap-y-5">
-                {PHASES.map((phase, phaseIndex) => (
-                  <li
-                    key={phase.title}
-                    className="flex flex-col rounded-panel border border-line bg-surface p-4 sm:p-5 lg:row-span-2 lg:grid lg:grid-rows-subgrid lg:border-0 lg:bg-transparent lg:p-0"
-                  >
-                    <article className="lg:rounded-panel lg:border lg:border-line lg:bg-surface lg:p-5 lg:transition lg:hover:border-line-strong">
-                      <h3 className="text-lg font-semibold">{phase.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-ink-muted lg:mt-2">{phase.body}</p>
-                      <ul className="mt-4 hidden flex-wrap gap-2 lg:flex">
-                        {phase.points.map((point) => (
-                          <li
-                            key={point}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/[0.03] px-3 py-1.5 text-sm text-ink"
-                          >
-                            <Check className="h-3.5 w-3.5 text-positive" aria-hidden />
-                            {point}
-                          </li>
-                        ))}
-                      </ul>
-                    </article>
-                    <ol
-                      className="mt-3 grid gap-2.5 border-t border-line pt-3 sm:mt-4 sm:grid-cols-2 sm:gap-3 sm:pt-4 lg:order-first lg:mt-0 lg:border-0 lg:pt-0"
-                      start={phaseIndex * 2 + 1}
-                    >
-                      {phase.stages.map((stage, stageIndex) => (
-                        <li key={stage.id} className="flex items-start gap-3 lg:block">
-                          <span
-                            aria-hidden
-                            className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full border border-brand/40 bg-surface text-xs font-bold text-brand lg:h-10 lg:w-10 lg:bg-canvas lg:text-sm"
-                          >
-                            {phaseIndex * 2 + stageIndex + 1}
-                          </span>
-                          <p className="min-w-0 text-sm leading-6 text-ink-muted lg:mt-3">
-                            <span className="mr-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink lg:mr-0 lg:block">
-                              {stage.name}
-                            </span>
-                            <span className="lg:mt-1 lg:block">{stage.line}</span>
-                          </p>
-                        </li>
-                      ))}
-                    </ol>
-                  </li>
-                ))}
-              </ol>
+            <HeroPreview />
+          </div>
+        </section>
+
+        <section id="workflow" className="scroll-mt-16 px-4 py-12 sm:px-6 sm:py-16 lg:py-24" aria-labelledby="workflow-heading">
+          <div className="mx-auto max-w-7xl">
+            <div className="max-w-3xl">
+              <h2 id="workflow-heading" className="text-[1.75rem] font-semibold leading-tight tracking-tight text-balance sm:text-5xl">
+                From the first call to paid.
+                <br />
+                <span className="text-ink-muted">Every step in one place.</span>
+              </h2>
+              <p className="mt-5 text-base leading-7 text-pretty text-ink-muted sm:text-lg">
+                One path from the request on your website to the money in the bank.
+              </p>
             </div>
+
+            <FrontPageSteps />
           </div>
         </section>
 
