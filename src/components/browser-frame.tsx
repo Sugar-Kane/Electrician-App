@@ -23,6 +23,7 @@ export function BrowserFrame({
   path,
   active,
   label,
+  bodyClassName = "",
   children,
 }: {
   /** After "volteira.com / ". */
@@ -30,6 +31,8 @@ export function BrowserFrame({
   active: FrameNav;
   /** What the picture shows, read out in place of the mock screen. */
   label: string;
+  /** Sizes the screen area, so a frame that swaps screens never changes size. */
+  bodyClassName?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -49,7 +52,7 @@ export function BrowserFrame({
         </p>
         <ArrowUpRight className="h-3.5 w-3.5 text-ink-faint" aria-hidden />
       </div>
-      <div className="grid sm:grid-cols-[9.5rem_minmax(0,1fr)]">
+      <div className={`grid sm:grid-cols-[9.5rem_minmax(0,1fr)] ${bodyClassName}`}>
         <nav aria-hidden className="hidden border-r border-line bg-surface/60 px-2.5 py-3 sm:block">
           <p className="flex items-center gap-2 px-2 pb-3 text-sm font-bold tracking-[0.04em]">
             <span className="grid h-6 w-6 place-items-center rounded-[6px] bg-brand text-on-brand">
@@ -75,7 +78,7 @@ export function BrowserFrame({
             Ridgeway Electric
           </p>
         </nav>
-        <div className="min-w-0 p-4 sm:p-5">{children}</div>
+        <div className="min-w-0 overflow-hidden p-4 sm:p-5">{children}</div>
       </div>
     </div>
   );

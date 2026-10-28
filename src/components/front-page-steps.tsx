@@ -144,26 +144,35 @@ export function FrontPageSteps() {
 
       <div className="hidden lg:block">
         <div id={`${id}-screen`} className="sticky top-24" aria-live="polite">
-          <div key={active} className="motion-safe:animate-swap">
-            <StepScreen step={step} />
-          </div>
+          <StepScreen step={step} swapKey={active} />
         </div>
       </div>
     </div>
   );
 }
 
-function StepScreen({ step }: { step: Step }) {
+/**
+ * One window for every step: the frame stays where it is, the same size,
+ * and only the screen inside it and the caption under it change.
+ */
+function StepScreen({ step, swapKey }: { step: Step; swapKey?: number }) {
   const { Screen } = step;
   return (
     <figure>
-      <BrowserFrame path={step.path} active={step.nav} label={step.alt}>
-        <Screen />
+      <BrowserFrame path={step.path} active={step.nav} label={step.alt} bodyClassName={SCREEN_SIZE}>
+        <div key={swapKey} className="motion-safe:animate-swap">
+          <Screen />
+        </div>
       </BrowserFrame>
-      <figcaption className="mt-4 text-sm text-ink-muted sm:text-base">{step.caption}</figcaption>
+      <figcaption key={swapKey} className="mt-4 min-h-12 text-sm text-ink-muted motion-safe:animate-swap sm:text-base">
+        {step.caption}
+      </figcaption>
     </figure>
   );
 }
+
+/** Tall enough for the tallest screen, so every step's window is the same size. */
+const SCREEN_SIZE = "h-[36rem]";
 
 const CHIP = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold";
 const GOOD = `${CHIP} border-positive/30 bg-positive-bg text-positive`;
