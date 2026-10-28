@@ -101,6 +101,11 @@ const WORDS: Record<string, { kind: ActivityKind; title: string }> = {
   "estimate.approved": { kind: "money", title: "Estimate approved" },
   "invoice.sent": { kind: "money", title: "Invoice sent" },
   "invoice.paid": { kind: "money", title: "Invoice paid" },
+  "invoice.partially_paid": { kind: "money", title: "Part payment received" },
+  // Paying online by bank: submitted, then cleared (invoice.paid) or not.
+  "invoice.payment_processing": { kind: "money", title: "Bank payment on its way" },
+  "invoice.payment_failed": { kind: "money", title: "Bank payment failed" },
+  "invoice.overpaid": { kind: "money", title: "Paid more than was owed" },
   // Sends that did not reach the customer are written down too, so a failed
   // or repeated send shows on the job rather than only in a toast that is gone
   // by the time anybody asks "did they get it?".

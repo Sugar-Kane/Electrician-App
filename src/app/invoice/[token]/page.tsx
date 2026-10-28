@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { CheckCircle2, Eye, Phone, ReceiptText } from "lucide-react";
+import { CheckCircle2, Clock, Eye, Landmark, Phone, ReceiptText } from "lucide-react";
 
+import { invoiceForPayment, onlinePaymentsEnabled, type InvoiceForPayment } from "@/lib/invoice-online-pay";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -13,6 +14,10 @@ import { createPublicClient } from "@/lib/supabase/public";
  *
  * Reached by an unguessable token, not a session. It shows the customer their
  * own invoice and nothing that would help anyone find another.
+ *
+ * A sent bill can be paid from here, by bank transfer (ACH) or card, through
+ * Stripe. A bank payment takes a few business days to clear, and the page says
+ * so until it has.
  */
 
 export const metadata: Metadata = {
@@ -53,8 +58,21 @@ function quantityLabel(line: Line): string {
   return `${whole}${unit}`;
 }
 
-export default async function InvoiceByLinkPage({ params }: { params: Promise<{ token: string }> }) {
+const PAY_PROBLEMS: Record<string, string> = {
+  processing: "A bank payment on this invoice is already on its way, so there is nothing to pay right now.",
+  not_payable: "This invoice can't be paid online right now. Call the business and they will help.",
+  unavailable: "Online payment isn't working right now. Try again in a few minutes, or call the business.",
+};
+
+export default async function InvoiceByLinkPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ paid?: string; pay?: string }>;
+}) {
   const { token } = await params;
+  const query = await searchParams;
 
   let invoice: InvoiceByLink | null = null;
   if (UUID.test(token)) {
@@ -85,6 +103,14 @@ export default async function InvoiceByLinkPage({ params }: { params: Promise<{ 
     ? new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" }).format(new Date(invoice.due_at))
     : "";
   const tel = (invoice.business_phone ?? "").replace(/[^\d+]/g, "");
+
+  // Paying online: only a sent, unpaid bill, and only when Stripe is set up.
+  const online: InvoiceForPayment | null = !paid && !preview && onlinePaymentsEnabled() ? await invoiceForPayment(token) : null;
+  const canPay = Boolean(online?.check.ok);
+  const processingCents = online && !online.check.ok && online.check.reason === "processing" ? online.check.processingCents ?? 0 : 0;
+  const lastFailed = online?.latest?.status === "failed";
+  const justPaid = query.paid === "1" && !paid;
+  const problem = query.pay ? PAY_PROBLEMS[query.pay] : undefined;
 
   return (
     <main id="main-content" className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
@@ -167,17 +193,58 @@ export default async function InvoiceByLinkPage({ params }: { params: Promise<{ 
           ) : null}
         </dl>
 
+        {processingCents > 0 ? (
+          <p className="mt-6 flex gap-3 rounded-control border border-info/40 bg-info-bg/40 p-3 text-sm leading-6">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-info" aria-hidden />
+            <span>
+              Your bank payment of {money(processingCents)} is on its way. Bank transfers usually take 3–5 business days to
+              clear, and this page will say paid once it has.
+            </span>
+          </p>
+        ) : justPaid && canPay ? (
+          <p className="mt-6 flex gap-3 rounded-control border border-info/40 bg-info-bg/40 p-3 text-sm leading-6">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-info" aria-hidden />
+            <span>Thank you. Your payment is being confirmed; refresh in a minute to see it.</span>
+          </p>
+        ) : null}
+
+        {lastFailed && canPay ? (
+          <p className="mt-6 rounded-control border border-caution/40 bg-caution-bg/40 p-3 text-sm leading-6">
+            Your last bank payment didn&apos;t go through, so nothing was taken. You can try again, with another account or
+            a card.
+          </p>
+        ) : null}
+
+        {problem && !justPaid ? (
+          <p className="mt-6 rounded-control border border-caution/40 bg-caution-bg/40 p-3 text-sm leading-6">{problem}</p>
+        ) : null}
+
+        {canPay && online?.check.ok ? (
+          <form action={`/invoice/${encodeURIComponent(token)}/pay`} method="post" className="mt-8">
+            <button
+              type="submit"
+              className="tap-target flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 py-2 text-center font-semibold text-on-brand"
+            >
+              <Landmark className="h-5 w-5" aria-hidden />
+              Pay {money(online.check.amountCents)} online
+            </button>
+            <p className="mt-2 text-center text-xs leading-5 text-ink-muted">
+              By bank transfer (ACH) or card, securely through Stripe.
+            </p>
+          </form>
+        ) : null}
+
         {invoice.business_phone ? (
           <a
             href={`tel:${tel}`}
-            className="tap-target mt-8 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-5 py-2 text-center font-semibold text-on-brand"
+            className={`tap-target ${canPay ? "mt-3 border border-line text-white" : "mt-8 bg-brand text-on-brand"} flex min-h-12 items-center justify-center gap-2 rounded-control px-5 py-2 text-center font-semibold`}
           >
             <Phone className="h-5 w-5" aria-hidden />
             <span>
-              {paid ? "Call " : preview ? "Questions? Call " : "Call "}
+              {canPay ? "Or call " : preview ? "Questions? Call " : "Call "}
               {/* The number never breaks across lines. */}
               <span className="whitespace-nowrap">{invoice.business_phone}</span>
-              {!paid && !preview ? " to pay" : ""}
+              {!paid && !preview && !canPay && processingCents === 0 ? " to pay" : ""}
             </span>
           </a>
         ) : null}

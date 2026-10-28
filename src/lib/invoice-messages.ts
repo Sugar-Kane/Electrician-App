@@ -128,7 +128,7 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
     facts.payUrl
       ? `Pay online: ${facts.payUrl}`
       : `To pay, call ${facts.businessPhone}.`,
-    ...(facts.viewUrl ? ["", `View your invoice: ${facts.viewUrl}`] : []),
+    ...(facts.viewUrl && facts.viewUrl !== facts.payUrl ? ["", `View your invoice: ${facts.viewUrl}`] : []),
     "",
     `Questions about this invoice? Call ${facts.businessPhone}.`,
     "",
@@ -153,7 +153,7 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
     facts.payUrl
       ? `<p><a href="${escapeHtml(facts.payUrl)}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Pay ${escapeHtml(amount)}</a></p>`
       : `<p>To pay, call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
-    ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your invoice</a></p>`] : []),
+    ...(facts.viewUrl && facts.viewUrl !== facts.payUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your invoice</a></p>`] : []),
     `<p>Questions about this invoice? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
   ]);
