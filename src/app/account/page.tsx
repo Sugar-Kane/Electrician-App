@@ -100,6 +100,9 @@ export default async function AccountPage({
   const activeSection = sections.some((section) => section.id === query.section)
     ? query.section
     : "profile";
+  // Membership is free until a monthly price is set in Stripe and named in
+  // STRIPE_PREMIUM_PRICE_ID; then the Start Premium button charges it.
+  const membershipPriced = Boolean(process.env.STRIPE_PREMIUM_PRICE_ID);
   const subscriptionActive = ["active", "trialing", "past_due", "paused", "unpaid"].includes(
     account.subscription.status,
   );
@@ -293,12 +296,18 @@ export default async function AccountPage({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand">Current plan</p>
-                <p className="mt-2 text-3xl font-semibold">{titleCase(account.subscription.plan)}</p>
+                <p className="mt-2 text-3xl font-semibold">
+                  {!membershipPriced && !subscriptionActive ? "Free" : titleCase(account.subscription.plan)}
+                </p>
                 <p className="mt-2 text-xs text-ink-muted">
-                  {periodEnd ? `${account.subscription.cancelAtPeriodEnd ? "Access ends" : "Renews"} ${periodEnd}` : `${account.subscription.seats} user seat${account.subscription.seats === 1 ? "" : "s"}`}
+                  {!membershipPriced && !subscriptionActive
+                    ? "Every feature is included at no charge while Volteira is in early access."
+                    : periodEnd
+                      ? `${account.subscription.cancelAtPeriodEnd ? "Access ends" : "Renews"} ${periodEnd}`
+                      : `${account.subscription.seats} user seat${account.subscription.seats === 1 ? "" : "s"}`}
                 </p>
               </div>
-              {account.canManageBusiness ? (
+              {!membershipPriced && !account.subscription.stripeCustomerId ? null : account.canManageBusiness ? (
                 account.subscription.stripeCustomerId ? (
                   <form action={openBillingPortal}>
                     <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">

@@ -13,8 +13,8 @@
  * database or a payment provider.
  */
 
-/** Volteira's cut of each invoice, in basis points. 500 = 5%. */
-export const PLATFORM_FEE_BASIS_POINTS = 500;
+/** Volteira's cut of each customer payment, in basis points. 100 = 1%. */
+export const PLATFORM_FEE_BASIS_POINTS = 100;
 
 export type InvoiceInput = {
   /** The work, before anything is added or taken off. */

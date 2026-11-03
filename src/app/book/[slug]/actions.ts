@@ -13,7 +13,7 @@ import {
   prepareBookingCheckout,
   releaseBookingCheckoutSetup,
 } from "@/lib/public-booking";
-import { getStripe } from "@/lib/stripe";
+import { readyPaymentAccount } from "@/lib/stripe-connect";
 import { checkServiceArea } from "@/lib/service-area";
 import { smsConsentRecord } from "@/lib/sms-consent";
 import { createPublicClient, getMessagingBusinessName } from "@/lib/supabase/public";
@@ -134,7 +134,11 @@ export async function startPublicBooking(
     postalCode,
     bookingPage.automatic_booking_radius_miles,
   );
-  const bookingMode = serviceArea.status === "inside" ? "paid_visit" : "callback";
+  // A paid visit needs the business's own Stripe account ready to take the
+  // deposit. Without one, the request still reaches the business, as a
+  // callback, rather than the customer being turned away.
+  const paymentsReady = Boolean(await readyPaymentAccount(bookingPage.organization_id));
+  const bookingMode = serviceArea.status === "inside" && paymentsReady ? "paid_visit" : "callback";
   const priority = safety.outcome === "urgent_review" ? "emergency" : "standard";
 
   if (bookingMode === "paid_visit") {
@@ -142,11 +146,6 @@ export async function startPublicBooking(
     const endTime = Date.parse(slotEnd);
     if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
       return { error: "Choose an available arrival window." };
-    }
-    if (!getStripe()) {
-      return {
-        error: "Secure test payments are still being connected. Please try again after the Stripe sandbox is enabled.",
-      };
     }
   }
 

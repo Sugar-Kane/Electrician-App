@@ -9,20 +9,20 @@ import {
   PLATFORM_FEE_BASIS_POINTS,
 } from "./invoice-math.ts";
 
-test("the platform takes five percent", () => {
-  assert.equal(PLATFORM_FEE_BASIS_POINTS, 500);
-  assert.equal(platformFeeCents(100_000), 5_000);
-  assert.equal(platformFeeCents(128_000), 6_400);
-  assert.equal(platformFeeCents(95_000), 4_750);
+test("the platform takes one percent", () => {
+  assert.equal(PLATFORM_FEE_BASIS_POINTS, 100);
+  assert.equal(platformFeeCents(100_000), 1_000);
+  assert.equal(platformFeeCents(128_000), 1_280);
+  assert.equal(platformFeeCents(95_000), 950);
 });
 
 test("the fee rounds down, not up", () => {
   // Over thousands of invoices, "always rounds up in our favour" is a pattern
   // somebody eventually notices. The half-cent goes to the business doing the
   // work.
-  assert.equal(platformFeeCents(1_999), 99); // 99.95 → 99
-  assert.equal(platformFeeCents(19), 0); // 0.95 → 0
-  assert.equal(platformFeeCents(21), 1); // 1.05 → 1
+  assert.equal(platformFeeCents(1_999), 19); // 19.99 → 19
+  assert.equal(platformFeeCents(99), 0); // 0.99 → 0
+  assert.equal(platformFeeCents(105), 1); // 1.05 → 1
 });
 
 test("nothing owed means nothing taken", () => {
@@ -37,7 +37,7 @@ test("an ordinary invoice adds up", () => {
   assert.equal(totals.subtotalCents, 128_000);
   assert.equal(totals.diagnosticCreditCents, 0);
   assert.equal(totals.totalCents, 128_000);
-  assert.equal(totals.applicationFeeCents, 6_400);
+  assert.equal(totals.applicationFeeCents, 1_280);
 });
 
 test("a paid diagnostic comes off the follow-up invoice", () => {
@@ -48,7 +48,7 @@ test("a paid diagnostic comes off the follow-up invoice", () => {
   assert.equal(totals.diagnosticCreditCents, 10_000);
   assert.equal(totals.totalCents, 118_000);
   // And the fee follows what is actually collected, not the pre-credit figure.
-  assert.equal(totals.applicationFeeCents, 5_900);
+  assert.equal(totals.applicationFeeCents, 1_180);
 });
 
 test("a credit larger than the work does not produce a refund", () => {
@@ -72,7 +72,7 @@ test("tax is charged after the credit, not before", () => {
   });
 
   assert.equal(totals.totalCents, 97_425);
-  assert.equal(totals.applicationFeeCents, 4_871); // 5% of 97,425 → 4871.25 → 4871
+  assert.equal(totals.applicationFeeCents, 974); // 1% of 97,425 → 974.25 → 974
 });
 
 test("garbage in does not become a wrong total", () => {
@@ -156,6 +156,6 @@ test("a hundred invoices of the same amount sum exactly", () => {
     fees += invoiceTotals({ subtotalCents: 33_333 }).applicationFeeCents;
   }
 
-  assert.equal(fees, 166_600); // 1,666 × 100, exactly
+  assert.equal(fees, 33_300); // 333 × 100, exactly
   assert.equal(Number.isInteger(fees), true);
 });

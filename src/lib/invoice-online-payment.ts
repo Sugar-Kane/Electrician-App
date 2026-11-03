@@ -20,6 +20,8 @@ export type PayableOnline = {
   balanceDueCents: number | null;
   /** Earlier online attempts on this invoice, newest first. */
   attempts: { status: OnlineAttemptStatus; amountCents: number }[];
+  /** The business has a Stripe account of its own that can take the charge. */
+  paymentsReady: boolean;
 };
 
 /** Stripe's smallest charge in US dollars. */
@@ -27,7 +29,11 @@ export const MIN_ONLINE_CENTS = 50;
 
 export type OnlinePayCheck =
   | { ok: true; amountCents: number }
-  | { ok: false; reason: "draft" | "void" | "paid" | "nothing_owed" | "processing" | "too_small"; processingCents?: number };
+  | {
+      ok: false;
+      reason: "draft" | "void" | "paid" | "nothing_owed" | "processing" | "too_small" | "not_set_up";
+      processingCents?: number;
+    };
 
 export function owedCents(invoice: Pick<PayableOnline, "balanceDueCents" | "totalCents">): number {
   return Math.max(0, Math.round(invoice.balanceDueCents ?? invoice.totalCents ?? 0));
@@ -48,6 +54,9 @@ export function checkOnlinePayment(invoice: PayableOnline): OnlinePayCheck {
   const amountCents = owedCents(invoice);
   if (amountCents <= 0) return { ok: false, reason: "nothing_owed" };
   if (amountCents < MIN_ONLINE_CENTS) return { ok: false, reason: "too_small" };
+  // The money is the business's: with no account of its own to take it,
+  // nothing is collected online, rather than landing in Volteira's.
+  if (!invoice.paymentsReady) return { ok: false, reason: "not_set_up" };
   return { ok: true, amountCents };
 }
 

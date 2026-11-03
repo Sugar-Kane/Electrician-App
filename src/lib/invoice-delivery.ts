@@ -74,9 +74,10 @@ export async function deliverInvoice(input: {
   const facts: InvoiceFacts = {
     ...input.facts,
     viewUrl,
-    // The invoice link is where the customer pays, by bank or card, whenever
-    // Stripe is set up; a Stripe-hosted invoice page, where one exists, still wins.
-    payUrl: input.facts.payUrl || (!preview && onlinePaymentsEnabled() && viewUrl ? viewUrl : undefined),
+    // The invoice link is where the customer pays, by bank or card, once the
+    // business has its Stripe account set up; a Stripe-hosted invoice page,
+    // where one exists, still wins.
+    payUrl: input.facts.payUrl || (!preview && viewUrl && (await onlinePaymentsEnabled(input.organizationId)) ? viewUrl : undefined),
   };
   const attempts: DeliveryAttempt[] = [];
   const note = (attempt: Omit<DeliveryAttempt, "at">) =>

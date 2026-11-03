@@ -15,6 +15,7 @@ const sent = (over: Partial<PayableOnline> = {}): PayableOnline => ({
   totalCents: 128_000,
   balanceDueCents: 128_000,
   attempts: [],
+  paymentsReady: true,
   ...over,
 });
 
@@ -27,6 +28,12 @@ test("only a sent, unpaid invoice can be paid online, and only for what is still
   assert.equal(checkOnlinePayment(sent({ status: "paid", balanceDueCents: 0 })).ok, false);
   assert.deepEqual(checkOnlinePayment(sent({ balanceDueCents: 0 })), { ok: false, reason: "nothing_owed" });
   assert.deepEqual(checkOnlinePayment(sent({ balanceDueCents: 30 })), { ok: false, reason: "too_small" });
+});
+
+test("nothing is collected online until the business has its own Stripe account", () => {
+  assert.deepEqual(checkOnlinePayment(sent({ paymentsReady: false })), { ok: false, reason: "not_set_up" });
+  // A paid or void invoice still says so, whatever the account.
+  assert.deepEqual(checkOnlinePayment(sent({ status: "paid", balanceDueCents: 0, paymentsReady: false })), { ok: false, reason: "paid" });
 });
 
 test("a bank payment still clearing blocks a second payment; a failed or abandoned one does not", () => {

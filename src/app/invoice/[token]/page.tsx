@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Clock, Eye, Landmark, Phone, ReceiptText } from "lucide-react";
 
-import { invoiceForPayment, onlinePaymentsEnabled, type InvoiceForPayment } from "@/lib/invoice-online-pay";
+import { invoiceForPayment, type InvoiceForPayment } from "@/lib/invoice-online-pay";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -104,8 +104,9 @@ export default async function InvoiceByLinkPage({
     : "";
   const tel = (invoice.business_phone ?? "").replace(/[^\d+]/g, "");
 
-  // Paying online: only a sent, unpaid bill, and only when Stripe is set up.
-  const online: InvoiceForPayment | null = !paid && !preview && onlinePaymentsEnabled() ? await invoiceForPayment(token) : null;
+  // Paying online: only a sent, unpaid bill, and only once the business has
+  // its own Stripe account set up to take it.
+  const online: InvoiceForPayment | null = !paid && !preview ? await invoiceForPayment(token) : null;
   const canPay = Boolean(online?.check.ok);
   const processingCents = online && !online.check.ok && online.check.reason === "processing" ? online.check.processingCents ?? 0 : 0;
   const lastFailed = online?.latest?.status === "failed";

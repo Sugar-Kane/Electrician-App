@@ -13,6 +13,8 @@ import {
 
 import { fulfillPaidBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
+import { getPublicBookingPage } from "@/lib/public-booking";
+import { paymentAccountFor } from "@/lib/stripe-connect";
 
 export const metadata: Metadata = {
   title: "Diagnostic confirmed | Volteira",
@@ -37,9 +39,15 @@ export default async function BookingConfirmationPage({
   const stripe = getStripe();
   let confirmation = null;
 
-  if (stripe && query.session_id?.startsWith("cs_")) {
+  // The checkout lives on the business's own Stripe account.
+  const bookingPage = stripe && query.session_id?.startsWith("cs_") ? await getPublicBookingPage(slug) : null;
+  const account = bookingPage ? await paymentAccountFor(bookingPage.organization_id) : null;
+
+  if (stripe && account && query.session_id?.startsWith("cs_")) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(query.session_id);
+      const session = await stripe.checkout.sessions.retrieve(query.session_id, undefined, {
+        stripeAccount: account.accountId,
+      });
       if (session.metadata?.organization_slug === slug) {
         confirmation = await fulfillPaidBooking(session);
       }

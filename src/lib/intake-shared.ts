@@ -17,7 +17,7 @@ import {
 import { localeFor } from "@/lib/intake-phrases";
 import { nowLabel, slotLabel } from "@/lib/schedule-labels";
 import { type IntakeAction, type IntakeContext, type OfferedSlot } from "@/lib/sms-intake";
-import { getStripe } from "@/lib/stripe";
+import { readyPaymentAccount } from "@/lib/stripe-connect";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 import { RECEPTIONIST_NAME } from "@/lib/voice-intake";
@@ -737,7 +737,8 @@ export async function recordBookingRequest(input: {
   const decision = decideHold({
     intent: "book",
     depositCents: input.depositCents,
-    paymentsAvailable: Boolean(getStripe()),
+    // The business's own Stripe account must be ready to take the deposit.
+    paymentsAvailable: Boolean(await readyPaymentAccount(input.organizationId)),
   });
 
   const markNeedsReview = async (because: string): Promise<RecordedRequest> => {

@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 
 import { attachCheckoutToBooking } from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
+import { readyPaymentAccount, volteiraFeeCents } from "@/lib/stripe-connect";
 
 /**
  * Turning a held booking into a Stripe checkout.
@@ -92,6 +93,10 @@ export async function startBookingCheckout(input: {
   if (!stripe) return { error: "Payments are not configured." };
   if (!input.origin) return { error: "This deployment has no public address." };
   if (!input.feeCents || input.feeCents <= 0) return { error: "There is nothing to pay." };
+  // The deposit is the business's money, charged on its own Stripe account.
+  const account = await readyPaymentAccount(input.organizationId);
+  if (!account) return { error: "This business has not set up payments yet." };
+  const onAccount = { stripeAccount: account.accountId };
 
   const back = `${input.origin}/booking/${encodeURIComponent(input.bookingToken)}`;
   const requestedExpiry = input.expiresAt ? Date.parse(input.expiresAt) : Number.NaN;
@@ -142,6 +147,8 @@ export async function startBookingCheckout(input: {
             booking_intake_id: input.intakeId ?? "",
             organization_id: input.organizationId,
           },
+          // Volteira's share; Stripe's processing fee is the business's.
+          application_fee_amount: volteiraFeeCents(input.feeCents) || undefined,
         },
         success_url: `${input.origin}/book/${encodeURIComponent(input.slug)}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${back}?pay=canceled`,
@@ -149,11 +156,12 @@ export async function startBookingCheckout(input: {
       {
         // Two taps on the same texted link produce one checkout, not two.
         idempotencyKey: `booking-checkout-${input.bookingToken}`,
+        ...onAccount,
       },
     );
 
     if (!session.url || !(await attachCheckoutToBooking(input.bookingToken, session.id))) {
-      await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+      await stripe.checkout.sessions.expire(session.id, undefined, onAccount).catch(() => undefined);
       return { error: "The appointment hold could not be completed." };
     }
 
