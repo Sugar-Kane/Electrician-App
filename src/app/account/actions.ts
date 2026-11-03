@@ -384,11 +384,19 @@ export async function startPremiumCheckout() {
 
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
+    // Settings chosen in Stripe's Checkout Studio.
+    ui_mode: "hosted_page",
+    billing_address_collection: "auto",
+    phone_number_collection: { enabled: false },
+    automatic_tax: { enabled: false },
+    allow_promotion_codes: false,
+    origin_context: "web",
+    integration_identifier: "hosted_web_0001",
+    payment_method_collection: "always",
     customer: customerId,
     customer_email: customerId ? undefined : context.user.email,
     client_reference_id: context.organizationId,
     line_items: [{ price: priceId, quantity: 1 }],
-    allow_promotion_codes: true,
     success_url: `${appUrl()}/account?section=subscription&checkout=success#subscription`,
     cancel_url: `${appUrl()}/account?section=subscription&checkout=canceled#subscription`,
     metadata: {

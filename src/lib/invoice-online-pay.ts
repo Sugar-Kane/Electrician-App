@@ -151,6 +151,15 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
   const metadata = { purpose: PURPOSE, invoice_id: invoice.id, organization_id: invoice.organizationId };
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
+    // Settings chosen in Stripe's Checkout Studio.
+    ui_mode: "hosted_page",
+    billing_address_collection: "auto",
+    phone_number_collection: { enabled: false },
+    automatic_tax: { enabled: false },
+    allow_promotion_codes: false,
+    origin_context: "web",
+    integration_identifier: "hosted_web_0001",
+    submit_type: "auto",
     // Bank first: for a bill of hundreds or thousands of dollars it is the
     // cheaper way to pay, and Stripe verifies the account instantly by bank
     // sign-in where it can, so the customer isn't waiting on test deposits.
