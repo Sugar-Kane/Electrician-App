@@ -7,6 +7,7 @@ import {
   getBookingPaymentIntent,
 } from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
+import { paymentAccountFor } from "@/lib/stripe-connect";
 
 /**
  * The link a text message carries.
@@ -65,10 +66,14 @@ export async function GET(
   // repeat tap retrieves that session rather than extending the hold.
   if (intent.checkout_session_id?.startsWith("cs_")) {
     const stripe = getStripe();
-    if (!stripe) return back("unavailable");
+    // The checkout lives on the business's own Stripe account.
+    const account = await paymentAccountFor(intent.organization_id);
+    if (!stripe || !account) return back("unavailable");
 
     try {
-      const session = await stripe.checkout.sessions.retrieve(intent.checkout_session_id);
+      const session = await stripe.checkout.sessions.retrieve(intent.checkout_session_id, undefined, {
+        stripeAccount: account.accountId,
+      });
       if (session.status === "open" && session.url) {
         return Response.redirect(session.url, 303);
       }

@@ -12,6 +12,7 @@ import {
   type OnlinePayCheck,
 } from "@/lib/invoice-online-payment";
 import { getStripe } from "@/lib/stripe";
+import { paymentAccountFor, readyPaymentAccount, volteiraFeeCents } from "@/lib/stripe-connect";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 
@@ -23,10 +24,11 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
  * unguessable link, and the webhook has neither. Every read is by that link or
  * by the checkout Stripe signed, never by an id somebody typed.
  *
- * Money lands in the Stripe account this deployment runs on, the same one the
- * booking deposits go to. A checkout is tagged `purpose: invoice_payment`, so
- * the booking and subscription handlers pass it by and these handle nothing
- * else.
+ * The charge is made on the business's own connected Stripe account (see
+ * stripe-connect.ts), with Volteira's percentage taken as Stripe's
+ * application fee. A business with no account ready to take charges has no Pay
+ * button. A checkout is tagged `purpose: invoice_payment`, so the booking and
+ * subscription handlers pass it by and these handle nothing else.
  */
 
 const PURPOSE = "invoice_payment";
@@ -38,6 +40,8 @@ type Database = ReturnType<typeof getSupabaseAdmin>;
 export type InvoiceForPayment = {
   id: string;
   organizationId: string;
+  /** The business's connected account, when it can take the charge. */
+  stripeAccount: string | null;
   jobId: string | null;
   invoiceNumber: string;
   businessName: string;
@@ -51,8 +55,9 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-export function onlinePaymentsEnabled(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY);
+/** Whether this business's customers can pay online at all. */
+export async function onlinePaymentsEnabled(organizationId: string): Promise<boolean> {
+  return Boolean(await readyPaymentAccount(organizationId));
 }
 
 /** The invoice behind a customer's link, and whether it can be paid online now. */
@@ -83,10 +88,12 @@ export async function invoiceForPayment(token: string, database: Database = getS
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
   const job = (row.jobs ?? null) as Record<string, unknown> | null;
   const customer = (job?.customers ?? null) as Record<string, unknown> | null;
+  const account = await readyPaymentAccount(text(row.organization_id));
 
   return {
     id: text(row.id),
     organizationId: text(row.organization_id),
+    stripeAccount: account?.accountId ?? null,
     jobId: text(row.job_id) || null,
     invoiceNumber: String(row.invoice_number ?? ""),
     businessName: text(organization?.name) || "Your electrician",
@@ -97,6 +104,7 @@ export async function invoiceForPayment(token: string, database: Database = getS
       totalCents: Number(row.total_cents) || 0,
       balanceDueCents: row.balance_due_cents === null || row.balance_due_cents === undefined ? null : Number(row.balance_due_cents),
       attempts,
+      paymentsReady: Boolean(account),
     }),
     latest: attempts[0] ?? null,
   };
@@ -114,6 +122,9 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
   if (!invoice) return { error: "unavailable" };
   if (!invoice.check.ok) return { error: invoice.check.reason === "processing" ? "processing" : "not_payable" };
   const amountCents = invoice.check.amountCents;
+  const stripeAccount = invoice.stripeAccount;
+  if (!stripeAccount) return { error: "not_payable" };
+  const onAccount = { stripeAccount };
 
   // A second tap on Pay returns to the checkout already open for this amount,
   // rather than opening another one the customer could also pay.
@@ -129,7 +140,7 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
   const openId = text((open as Record<string, unknown> | null)?.checkout_session_id);
   if (openId) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(openId);
+      const session = await stripe.checkout.sessions.retrieve(openId, undefined, onAccount);
       if (session.status === "open" && session.url) return { url: session.url };
     } catch {
       // Gone or unreadable: a new checkout below.
@@ -166,6 +177,9 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
     payment_intent_data: {
       description: `${invoice.businessName} invoice INV-${invoice.invoiceNumber}`,
       metadata,
+      // Volteira's share. Stripe's own processing fee comes out of the
+      // business's side separately, as the account was set up to pay it.
+      application_fee_amount: volteiraFeeCents(amountCents) || undefined,
     },
     success_url: `${back}?paid=1`,
     cancel_url: back,
@@ -173,7 +187,7 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
 
   let session: Stripe.Checkout.Session;
   try {
-    session = await stripe.checkout.sessions.create(params);
+    session = await stripe.checkout.sessions.create(params, onAccount);
   } catch (error) {
     // An account without bank payments turned on still takes cards, rather
     // than leaving the customer with no way to pay at all.
@@ -184,7 +198,7 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
     }
     console.error("invoice checkout: bank payments unavailable, offering card only", { message: message.slice(0, 300) });
     try {
-      session = await stripe.checkout.sessions.create({ ...params, payment_method_types: ["card"], payment_method_options: undefined });
+      session = await stripe.checkout.sessions.create({ ...params, payment_method_types: ["card"], payment_method_options: undefined }, onAccount);
     } catch (retry) {
       console.error("invoice checkout failed", { invoiceId: invoice.id, message: String(retry).slice(0, 300) });
       return { error: "unavailable" };
@@ -203,17 +217,25 @@ export async function startInvoiceCheckout(input: { token: string; origin: strin
   // account for, so it is closed rather than shown.
   if (insertError || !session.url) {
     console.error("invoice checkout not recorded", { invoiceId: invoice.id, code: insertError?.code });
-    await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+    await stripe.checkout.sessions.expire(session.id, undefined, onAccount).catch(() => undefined);
     return { error: "unavailable" };
   }
   return { url: session.url };
 }
 
-async function paymentMethodOf(stripe: Stripe, session: Stripe.Checkout.Session): Promise<{ method: "bank" | "card"; paymentIntentId: string; failure: string }> {
+async function paymentMethodOf(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  stripeAccount: string | undefined,
+): Promise<{ method: "bank" | "card"; paymentIntentId: string; failure: string }> {
   const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? "";
   if (!paymentIntentId) return { method: "card", paymentIntentId: "", failure: "" };
   try {
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["payment_method"] });
+    const intent = await stripe.paymentIntents.retrieve(
+      paymentIntentId,
+      { expand: ["payment_method"] },
+      stripeAccount ? { stripeAccount } : undefined,
+    );
     const paymentMethod = intent.payment_method && typeof intent.payment_method === "object" ? intent.payment_method : null;
     const type = paymentMethod?.type ?? intent.payment_method_types?.[0] ?? null;
     return {
@@ -231,10 +253,18 @@ async function paymentMethodOf(stripe: Stripe, session: Stripe.Checkout.Session)
  * Stripe's word on an invoice checkout. False when the checkout was not an
  * invoice payment, so the webhook hands it to the other handlers.
  *
+ * `account` is the connected account the event came from (Stripe's
+ * `event.account`). Only the account the invoice's business connected is
+ * believed.
+ *
  * Throws on a database failure, so Stripe retries the event; every step is
  * safe to repeat.
  */
-export async function handleInvoiceCheckoutEvent(eventType: string, session: Stripe.Checkout.Session): Promise<boolean> {
+export async function handleInvoiceCheckoutEvent(
+  eventType: string,
+  session: Stripe.Checkout.Session,
+  account?: string,
+): Promise<boolean> {
   if (session.metadata?.purpose !== PURPOSE || session.mode !== "payment") return false;
   const action = onlineEventAction(eventType, session.payment_status);
   if (action === "ignore") return true;
@@ -258,6 +288,12 @@ export async function handleInvoiceCheckoutEvent(eventType: string, session: Str
   const jobId = text(attempt.job_id) || null;
   const activity = asFlexibleClient(database);
 
+  const connected = await paymentAccountFor(organizationId, database);
+  if (!account || connected?.accountId !== account) {
+    console.error("invoice checkout event from an account that isn't the business's", { session: session.id, eventType });
+    return true;
+  }
+
   if (action === "expired") {
     if (canMoveAttempt(from, "expired")) {
       await database.from("invoice_online_payments").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", text(attempt.id)).eq("status", from);
@@ -265,7 +301,7 @@ export async function handleInvoiceCheckoutEvent(eventType: string, session: Str
     return true;
   }
 
-  const paid = stripe ? await paymentMethodOf(stripe, session) : { method: "card" as const, paymentIntentId: "", failure: "" };
+  const paid = stripe ? await paymentMethodOf(stripe, session, account) : { method: "card" as const, paymentIntentId: "", failure: "" };
   const amountCents = session.amount_total ?? (Number(attempt.amount_cents) || 0);
 
   if (action === "processing") {
