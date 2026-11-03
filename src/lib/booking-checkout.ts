@@ -108,12 +108,20 @@ export async function startBookingCheckout(input: {
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
+        // Settings chosen in Stripe's Checkout Studio.
+        ui_mode: "hosted_page",
+        billing_address_collection: "auto",
+        phone_number_collection: { enabled: false },
+        automatic_tax: { enabled: false },
+        allow_promotion_codes: false,
+        origin_context: "web",
+        integration_identifier: "hosted_web_0001",
+        submit_type: "auto",
         // Payment methods are managed in Stripe so Checkout can show the best
         // eligible instant options for this customer, device and currency.
         // Delayed-settlement methods are the exception: a bank debit that
         // settles days later cannot safely confirm a slot held for 30 minutes.
         excluded_payment_method_types: DELAYED_PAYMENT_METHODS,
-        integration_identifier: "volteira_diagnostic_booking_kqvmrjta",
         customer_email: input.email || undefined,
         // Stripe's Latin American Spanish for a customer who booked in Spanish;
         // otherwise the browser's own language, as before.
