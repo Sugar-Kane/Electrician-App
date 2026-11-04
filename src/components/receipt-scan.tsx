@@ -10,6 +10,7 @@ import {
   type ReceiptSaveState,
 } from "@/app/inventory/receipt-actions";
 import { FormMessage, inputClass } from "@/components/ui/field";
+import { AiLimitActions } from "@/components/ai-limit-actions";
 import { centsToInput, keepMoneyCharacters, keepQuantityCharacters } from "@/lib/money-input";
 import { checkReceiptTotals, linesTotalCents, type ReceiptPlanLine } from "@/lib/receipt-lines";
 import { createClient } from "@/lib/supabase/client";
@@ -349,6 +350,7 @@ export function ReceiptScan() {
           ) : null}
 
           {problem ? <p className="mt-2 text-xs leading-5 text-critical">{problem}</p> : null}
+          <AiLimitActions message={problem} />
         </div>
       ) : (
         <form action={action} className="mt-3">

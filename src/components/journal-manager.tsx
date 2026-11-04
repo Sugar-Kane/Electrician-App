@@ -20,6 +20,7 @@ import {
   type JournalActionState,
 } from "@/app/settings/journal/actions";
 import { FormMessage } from "@/components/ui/field";
+import { AiLimitActions } from "@/components/ai-limit-actions";
 import type { OwnerPost, WritableJob } from "@/lib/journal-admin";
 
 /**
@@ -203,6 +204,7 @@ function PostRow({ post, publicHref }: { post: OwnerPost; publicHref: string }) 
       <div className="mt-2 empty:mt-0">
         <FormMessage error={visibility.error} notice={visibility.notice} />
         <FormMessage error={edit.error} notice={edit.notice} />
+        <AiLimitActions message={edit.error} />
         <FormMessage error={undo.error} notice={undo.notice} />
       </div>
     </li>
@@ -237,6 +239,7 @@ function WritableRow({ job }: { job: WritableJob }) {
       </form>
       <div className="mt-1.5">
         <FormMessage error={state.error} notice={state.notice} />
+        <AiLimitActions message={state.notice || state.error} />
       </div>
     </li>
   );
