@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
+import { DefaultAiCard } from "@/app/admin/ai/ai-cards";
 import { AdminTime } from "@/components/admin-time";
 import { Card, Pill, type Tone } from "@/components/admin-ui";
 import {
@@ -11,6 +12,7 @@ import {
   listOverdueVisits,
   listOverviewIssues,
   type OrganizationSummary,
+  myAdminRole,
   requirePlatformAdmin,
 } from "@/lib/admin-console";
 import { diagnose } from "@/lib/admin-health";
@@ -89,8 +91,9 @@ function describe(kind: string, occurrences: number): { title: string; detail: s
  * seen is called healthy: a business with no evidence either way is listed
  * under Unknown.
  */
-export default async function AdminOverviewPage() {
+export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ ai?: string }> }) {
   await requirePlatformAdmin();
+  const [{ ai: aiNotice = "" }, role] = await Promise.all([searchParams, myAdminRole()]);
   const [organizations, evidence, found, overdue, facts] = await Promise.all([
     listOrganizations(),
     getMessagingEvidence(null),
@@ -267,6 +270,8 @@ export default async function AdminOverviewPage() {
           </Card>
         );
       })}
+
+      <DefaultAiCard owner={role === "owner"} notice={aiNotice} />
     </div>
   );
 }

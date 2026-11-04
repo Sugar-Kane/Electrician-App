@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 
 import { beginImpersonation } from "@/app/admin/impersonate/actions";
+import { BusinessAiCard } from "@/app/admin/ai/ai-cards";
 import { AdminTime } from "@/components/admin-time";
 import { Card, Row } from "@/components/admin-ui";
 import {
@@ -28,9 +29,12 @@ export async function SummaryTab({
   organization,
   elevate,
   owner,
+  aiNotice = "",
 }: {
   organization: OrganizationDetail;
   elevate: string;
+  /** What the last AI allowance save said, from the URL. */
+  aiNotice?: string;
   /** Support admins look and check; only owners can make changes. */
   owner: boolean;
 }) {
@@ -223,6 +227,8 @@ export async function SummaryTab({
           <Row label="Booking page" value={`/book/${organization.slug}`} />
         </dl>
       </Card>
+
+      <BusinessAiCard organizationId={id} owner={owner} notice={aiNotice} />
 
       {owner ? (
         <Card title="Make changes as this business">

@@ -26,6 +26,8 @@ import { Banner } from "@/components/ui/banner";
 import { SelectField } from "@/components/ui/select-field";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
+import { aiUsageSummary } from "@/lib/ai-allowance";
+import { premiumPriceLabel } from "@/lib/premium-price";
 
 export const metadata: Metadata = { title: "My account | Volteira" };
 
@@ -96,6 +98,10 @@ export default async function AccountPage({
   // Membership is free until a monthly price is set in Stripe and named in
   // STRIPE_PREMIUM_PRICE_ID; then the Start Premium button charges it.
   const membershipPriced = Boolean(process.env.STRIPE_PREMIUM_PRICE_ID);
+  const [aiUsage, premiumPrice] = await Promise.all([
+    account.organizationId ? aiUsageSummary(account.organizationId) : Promise.resolve(null),
+    membershipPriced ? premiumPriceLabel() : Promise.resolve(null),
+  ]);
   const subscriptionActive = ["active", "trialing", "past_due", "paused", "unpaid"].includes(
     account.subscription.status,
   );
@@ -255,7 +261,7 @@ export default async function AccountPage({
                 </p>
                 <p className="mt-2 text-xs text-ink-muted">
                   {!membershipPriced && !subscriptionActive
-                    ? "Every feature is included at no charge while Volteira is in early access."
+                    ? "Everything is included at no charge, with a monthly allowance of built-in AI."
                     : periodEnd
                       ? `${account.subscription.cancelAtPeriodEnd ? "Access ends" : "Renews"} ${periodEnd}`
                       : `${account.subscription.seats} user seat${account.subscription.seats === 1 ? "" : "s"}`}
@@ -271,7 +277,7 @@ export default async function AccountPage({
                 ) : (
                   <form action={startPremiumCheckout}>
                     <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">
-                      Start Premium
+                      {premiumPrice ? `Start Premium · ${premiumPrice}` : "Start Premium"}
                     </button>
                   </form>
                 )
@@ -281,8 +287,28 @@ export default async function AccountPage({
             </div>
           </div>
 
+          {aiUsage ? (
+            <div className="mt-4 rounded-control border border-line p-4">
+              <p className="text-sm font-semibold">Built-in AI this month</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {aiUsage.limit === "unlimited"
+                  ? `${aiUsage.used} used. Unlimited on your plan.`
+                  : `${aiUsage.used} of ${aiUsage.limit} used. Resets on the 1st.`}
+              </p>
+              {aiUsage.limit !== "unlimited" ? (
+                <p className="mt-2 text-xs leading-5 text-ink-muted">
+                  {membershipPriced
+                    ? `Premium${premiumPrice ? ` (${premiumPrice})` : ""} includes unlimited built-in AI. `
+                    : ""}
+                  Using Volteira in ChatGPT or Claude is always unlimited and free:{" "}
+                  <Link href="/settings/chatgpt" className="font-semibold text-brand">Settings → Use in ChatGPT</Link>.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            {["AI-assisted intake", "Route optimization", "Advanced automation"].map((feature) => (
+            {["Unlimited built-in AI", "Route optimization", "Advanced automation"].map((feature) => (
               <p key={feature} className="flex min-h-11 items-center gap-2 rounded-chip bg-white/[0.03] px-3 text-xs text-ink-muted">
                 <Zap className="h-4 w-4 shrink-0 fill-brand text-brand" aria-hidden /> {feature}
               </p>
