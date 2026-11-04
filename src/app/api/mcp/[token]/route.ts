@@ -4,12 +4,13 @@ import { NextResponse } from "next/server";
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
 import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
+import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
 import { logMcpCall } from "@/lib/mcp-log";
 import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.2.0";
+const SERVER_VERSION = "1.3.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -73,7 +74,10 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     return rpcError(400, -32700, "Parse error: invalid JSON");
   }
 
-  const tools = business ? [...BUSINESS_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS] : BOOKING_TOOLS;
+  const tools = business
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
+    : BOOKING_TOOLS;
+  const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
   const supplierNames = new Set(SUPPLIER_ORDER_MCP_TOOLS.map((tool) => tool.name));
 
@@ -82,7 +86,9 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     tools,
     callTool: async (name, args) => {
       const toolStartedAt = Date.now();
-      const result = business && businessNames.has(name)
+      const result = business && workdayNames.has(name)
+        ? await runWorkdayMcpTool({ database, session, name, args })
+        : business && businessNames.has(name)
         ? await runBusinessMcpTool({ database, session, name, args })
         : business && supplierNames.has(name)
           ? await runSupplierOrderMcpTool({ database, session, name, args })
