@@ -22,12 +22,6 @@ import {
  * arithmetic would be a second answer to disagree with the first.
  */
 
-export type InvoiceLine = {
-  description: string;
-  quantityLabel: string;
-  rateLabel: string;
-  amountLabel: string;
-};
 
 export type InvoiceDocumentData = {
   business: BusinessLetterhead;
@@ -37,7 +31,12 @@ export type InvoiceDocumentData = {
   statusLabel: string;
   customer: { name: string; addressLines: string[]; phone: string; email: string };
   job: { number: string; addressLines: string[]; serviceDateLabel: string; technician: string };
-  lines: InvoiceLine[];
+  /**
+   * What the work was, in a sentence. The customer is billed for the work as a
+   * whole: the line items (each part and its price) stay with the electrician
+   * and are never printed on the invoice.
+   */
+  workSummary: string;
   totals: {
     subtotalLabel: string;
     /** Already-paid diagnostic taken off the repair. Empty when there was none. */
@@ -51,29 +50,7 @@ export type InvoiceDocumentData = {
   customerNote: string;
 };
 
-const COLUMNS = { description: "52%", quantity: "12%", rate: "16%", amount: "20%" } as const;
-
-function LineRow({ line, striped }: { line: InvoiceLine; striped: boolean }) {
-  return (
-    <View
-      style={[
-        sheet.row,
-        {
-          paddingVertical: 5,
-          borderBottomWidth: 1,
-          borderBottomColor: RULE,
-          backgroundColor: striped ? "#f8fafc" : undefined,
-        },
-      ]}
-      wrap={false}
-    >
-      <Text style={{ width: COLUMNS.description, paddingRight: 8 }}>{line.description}</Text>
-      <Text style={{ width: COLUMNS.quantity, textAlign: "right" }}>{line.quantityLabel}</Text>
-      <Text style={{ width: COLUMNS.rate, textAlign: "right" }}>{line.rateLabel}</Text>
-      <Text style={{ width: COLUMNS.amount, textAlign: "right" }}>{line.amountLabel}</Text>
-    </View>
-  );
-}
+const COLUMNS = { description: "75%", amount: "25%" } as const;
 
 function TotalRow({
   label,
@@ -179,31 +156,22 @@ export function InvoiceDocument({ data }: { data: InvoiceDocumentData }) {
             DESCRIPTION
           </Text>
           <Text
-            style={[sheet.sectionHeading, { width: COLUMNS.quantity, marginBottom: 0, textAlign: "right" }]}
-          >
-            QTY
-          </Text>
-          <Text
-            style={[sheet.sectionHeading, { width: COLUMNS.rate, marginBottom: 0, textAlign: "right" }]}
-          >
-            RATE
-          </Text>
-          <Text
             style={[sheet.sectionHeading, { width: COLUMNS.amount, marginBottom: 0, textAlign: "right" }]}
           >
             AMOUNT
           </Text>
         </View>
 
-        {data.lines.length === 0 ? (
-          <Text style={[sheet.muted, { paddingVertical: 10 }]}>
-            No work or parts were recorded against this job.
-          </Text>
-        ) : (
-          data.lines.map((line, index) => (
-            <LineRow key={`${line.description}-${index}`} line={line} striped={index % 2 === 1} />
-          ))
-        )}
+        <View
+          style={[sheet.row, { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: RULE }]}
+          wrap={false}
+        >
+          <View style={{ width: COLUMNS.description, paddingRight: 8 }}>
+            <Text style={{ fontWeight: "bold" }}>Electrical work (labor and materials)</Text>
+            {data.workSummary ? <Text style={sheet.muted}>{data.workSummary}</Text> : null}
+          </View>
+          <Text style={{ width: COLUMNS.amount, textAlign: "right" }}>{totals.subtotalLabel}</Text>
+        </View>
 
         <View style={[sheet.row, { justifyContent: "flex-end", marginTop: 14 }]} wrap={false}>
           <View style={{ width: "50%" }}>
