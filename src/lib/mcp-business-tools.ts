@@ -1,8 +1,7 @@
 import "server-only";
 
 import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
-import { draftScope, draftWorkOrderLines } from "@/lib/claude";
-import { fillTemplate, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
+import { fillTemplate, scopePrompt, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
@@ -95,7 +94,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "draft_estimate",
     title: "Draft a pricing estimate",
     description:
-      "Draft labor and material line suggestions from a work description. This does not save or send anything; prices are suggestions for owner review.",
+      "Get what you need to draft labor and material lines for a job. You write the draft yourself from what this returns; nothing is saved or sent. Once the electrician agrees the items and prices, put them on the job with add_job_lines.",
     inputSchema: {
       type: "object",
       properties: { description: str("What work the customer needs, with as much known detail as practical.") },
@@ -168,10 +167,14 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "draft_contract",
     title: "Create draft contract",
     description:
-      "Create a stored draft contract for an existing job from the business template and render its PDF when possible. Explicit owner approval is required.",
+      "Create a stored draft contract for an existing job from the business template and render its PDF when possible. You write the scope-of-work paragraph yourself: call once without scope to get the job's details and the rules for it, then again with scope. Explicit owner approval is required.",
     inputSchema: {
       type: "object",
-      properties: { job_number: str("The existing job number."), confirmed },
+      properties: {
+        job_number: str("The existing job number."),
+        scope: str("The scope-of-work paragraph you wrote, following the rules the first call returns. Leave empty to get them."),
+        confirmed,
+      },
       required: ["job_number", "confirmed"],
       additionalProperties: false,
     },
@@ -445,12 +448,20 @@ export async function runBusinessMcpTool(input: {
     case "draft_estimate": {
       const description = text(args.description);
       if (description.length < 10) return { text: "Give a little more detail about the work before drafting an estimate." };
-      const lines = await draftWorkOrderLines({ description });
-      if (!lines?.length) return { isError: true, text: "No estimate lines could be drafted. Nothing was saved." };
+      // Drafted by the assistant the electrician is talking to, on their own
+      // plan, rather than by Volteira's built-in AI.
       return {
-        text: `DRAFT ONLY — review quantities and prices before using them:\n${lines
-          .map((line, index) => `${index + 1}. ${JSON.stringify(line)}`)
-          .join("\n")}`,
+        text: [
+          "Write the draft estimate yourself from this description. Nothing has been saved.",
+          "",
+          `WORK: ${description.slice(0, 2000)}`,
+          "",
+          "HOW TO WRITE IT",
+          "- Labor: hours for each part of the work, at the electrician's hourly rate (ask for it if you don't know it).",
+          "- Materials: each part with a quantity, a unit (each, ft, box, roll or stick) and a suggested customer price each.",
+          "- Say plainly that the prices are suggestions to check, and never invent work that was not described.",
+          "- Show it as a short list and ask the electrician to correct anything. When they agree, put it on the job with add_job_lines.",
+        ].join("\n"),
       };
     }
 
@@ -623,7 +634,32 @@ export async function runBusinessMcpTool(input: {
 
     case "draft_contract": {
       const jobNumber = Number(text(args.job_number));
-      const proposal = `Create and store a draft contract for job #${text(args.job_number)}.`;
+      // The scope is written by the assistant the electrician is talking to,
+      // on their own plan, rather than by Volteira's built-in AI. One plain
+      // paragraph, so nothing it sends can become a heading or a new clause.
+      const written = text(args.scope).replace(/\s+/g, " ").trim().slice(0, 1200);
+      if (!written) {
+        if (!Number.isFinite(jobNumber)) return { isError: true, text: "That job number could not be read." };
+        const { data: described } = await database
+          .from("jobs")
+          .select("job_number, category, customer_description")
+          .eq("organization_id", organizationId)
+          .eq("job_number", jobNumber)
+          .maybeSingle();
+        if (!described) return { isError: true, text: `Job #${jobNumber} was not found.` };
+        return {
+          text: [
+            "Nothing has been created yet. Write the scope-of-work paragraph, then call draft_contract again with it as scope.",
+            "",
+            `KIND OF WORK: ${text(described.category).replace(/_/g, " ") || "not given"}`,
+            `WHAT THE CUSTOMER DESCRIBED: ${text(described.customer_description).slice(0, 2000) || "nothing yet; ask the electrician"}`,
+            "",
+            "RULES",
+            scopePrompt(),
+          ].join("\n"),
+        };
+      }
+      const proposal = `Create and store a draft contract for job #${text(args.job_number)} with this scope: "${written}"`;
       const gate = requireConfirmation(args, proposal);
       if (gate) return gate;
       if (!Number.isFinite(jobNumber)) return { isError: true, text: "That job number could not be read." };
@@ -653,7 +689,7 @@ export async function runBusinessMcpTool(input: {
         ? new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" }).format(new Date(iso))
         : "";
       const totalCents = invoices.reduce((sum, invoice) => sum + Number(invoice.total_cents ?? 0), 0);
-      const scope = await draftScope({ description: text(row.customer_description), workType: text(row.category).replace(/_/g, " ") });
+      const scope = written;
       const facts: Partial<ContractFacts> = {
         business_name: text(organization.name),
         business_phone: text(organization.phone),

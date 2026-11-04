@@ -1,10 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 
 import { advanceVisit } from "@/lib/job-changes-server";
-import { writePostForJob } from "@/lib/journal-writer";
 import { isWorkflowState, type WorkflowState } from "@/lib/job-workflow";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -133,19 +131,10 @@ export async function advanceJob(
   revalidatePath("/schedule");
   revalidatePath("/");
 
-  /*
-   * The write-up, after the response has gone.
-   *
-   * `after` runs the callback once this action's response is flushed, so the
-   * tap that finishes a job returns at the speed it always did and the model
-   * runs on its own time. `writePostForJob` never throws and never needs
-   * anything from the caller.
-   */
+  // A finished job is no longer written up on its own: each write-up costs
+  // built-in AI whether anybody reads it or not. The owner writes the ones
+  // they want from Settings → Journal, where every finished job is offered.
   if (result.finished) {
-    after(async () => {
-      await writePostForJob({ jobId: job.id });
-      revalidatePath(`/jobs/${jobNumber}`);
-    });
     revalidatePath("/inventory");
     revalidatePath("/materials");
   }

@@ -41,8 +41,9 @@ export default async function JournalSettingsPage() {
     >
       <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
         <p className="text-sm leading-6 text-ink-muted">
-          When a job is completed, the assistant writes it up and publishes it. Posts explain the
-          problem for somebody who is not an electrician, which is what makes them worth finding.
+          Pick a finished job below and tap Write a post: the assistant writes it up and publishes it.
+          Posts explain the problem for somebody who is not an electrician, which is what makes them
+          worth finding.
           Nothing about the customer goes in: no name, no address, no job number.
         </p>
         <p className="mt-2 text-sm leading-6 text-ink-muted">

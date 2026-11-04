@@ -61,6 +61,7 @@ export default async function AdminOrganizationPage({
     done?: string;
     problem?: string;
     why?: string;
+    ai?: string;
   }>;
 }) {
   await requirePlatformAdmin();
@@ -127,7 +128,7 @@ export default async function AdminOrganizationPage({
         <p className="text-sm text-critical">Say why you need to see them. The reason goes on the activity record.</p>
       ) : null}
 
-      {tab === "summary" ? <SummaryTab organization={organization} elevate={query.elevate ?? ""} owner={owner} /> : null}
+      {tab === "summary" ? <SummaryTab organization={organization} elevate={query.elevate ?? ""} owner={owner} aiNotice={query.ai ?? ""} /> : null}
       {tab === "people" ? <PeopleTab organization={organization} owner={owner} /> : null}
       {tab === "jobs" ? <JobsTab organization={organization} customerId={customerId} /> : null}
       {tab === "messages" ? <MessagesTab organization={organization} revealed={revealed} /> : null}

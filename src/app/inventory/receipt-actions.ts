@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { prepareAttachments } from "@/lib/assistant-attachments";
 import { attachmentKind, refuseAttachment } from "@/lib/attachment-kinds";
+import { takeAiUse } from "@/lib/ai-allowance";
 import { readReceipt } from "@/lib/claude";
 import { documentFolderId } from "@/lib/document-folders";
 import {
@@ -234,6 +235,9 @@ export async function scanReceipt(input: {
       error: "That receipt was saved, but it could not be opened for reading. Try a clearer photo.",
     };
   }
+
+  const allowance = await takeAiUse(context.organizationId, "receipt");
+  if (!allowance.ok) return { ok: false, error: `That receipt was saved. ${allowance.message}` };
 
   const read = await readReceipt({ block });
   if (!read) {
