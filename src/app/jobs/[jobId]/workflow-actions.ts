@@ -3,17 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 
-import { recordActivity } from "@/lib/activity";
-import { sendJobEventMessage } from "@/lib/automatic-messages";
-import { takeReservedParts } from "@/lib/job-billing-server";
+import { advanceVisit } from "@/lib/job-changes-server";
 import { writePostForJob } from "@/lib/journal-writer";
-import {
-  canAdvance,
-  isWorkflowState,
-  jobStatusFor,
-  workflowStateOf,
-  type WorkflowState,
-} from "@/lib/job-workflow";
+import { isWorkflowState, type WorkflowState } from "@/lib/job-workflow";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -102,40 +94,6 @@ async function loadJob(jobNumber: string) {
   };
 }
 
-type ProgressRow = {
-  id: string;
-  tripStartedAt: string;
-  arrivedAt: string;
-  workStartedAt: string;
-};
-
-/** What is already recorded for this technician on this job. */
-async function loadProgress(
-  job: NonNullable<Awaited<ReturnType<typeof loadJob>>>,
-): Promise<ProgressRow | null> {
-  const query = job.supabase
-    .from("job_technician_progress")
-    .select("id, trip_started_at, arrived_at, work_started_at")
-    .eq("organization_id", job.organizationId)
-    .eq("job_id", job.id);
-
-  // `is` rather than `eq` for the unattributed row: `eq(null)` matches nothing
-  // in PostgREST, which would mint a second row on every tap.
-  const { data } = job.technicianId
-    ? await query.eq("technician_id", job.technicianId).maybeSingle()
-    : await query.is("technician_id", null).maybeSingle();
-
-  if (!data) return null;
-  const row = data as Record<string, unknown>;
-
-  return {
-    id: str(row.id),
-    tripStartedAt: str(row.trip_started_at),
-    arrivedAt: str(row.arrived_at),
-    workStartedAt: str(row.work_started_at),
-  };
-}
-
 /**
  * Advance a job one step.
  *
@@ -157,156 +115,19 @@ export async function advanceJob(
   const job = await loadJob(jobNumber);
   if (!job) return { error: "That job could not be found." };
 
-  const current = workflowStateOf(job.status);
-
-  // The geofence and a tap can land within a second of each other, and a
-  // refresh can replay a form. Arriving at the state you are already in is
-  // success, not an error worth showing somebody.
-  if (current === requested) return { error: "", state: current };
-
-  if (current === "canceled") {
-    return { error: "This job is canceled. Book a new visit instead." };
+  // What was actually used from stock for each reserved line, as
+  // `used:<line id>`; a line the form does not mention used what it asked for.
+  const confirmed = new Map<string, number | null>();
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("used:")) continue;
+    const typed = String(value).trim();
+    const amount = Number(typed);
+    // Blank, or anything that is not a number, is "none from stock".
+    confirmed.set(key.slice("used:".length), typed && Number.isFinite(amount) ? amount : 0);
   }
 
-  if (!canAdvance(current, requested)) {
-    return { error: `A job that is ${current.replace(/_/g, " ")} cannot go straight to that step.` };
-  }
-
-  const now = new Date().toISOString();
-  const progress = await loadProgress(job);
-
-  // Only ever filled in, never overwritten. The first time somebody arrived is
-  // the time they arrived; a second tap does not move it later.
-  const patch: Record<string, unknown> = {};
-  if (requested === "en_route" && !progress?.tripStartedAt) patch.trip_started_at = now;
-
-  // Starting work from the van, without ever having been marked arrived. The
-  // alternative is a job that is being worked on and has no arrival time at
-  // all — see the confirm the screen shows before this happens.
-  const recordsArrival =
-    (requested === "arrived" || requested === "working") && !progress?.arrivedAt;
-
-  if (recordsArrival) {
-    patch.arrived_at = now;
-    patch.arrival_source = requested === "arrived" ? source : "manual";
-  }
-
-  if (requested === "working" && !progress?.workStartedAt) patch.work_started_at = now;
-  if (requested === "completed") patch.completed_at = now;
-
-  /*
-   * Finishing a job claims it, then takes its parts off the count.
-   *
-   * Until now its parts were reserved: on the van, counted, but held for this
-   * job. The form carries what was actually used from stock for each reserved
-   * line, as `used:<line id>`; a line it does not mention used what it asked
-   * for.
-   *
-   * The status moves first, and only from the status this request read — so
-   * of two taps that arrive together, one finishes the job and the other finds
-   * it already finished, and the parts come off once. If taking them then
-   * fails, the job goes back to where it was, still open with its parts still
-   * reserved, rather than finished with them never taken.
-   */
-  let partsUsed: string[] = [];
-  if (requested === "completed") {
-    const { data: claimed, error: claimError } = await job.supabase
-      .from("jobs")
-      .update({ status: jobStatusFor(requested) })
-      .eq("id", job.id)
-      .eq("organization_id", job.organizationId)
-      .eq("status", job.status)
-      .select("id");
-
-    if (claimError) return { error: "That could not be saved. Try again." };
-    if (!Array.isArray(claimed) || claimed.length === 0) {
-      // Somebody else finished it (or moved it) a moment ago.
-      return { error: "", state: requested };
-    }
-
-    const confirmed = new Map<string, number | null>();
-    for (const [key, value] of formData.entries()) {
-      if (!key.startsWith("used:")) continue;
-      const typed = String(value).trim();
-      const amount = Number(typed);
-      // Blank, or anything that is not a number, is "none from stock".
-      confirmed.set(key.slice("used:".length), typed && Number.isFinite(amount) ? amount : 0);
-    }
-    const parts = await takeReservedParts(job.supabase, {
-      organizationId: job.organizationId,
-      jobId: job.id,
-      confirmed,
-    });
-    if (!parts.ok) {
-      await job.supabase
-        .from("jobs")
-        .update({ status: job.status })
-        .eq("id", job.id)
-        .eq("organization_id", job.organizationId)
-        .eq("status", jobStatusFor(requested));
-      return { error: "The parts used could not be taken off the stock count, so the job is not completed yet. Try again." };
-    }
-    partsUsed = parts.said;
-  } else {
-    const { error: statusError } = await job.supabase
-      .from("jobs")
-      .update({ status: jobStatusFor(requested) })
-      .eq("id", job.id)
-      .eq("organization_id", job.organizationId);
-
-    if (statusError) return { error: "That could not be saved. Try again." };
-  }
-
-  // The status is what the rest of the app reads, so it is written first and
-  // the timestamps are best effort behind it. A progress row that fails to save
-  // costs a time on a report; a status that fails to save strands somebody in
-  // the wrong step.
-  if (Object.keys(patch).length > 0) {
-    if (progress) {
-      await job.supabase
-        .from("job_technician_progress")
-        .update(patch)
-        .eq("id", progress.id)
-        .eq("organization_id", job.organizationId);
-    } else {
-      const { error: insertError } = await job.supabase
-        .from("job_technician_progress")
-        .insert({
-          organization_id: job.organizationId,
-          job_id: job.id,
-          technician_id: job.technicianId,
-          ...patch,
-        });
-
-      // Two taps in flight at once: the unique index refused the second. The
-      // row it collided with is the one this was trying to create.
-      if (insertError) {
-        const existing = await loadProgress(job);
-        if (existing) {
-          await job.supabase
-            .from("job_technician_progress")
-            .update(patch)
-            .eq("id", existing.id)
-            .eq("organization_id", job.organizationId);
-        }
-      }
-    }
-  }
-
-  /*
-   * Written down before anything is told to anybody.
-   *
-   * Every step of the visit is a line on the customer's history, which until
-   * now went from "booked" straight to whatever the invoice said. `recordActivity`
-   * passes only the job; the trigger on the table finds the customer from it.
-   */
-  await recordActivity(job.supabase, {
-    organizationId: job.organizationId,
-    eventType: `job.${requested}`,
-    label: `Job ${requested.replace(/_/g, " ")}`,
-    jobId: job.id,
-    metadata: source === "geofence" ? { note: "recorded automatically" } : {},
-  });
+  const result = await advanceVisit(job, { requested, source, confirmed });
+  if (result.error || !result.state) return { error: result.error, state: result.state };
 
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/schedule");
@@ -317,117 +138,17 @@ export async function advanceJob(
    *
    * `after` runs the callback once this action's response is flushed, so the
    * tap that finishes a job returns at the speed it always did and the model
-   * runs on its own time. Writing it inline would hold an electrician standing
-   * in somebody's garage while a language model composes prose about them.
-   *
-   * `writePostForJob` never throws and never needs anything from the caller. A
-   * job with nothing worth writing about produces no post and says why on the
-   * job's own screen; that is the ordinary case rather than an error.
+   * runs on its own time. `writePostForJob` never throws and never needs
+   * anything from the caller.
    */
-  if (requested === "completed") {
+  if (result.finished) {
     after(async () => {
       await writePostForJob({ jobId: job.id });
       revalidatePath(`/jobs/${jobNumber}`);
     });
     revalidatePath("/inventory");
     revalidatePath("/materials");
-    if (partsUsed.length > 0) return { error: "", state: requested, notice: partsUsed.join(" ") };
   }
 
-  // Setting off and turning up are the two moments the customer is waiting on,
-  // so they are the two that are worth a text. Nothing else in the workflow
-  // sends anything: starting work and finishing are the business's own
-  // business, and a status tap that quietly texted somebody would be a surprise
-  // nobody asked for.
-  if (requested === "en_route" && patch.trip_started_at) {
-    const told = await tellCustomer(job, jobNumber, "en_route");
-    return { error: "", state: requested, notice: told };
-  }
-
-  if (recordsArrival) {
-    const told = await tellCustomer(job, jobNumber, "arrived");
-    return { error: "", state: requested, notice: told };
-  }
-
-  return { error: "", state: requested };
-}
-
-/** What each moment is called in the database, the templates, and to a person. */
-const NOTICES = {
-  en_route: {
-    stamp: "customer_en_route_notified_at",
-    trigger: "job_en_route",
-    said: "Customer told you are on the way.",
-  },
-  arrived: {
-    stamp: "customer_arrival_notified_at",
-    trigger: "job_arrived",
-    said: "Customer told you have arrived.",
-  },
-} as const;
-
-/**
- * Tell the customer, at most once per job per moment.
- *
- * Once per job rather than once per technician: a second van setting off is not
- * a second journey from the customer's point of view, and somebody texted twice
- * about one visit is somebody who replies STOP. So the guard reads every row on
- * the job, not just this technician's. The same guard covers a technician who
- * steps out for a part and comes back — they have not arrived twice.
- *
- * Everything about whether this is allowed at all — consent, the STOP ledger,
- * quiet hours, and whether this business sends this particular message —
- * already lives in `sendJobEventMessage` and its template. Duplicating any of it
- * here would be a second set of rules to keep in step with the first, and the
- * one that goes stale is the one that texts somebody who opted out.
- */
-async function tellCustomer(
-  job: NonNullable<Awaited<ReturnType<typeof loadJob>>>,
-  jobNumber: string,
-  moment: keyof typeof NOTICES,
-): Promise<string | undefined> {
-  const notice = NOTICES[moment];
-
-  const { data: alreadyTold } = await job.supabase
-    .from("job_technician_progress")
-    .select("id")
-    .eq("organization_id", job.organizationId)
-    .eq("job_id", job.id)
-    .not(notice.stamp, "is", null)
-    .limit(1)
-    .maybeSingle();
-
-  if (alreadyTold) return undefined;
-
-  const result = await sendJobEventMessage({ jobId: job.id, trigger: notice.trigger });
-
-  // Nothing sent, nothing stamped. The column records when the customer was
-  // told, so writing it after a refused send would turn "the template is
-  // switched off" into "they were told" on every report that reads it.
-  if (!result.sent) return undefined;
-
-  const { data: mine } = await job.supabase
-    .from("job_technician_progress")
-    .select("id")
-    .eq("organization_id", job.organizationId)
-    .eq("job_id", job.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (mine) {
-    // Widened deliberately: a computed key narrows to a string-indexed literal,
-    // which the flexible client's excess-property guard reads as a row shape it
-    // has never heard of.
-    const stamp: Record<string, unknown> = { [notice.stamp]: new Date().toISOString() };
-
-    await job.supabase
-      .from("job_technician_progress")
-      .update(stamp)
-      .eq("id", str((mine as Record<string, unknown>).id))
-      .eq("organization_id", job.organizationId);
-  }
-
-  revalidatePath(`/jobs/${jobNumber}`);
-  return notice.said;
+  return { error: "", state: result.state, notice: result.notice };
 }
