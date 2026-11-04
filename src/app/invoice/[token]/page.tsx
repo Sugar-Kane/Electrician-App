@@ -25,8 +25,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Line = { kind: string; description: string; quantity: number; unit: string; unit_price_cents: number };
-
 type InvoiceByLink = {
   business_name: string;
   business_phone: string | null;
@@ -43,7 +41,6 @@ type InvoiceByLink = {
   paid_at: string | null;
   work_summary: string | null;
   time_zone: string | null;
-  lines: Line[] | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -51,12 +48,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const money = (cents: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 
-function quantityLabel(line: Line): string {
-  const quantity = Number(line.quantity) || 0;
-  const whole = Number.isInteger(quantity) ? String(quantity) : quantity.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
-  const unit = line.unit && line.unit !== "each" ? ` ${line.unit}` : "";
-  return `${whole}${unit}`;
-}
 
 const PAY_PROBLEMS: Record<string, string> = {
   processing: "A bank payment on this invoice is already on its way, so there is nothing to pay right now.",
@@ -96,7 +87,6 @@ export default async function InvoiceByLinkPage({
   const timeZone = invoice.time_zone || "America/Los_Angeles";
   const paid = invoice.status === "paid" || Boolean(invoice.paid_at);
   const preview = !paid && invoice.status === "draft" && !invoice.last_sent_at;
-  const lines = Array.isArray(invoice.lines) ? invoice.lines : [];
   const total = invoice.total_cents ?? 0;
   const owed = invoice.balance_due_cents ?? total;
   const dueLabel = invoice.due_at
@@ -145,31 +135,17 @@ export default async function InvoiceByLinkPage({
           <p className="mt-5 text-sm leading-6 text-ink-muted">{invoice.work_summary}</p>
         ) : null}
 
-        {lines.length > 0 ? (
-          <ul className="mt-5 divide-y divide-line border-y border-line text-sm">
-            {lines.map((line, index) => (
-              <li key={index} className="flex items-start justify-between gap-3 py-2.5">
-                <span className="min-w-0">
-                  <span className="block">{line.description}</span>
-                  <span className="text-xs text-ink-faint">
-                    {quantityLabel(line)} × {money(Number(line.unit_price_cents) || 0)}
-                  </span>
-                </span>
-                <span className="shrink-0 font-semibold">
-                  {money(Math.round((Number(line.quantity) || 0) * (Number(line.unit_price_cents) || 0)))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {/* The customer is billed for the work, not the parts list: the
+            electrician keeps the line items, and the customer sees the total. */}
+        <div className="mt-5 flex items-start justify-between gap-3 border-y border-line py-3 text-sm">
+          <span className="min-w-0">
+            <span className="block font-semibold">Electrical work</span>
+            <span className="text-xs text-ink-faint">Labor and materials</span>
+          </span>
+          <span className="shrink-0 font-semibold">{money(invoice.subtotal_cents ?? total)}</span>
+        </div>
 
         <dl className="mt-4 space-y-1.5 text-sm">
-          {invoice.subtotal_cents !== null && invoice.subtotal_cents !== total ? (
-            <div className="flex justify-between text-ink-muted">
-              <dt>Subtotal</dt>
-              <dd>{money(invoice.subtotal_cents)}</dd>
-            </div>
-          ) : null}
           {invoice.diagnostic_credit_cents ? (
             <div className="flex justify-between text-ink-muted">
               <dt>Diagnostic fee already paid</dt>

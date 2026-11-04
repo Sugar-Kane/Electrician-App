@@ -47,7 +47,7 @@ import {
   type DemoDay,
   type JobStageId,
 } from "@/lib/demo-job";
-import { formatCents, formatQuantity, lineTotalCents } from "@/lib/job-lines";
+import { formatCents } from "@/lib/job-lines";
 import { nextStep } from "@/lib/job-workflow";
 import type { ContractSignature } from "@/lib/pdf/contract-document";
 
@@ -713,41 +713,19 @@ function InvoiceSheet({ workDay, status }: { workDay: DemoDay; status: string })
         Service date {date} · Electrician: {DEMO_JOB.technician}
       </p>
 
-      <table className="mt-5 w-full table-fixed border-collapse">
-        <thead>
-          <tr className="border-b border-[#0f172a]">
-            <th scope="col" className={`${SHEET_HEADING} w-[46%] pb-1.5 text-left sm:w-[52%]`}>
-              Description
-            </th>
-            <th scope="col" className={`${SHEET_HEADING} w-[16%] pb-1.5 text-right sm:w-[12%]`}>
-              Qty
-            </th>
-            <th scope="col" className={`${SHEET_HEADING} w-[18%] pb-1.5 text-right sm:w-[16%]`}>
-              Rate
-            </th>
-            <th scope="col" className={`${SHEET_HEADING} w-[20%] pb-1.5 text-right`}>
-              Amount
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {DEMO_LINES.map((line, index) => (
-            <tr key={line.id} className={index % 2 === 1 ? "bg-[#f8fafc]" : undefined}>
-              <td className="break-words py-1.5 pr-2 align-top">{line.description}</td>
-              <td className="py-1.5 text-right align-top">
-                {formatQuantity(line.quantity)} {line.unit}
-              </td>
-              <td className="py-1.5 text-right align-top">{formatCents(line.unitPriceCents)}</td>
-              <td className="py-1.5 text-right align-top">{formatCents(lineTotalCents(line))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* One line for the work: the customer is billed the total, and the parts
+          list stays with the electrician, as on the real PDF. */}
+      <div className="mt-5 flex items-start justify-between gap-3 border-y border-[#0f172a] py-2">
+        <div className="min-w-0 break-words">
+          <p className="font-bold">Electrical work (labor and materials)</p>
+          <p className="text-[#64748b]">{DEMO_JOB.work}</p>
+        </div>
+        <p className="shrink-0">{formatCents(totals.subtotalCents)}</p>
+      </div>
 
       <dl className="ml-auto mt-4 w-full space-y-1 sm:w-1/2">
         {(
           [
-            ["Subtotal", formatCents(totals.subtotalCents), false],
             ["Diagnostic fee already paid", `-${formatCents(totals.diagnosticCreditCents)}`, false],
             ["Total", formatCents(totals.totalCents), true],
             ["Balance due", formatCents(totals.totalCents), true],

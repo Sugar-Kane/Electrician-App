@@ -3,7 +3,7 @@ import "server-only";
 import { documentFolderId } from "@/lib/document-folders";
 import { InvoiceDocument, invoiceFileName } from "@/lib/pdf/invoice-document";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
-import { formatCents, formatQuantity } from "@/lib/job-lines";
+import { formatCents } from "@/lib/job-lines";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
 /**
@@ -67,7 +67,7 @@ export async function generateInvoicePdf(input: {
       `id, invoice_number, status, subtotal_cents, diagnostic_credit_cents, tax_cents,
        total_cents, balance_due_cents, due_at, created_at,
        jobs (
-         id, job_number, scheduled_start, technician_notes,
+         id, job_number, scheduled_start, technician_notes, customer_description,
          customers ( first_name, last_name, company_name, phone, email ),
          properties ( address_line_1, address_line_2, city, state, postal_code ),
          technicians ( display_name )
@@ -121,20 +121,6 @@ export async function generateInvoicePdf(input: {
     str(customer?.company_name) ||
     [str(customer?.first_name), str(customer?.last_name)].filter(Boolean).join(" ") ||
     "Customer";
-
-  const lines = ((lineRows ?? []) as Record<string, unknown>[]).map((row) => {
-    // numeric arrives as a string over PostgREST, so this would concatenate
-    // rather than multiply if it were passed through untouched.
-    const quantity = num(row.quantity);
-    const unitPriceCents = num(row.unit_price_cents);
-
-    return {
-      description: str(row.description),
-      quantityLabel: `${formatQuantity(quantity)} ${str(row.unit) || "each"}`,
-      rateLabel: formatCents(unitPriceCents),
-      amountLabel: formatCents(Math.round(quantity * unitPriceCents)),
-    };
-  });
 
   const totalCents = num(invoice.total_cents);
   const balanceCents = num(invoice.balance_due_cents);
@@ -209,7 +195,7 @@ export async function generateInvoicePdf(input: {
           serviceDateLabel: dateLabel(job?.scheduled_start, input.timeZone),
           technician: str(technician?.display_name),
         },
-        lines,
+        workSummary: str(job?.customer_description),
         totals: {
           subtotalLabel: formatCents(num(invoice.subtotal_cents)),
           diagnosticCreditLabel: creditCents > 0 ? `-${formatCents(creditCents)}` : "",
