@@ -10,6 +10,7 @@ import {
   type Attachment,
 } from "@/components/assistant-attachments";
 import { ChatMarkdown } from "@/components/ui/chat-markdown";
+import { AiLimitActions } from "@/components/ai-limit-actions";
 import { DictateButton } from "@/components/dictate-button";
 
 import { chatAction, type ChatState } from "@/app/assistant/agent-actions";
@@ -306,6 +307,7 @@ function Form({
           {error}
         </p>
       ) : null}
+      <AiLimitActions message={error} />
 
       <div className="flex gap-2">
         <AttachButton

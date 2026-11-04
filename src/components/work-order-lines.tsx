@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LoaderCircle, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { estimateWorkOrder } from "@/app/jobs/new/estimate-actions";
+import { AiLimitActions } from "@/components/ai-limit-actions";
 import { StockPicker } from "@/components/stock-picker";
 import { Field, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
@@ -184,6 +185,7 @@ export function WorkOrderLines({
         </p>
 
         {problem ? <p className="mt-2 text-xs leading-5 text-critical">{problem}</p> : null}
+        <AiLimitActions message={problem} />
 
         <ul className="mt-3 space-y-3">
           {lines.map((line) => (

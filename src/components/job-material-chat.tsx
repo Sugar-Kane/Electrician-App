@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { addListedParts, type ListedPart } from "@/app/jobs/[jobId]/line-actions";
+import { AiLimitActions } from "@/components/ai-limit-actions";
 import { clearMaterialList, saveMaterialList } from "@/app/jobs/[jobId]/material-list-actions";
 import {
   carryPrices,
@@ -1074,6 +1075,7 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
           </form>
         ) : null}
         {error ? <p className="mt-2 text-sm text-critical">{error}</p> : null}
+        <AiLimitActions message={error} />
 
         {!choosing && fromChatGpt ? (
           <FromChatGpt
