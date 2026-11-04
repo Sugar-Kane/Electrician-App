@@ -450,8 +450,6 @@ export default async function JobDetailPage({
               <JobMaterialChat
                 jobNumber={controls.jobNumber}
                 saved={materialChat.saved}
-                ai={materialChat.ai}
-                canConnect={materialChat.canConnect}
                 markupPercent={materialChat.markupPercent}
                 forChatGpt={materialChat.forChatGpt}
                 jobDescription={job.summary}
