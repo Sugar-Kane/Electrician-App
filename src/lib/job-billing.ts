@@ -22,7 +22,7 @@
  */
 import { fillTemplate, type ContractFacts, type FilledContract } from "./contract-template.ts";
 import { canEditInvoice } from "./document-edit.ts";
-import { formatCents, formatQuantity, lineTotalCents } from "./job-lines.ts";
+import { formatCents, lineTotalCents } from "./job-lines.ts";
 
 export type BillableLine = {
   id: string;
@@ -220,10 +220,26 @@ function plain(text: string): string {
   return text.replace(/\{\{|\}\}/g, (pair) => pair[0]!);
 }
 
-/** One added line as the change order lists it. */
-export function changeOrderLine(line: Pick<BillableLine, "description" | "quantity" | "unit" | "unitPriceCents">): string {
-  const quantity = `${formatQuantity(line.quantity)} ${line.unit || "each"}`;
-  return `${plain(line.description.trim())} — ${quantity} at ${formatCents(line.unitPriceCents)}: ${formatCents(lineTotalCents(line))}`;
+/**
+ * What a change order says was added, in words.
+ *
+ * The work, never the parts list: a customer approves the job and its price,
+ * and the materials, their quantities and per-line prices stay with the
+ * electrician, as they do on the invoice. Labor lines name the work; parts
+ * alone read as additional materials.
+ */
+export function changeOrderWork(lines: readonly (Pick<BillableLine, "description"> & { kind?: string })[]): string[] {
+  const work = [
+    ...new Set(
+      lines
+        .filter((line) => line.kind !== "material")
+        .map((line) => plain(line.description.trim()))
+        .filter(Boolean),
+    ),
+  ];
+  const hasParts = lines.some((line) => line.kind === "material");
+  if (work.length === 0) return ["Additional parts and materials"];
+  return hasParts ? [...work, "Parts and materials for the above"] : work;
 }
 
 /**
@@ -238,7 +254,8 @@ export function changeOrderBody(input: {
   facts: Partial<ContractFacts>;
   /** When the customer last signed, as it should read: "Oct 2, 2026". */
   signedOn: string;
-  lines: readonly Pick<BillableLine, "description" | "quantity" | "unit" | "unitPriceCents">[];
+  /** `kind` is "labor" or "material"; a line without one is treated as work. */
+  lines: readonly (Pick<BillableLine, "description" | "quantity" | "unit" | "unitPriceCents"> & { kind?: string })[];
 }): FilledContract {
   const head = fillTemplate(
     `CHANGE ORDER
@@ -250,7 +267,7 @@ This change order is made on {{today}} between {{business_name}} ("the Contracto
   const total = centsOf(input.lines);
   const body = [
     head.body,
-    ["WORK AND PARTS ADDED", ...input.lines.map(changeOrderLine)].join("\n"),
+    ["WORK ADDED", ...changeOrderWork(input.lines)].join("\n"),
     `PRICE\nThese additions come to ${formatCents(total)}, on top of the price already agreed.`,
     "Everything else that was agreed stays the same. By signing, the Customer approves the additions above and agrees to pay for them.",
   ].join("\n\n");

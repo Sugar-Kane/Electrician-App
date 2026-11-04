@@ -162,7 +162,7 @@ test("a voided contract is not what anybody agreed to", () => {
   assert.equal(changes.signed, null);
 });
 
-test("a change order lists what was added and what it comes to", () => {
+test("a change order names the work added and its total, never the parts list or line prices", () => {
   const filled = changeOrderBody({
     facts: {
       today: "Oct 3, 2026",
@@ -173,14 +173,15 @@ test("a change order lists what was added and what it comes to", () => {
     },
     signedOn: "Oct 1, 2026",
     lines: [
-      { description: "60A double-pole breaker", quantity: 1, unit: "each", unitPriceCents: 4_850 },
-      { description: "Install 60A EV charger circuit", quantity: 3, unit: "hr", unitPriceCents: 12_500 },
+      { kind: "material", description: "60A double-pole breaker", quantity: 1, unit: "each", unitPriceCents: 4_850 },
+      { kind: "labor", description: "Install 60A EV charger circuit", quantity: 3, unit: "hr", unitPriceCents: 12_500 },
     ],
   });
   assert.deepEqual(filled.unfilled, []);
   assert.match(filled.body, /^CHANGE ORDER\n\nThis change order is made on Oct 3, 2026 between Pacific Plains Electric/);
   assert.match(filled.body, /job 15 at 200 Harbor Way, Morro Bay, CA, signed on Oct 1, 2026\./);
-  assert.match(filled.body, /WORK AND PARTS ADDED\n60A double-pole breaker — 1 each at \$48\.50: \$48\.50\nInstall 60A EV charger circuit — 3 hr at \$125\.00: \$375\.00/);
+  assert.match(filled.body, /WORK ADDED\nInstall 60A EV charger circuit\nParts and materials for the above\n/);
+  assert.doesNotMatch(filled.body, /breaker|\$48\.50|\$125\.00|3 hr/);
   assert.match(filled.body, /These additions come to \$423\.50, on top of the price already agreed\./);
 });
 
