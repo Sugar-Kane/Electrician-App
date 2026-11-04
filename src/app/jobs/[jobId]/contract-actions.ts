@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { recordActivity } from "@/lib/activity";
 
+import { takeAiUse } from "@/lib/ai-allowance";
 import { draftScope } from "@/lib/claude";
 import {
   completeDraftFields,
@@ -340,13 +341,16 @@ export async function generateContract(
   const workType = text(row.category).replace(/_/g, " ");
   const description = text(row.customer_description);
 
-  // Best effort. A model outage leaves {{scope}} standing in the draft, which
-  // is visible and fixable; a paragraph invented to fill the gap is neither.
-  const scope = await draftScope({
-    description,
-    workType,
-    visitOnly: money.source === "diagnostic",
-  });
+  // Best effort. A model outage, or a business past this month's built-in AI,
+  // leaves {{scope}} standing in the draft, which is visible and fixable; a
+  // paragraph invented to fill the gap is neither.
+  const scope = (await takeAiUse(organizationId, "contract_scope")).ok
+    ? await draftScope({
+        description,
+        workType,
+        visitOnly: money.source === "diagnostic",
+      })
+    : null;
 
   const facts: Partial<ContractFacts> = {
     business_name: text(organization?.name),

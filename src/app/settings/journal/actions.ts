@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { checkPost, retryNote } from "@/lib/blog-voice";
+import { takeAiUse } from "@/lib/ai-allowance";
 import { editJournalPost, type DraftedPost } from "@/lib/claude";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
 import { streetIdentifiers } from "@/lib/journal-source";
@@ -123,6 +124,9 @@ export async function askAssistantToEdit(
     context.organizationId,
     String(post.job_id ?? ""),
   );
+
+  const allowance = await takeAiUse(context.organizationId, "journal_edit");
+  if (!allowance.ok) return { error: allowance.message };
 
   const edited = await editJournalPost({
     system: journalSystemPrompt({

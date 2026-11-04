@@ -1,5 +1,6 @@
 "use server";
 
+import { takeAiUse } from "@/lib/ai-allowance";
 import { draftWorkOrderLines, type DraftedLine } from "@/lib/claude";
 import { currentContext } from "@/lib/request-context";
 
@@ -34,6 +35,9 @@ export async function estimateWorkOrder(input: {
       problem: "Say a bit more about the work first — a sentence is enough to draft from.",
     };
   }
+
+  const allowance = await takeAiUse(context.organizationId, "estimate");
+  if (!allowance.ok) return { lines: [], problem: allowance.message };
 
   const lines = await draftWorkOrderLines({ description: described });
 

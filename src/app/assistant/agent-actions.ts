@@ -15,6 +15,7 @@ import {
 } from "@/lib/assistant-tools";
 import { buildBrief, type BriefInvoice, type BriefJob } from "@/lib/assistant-brief";
 import { todayInZone } from "@/lib/calendar";
+import { takeAiUse } from "@/lib/ai-allowance";
 import { claudeIsConfigured, runAssistantTurn } from "@/lib/claude";
 import { getInvoices, getJobs } from "@/lib/job-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
@@ -170,6 +171,10 @@ async function sendChatMessage(
 
   const context = await buildContext();
   if (!context) return { turns: asked, error: "You are not signed in to a business." };
+
+  // One use per question, however many rounds of tool calls answering it takes.
+  const allowance = await takeAiUse(context.organizationId, "assistant");
+  if (!allowance.ok) return { turns: asked, error: allowance.message };
 
   // The conversation as the API wants it. Earlier turns are plain text; only
   // the current round carries tool blocks.

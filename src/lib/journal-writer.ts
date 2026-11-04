@@ -1,6 +1,7 @@
 import "server-only";
 
 import { checkPost, retryNote } from "@/lib/blog-voice";
+import { takeAiUse } from "@/lib/ai-allowance";
 import { writeJournalPost, type DraftedPost } from "@/lib/claude";
 import { diagramLabels, isDiagramKey } from "@/lib/journal-diagrams";
 import { journalSystemPrompt } from "@/lib/journal-prompt";
@@ -230,6 +231,9 @@ export async function writePostForJob(input: {
     if (!source) {
       return { wrote: false, reason: "There is nothing on this job that reads as an electrical problem." };
     }
+
+    const allowance = await takeAiUse(organizationId, "journal_post");
+    if (!allowance.ok) return { wrote: false, reason: allowance.message };
 
     const drafted = await writeJournalPost({
       system: journalSystemPrompt({

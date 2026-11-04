@@ -1,7 +1,5 @@
 import "server-only";
 
-import { after } from "next/server";
-
 import { addDays, calendarDate, isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { invoiceState } from "@/lib/dashboard-metrics";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
@@ -11,7 +9,6 @@ import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import { invoiceIsLive, invoiceIsOpenDraft, nextBillingStep } from "@/lib/job-billing";
 import { advanceVisit, callOffJob, changeJob, loadChangeJob } from "@/lib/job-changes-server";
 import { workflowStateOf } from "@/lib/job-workflow";
-import { writePostForJob } from "@/lib/journal-writer";
 import {
   claimUnbilledLines,
   jobInvoices,
@@ -880,11 +877,6 @@ async function updateJobStatus(database: Database, organizationId: string, args:
   const result = await advanceVisit(visit, { requested, source: "manual" });
   if (result.error) return { isError: true, text: `${result.error} Nothing was changed.`, record: { jobId: job.id } };
 
-  if (result.finished) {
-    after(async () => {
-      await writePostForJob({ jobId: job.id });
-    });
-  }
   const label = step.replace(/_/g, " ");
   const next = result.finished ? " Bill it with bill_job when you are ready." : "";
   return { text: `Job #${text(args.job_number)} is now ${label}.${result.notice ? ` ${result.notice}` : ""}${next}`, record: { jobId: job.id } };

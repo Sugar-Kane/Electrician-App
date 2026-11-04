@@ -1,3 +1,4 @@
+import { takeAiUse } from "@/lib/ai-allowance";
 import { builtInAiOutOfCredit, claudeIsConfigured, streamMaterialList } from "@/lib/claude";
 import {
   carryPrices,
@@ -54,6 +55,11 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
   const caller = await currentContext();
   if (!caller) return jsonError(403, "You are not a member of a business.");
   const { organizationId, userId } = caller;
+  if (!claudeIsConfigured()) {
+    return jsonError(503, "The built-in AI is not set up on this deployment. Tap “Write it in ChatGPT instead” to write the list in your own ChatGPT.");
+  }
+  const allowance = await takeAiUse(organizationId, "materials_chat");
+  if (!allowance.ok) return jsonError(429, allowance.message);
 
   const supabase = asFlexibleClient(await createClient());
   const { data: organization } = await supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle();
@@ -70,9 +76,6 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
   if (!jobId) return jsonError(404, "That job could not be found.");
 
   const saved = await readMaterialList(supabase, jobId);
-  if (!claudeIsConfigured()) {
-    return jsonError(503, "The built-in AI is not set up on this deployment. Tap “Write it in ChatGPT instead” to write the list in your own ChatGPT.");
-  }
 
   // What the job page already knows, so the first message can be short.
   const place = (Array.isArray(job?.properties) ? job.properties[0] : job?.properties) as
