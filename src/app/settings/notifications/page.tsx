@@ -6,7 +6,7 @@ import { formatForDisplay } from "@/lib/phone-format";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Booking alerts | Volteira" };
+export const metadata: Metadata = { title: "Job alerts | Volteira" };
 
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
@@ -49,8 +49,8 @@ export default async function BookingAlertsSettingsPage() {
   return (
     <FieldPageShell
       backHref="/settings"
-      title="Booking alerts"
-      eyebrow="Notifications"
+      title="Job alerts"
+      eyebrow="Settings"
       description="How you find out when the phone assistant books a job for you."
     >
       {organizationId ? (

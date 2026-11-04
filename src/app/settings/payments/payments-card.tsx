@@ -30,7 +30,7 @@ export function PaymentsCard({
   const started = state !== "none";
 
   return (
-    <section id="payments" className="rounded-panel border border-brand/25 bg-surface p-5 sm:p-6 lg:col-span-2">
+    <section id="payments" className="rounded-panel border border-brand/25 bg-surface p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-control bg-brand/10 text-brand">

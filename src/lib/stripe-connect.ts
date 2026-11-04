@@ -165,7 +165,7 @@ export async function paymentsOnboardingUrl(input: {
       account: accountId,
       type: "account_onboarding",
       refresh_url: `${input.origin}/settings/payments/start`,
-      return_url: `${input.origin}/settings/integrations?payments=return#payments`,
+      return_url: `${input.origin}/settings/payments?payments=return`,
     });
     return { url: link.url };
   } catch (error) {

@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/server";
  * publishes on their behalf should find both in one place.
  */
 
-export const metadata: Metadata = { title: "Work journal | Volteira" };
+export const metadata: Metadata = { title: "Job write-ups | Volteira" };
 
 // The model call behind "ask for a change" and "write a post" runs inside this
 // segment's request, so the segment needs longer than the platform default.
@@ -34,7 +34,7 @@ export default async function JournalSettingsPage() {
 
   return (
     <FieldPageShell
-      title="Work journal"
+      title="Job write-ups"
       eyebrow="Settings"
       description="Finished jobs, written up as pages that answer what people search for."
       backHref="/settings"

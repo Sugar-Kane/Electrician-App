@@ -91,7 +91,7 @@ export default async function BusinessSettingsPage() {
 
   return (
     <FieldPageShell
-      title="Business details"
+      title="Business info"
       eyebrow="Settings"
       description="Name, phone, timezone, where you work from, and your materials markup."
       backHref="/settings"

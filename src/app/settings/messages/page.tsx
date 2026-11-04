@@ -6,7 +6,7 @@ import { MessageTemplateEditor } from "@/components/message-template-editor";
 import { getMessagingContext } from "@/lib/messaging";
 import { TEMPLATE_TRIGGERS } from "@/lib/message-templates";
 
-export const metadata: Metadata = { title: "Automatic messages | Volteira" };
+export const metadata: Metadata = { title: "Auto texts | Volteira" };
 
 const TRIGGER_COPY: Record<string, { label: string; description: string }> = {
   job_confirmed: {
@@ -60,8 +60,8 @@ export default async function AutomaticMessagesPage() {
   return (
     <FieldPageShell
       backHref="/settings"
-      title="Automatic messages"
-      eyebrow="Messaging"
+      title="Auto texts"
+      eyebrow="Settings"
       description="What gets texted to customers, and when."
     >
       <section className="mb-4 rounded-panel border border-line bg-surface p-5 text-sm leading-6 text-ink-muted sm:p-6">

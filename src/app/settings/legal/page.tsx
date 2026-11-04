@@ -14,7 +14,7 @@ export default async function TenantLegalSettingsPage() {
     <FieldPageShell
       backHref="/settings"
       title="Legal pages"
-      eyebrow="Messaging compliance"
+      eyebrow="Settings"
       description="The Privacy Policy and Text Message Terms customers and mobile carriers read."
     >
       {page ? (

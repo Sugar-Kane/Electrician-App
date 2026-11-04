@@ -66,8 +66,8 @@ export default async function ContractSettingsPage() {
 
   return (
     <FieldPageShell
-      title="Contract"
-      eyebrow="Business settings"
+      title="Customer contract"
+      eyebrow="Settings"
       description="The agreement your customers sign, with the job details filled in for you."
       backHref="/settings"
     >
