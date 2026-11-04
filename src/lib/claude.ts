@@ -1026,9 +1026,9 @@ export function builtInAiOutOfCredit(error: unknown): boolean {
 }
 
 /**
- * A materials list, written as it is read, for a business that has not
- * connected its own ChatGPT key. Same instructions and the same plain-text
- * format as the OpenAI path, so the list reads the same whichever wrote it.
+ * A materials list, written as it is read, for the job page's Materials chat.
+ * The same instructions and plain-text format ChatGPT is given, so a list reads
+ * the same whichever wrote it.
  *
  * Streamed because a full list is long: the electrician watches it arrive
  * rather than a spinner. Throws when Claude is not configured or refuses.

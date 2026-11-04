@@ -22,7 +22,6 @@ import {
 import { addListedParts, type ListedPart } from "@/app/jobs/[jobId]/line-actions";
 import { clearMaterialList, saveMaterialList } from "@/app/jobs/[jobId]/material-list-actions";
 import {
-  applyPrices,
   carryPrices,
   chatGptMaterialPrompt,
   estimateLineFor,
@@ -33,7 +32,6 @@ import {
   listItems,
   parseMaterialList,
   readPastedMaterialList,
-  unpricedItems,
   withCurrentPrices,
   type ChatTurn,
   type MaterialItem,
@@ -66,8 +64,6 @@ const END = "\u001e";
 type Props = {
   jobNumber: string;
   saved: SavedMaterialList;
-  ai: { connected: boolean; label: string };
-  canConnect: boolean;
   /** Percent added to a store price for the customer's price. */
   markupPercent: number;
   /** What a prompt for ChatGPT's own chat says about the business and the job. */
@@ -589,7 +585,7 @@ function FromChatGpt({
   );
 }
 
-export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercent, forChatGpt, jobDescription, hasLines }: Props) {
+export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, jobDescription, hasLines }: Props) {
   const [list, setList] = useState<MaterialList>(saved.list);
   const [messages, setMessages] = useState<ChatTurn[]>(saved.messages);
   const [draft, setDraft] = useState("");
@@ -608,11 +604,8 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   // estimate gives the job lines, and that must not fold the chat shut under
   // the person using it.
   const [startsOpen] = useState(() => !hasContent(saved.list) || !hasLines);
-  const [lookingUp, setLookingUp] = useState(false);
-  const [priceNote, setPriceNote] = useState("");
   const [fromChatGpt, setFromChatGpt] = useState(false);
   const abort = useRef<AbortController | null>(null);
-  const lookup = useRef<AbortController | null>(null);
   // The list as it is on screen now, for prices that arrive a minute later.
   const listNow = useRef(list);
   useEffect(() => {
@@ -622,7 +615,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   useEffect(
     () => () => {
       abort.current?.abort();
-      lookup.current?.abort();
     },
     [],
   );
@@ -635,7 +627,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   const priceable = estimateItems(list);
   const picked = priceable.filter((item) => chosen.has(item.id));
   const listed = hasContent(list);
-  const unpriced = unpricedItems(list);
 
   // Writes to the saved list go one at a time, in the order they were made, so
   // an earlier edit can never land after a later one, and a revision waits for
@@ -695,10 +686,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
   function startOver() {
     generation.current += 1;
     const asked = generation.current;
-    lookup.current?.abort();
-    lookup.current = null;
-    setLookingUp(false);
-    setPriceNote("");
     setClearing(true);
     setEditingId(null);
     setAddingTo(null);
@@ -739,48 +726,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
     void saveList(next);
   }
 
-  /*
-   * Look up Home Depot and Lowe's prices for what the list does not have a
-   * price for yet. The answer takes a while; when it comes, the prices go on
-   * the list as it is by then (only on items still there, and still the same
-   * thing) and are saved like any edit, in order, on the version this screen
-   * holds.
-   */
-  async function findPrices(from: MaterialList) {
-    if (!ai.connected) return;
-    const wanted = unpricedItems(from);
-    if (wanted.length === 0) return;
-    lookup.current?.abort();
-    const controller = new AbortController();
-    lookup.current = controller;
-    const madeOn = generation.current;
-    setLookingUp(true);
-    setPriceNote("");
-    try {
-      const response = await fetch(`/api/jobs/${encodeURIComponent(jobNumber)}/materials-prices`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ items: wanted.map(({ id, qty, name, note }) => ({ id, qty, name, note })) }),
-        signal: controller.signal,
-      });
-      const body = (await response.json().catch(() => ({}))) as { prices?: Record<string, ItemPrices>; error?: string | null };
-      if (controller.signal.aborted) return;
-      const found = body.prices ?? {};
-      if (madeOn === generation.current && Object.keys(found).length > 0) {
-        persist(applyPrices(listNow.current, found));
-      }
-      if (body.error) setPriceNote(body.error);
-      else if (!response.ok) setPriceNote("Store prices could not be looked up just now. Try again.");
-    } catch {
-      if (!controller.signal.aborted) setPriceNote("Store prices could not be looked up just now. Try again.");
-    } finally {
-      if (lookup.current === controller) {
-        lookup.current = null;
-        setLookingUp(false);
-      }
-    }
-  }
-
   async function send(prompt: string) {
     const text = prompt.trim();
     if (!text || writing || clearing) return;
@@ -793,14 +738,8 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
     setPendingPrompt(text);
     setLiveText("");
     setDraft("");
-    // Prices are looked up again for whatever the new answer holds.
-    lookup.current?.abort();
-    lookup.current = null;
-    setLookingUp(false);
-    setPriceNote("");
     const controller = new AbortController();
     abort.current = controller;
-    let answered: MaterialList | null = null;
 
     try {
       const askedOn = generation.current;
@@ -853,7 +792,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
       listNow.current = result.list;
       setMessages(result.messages ?? []);
       setChosen(new Set());
-      answered = result.list;
     } catch (problem) {
       if (controller.signal.aborted) return;
       setError(problem instanceof Error ? problem.message : "The list could not be written just now. Try again.");
@@ -863,7 +801,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
       setPendingPrompt("");
       abort.current = null;
     }
-    if (answered) void findPrices(answered);
   }
 
   /*
@@ -879,10 +816,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
       return "That doesn't read as a list: it needs headings with bullets under them. Tap the copy button under ChatGPT's answer and paste that.";
     }
     if (listed && !window.confirm("Replace the list on this job with the one from ChatGPT?")) return "";
-    lookup.current?.abort();
-    lookup.current = null;
-    setLookingUp(false);
-    setPriceNote("");
     setError("");
     setNotice("");
     setEditingId(null);
@@ -891,7 +824,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
     const next = carryPrices(list, pasted);
     persist(next);
     setFromChatGpt(false);
-    void findPrices(next);
     return "";
   }
 
@@ -995,37 +927,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
           </div>
         ) : null}
 
-        {/* Store prices: being looked up, why some are missing, or how to get them. */}
-        {listed && !writing ? (
-          lookingUp ? (
-            <p className="mt-2 flex items-center gap-2 text-xs text-ink-muted" role="status">
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              Finding Home Depot and Lowe&apos;s prices…
-            </p>
-          ) : ai.connected ? (
-            priceNote || unpriced.length > 0 ? (
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                {priceNote ? <p className="text-xs text-ink-muted">{priceNote}</p> : null}
-                {unpriced.length > 0 && !clearing && !pricing ? (
-                  <button
-                    type="button"
-                    onClick={() => void findPrices(list)}
-                    className="tap-target inline-flex min-h-10 items-center gap-1.5 text-xs font-semibold text-brand"
-                  >
-                    <Tag className="h-3.5 w-3.5" aria-hidden />
-                    Find store prices for {unpriced.length} {unpriced.length === 1 ? "item" : "items"}
-                  </button>
-                ) : null}
-              </div>
-            ) : null
-          ) : (
-            // The link to connect one is in the line at the bottom.
-            <p className="mt-2 text-xs text-ink-faint">
-              Home Depot and Lowe&apos;s prices are filled in once {canConnect ? "you connect" : "the owner connects"} a ChatGPT key.
-            </p>
-          )
-        ) : null}
-
         {listed && !writing ? (
           choosing ? (
             pricing ? (
@@ -1058,22 +959,13 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
                 >
                   {picked.length > 0 && picked.length === priceable.length ? "Clear" : "Choose all"}
                 </button>
-                {/* The sheet is filled from the prices on the list as it opens, so it
-                    waits for a lookup still running rather than open half empty. */}
                 <button
                   type="button"
-                  disabled={picked.length === 0 || lookingUp}
+                  disabled={picked.length === 0}
                   onClick={() => setPricing(true)}
                   className="tap-target ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
                 >
-                  {lookingUp ? (
-                    <>
-                      <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-                      Finding prices…
-                    </>
-                  ) : (
-                    `Price ${picked.length || ""} for the estimate`
-                  )}
+                  {`Price ${picked.length || ""} for the estimate`}
                 </button>
                 <button type="button" onClick={() => setChoosing(false)} aria-label="Stop choosing" className="tap-target inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted">
                   <X className="h-4 w-4" aria-hidden />
@@ -1193,17 +1085,6 @@ export function JobMaterialChat({ jobNumber, saved, ai, canConnect, markupPercen
           />
         ) : null}
 
-        <p className="mt-2 text-xs text-ink-faint">
-          Runs on {ai.label}.
-          {!ai.connected && canConnect ? (
-            <>
-              {" "}
-              <Link href="/settings/integrations" className="font-semibold text-brand">
-                Connect your ChatGPT key
-              </Link>
-            </>
-          ) : null}
-        </p>
         {!choosing && !fromChatGpt ? (
           <button
             type="button"

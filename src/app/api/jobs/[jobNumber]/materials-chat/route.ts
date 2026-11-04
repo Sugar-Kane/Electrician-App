@@ -1,4 +1,3 @@
-import { noteOpenAiKeyUse, openAiKeyFor } from "@/lib/ai-key";
 import { builtInAiOutOfCredit, claudeIsConfigured, streamMaterialList } from "@/lib/claude";
 import {
   carryPrices,
@@ -10,7 +9,6 @@ import {
   type ChatTurn,
 } from "@/lib/material-list";
 import { readMaterialList, writeMaterialList } from "@/lib/material-list-server";
-import { OpenAiRefusal, streamOpenAiChat } from "@/lib/openai";
 import { ReplyCutOff } from "@/lib/reply-cut-off";
 import { currentContext, currentUser } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -19,8 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * The materials chat: a request in, the list written back as it is written.
  *
- * Runs on the business's own ChatGPT key when the owner has connected one,
- * and on the app's built-in AI otherwise. The reply streams as plain text in
+ * Runs on the app's built-in AI. The reply streams as plain text in
  * the list's format; when it ends, the list is read, saved on the job, and a
  * record separator (U+001E) followed by JSON closes the stream with the saved
  * list, or with why nothing was saved.
@@ -73,18 +70,8 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
   if (!jobId) return jsonError(404, "That job could not be found.");
 
   const saved = await readMaterialList(supabase, jobId);
-  const stored = await openAiKeyFor(organizationId);
-  if (stored && "unavailable" in stored) {
-    return jsonError(503, "The saved ChatGPT key could not be checked just now. Try again in a moment.");
-  }
-  if (stored && "unreadable" in stored) {
-    const reason = "The saved ChatGPT key could not be read. The owner can reconnect it in Settings → Connected apps.";
-    await noteOpenAiKeyUse(organizationId, stored.version, reason);
-    return jsonError(503, reason);
-  }
-  const ownKey = stored;
-  if (!ownKey && !claudeIsConfigured()) {
-    return jsonError(503, "No AI is connected. The owner can add a ChatGPT API key in Settings → Connected apps.");
+  if (!claudeIsConfigured()) {
+    return jsonError(503, "The built-in AI is not set up on this deployment. Tap “Write it in ChatGPT instead” to write the list in your own ChatGPT.");
   }
 
   // What the job page already knows, so the first message can be short.
@@ -111,8 +98,8 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
       ]
     : [{ role: "user", content: prompt }];
 
-  const source: "openai" | "claude" = ownKey ? "openai" : "claude";
-  const model = ownKey ? ownKey.model : "volteira";
+  const source = "claude" as const;
+  const model = "volteira";
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -124,15 +111,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
       };
 
       try {
-        const chunks = ownKey
-          ? streamOpenAiChat({
-              key: ownKey.key,
-              model: ownKey.model,
-              messages: [{ role: "system", content: system }, ...turns],
-              maxTokens: 8000,
-              signal: request.signal,
-            })
-          : streamMaterialList({ system, turns, signal: request.signal });
+        const chunks = streamMaterialList({ system, turns, signal: request.signal });
         for await (const chunk of chunks) {
           written += chunk;
           controller.enqueue(encoder.encode(chunk));
@@ -142,20 +121,14 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
           controller.close();
           return;
         }
-        // A reply that ran out of room is not the key's fault: the key worked.
         const cutOff = error instanceof ReplyCutOff;
-        const noCredit = !ownKey && builtInAiOutOfCredit(error);
+        const noCredit = builtInAiOutOfCredit(error);
         const reason = cutOff
           ? "The list was too long to finish in one answer, so it was not kept. Ask for a shorter list, or for one part of the job at a time."
-          : error instanceof OpenAiRefusal
-            ? error.message
-            : noCredit
-              ? "Volteira's built-in AI is out of credit right now, so the list can't be written here. Tap “Write it in ChatGPT instead” below to write it in your own ChatGPT, or connect a ChatGPT key in Settings → Connected apps."
-              : ownKey
-                ? "ChatGPT stopped before the list was finished. Try again."
-                : "The list could not be written just now. Try again.";
+          : noCredit
+            ? "Volteira's built-in AI is out of credit right now, so the list can't be written here. Tap “Write it in ChatGPT instead” below to write it in your own ChatGPT."
+            : "The list could not be written just now. Try again.";
         console.error(noCredit ? "materials chat failed: built-in AI out of credit" : "materials chat failed", { jobId, source, error: String(error) });
-        if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, cutOff ? null : reason);
         finish({ error: reason });
         return;
       }
@@ -185,7 +158,6 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
         model,
         expectedUpdatedAt: saved.updatedAt,
       });
-      if (ownKey) await noteOpenAiKeyUse(organizationId, ownKey.version, null);
       if (write.status === "saved") {
         finish({ list, messages, source, model, updatedAt: write.updatedAt });
       } else if (write.status === "changed") {
