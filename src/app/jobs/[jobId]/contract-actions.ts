@@ -468,7 +468,7 @@ export async function generateChangeOrder(
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
        contracts ( id, kind, status, created_at, signed_at ),
-       job_line_items ( description, quantity, unit, unit_price_cents, created_at )`,
+       job_line_items ( kind, description, quantity, unit, unit_price_cents, created_at )`,
     )
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
@@ -492,6 +492,7 @@ export async function generateChangeOrder(
   );
   const lines = (Array.isArray(row.job_line_items) ? (row.job_line_items as Record<string, unknown>[]) : []).map(
     (line) => ({
+      kind: text(line.kind),
       description: text(line.description),
       // numeric arrives as a string over PostgREST.
       quantity: Number(line.quantity ?? 0),
