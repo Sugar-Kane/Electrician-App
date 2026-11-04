@@ -78,13 +78,13 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
     return jsonError(503, "The saved ChatGPT key could not be checked just now. Try again in a moment.");
   }
   if (stored && "unreadable" in stored) {
-    const reason = "The saved ChatGPT key could not be read. The owner can reconnect it in Settings → Integrations.";
+    const reason = "The saved ChatGPT key could not be read. The owner can reconnect it in Settings → Connected apps.";
     await noteOpenAiKeyUse(organizationId, stored.version, reason);
     return jsonError(503, reason);
   }
   const ownKey = stored;
   if (!ownKey && !claudeIsConfigured()) {
-    return jsonError(503, "No AI is connected. The owner can add a ChatGPT API key in Settings → Integrations.");
+    return jsonError(503, "No AI is connected. The owner can add a ChatGPT API key in Settings → Connected apps.");
   }
 
   // What the job page already knows, so the first message can be short.
@@ -150,7 +150,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
           : error instanceof OpenAiRefusal
             ? error.message
             : noCredit
-              ? "Volteira's built-in AI is out of credit right now, so the list can't be written here. Tap “Write it in ChatGPT instead” below to write it in your own ChatGPT, or connect a ChatGPT key in Settings → Integrations."
+              ? "Volteira's built-in AI is out of credit right now, so the list can't be written here. Tap “Write it in ChatGPT instead” below to write it in your own ChatGPT, or connect a ChatGPT key in Settings → Connected apps."
               : ownKey
                 ? "ChatGPT stopped before the list was finished. Try again."
                 : "The list could not be written just now. Try again.";

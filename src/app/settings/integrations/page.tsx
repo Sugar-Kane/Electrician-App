@@ -9,8 +9,6 @@ import { currentContext } from "@/lib/request-context";
 import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
-import { ChatGptConnectionCard } from "./chatgpt-connection-card";
-import { revokeChatGptConnection } from "./chatgpt-actions";
 import { revokeWebsiteKey } from "./website-actions";
 import { WebsiteFormCard } from "./website-form-card";
 import { aiKeyState } from "@/lib/ai-key";
@@ -33,25 +31,10 @@ export default async function IntegrationsPage() {
   const suppliers = getSupplierIntegrations();
   const context = await currentContext();
   const canManage = context?.role === "owner";
-  let connections: { id: string; createdAt: string; expiresAt: string; lastUsedAt: string }[] = [];
   let websiteKeys: { id: string; createdAt: string; lastUsedAt: string }[] = [];
 
   if (context && canManage) {
     const supabase = asFlexibleClient(await createClient());
-    const { data } = await supabase
-      .from("mcp_business_credentials")
-      .select("id, created_at, expires_at, last_used_at")
-      .eq("organization_id", context.organizationId)
-      .is("revoked_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
-    connections = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-      id: String(row.id ?? ""),
-      createdAt: dateLabel(row.created_at),
-      expiresAt: dateLabel(row.expires_at),
-      lastUsedAt: dateLabel(row.last_used_at),
-    }));
-
     const { data: keys } = await supabase
       .from("website_intake_keys")
       .select("id, created_at, last_used_at")
@@ -75,7 +58,13 @@ export default async function IntegrationsPage() {
     <FieldPageShell backHref="/settings" title="Connected apps" eyebrow="Settings" description="ChatGPT, your website form, Google Calendar and suppliers.">
       <div className="grid gap-4 lg:grid-cols-2">
         <OpenAiKeyCard status={openAiKey.status} version={openAiKey.version} canManage={canManage} />
-        <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
+        <Link href="/settings/chatgpt" className="tap-row flex items-center gap-3 rounded-panel border border-brand/25 bg-surface p-5 sm:p-6">
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold">ChatGPT</span>
+            <span className="mt-1 block text-sm text-ink-muted">Run your day by asking ChatGPT. Set it up on its own page.</span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+        </Link>
         <WebsiteFormCard
           keys={websiteKeys}
           canManage={canManage}

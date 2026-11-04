@@ -37,7 +37,7 @@ export async function createChatGptConnection(): Promise<ChatGptConnectionState>
     return { error: "MCP is not configured on this deployment." };
   }
 
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/chatgpt");
   return { error: "", url };
 }
 
@@ -52,5 +52,5 @@ export async function revokeChatGptConnection(formData: FormData) {
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", id)
     .eq("organization_id", context.organizationId);
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/chatgpt");
 }
