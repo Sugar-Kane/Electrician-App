@@ -166,28 +166,22 @@ export const TOP_BAR_ITEMS: NavItem[] = [
  */
 export const ACCOUNT_MENU_ITEMS: NavItem[] = [
   {
-    label: "Profile",
-    href: "/account?section=profile#profile",
-    icon: "UserRound",
-    description: "Name, photo, email",
-  },
-  {
-    label: "App preferences",
-    href: "/account?section=preferences#preferences",
-    icon: "Settings2",
-    description: "Notifications, maps, display",
-  },
-  {
     label: "Settings",
     href: "/settings",
     icon: "Settings",
-    description: "How the business runs",
+    description: "Business, payments, texts, apps",
   },
   {
-    label: "Your account",
+    label: "Get paid online",
+    href: "/settings/payments",
+    icon: "Landmark",
+    description: "Card and bank payments with Stripe",
+  },
+  {
+    label: "My account",
     href: "/account",
-    icon: "CreditCard",
-    description: "Your sign-in and plan",
+    icon: "UserRound",
+    description: "Profile, password, plan",
   },
 ];
 
@@ -279,6 +273,8 @@ export type SettingsLink = {
   href: string;
   icon: string;
   description: string;
+  /** Other words people type when looking for it, for the settings search. */
+  keywords?: string[];
 };
 
 export type SettingsGroup = {
@@ -289,88 +285,127 @@ export type SettingsGroup = {
 
 export const SETTINGS_GROUPS: SettingsGroup[] = [
   {
-    title: "Your business",
-    blurb: "How the business runs, for everybody in it.",
+    // First, because it is the one people come looking for and the one that
+    // decides whether the business gets paid.
+    title: "Get paid",
+    blurb: "Take card and bank payments from customers.",
     links: [
       {
-        label: "Business details",
-        href: "/settings/business",
-        icon: "Building2",
-        description: "Name, phone, timezone and where you work from",
-      },
-      {
-        label: "Team",
-        href: "/technicians",
-        icon: "UsersRound",
-        description: "Who is working, hours and access",
-      },
-      {
-        label: "Booking alerts",
-        href: "/settings/notifications",
-        icon: "BellRing",
-        description: "Where a booked job reaches you",
-      },
-      {
-        label: "Contract",
-        href: "/settings/contract",
-        icon: "FileText",
-        description: "The agreement customers sign, filled in per job",
+        label: "Get paid online",
+        href: "/settings/payments",
+        icon: "Landmark",
+        description: "Connect Stripe so customers can pay invoices and deposits by card or bank",
+        keywords: ["stripe", "payments", "card", "bank", "ach", "deposit", "invoice", "payout", "money", "connect"],
       },
     ],
   },
   {
-    title: "Customer messaging",
-    blurb: "What customers receive, and the pages carriers check.",
+    title: "Your business",
+    blurb: "How your business works, for everyone on your team.",
     links: [
       {
-        label: "Automatic messages",
-        href: "/settings/messages",
-        icon: "MessagesSquare",
-        description: "What gets texted, and when",
+        label: "Business info",
+        href: "/settings/business",
+        icon: "Building2",
+        description: "Name, phone, timezone, service area, markup",
+        keywords: ["company", "address", "timezone", "hours", "area", "radius", "markup", "booking page"],
       },
       {
-        // Beside the automatic messages rather than out on its own: both are
-        // things this app puts out on the business's behalf without anybody
-        // pressing send, and somebody wondering what is published in their name
-        // should find them in one place.
-        label: "Work journal",
+        label: "Your team",
+        href: "/technicians",
+        icon: "UsersRound",
+        description: "Add electricians, set hours and access",
+        keywords: ["staff", "technicians", "employees", "invite", "users", "roles"],
+      },
+      {
+        label: "Customer contract",
+        href: "/settings/contract",
+        icon: "FileText",
+        description: "The agreement customers sign before work starts",
+        keywords: ["agreement", "signature", "terms", "warranty"],
+      },
+      {
+        label: "Job alerts",
+        href: "/settings/notifications",
+        icon: "BellRing",
+        description: "Who gets told when a new job is booked",
+        keywords: ["notifications", "booking", "alerts", "email", "text"],
+      },
+    ],
+  },
+  {
+    title: "Texting customers",
+    blurb: "What Volteira sends customers for you.",
+    links: [
+      {
+        label: "Auto texts",
+        href: "/settings/messages",
+        icon: "MessagesSquare",
+        description: "Reminders and updates texted to customers",
+        keywords: ["sms", "messages", "reminders", "templates", "ai", "assistant"],
+      },
+      {
+        // Beside the texts: both go out in the business's name without anybody
+        // pressing send.
+        label: "Job write-ups",
         href: "/settings/journal",
         icon: "Newspaper",
-        description: "Finished jobs, written up as public pages",
+        description: "Finished jobs posted as pages on your website",
+        keywords: ["journal", "blog", "seo", "website", "portfolio"],
       },
       {
         label: "Legal pages",
         href: "/settings/legal",
         icon: "ScrollText",
-        description: "Privacy policy and text message terms",
+        description: "Privacy policy and texting terms",
+        keywords: ["privacy", "terms", "compliance", "10dlc", "carrier"],
       },
     ],
   },
   {
-    title: "Connections",
-    blurb: "Other services this business uses.",
+    title: "Apps",
+    blurb: "Other tools Volteira works with.",
     links: [
       {
-        label: "Suppliers",
+        label: "Connected apps",
         href: "/settings/integrations",
         icon: "PlugZap",
-        description: "Lowe's and Home Depot programs",
+        description: "ChatGPT, your website form, Google Calendar, suppliers",
+        keywords: ["integrations", "chatgpt", "openai", "website", "calendar", "google", "lowes", "home depot", "suppliers", "api"],
+      },
+    ],
+  },
+  {
+    title: "You",
+    blurb: "Just for your own sign-in.",
+    links: [
+      {
+        label: "My profile",
+        href: "/account?section=profile",
+        icon: "UserRound",
+        description: "Your name, photo, email, phone",
+        keywords: ["account", "name", "photo", "email", "phone"],
       },
       {
-        // Anchored at Square because that is where this lands. It used to say
-        // "Square and subscription billing" while jumping to Square alone, so
-        // somebody sent here to change their Volteira plan arrived at a card
-        // about taking customer payments and had to go looking.
-        label: "Card payments",
-        href: "/account?section=square",
-        icon: "CreditCard",
-        description: "Square, for taking money from customers",
+        label: "Look and alerts",
+        href: "/account?section=preferences",
+        icon: "Settings2",
+        description: "Dark or light, text size, maps app, notifications",
+        keywords: ["preferences", "theme", "dark mode", "font", "maps", "notifications"],
       },
       {
-        label: "Your Volteira plan",
+        label: "Password",
+        href: "/account?section=security",
+        icon: "KeyRound",
+        description: "Change your password",
+        keywords: ["security", "login", "sign in"],
+      },
+      {
+        label: "Volteira plan",
         href: "/account?section=subscription",
         icon: "Sparkles",
-        description: "Premium billing and invoices",
+        description: "What you pay for Volteira",
+        keywords: ["subscription", "billing", "premium", "membership"],
       },
     ],
   },

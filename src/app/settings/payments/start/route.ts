@@ -19,10 +19,10 @@ export const dynamic = "force-dynamic";
 
 async function start(): Promise<Response> {
   const origin = originFromHeaders(await headers());
-  const back = (why: string) => Response.redirect(`${origin}/settings/integrations?payments=${why}#payments`, 303);
+  const back = (why: string) => Response.redirect(`${origin}/settings/payments?payments=${why}`, 303);
 
   const context = await currentContext();
-  if (!context) return Response.redirect(`${origin}/login?next=/settings/integrations`, 303);
+  if (!context) return Response.redirect(`${origin}/login?next=/settings/payments`, 303);
   if (context.role !== "owner") return back("owner_only");
 
   const { data } = await getSupabaseAdmin()

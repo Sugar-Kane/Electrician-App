@@ -15,9 +15,6 @@ import { revokeWebsiteKey } from "./website-actions";
 import { WebsiteFormCard } from "./website-form-card";
 import { aiKeyState } from "@/lib/ai-key";
 import { OpenAiKeyCard } from "./openai-key-card";
-import { PaymentsCard, type PaymentsCardState } from "./payments-card";
-import { PLATFORM_FEE_BASIS_POINTS } from "@/lib/invoice-math";
-import { refreshPaymentAccount } from "@/lib/stripe-connect";
 
 const envLabels: Record<string, string> = {
   LOWES_PRODUCT_DISCOVERY_API_URL: "Product Discovery API URL",
@@ -32,12 +29,7 @@ function dateLabel(value: unknown) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
-export default async function IntegrationsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ payments?: string }>;
-}) {
-  const query = await searchParams;
+export default async function IntegrationsPage() {
   const suppliers = getSupplierIntegrations();
   const context = await currentContext();
   const canManage = context?.role === "owner";
@@ -79,42 +71,9 @@ export default async function IntegrationsPage({
   // Every member can see whether the key is connected; only the owner can change it.
   const openAiKey = context ? await aiKeyState(context.organizationId) : { status: null, version: "" };
 
-  // Back from Stripe's onboarding: ask Stripe how it went rather than waiting
-  // for its webhook, so the card is right the moment the owner lands here.
-  if (context && query.payments === "return") await refreshPaymentAccount(context.organizationId);
-  const paymentRow = context
-    ? ((await getSupabaseAdmin()
-        .from("stripe_connect_accounts")
-        .select("onboarding_status, charges_enabled, currently_due, past_due")
-        .eq("organization_id", context.organizationId)
-        .maybeSingle()).data as Record<string, unknown> | null)
-    : null;
-  const paymentsState: PaymentsCardState = !paymentRow
-    ? "none"
-    : paymentRow.onboarding_status === "disabled"
-      ? "disabled"
-      : paymentRow.charges_enabled === true
-        ? "active"
-        : paymentRow.onboarding_status === "restricted"
-          ? "restricted"
-          : "pending";
-  const paymentsDue = new Set([
-    ...(Array.isArray(paymentRow?.currently_due) ? (paymentRow.currently_due as string[]) : []),
-    ...(Array.isArray(paymentRow?.past_due) ? (paymentRow.past_due as string[]) : []),
-  ]).size;
-
   return (
-    <FieldPageShell backHref="/settings" title="Integrations" eyebrow="Connected services" description="Take customer payments, and connect your ChatGPT key, your website and supplier programs. Their keys stay on the server.">
+    <FieldPageShell backHref="/settings" title="Connected apps" eyebrow="Settings" description="ChatGPT, your website form, Google Calendar and suppliers.">
       <div className="grid gap-4 lg:grid-cols-2">
-        {context ? (
-          <PaymentsCard
-            state={paymentsState}
-            dueCount={paymentsDue}
-            canManage={canManage}
-            notice={query.payments}
-            feePercent={`${PLATFORM_FEE_BASIS_POINTS / 100}%`}
-          />
-        ) : null}
         <OpenAiKeyCard status={openAiKey.status} version={openAiKey.version} canManage={canManage} />
         <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
         <WebsiteFormCard

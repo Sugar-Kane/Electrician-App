@@ -3,16 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BellRing,
-  ChevronRight,
   CircleUserRound,
-  Clock3,
   CreditCard,
-  ExternalLink,
   KeyRound,
   LockKeyhole,
-  MapPinned,
   MonitorSmartphone,
-  Store,
   Upload,
   UserRound,
   Zap,
@@ -25,24 +20,22 @@ import {
   updatePassword,
   updatePreferences,
   updateProfile,
-  updateSquareAccount,
   uploadAvatar,
 } from "@/app/account/actions";
 import { Banner } from "@/components/ui/banner";
 import { SelectField } from "@/components/ui/select-field";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { getAccountSnapshot } from "@/lib/account";
-import { currentTimeIn, timezoneLabel } from "@/lib/timezones";
 
-export const metadata: Metadata = { title: "Account | Volteira" };
+export const metadata: Metadata = { title: "My account | Volteira" };
 
+// Only what is about you. Business settings (timezone, payments, apps) live
+// in Settings, one tap away, rather than repeated here.
 const sections = [
   { id: "profile", label: "Profile", icon: UserRound },
-  { id: "timezone", label: "Timezone", icon: Clock3 },
-  { id: "subscription", label: "Premium", icon: CreditCard },
-  { id: "preferences", label: "App settings", icon: MonitorSmartphone },
-  { id: "square", label: "Square", icon: Store },
-  { id: "security", label: "Security", icon: LockKeyhole },
+  { id: "preferences", label: "Look and alerts", icon: MonitorSmartphone },
+  { id: "security", label: "Password", icon: LockKeyhole },
+  { id: "subscription", label: "Plan", icon: CreditCard },
 ];
 
 const inputClass =
@@ -109,8 +102,6 @@ export default async function AccountPage({
   const avatarStyle = account.avatarUrl
     ? { backgroundImage: `url(${JSON.stringify(account.avatarUrl).slice(1, -1)})` }
     : undefined;
-  const businessClock =
-    currentTimeIn(account.businessTimezone) || timezoneLabel(account.businessTimezone);
   const periodEnd = account.subscription.currentPeriodEnd
     ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
         new Date(account.subscription.currentPeriodEnd),
@@ -119,9 +110,9 @@ export default async function AccountPage({
 
   return (
     <FieldPageShell
-      title="Account"
-      eyebrow="User and business settings"
-      description="Your profile, app settings, plan and payment details."
+      title="My account"
+      eyebrow="Just for you"
+      description="Your profile, how the app looks, your password and your Volteira plan."
     >
       <section className="mb-4 rounded-panel border border-brand/20 bg-brand/[0.045] p-4 sm:p-5">
         <div className="flex items-center gap-4">
@@ -185,7 +176,7 @@ export default async function AccountPage({
           <div className="flex items-start gap-3">
             <CircleUserRound className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
-              <h2 className="font-semibold">Profile details</h2>
+              <h2 className="font-semibold">My profile</h2>
               <p className="mt-1 text-xs leading-5 text-ink-muted">Your name appears on assignments, activity, and customer-facing technician updates.</p>
             </div>
           </div>
@@ -241,50 +232,13 @@ export default async function AccountPage({
           </form>
         </section>
 
-        {/*
-          The timezone is shown here and changed in Settings.
-
-          It used to be editable in both places: this page and
-          /settings/business, two forms and two save buttons writing the same
-          organizations.timezone. Whichever was saved last won, and neither
-          screen said the other existed — so the answer to "did that stick"
-          depended on which page you happened to reload.
-
-          It is a business setting, so the business page owns it. This is the
-          personal page, and it reads the value rather than competing to set it.
-        */}
-        <section id="timezone" className={cardClass}>
-          <div className="flex items-start gap-3">
-            <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
-            <div>
-              <h2 className="font-semibold">Business timezone</h2>
-              <p className="mt-1 text-xs leading-5 text-ink-muted">
-                Schedules, arrival windows, message timestamps, and text-message quiet hours are all shown and sent in this timezone. It applies to everyone in the business.
-              </p>
-            </div>
-          </div>
-
-          <p className="mt-5 text-sm">
-            <span className="font-semibold">{timezoneLabel(account.businessTimezone)}</span>
-            <span className="text-ink-muted"> · it is currently {businessClock} for the business.</span>
-          </p>
-
-          <Link
-            href="/settings/business"
-            className="tap-target mt-4 inline-flex min-h-12 items-center gap-2 rounded-chip border border-line px-4 text-sm font-semibold"
-          >
-            Change it in Business details
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </section>
-
         <section id="subscription" className={cardClass}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
               <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
               <div>
-                <h2 className="font-semibold">Premium subscription</h2>
-                <p className="mt-1 text-xs leading-5 text-ink-muted">Billing for Volteira is handled securely through Stripe. Square remains available for your customer payments.</p>
+                <h2 className="font-semibold">Volteira plan</h2>
+                <p className="mt-1 text-xs leading-5 text-ink-muted">What you pay for Volteira itself. To take payments from customers, go to Settings → Get paid online.</p>
               </div>
             </div>
             <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${subscriptionActive ? "bg-positive-bg text-positive" : "bg-white/5 text-ink-muted"}`}>
@@ -340,7 +294,7 @@ export default async function AccountPage({
           <div className="flex items-start gap-3">
             <MonitorSmartphone className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
-              <h2 className="font-semibold">App settings</h2>
+              <h2 className="font-semibold">Look and alerts</h2>
               <p className="mt-1 text-xs leading-5 text-ink-muted">These preferences follow your login without changing settings for coworkers.</p>
             </div>
           </div>
@@ -385,75 +339,16 @@ export default async function AccountPage({
             <SettingToggle name="compactMode" title="Compact dashboard" description="Show more jobs and business information on each screen." defaultChecked={account.preferences.compactMode} />
 
             <div className="sm:flex sm:justify-end">
-              <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">Save app settings</button>
+              <button type="submit" className="tap-target min-h-12 w-full rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand sm:w-auto">Save</button>
             </div>
           </form>
-        </section>
-
-        <section id="square" className={cardClass}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
-              <Store className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
-              <div>
-                <h2 className="font-semibold">Square information</h2>
-                <p className="mt-1 text-xs leading-5 text-ink-muted">Choose the Square business and location Volteira should use when Square payment support is activated.</p>
-              </div>
-            </div>
-            <span className={`self-start rounded-full px-3 py-1.5 text-[10px] font-semibold ${account.square.status === "connected" ? "bg-positive-bg text-positive" : account.square.status === "pending" ? "bg-caution-bg text-caution" : "bg-white/5 text-ink-muted"}`}>
-              {titleCase(account.square.status)}
-            </span>
-          </div>
-
-          <div className="mt-4 rounded-control border border-info/15 bg-info-bg p-4 text-xs leading-5 text-ink-muted">
-            Enter identifiers only—never paste a Square access token here. A future OAuth connection will verify the merchant and retrieve selectable locations securely.
-          </div>
-
-          <form action={updateSquareAccount} className="mt-5">
-            <fieldset disabled={!account.canManageBusiness} className="grid gap-4 sm:grid-cols-2 disabled:opacity-65">
-              <label className={labelClass}>
-                Square business name
-                <input className={inputClass} name="businessName" defaultValue={account.square.businessName} maxLength={160} placeholder={account.organizationName} />
-              </label>
-              <label className={labelClass}>
-                Square account email
-                <input className={inputClass} name="accountEmail" defaultValue={account.square.accountEmail} type="email" inputMode="email" maxLength={254} placeholder="owner@company.com" />
-              </label>
-              <label className={labelClass}>
-                Merchant ID
-                <input className={inputClass} name="merchantId" defaultValue={account.square.merchantId} maxLength={128} autoCapitalize="characters" placeholder="Square merchant ID" />
-              </label>
-              <label className={labelClass}>
-                Default location ID
-                <input className={inputClass} name="defaultLocationId" defaultValue={account.square.defaultLocationId} maxLength={128} autoCapitalize="characters" placeholder="Main Square location" />
-              </label>
-              <label className={labelClass}>
-                Environment
-                <span className="mt-2 block">
-                  <SelectField name="environment" defaultValue={account.square.environment} label="Square environment" choices={[{ value: "production", label: "Production" }, { value: "sandbox", label: "Sandbox testing" }]} />
-                </span>
-              </label>
-              <label className={labelClass}>
-                Currency
-                <span className="mt-2 block">
-                  <SelectField name="currency" defaultValue={account.square.currency} label="Currency" choices={[{ value: "USD", label: "USD — US Dollar" }, { value: "CAD", label: "CAD — Canadian Dollar" }, { value: "AUD", label: "AUD — Australian Dollar" }, { value: "GBP", label: "GBP — British Pound" }]} />
-                </span>
-              </label>
-              <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-                <a href="https://squareup.com/dashboard" target="_blank" rel="noreferrer" className="tap-target inline-flex min-h-12 items-center gap-2 text-sm font-semibold text-ink-muted">
-                  Open Square Dashboard <ExternalLink className="h-4 w-4" aria-hidden />
-                </a>
-                <button type="submit" className="tap-target min-h-12 rounded-chip bg-brand px-5 text-sm font-semibold text-on-brand">Save Square information</button>
-              </div>
-            </fieldset>
-          </form>
-          {!account.canManageBusiness ? <p className="mt-4 text-xs text-ink-muted">Only an owner or administrator can change Square information.</p> : null}
         </section>
 
         <section id="security" className={cardClass}>
           <div className="flex items-start gap-3">
             <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
             <div>
-              <h2 className="font-semibold">Password and security</h2>
+              <h2 className="font-semibold">Password</h2>
               <p className="mt-1 text-xs leading-5 text-ink-muted">Changing your password requires the current password for this login.</p>
             </div>
           </div>
@@ -471,17 +366,12 @@ export default async function AccountPage({
               <input className={inputClass} name="passwordConfirmation" type="password" autoComplete="new-password" minLength={10} required />
             </label>
             <div className="sm:col-span-2 sm:flex sm:justify-between sm:gap-4">
-              <p className="flex items-center gap-2 text-xs leading-5 text-ink-muted"><LockKeyhole className="h-4 w-4 shrink-0 text-positive" aria-hidden /> Passwords are managed by Supabase Auth and are never stored in the app database.</p>
+              <p className="flex items-center gap-2 text-xs leading-5 text-ink-muted"><LockKeyhole className="h-4 w-4 shrink-0 text-positive" aria-hidden /> At least 10 characters.</p>
               <button type="submit" className="tap-target mt-3 min-h-12 w-full rounded-chip border border-line px-5 text-sm font-semibold sm:mt-0 sm:w-auto">Update password</button>
             </div>
           </form>
         </section>
 
-        <Link href="/settings/integrations" className="tap-row flex min-h-16 items-center gap-3 rounded-control border border-line bg-surface px-4 py-3">
-          <MapPinned className="h-5 w-5 shrink-0 text-brand" aria-hidden />
-          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Business integrations</span><span className="block truncate text-[11px] text-ink-muted">Lowe’s, Home Depot, cloud storage, and future connections</span></span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
-        </Link>
       </div>
     </FieldPageShell>
   );
