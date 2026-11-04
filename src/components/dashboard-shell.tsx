@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CircleDollarSign, ClipboardCheck, Zap } from "lucide-react";
+import { ChevronRight, CircleDollarSign, ClipboardCheck, Sparkles, Zap } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
@@ -266,6 +266,7 @@ export function DashboardShell({
   attention,
   followUps = [],
   late = {},
+  suggestChatGpt = false,
 }: {
   snapshot: DashboardSnapshot;
   /** Real jobs. The snapshot's own `schedule` is never populated for a live
@@ -278,6 +279,8 @@ export function DashboardShell({
   followUps?: FollowUp[];
   /** Jobs whose time went by without them being started or finished. */
   late?: Record<string, Lateness>;
+  /** The owner has not connected ChatGPT yet: say once, at the bottom, that they can. */
+  suggestChatGpt?: boolean;
 }) {
   const today = todayInZone(snapshot.timezone);
   const nextUp = nextJob(jobs, today);
@@ -335,6 +338,20 @@ export function DashboardShell({
           />
 
           <MoneySummary money={snapshot.money} />
+
+          {suggestChatGpt ? (
+            <Link
+              href="/settings/chatgpt"
+              className="tap-row mt-4 flex items-center gap-3 rounded-panel border border-line bg-surface px-4 py-3"
+            >
+              <Sparkles className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">Use Volteira in ChatGPT</span>
+                <span className="block text-xs text-ink-muted">Ask &ldquo;What&apos;s on today?&rdquo;, make jobs and send invoices by chat. About 5 minutes to set up.</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />
+            </Link>
+          ) : null}
         </div>
       </div>
     </main>

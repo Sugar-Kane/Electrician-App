@@ -1,12 +1,17 @@
 import "server-only";
 
-import { addDays, calendarDate, zonedWallClockToIso } from "@/lib/schedule-labels";
+import { after } from "next/server";
+
+import { addDays, calendarDate, isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { invoiceState } from "@/lib/dashboard-metrics";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import { invoiceIsLive, invoiceIsOpenDraft, nextBillingStep } from "@/lib/job-billing";
+import { advanceVisit, callOffJob, changeJob, loadChangeJob } from "@/lib/job-changes-server";
+import { workflowStateOf } from "@/lib/job-workflow";
+import { writePostForJob } from "@/lib/journal-writer";
 import {
   claimUnbilledLines,
   jobInvoices,
@@ -26,10 +31,12 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
  * The working day, run from ChatGPT.
  *
  * What is on today and what still needs doing, the schedule ahead, writing a
- * new job down, putting priced parts and labor on a job, and billing it. The
- * rules are the job page's: the same checks on a new job, the same refusal of
- * a price nobody gave, and billing by claiming the job's unbilled lines, so
- * nothing is billed twice and the diagnostic fee comes off once.
+ * new job down, moving it, taking it through the visit or calling it off,
+ * putting priced parts and labor on it, and billing it. The rules are the job
+ * page's: the same checks on a new job, the same refusal of a price nobody
+ * gave, billing by claiming the job's unbilled lines (so nothing is billed
+ * twice and the diagnostic fee comes off once), and moves, steps and
+ * cancellations through job-changes-server.ts, which the job page uses too.
  *
  * Every change asks first. A tool called without `confirmed` says what it
  * would do and changes nothing; ChatGPT shows that to the electrician and
@@ -151,6 +158,59 @@ export const WORKDAY_MCP_TOOLS: McpTool[] = [
         confirmed,
       },
       required: ["job_number", "send", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "reschedule_job",
+    title: "Reschedule job",
+    description:
+      "Move a job to a new time. Say whether the customer should be told: if yes, they get the same rescheduled text or email the app sends. Explicit approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The job number."),
+        start: str("New start as local wall-clock time YYYY-MM-DDTHH:MM in the business's time zone."),
+        duration_hours: {
+          type: "number",
+          description: "Optional visit length in hours. Defaults to the job's current length, or 2 hours.",
+        },
+        tell_customer: { type: "boolean", description: "Send the customer the new time." },
+        confirmed,
+      },
+      required: ["job_number", "start", "tell_customer", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_job_status",
+    title: "Update job status",
+    description:
+      "Move a job through the visit: on_the_way (texts the customer that you are on the way, if that message is switched on), arrived (texts that you have arrived), working, finished (parts reserved for it come off the stock count; then bill it with bill_job), or no_show. Explicit approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The job number."),
+        step: { type: "string", enum: ["on_the_way", "arrived", "working", "finished", "no_show"] },
+        confirmed,
+      },
+      required: ["job_number", "step", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "cancel_job",
+    title: "Cancel job",
+    description:
+      "Call a job off. The customer is told by text and/or email, and parts taken from stock for it go back on the count. This cannot be undone. Explicit approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The job number."),
+        reason: str("Why, in a few words. Included in the message to the customer. Optional."),
+        confirmed,
+      },
+      required: ["job_number", "confirmed"],
       additionalProperties: false,
     },
   },
@@ -746,6 +806,109 @@ async function billJob(database: Database, organizationId: string, args: Record<
   };
 }
 
+const STEP_STATES = {
+  on_the_way: "en_route",
+  arrived: "arrived",
+  working: "working",
+  finished: "completed",
+  no_show: "no_show",
+} as const;
+
+const STEP_SAYS = {
+  on_the_way: "on the way (the customer is texted that you are on the way, if that message is switched on)",
+  arrived: "arrived (the customer is texted that you have arrived, if that message is switched on)",
+  working: "working",
+  finished: "finished (parts reserved for it come off the stock count)",
+  no_show: "no show",
+} as const;
+
+async function rescheduleJob(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
+  const job = await loadChangeJob(asFlexibleClient(database), organizationId, String(jobNumberOf(args.job_number) ?? ""));
+  if (!job) return { isError: true, text: `Job #${text(args.job_number)} was not found. Nothing was changed.` };
+  if (job.status === "canceled") return { isError: true, text: "That job is canceled. Create a new job instead." };
+
+  const startLocal = text(args.start).trim();
+  const start = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(startLocal) ? zonedWallClockToIso(startLocal, job.timeZone) : "";
+  if (!start) return { isError: true, text: "The new start must look like 2026-11-05T09:00. Nothing was changed." };
+
+  const typedHours = Number(args.duration_hours);
+  const currentMinutes = job.start && job.end ? (Date.parse(job.end) - Date.parse(job.start)) / 60_000 : 0;
+  const minutes = Number.isFinite(typedHours) && typedHours > 0
+    ? Math.round(typedHours * 60)
+    : currentMinutes > 0 ? currentMinutes : 120;
+  if (minutes > 12 * 60) return { isError: true, text: "A single visit cannot be longer than 12 hours. Nothing was changed." };
+  const end = new Date(Date.parse(start) + minutes * 60_000).toISOString();
+
+  const tell = args.tell_customer === true;
+  const gate = requireConfirmation(
+    args,
+    `Move job #${text(args.job_number)} (${job.contactName || "customer"}) to ${dayLabel(calendarDate(start, job.timeZone))}, ${timeLabel(start, job.timeZone)}–${timeLabel(end, job.timeZone)}. ${tell ? "The customer is sent the new time." : "The customer is not told."}`,
+  );
+  if (gate) return gate;
+
+  const result = await changeJob(job, {
+    startLocal: isoToZonedWallClock(start, job.timeZone),
+    endLocal: isoToZonedWallClock(end, job.timeZone),
+    status: "",
+    notifyCustomer: tell,
+  });
+  return result.error
+    ? { isError: true, text: `${result.error} Nothing was changed.`, record: { jobId: job.id } }
+    : { text: result.notice ?? "Job moved.", record: { jobId: job.id } };
+}
+
+async function updateJobStatus(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
+  const step = text(args.step) as keyof typeof STEP_STATES;
+  if (!(step in STEP_STATES)) return { isError: true, text: "That is not a step a job can take." };
+  const job = await loadChangeJob(asFlexibleClient(database), organizationId, String(jobNumberOf(args.job_number) ?? ""));
+  if (!job) return { isError: true, text: `Job #${text(args.job_number)} was not found. Nothing was changed.` };
+
+  const gate = requireConfirmation(args, `Mark job #${text(args.job_number)} (${job.contactName || "customer"}) ${STEP_SAYS[step]}.`);
+  if (gate) return gate;
+
+  const visit = { supabase: job.supabase, organizationId, id: job.id, status: job.status, technicianId: job.technicianId };
+  const requested = STEP_STATES[step];
+
+  // Finishing from the middle of the work goes through review, as the job
+  // page's buttons do: working, then review, then completed.
+  if (requested === "completed" && workflowStateOf(job.status) === "working") {
+    const review = await advanceVisit(visit, { requested: "review", source: "manual" });
+    if (review.error) return { isError: true, text: review.error, record: { jobId: job.id } };
+    visit.status = "needs_review";
+  }
+
+  const result = await advanceVisit(visit, { requested, source: "manual" });
+  if (result.error) return { isError: true, text: `${result.error} Nothing was changed.`, record: { jobId: job.id } };
+
+  if (result.finished) {
+    after(async () => {
+      await writePostForJob({ jobId: job.id });
+    });
+  }
+  const label = step.replace(/_/g, " ");
+  const next = result.finished ? " Bill it with bill_job when you are ready." : "";
+  return { text: `Job #${text(args.job_number)} is now ${label}.${result.notice ? ` ${result.notice}` : ""}${next}`, record: { jobId: job.id } };
+}
+
+async function cancelJob(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
+  const job = await loadChangeJob(asFlexibleClient(database), organizationId, String(jobNumberOf(args.job_number) ?? ""));
+  if (!job) return { isError: true, text: `Job #${text(args.job_number)} was not found. Nothing was changed.` };
+  if (job.status === "canceled") return { isError: true, text: "That job is already canceled." };
+
+  const reason = text(args.reason).trim().slice(0, 500);
+  const when = job.start ? ` on ${dayLabel(calendarDate(job.start, job.timeZone))} at ${timeLabel(job.start, job.timeZone)}` : "";
+  const gate = requireConfirmation(
+    args,
+    `Cancel job #${text(args.job_number)} (${job.contactName || "customer"})${when}${reason ? `, reason: "${reason}"` : ""}. The customer is told it is canceled. This cannot be undone.`,
+  );
+  if (gate) return gate;
+
+  const result = await callOffJob(job, reason);
+  return result.error
+    ? { isError: true, text: result.error, record: { jobId: job.id } }
+    : { text: result.notice ?? "Job canceled.", record: { jobId: job.id } };
+}
+
 export async function runWorkdayMcpTool(input: {
   database: Database;
   session: McpSession;
@@ -768,6 +931,12 @@ export async function runWorkdayMcpTool(input: {
       return addJobLines(database, organizationId, args);
     case "bill_job":
       return billJob(database, organizationId, args);
+    case "reschedule_job":
+      return rescheduleJob(database, organizationId, args);
+    case "update_job_status":
+      return updateJobStatus(database, organizationId, args);
+    case "cancel_job":
+      return cancelJob(database, organizationId, args);
     default:
       return { isError: true, text: `Unknown workday tool: ${name}` };
   }

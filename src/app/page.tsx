@@ -12,7 +12,8 @@ import { getBookingRequests } from "@/lib/booking-requests";
 import { followUps, isPastVisit, lateJobs } from "@/lib/follow-ups";
 import { getAgreementStates, getInventory, getJobs, getUnbilledWork } from "@/lib/job-data";
 import { jobStage } from "@/lib/job-stage";
-import { currentUser } from "@/lib/request-context";
+import { currentContext, currentUser } from "@/lib/request-context";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { listSiteVideos } from "@/lib/site-video-data";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +107,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
     unassignedToday: unassignedToday(jobs, today),
   });
 
+  // The owner of a real business who has not connected ChatGPT yet is told,
+  // once, at the bottom of the day, that they can.
+  const context = snapshot.source === "supabase" ? await currentContext() : null;
+  let suggestChatGpt = false;
+  if (context?.role === "owner") {
+    const { count } = await getSupabaseAdmin()
+      .from("mcp_business_credentials")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", context.organizationId)
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString());
+    suggestChatGpt = (count ?? 0) === 0;
+  }
+
   return (
     <>
       <StartAtTop />
@@ -115,6 +130,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
         attention={attention}
         followUps={loose}
         late={lateJobs(jobs, now)}
+        suggestChatGpt={suggestChatGpt}
       />
     </>
   );

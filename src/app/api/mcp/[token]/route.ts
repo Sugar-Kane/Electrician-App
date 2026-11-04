@@ -10,7 +10,7 @@ import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.3.0";
+const SERVER_VERSION = "1.4.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -54,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
   const business = session.scope === "business";
   if (business) {
-    if (!session.credentialId) return rpcError(401, -32001, "Reconnect ChatGPT from Volteira Settings > Integrations");
+    if (!session.credentialId) return rpcError(401, -32001, "Reconnect ChatGPT from Volteira: Settings → Use in ChatGPT");
     const { data: credential } = await database
       .from("mcp_business_credentials")
       .select("id")
