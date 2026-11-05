@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { onTabListKeyDown } from "@/components/ui/keyboard";
 import { IntentLink } from "@/components/intent-link";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
@@ -134,6 +135,7 @@ export function ScheduleBoard({
           className="inline-flex rounded-control border border-line p-1"
           role="tablist"
           aria-label="Choose a schedule view"
+          onKeyDown={onTabListKeyDown}
         >
           {SCHEDULE_VIEWS.map((option) => {
             const selected = view === option.value;

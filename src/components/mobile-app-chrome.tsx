@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { IntentLink } from "@/components/intent-link";
 import { usePathname } from "next/navigation";
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
+import { useFocusTrap } from "@/components/ui/keyboard";
 import { NavIcon } from "@/components/ui/nav-icon";
 import { NAV_SECTIONS, activeNavHref, isBeyondBottomNav } from "@/lib/navigation";
 import { scrollToTop } from "@/lib/scroll-top";
@@ -115,6 +116,13 @@ export function MobileAppChrome({
   flush?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  const drawer = useRef<HTMLDivElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  // The main menu is a dialog over the page: focus goes into it, Tab stays
+  // inside it, and closing it puts focus back on More.
+  useFocusTrap({ active: menuOpen, container: drawer, initial: closeButton, returnTo: moreButton });
   const pathname = usePathname();
   const active = activeNavHref(pathname);
 
@@ -267,6 +275,7 @@ export function MobileAppChrome({
               return (
                 <button
                   key={label}
+                  ref={moreButton}
                   type="button"
                   onClick={() => setMenuOpen(true)}
                   aria-haspopup="dialog"
@@ -305,6 +314,7 @@ export function MobileAppChrome({
           onClick={() => setMenuOpen(false)}
         >
           <div
+            ref={drawer}
             // Clears the home indicator. The last entry in a menu that ends
             // inside the iPhone gesture area is an entry nobody can tap.
             className="ml-auto flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-sunken p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl"
@@ -313,6 +323,7 @@ export function MobileAppChrome({
             <div className="flex items-center justify-between">
               <Brand />
               <button
+                ref={closeButton}
                 type="button"
                 onClick={() => setMenuOpen(false)}
                 className="tap-target grid h-11 w-11 place-items-center rounded-chip border border-line"
