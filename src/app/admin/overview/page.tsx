@@ -91,9 +91,9 @@ function describe(kind: string, occurrences: number): { title: string; detail: s
  * seen is called healthy: a business with no evidence either way is listed
  * under Unknown.
  */
-export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ ai?: string }> }) {
+export default async function AdminOverviewPage({ searchParams }: { searchParams: Promise<{ ai?: string; deleted?: string }> }) {
   await requirePlatformAdmin();
-  const [{ ai: aiNotice = "" }, role] = await Promise.all([searchParams, myAdminRole()]);
+  const [{ ai: aiNotice = "", deleted = "" }, role] = await Promise.all([searchParams, myAdminRole()]);
   const [organizations, evidence, found, overdue, facts] = await Promise.all([
     listOrganizations(),
     getMessagingEvidence(null),
@@ -199,6 +199,11 @@ export default async function AdminOverviewPage({ searchParams }: { searchParams
 
   return (
     <div className="space-y-4">
+      {deleted ? (
+        <p className="rounded-control border border-positive/30 bg-positive-bg px-3 py-2 text-sm text-positive">
+          {deleted.slice(0, 120)} was deleted. It&apos;s on the audit log.
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-3">
         <Link href="/admin/cases" className="rounded-panel border border-line bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">Open cases</p>
