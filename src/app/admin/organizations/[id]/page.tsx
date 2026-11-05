@@ -11,6 +11,7 @@ import { zoneAbbreviation } from "@/lib/admin-time";
 import { ActivityTab } from "./activity-tab";
 import { AssistantTab } from "./assistant-tab";
 import { BookingsTab } from "./bookings-tab";
+import { DataTab } from "./data-tab";
 import { JobsTab } from "./jobs-tab";
 import { MessagesTab } from "./messages-tab";
 import { MoneyTab } from "./money-tab";
@@ -33,6 +34,7 @@ const TABS = [
   { value: "money", label: "Money" },
   { value: "assistant", label: "Assistant" },
   { value: "activity", label: "Activity" },
+  { value: "data", label: "Delete data" },
 ] as const;
 type Tab = (typeof TABS)[number]["value"];
 
@@ -62,6 +64,8 @@ export default async function AdminOrganizationPage({
     problem?: string;
     why?: string;
     ai?: string;
+    q?: string;
+    files?: string;
   }>;
 }) {
   await requirePlatformAdmin();
@@ -144,6 +148,15 @@ export default async function AdminOrganizationPage({
         />
       ) : null}
       {tab === "money" ? <MoneyTab organization={organization} /> : null}
+      {tab === "data" ? (
+        <DataTab
+          organization={organization}
+          owner={owner}
+          query={(query.q ?? "").slice(0, 80)}
+          done={query.done ?? ""}
+          files={(query.files ?? "").replace(/\D/g, "").slice(0, 6)}
+        />
+      ) : null}
       {tab === "assistant" ? <AssistantTab organization={organization} revealed={revealed} /> : null}
       {tab === "activity" ? <ActivityTab organization={organization} revealed={revealed} /> : null}
     </div>
