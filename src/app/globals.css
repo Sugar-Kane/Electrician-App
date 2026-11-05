@@ -247,6 +247,9 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
+summary:focus-visible,
+[role]:focus-visible,
+[contenteditable="true"]:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;

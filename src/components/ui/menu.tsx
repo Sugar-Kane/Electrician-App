@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
+import { focusablesIn, nextIndex } from "@/components/ui/keyboard";
 import { useDismissable } from "@/components/ui/popover-field";
 
 /**
@@ -20,6 +21,8 @@ import { useDismissable } from "@/components/ui/popover-field";
  *  - a click anywhere outside closes
  *  - choosing anything closes
  *  - the trigger reports its state to assistive technology
+ *  - opening puts focus on the first item; the arrow keys, Home and End move
+ *    between items, and Tab leaves the menu and closes it
  *
  * Rendered inline rather than in a portal. Every menu in this app hangs off a
  * header or a row that is already above the page, and a portal would buy
@@ -42,7 +45,29 @@ export function Menu({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  // Each link or button in the menu is a menu item to assistive technology,
+  // and the first one takes focus, so the keyboard starts inside the menu.
+  useEffect(() => {
+    if (!open) return;
+    const items = focusablesIn(panel.current);
+    for (const item of items) item.setAttribute("role", "menuitem");
+    items[0]?.focus();
+  }, [open]);
+
+  function onMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Tab") {
+      setOpen(false);
+      return;
+    }
+    const items = focusablesIn(panel.current);
+    const index = nextIndex(event.key, items.indexOf(document.activeElement as HTMLElement), items.length, "vertical");
+    if (index === null) return;
+    event.preventDefault();
+    items[index]?.focus();
+  }
 
   // Outside click, Escape, and putting focus back where it came from. Shared
   // with the pickers rather than kept here in a third copy — this was the
@@ -72,8 +97,10 @@ export function Menu({
 
       {open ? (
         <div
+          ref={panel}
           id={menuId}
           role="menu"
+          onKeyDown={onMenuKeyDown}
           aria-label={label}
           // Closed once the click has done what it was for, not during it.
           // Closing during it took the item off the page before the browser

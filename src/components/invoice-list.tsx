@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CircleDollarSign, X } from "lucide-react";
 
+import { onTabListKeyDown } from "@/components/ui/keyboard";
 import { InvoiceRow } from "@/components/invoice-row";
 import {
   inInvoiceFilter,
@@ -106,6 +107,7 @@ export function InvoiceList({
         className="grid grid-cols-3 gap-1 min-[440px]:grid-cols-5"
         role="tablist"
         aria-label="Filter invoices by status"
+        onKeyDown={onTabListKeyDown}
       >
         {FILTERS.map((filter) => (
           <button
