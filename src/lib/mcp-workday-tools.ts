@@ -20,15 +20,15 @@ import {
 import { readToolLines } from "@/lib/mcp-job-lines";
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { McpSession } from "@/lib/mcp-session-token";
-import { jobCategoryLabel, parseNewJob, splitName } from "@/lib/new-job-input";
+import { jobCategoryLabel, parseNewJob, splitName, type NewJobParsed } from "@/lib/new-job-input";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 
 /**
  * The working day, run from ChatGPT.
  *
- * What is on today and what still needs doing, the schedule ahead, writing a
- * new job down, moving it, taking it through the visit or calling it off,
+ * What is on today and what still needs doing, the schedule ahead, adding a
+ * customer on their own, writing a new job down, moving it, taking it through the visit or calling it off,
  * putting priced parts and labor on it, and billing it. The rules are the job
  * page's: the same checks on a new job, the same refusal of a price nobody
  * gave, billing by claiming the job's unbilled lines (so nothing is billed
@@ -104,6 +104,36 @@ export const WORKDAY_MCP_TOOLS: McpTool[] = [
         confirmed,
       },
       required: ["customer_name", "category", "description", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_customer",
+    title: "Create customer",
+    description:
+      "Add a customer without making a job: their name or company, how to reach them, and optionally their address and notes. If a customer with the same phone or email is already on file, nothing new is made and that customer is named instead. Nothing is sent to the customer. Explicit approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customer_name: str("Customer's full name. Optional when there is a company name."),
+        company_name: str("Company or business name, for a commercial customer. Optional."),
+        phone: str("Customer's phone. A phone or an email is required."),
+        email: str("Customer's email. Optional when there is a phone."),
+        preferred_contact: {
+          type: "string",
+          enum: ["sms", "phone", "email"],
+          description: "How they like to be reached. Defaults to text when there is a phone, otherwise email.",
+        },
+        address_line_1: str("Street address. Give street, city, state and ZIP together, or none of them."),
+        address_line_2: str("Apartment, suite or unit. Optional."),
+        city: str("City."),
+        state: str("Two-letter state code, such as CA."),
+        postal_code: str("Five-digit ZIP."),
+        access_notes: str("Gate code, parking, pets. Optional."),
+        notes: str("Anything else worth keeping about this customer. Optional."),
+        confirmed,
+      },
+      required: ["confirmed"],
       additionalProperties: false,
     },
   },
@@ -417,6 +447,170 @@ async function schedule(database: Database, organizationId: string, args: Record
   return { text: out.join("\n") };
 }
 
+type NewAddress = NonNullable<NewJobParsed["address"]>;
+const CUSTOMER_FIELDS = "id, first_name, last_name, company_name, phone, email";
+
+/** The oldest live customer with this email, ignoring case. */
+async function customerWithEmail(database: Database, organizationId: string, email: string) {
+  const { data } = await database
+    .from("customers")
+    .select(CUSTOMER_FIELDS)
+    .eq("organization_id", organizationId)
+    .ilike("email", email.replace(/[\\%_]/g, "\\$&"))
+    .is("archived_at", null)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return data ? (data as Record<string, unknown>) : null;
+}
+
+/**
+ * The oldest live customer with this phone, compared on the last ten digits
+ * as find_or_create_customer_by_phone and the database's unique index do, so
+ * "(555) 123-4567" and "+15551234567" are the same person.
+ */
+async function customerWithPhone(database: Database, organizationId: string, phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  const lastTen = digits.slice(-10);
+  const { data } = await database
+    .from("customers")
+    .select(CUSTOMER_FIELDS)
+    .eq("organization_id", organizationId)
+    .is("archived_at", null)
+    .like("phone", `%${digits.slice(-4)}`)
+    .order("created_at", { ascending: true })
+    .limit(50);
+  const match = (Array.isArray(data) ? data : []).find(
+    (row) => text((row as Record<string, unknown>).phone).replace(/\D/g, "").slice(-10) === lastTen,
+  );
+  return match ? (match as Record<string, unknown>) : null;
+}
+
+/** The customer's property at this street, kept if it is on file already. */
+async function saveProperty(
+  database: Database,
+  organizationId: string,
+  customerId: string,
+  address: NewAddress,
+  accessNotes: string,
+): Promise<string | null> {
+  const sameStreet = database
+    .from("properties")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .eq("address_line_1", address.line1)
+    .is("archived_at", null);
+  const { data: existing } = await (address.line2
+    ? sameStreet.eq("address_line_2", address.line2)
+    : sameStreet.or("address_line_2.is.null,address_line_2.eq."))
+    .limit(1)
+    .maybeSingle();
+  const existingId = text(existing?.id);
+  if (existingId) {
+    if (accessNotes) await database.from("properties").update({ access_notes: accessNotes }).eq("id", existingId);
+    return existingId;
+  }
+  const { data: created } = await database
+    .from("properties")
+    .insert({
+      organization_id: organizationId,
+      customer_id: customerId,
+      address_line_1: address.line1,
+      address_line_2: address.line2 || null,
+      city: address.city,
+      state: address.state,
+      postal_code: address.postalCode,
+      access_notes: accessNotes || null,
+    })
+    .select("id")
+    .maybeSingle();
+  return text(created?.id) || null;
+}
+
+async function createCustomer(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
+  const personName = text(args.customer_name).trim();
+  const companyName = text(args.company_name).trim().slice(0, 200);
+  // The new-job rules, so a customer added here passes the same checks as one
+  // added with a job: a name, a phone or email that can be reached, and a
+  // whole address or none.
+  const parsed = parseNewJob({
+    customerName: personName || companyName,
+    phone: text(args.phone),
+    email: text(args.email),
+    addressLine1: text(args.address_line_1),
+    addressLine2: text(args.address_line_2),
+    city: text(args.city),
+    state: text(args.state),
+    postalCode: text(args.postal_code),
+    accessNotes: text(args.access_notes),
+    category: "diagnostic",
+    description: "",
+    startLocal: "",
+    durationHours: "",
+    cost: "",
+    mode: "save",
+    workOrderLines: "",
+  });
+  if (!parsed.ok) {
+    const error = parsed.field === "customerName" ? "A customer name or company name is needed." : parsed.error;
+    return { isError: true, text: `${error} Nothing was created.` };
+  }
+  const customer = parsed.value;
+  const notes = text(args.notes).trim().slice(0, 2000);
+  const asked = text(args.preferred_contact);
+  const preferredContact =
+    asked === "email" && customer.email ? "email" : (asked === "sms" || asked === "phone") && customer.phone ? asked : customer.phone ? "sms" : "email";
+
+  // One person, one record: matched as a new job matches, phone first, then email.
+  const byPhone = customer.phone ? await customerWithPhone(database, organizationId, customer.phone) : null;
+  const existing = byPhone ?? (customer.email ? await customerWithEmail(database, organizationId, customer.email) : null);
+  if (existing) {
+    const how = byPhone ? "phone" : "email";
+    return {
+      text: `${displayCustomer(existing)} is already a customer with that ${how}, so no new customer was made. Use that customer for their jobs.`,
+    };
+  }
+
+  const { firstName, lastName } = personName ? splitName(personName) : { firstName: "", lastName: "" };
+  const who = [personName, companyName && companyName !== personName ? companyName : ""].filter(Boolean).join(", ");
+  const reach = [customer.phone, customer.email].filter(Boolean).join(" / ");
+  const where = customer.address ? ` at ${customer.address.line1}, ${customer.address.city}` : "";
+  const gate = requireConfirmation(args, `Add ${who} (${reach})${where} as a new customer. Nothing is sent to them.`);
+  if (gate) return gate;
+
+  const { data, error } = await database
+    .from("customers")
+    .insert({
+      organization_id: organizationId,
+      customer_type: companyName ? "commercial" : "residential",
+      first_name: firstName || null,
+      last_name: lastName || null,
+      company_name: companyName || null,
+      phone: customer.phone || null,
+      email: customer.email || null,
+      preferred_contact: preferredContact,
+      notes: notes || null,
+    })
+    .select("id")
+    .maybeSingle();
+  if (error?.code === "23505") {
+    return { text: "A customer with that phone was added just now, so no second one was made." };
+  }
+  if (error || !data) return { isError: true, text: "That customer could not be saved. Nothing was created." };
+  const customerId = text(data.id);
+
+  const propertyId = customer.address
+    ? await saveProperty(database, organizationId, customerId, customer.address, customer.accessNotes)
+    : null;
+  const addressNote = customer.address && !propertyId ? " The address could not be saved; add it from the customer's page." : "";
+
+  return {
+    text: `${who} added as a customer${propertyId ? where : ""}. Nothing was sent to them.${addressNote} To book work for them, use create_job with the same phone or email.`,
+  };
+}
+
 async function createJob(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
   const parsed = parseNewJob({
     customerName: text(args.customer_name),
@@ -473,16 +667,7 @@ async function createJob(database: Database, organizationId: string, args: Recor
     if (job.email) await database.from("customers").update({ email: job.email }).eq("id", customerId).is("email", null);
   }
   if (!customerId && job.email) {
-    const { data } = await database
-      .from("customers")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .ilike("email", job.email.replace(/[\\%_]/g, "\\$&"))
-      .is("archived_at", null)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    customerId = text(data?.id);
+    customerId = text((await customerWithEmail(database, organizationId, job.email))?.id);
   }
   if (!customerId) {
     const { firstName, lastName } = splitName(job.customerName);
@@ -502,42 +687,9 @@ async function createJob(database: Database, organizationId: string, args: Recor
     customerId = text(data.id);
   }
 
-  let propertyId: string | null = null;
-  if (job.address) {
-    const sameStreet = database
-      .from("properties")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("customer_id", customerId)
-      .eq("address_line_1", job.address.line1)
-      .is("archived_at", null);
-    const { data: existing } = await (job.address.line2
-      ? sameStreet.eq("address_line_2", job.address.line2)
-      : sameStreet.or("address_line_2.is.null,address_line_2.eq."))
-      .limit(1)
-      .maybeSingle();
-    propertyId = text(existing?.id) || null;
-    if (propertyId && job.accessNotes) {
-      await database.from("properties").update({ access_notes: job.accessNotes }).eq("id", propertyId);
-    }
-    if (!propertyId) {
-      const { data: created } = await database
-        .from("properties")
-        .insert({
-          organization_id: organizationId,
-          customer_id: customerId,
-          address_line_1: job.address.line1,
-          address_line_2: job.address.line2 || null,
-          city: job.address.city,
-          state: job.address.state,
-          postal_code: job.address.postalCode,
-          access_notes: job.accessNotes || null,
-        })
-        .select("id")
-        .maybeSingle();
-      propertyId = text(created?.id) || null;
-    }
-  }
+  const propertyId = job.address
+    ? await saveProperty(database, organizationId, customerId, job.address, job.accessNotes)
+    : null;
 
   const { data: createdJob, error: jobError } = await database
     .from("jobs")
@@ -917,6 +1069,8 @@ export async function runWorkdayMcpTool(input: {
       return todayPlan(database, organizationId, args);
     case "get_schedule":
       return schedule(database, organizationId, args);
+    case "create_customer":
+      return createCustomer(database, organizationId, args);
     case "create_job":
       return createJob(database, organizationId, args);
     case "add_job_lines":
