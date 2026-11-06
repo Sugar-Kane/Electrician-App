@@ -25,7 +25,7 @@ export function monthStart(now: Date): Date {
 }
 
 export const AI_LIMIT_MESSAGE =
-  "You've used this month's built-in AI. It resets on the 1st. For unlimited built-in AI, upgrade to Premium in Your account. Or do this in ChatGPT or Claude for free: Settings → Use in ChatGPT.";
+  "You've used this month's built-in AI. It resets on the 1st. For unlimited built-in AI, upgrade to Premium in Your account. Or do this in ChatGPT or Claude for free: Settings → Use in ChatGPT or Claude.";
 
 /** Subscription states that come with unlimited built-in AI. */
 const PAID_STATUSES = new Set(["active", "trialing"]);

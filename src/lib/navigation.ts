@@ -367,11 +367,11 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     blurb: "Other tools Volteira works with.",
     links: [
       {
-        label: "Use in ChatGPT",
+        label: "Use in ChatGPT or Claude",
         href: "/settings/chatgpt",
         icon: "Sparkles",
-        description: "Run your day by asking ChatGPT: today's jobs, new jobs, invoices",
-        keywords: ["chatgpt", "openai", "ai", "assistant", "mcp", "connect", "voice"],
+        description: "Run your day by asking ChatGPT or Claude: today's jobs, new jobs, invoices",
+        keywords: ["chatgpt", "claude", "openai", "anthropic", "ai", "assistant", "mcp", "connect", "voice"],
       },
       {
         label: "Connected apps",
