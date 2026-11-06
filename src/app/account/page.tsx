@@ -301,7 +301,7 @@ export default async function AccountPage({
                     ? `Premium${premiumPrice ? ` (${premiumPrice})` : ""} includes unlimited built-in AI. `
                     : ""}
                   Using Volteira in ChatGPT or Claude is always unlimited and free:{" "}
-                  <Link href="/settings/chatgpt" className="font-semibold text-brand">Settings → Use in ChatGPT</Link>.
+                  <Link href="/settings/chatgpt" className="font-semibold text-brand">Settings → Use in ChatGPT or Claude</Link>.
                 </p>
               ) : null}
             </div>

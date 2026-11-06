@@ -346,7 +346,7 @@ export function DashboardShell({
             >
               <Sparkles className="h-5 w-5 shrink-0 text-brand" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">Use Volteira in ChatGPT</span>
+                <span className="block text-sm font-semibold">Use Volteira in ChatGPT or Claude</span>
                 <span className="block text-xs text-ink-muted">Ask &ldquo;What&apos;s on today?&rdquo;, make jobs and send invoices by chat. About 5 minutes to set up.</span>
               </span>
               <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" aria-hidden />

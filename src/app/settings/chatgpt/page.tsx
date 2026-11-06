@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revokeChatGptConnection } from "./chatgpt-actions";
 import { ChatGptConnectionCard } from "./chatgpt-connection-card";
 
-export const metadata: Metadata = { title: "Use in ChatGPT | Volteira" };
+export const metadata: Metadata = { title: "Use in ChatGPT or Claude | Volteira" };
 
 function dateLabel(value: unknown) {
   if (typeof value !== "string" || !value) return "";
@@ -44,9 +44,9 @@ export default async function ChatGptSettingsPage() {
   return (
     <FieldPageShell
       backHref="/settings"
-      title="Use in ChatGPT"
+      title="Use in ChatGPT or Claude"
       eyebrow="Settings"
-      description="Run your day by asking ChatGPT. About 5 minutes to set up."
+      description="Run your day by asking ChatGPT or Claude. About 5 minutes to set up."
     >
       <ChatGptConnectionCard connections={connections} canManage={canManage} revokeAction={revokeChatGptConnection} />
     </FieldPageShell>

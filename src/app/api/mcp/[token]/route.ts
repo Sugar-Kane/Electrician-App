@@ -54,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
   const business = session.scope === "business";
   if (business) {
-    if (!session.credentialId) return rpcError(401, -32001, "Reconnect ChatGPT from Volteira: Settings → Use in ChatGPT");
+    if (!session.credentialId) return rpcError(401, -32001, "Reconnect ChatGPT from Volteira: Settings → Use in ChatGPT or Claude");
     const { data: credential } = await database
       .from("mcp_business_credentials")
       .select("id")

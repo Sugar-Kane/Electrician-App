@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Bot, Check, Copy, Link2Off, TriangleAlert } from "lucide-react";
 
+import { onTabListKeyDown } from "@/components/ui/keyboard";
 import { createChatGptConnection, type ChatGptConnectionState } from "./chatgpt-actions";
 
 const initial: ChatGptConnectionState = { error: "" };
@@ -20,12 +21,26 @@ const THINGS_TO_SAY = [
   "Move the Smith job to Monday at 10 and let them know.",
 ];
 
+type App = "chatgpt" | "claude";
+
+const APPS: { value: App; label: string }[] = [
+  { value: "chatgpt", label: "ChatGPT" },
+  { value: "claude", label: "Claude" },
+];
+
 /**
- * Running Volteira from ChatGPT, set up in plain steps.
+ * Running Volteira from ChatGPT or Claude, set up in plain steps.
  *
- * The steps are on the card before anything is pressed, so somebody can see
- * what they are signing up for. The link is shown once (Volteira keeps only a
- * revocable record of it), so the copy button is big and the card says so.
+ * The same link works in both. The steps are on the card before anything is
+ * pressed, so somebody can see what they are signing up for, and whether
+ * their plan allows it: ChatGPT needs Developer mode, which not every plan
+ * has, while Claude's free plan allows one custom connector. The link is shown
+ * once (Volteira keeps only a revocable record of it), so the copy button is
+ * big and the card says so.
+ *
+ * Menu names are as the apps' own help pages give them. ChatGPT's have been
+ * renamed before, so its steps name the other labels too, and say what not
+ * finding Developer mode means.
  */
 export function ChatGptConnectionCard({
   connections,
@@ -38,6 +53,7 @@ export function ChatGptConnectionCard({
 }) {
   const [state, action, pending] = useActionState(async () => createChatGptConnection(), initial);
   const [copied, setCopied] = useState(false);
+  const [app, setApp] = useState<App>("chatgpt");
   const connected = connections.length > 0;
 
   async function copy() {
@@ -54,10 +70,10 @@ export function ChatGptConnectionCard({
       <div className="flex items-start gap-3">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-control bg-brand/10 text-brand"><Bot className="h-6 w-6" aria-hidden /></span>
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold">Use Volteira in ChatGPT</h2>
+          <h2 className="text-lg font-semibold">Use Volteira in ChatGPT or Claude</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">
-            Ask ChatGPT what&apos;s on today, make jobs, write materials lists, and send invoices, just by typing or talking.
-            ChatGPT always asks you before it changes anything or messages a customer.
+            Ask what&apos;s on today, make jobs, write materials lists, and send invoices, just by typing or talking. It always
+            asks you before it changes anything or messages a customer. It runs on your own ChatGPT or Claude account.
           </p>
           {connected ? (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-positive-bg px-3 py-1 text-xs font-semibold text-positive">
@@ -68,7 +84,7 @@ export function ChatGptConnectionCard({
       </div>
 
       {!canManage ? (
-        <p className="mt-5 rounded-control border border-line p-4 text-sm text-ink-muted">Only the business owner can connect ChatGPT.</p>
+        <p className="mt-5 rounded-control border border-line p-4 text-sm text-ink-muted">Only the business owner can connect ChatGPT or Claude.</p>
       ) : (
         <>
           <ol className="mt-5 space-y-4">
@@ -76,7 +92,7 @@ export function ChatGptConnectionCard({
               <Step n={1} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">Get your link</p>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">Do this on a computer, with ChatGPT open in another tab.</p>
+                <p className="mt-1 text-sm leading-6 text-ink-muted">Do this on a computer, with ChatGPT or Claude open in another tab. The same link works in either.</p>
                 {state.url ? (
                   <div className="mt-3 rounded-control border border-positive/25 bg-positive-bg p-3">
                     <div className="flex gap-2">
@@ -85,7 +101,7 @@ export function ChatGptConnectionCard({
                         value={state.url}
                         onFocus={(event) => event.currentTarget.select()}
                         className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3 py-2 text-xs"
-                        aria-label="Your ChatGPT link"
+                        aria-label="Your Volteira link"
                       />
                       <button
                         type="button"
@@ -98,7 +114,7 @@ export function ChatGptConnectionCard({
                     </div>
                     <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-caution">
                       <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                      This link is shown only once. Keep this page open until it&apos;s pasted into ChatGPT. Treat it like a password.
+                      This link is shown only once. Keep this page open until it&apos;s pasted in. Treat it like a password.
                     </p>
                   </div>
                 ) : (
@@ -115,36 +131,120 @@ export function ChatGptConnectionCard({
             <li className="flex gap-3">
               <Step n={2} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Turn on Developer mode in ChatGPT</p>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">
-                  In ChatGPT, open <span className="font-semibold text-ink">Settings → Apps</span> (it may say Apps &amp; Connectors), then
-                  <span className="font-semibold text-ink"> Advanced settings</span>, and switch on <span className="font-semibold text-ink">Developer mode</span>.
-                </p>
+                <p className="text-sm font-semibold">Which do you use?</p>
+                <div role="tablist" aria-label="Which app do you use?" onKeyDown={onTabListKeyDown} className="mt-2 inline-flex rounded-control border border-line p-1">
+                  {APPS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="tab"
+                      id={`app-tab-${option.value}`}
+                      aria-selected={app === option.value}
+                      aria-controls="app-steps"
+                      tabIndex={app === option.value ? 0 : -1}
+                      onClick={() => setApp(option.value)}
+                      className={`tap-target inline-flex min-w-24 items-center justify-center rounded-chip px-3 text-sm font-semibold ${
+                        app === option.value ? "bg-brand text-on-brand" : "text-ink-muted hover:text-ink"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {app === "chatgpt" ? (
+                  <p className="mt-3 rounded-control border border-caution/25 bg-caution-bg p-3 text-xs leading-5 text-caution">
+                    Adding your own server isn&apos;t on every ChatGPT plan, and in a Business or Enterprise workspace your admin may
+                    need to allow it. If you don&apos;t see a way to add one in the steps below, use Claude instead, which works on
+                    its free plan.
+                  </p>
+                ) : (
+                  <p className="mt-3 rounded-control border border-positive/25 bg-positive-bg p-3 text-xs leading-5 text-positive">
+                    Works on Claude&apos;s free plan, which allows one custom connector. Paid plans allow more.
+                  </p>
+                )}
               </div>
             </li>
+          </ol>
 
-            <li className="flex gap-3">
-              <Step n={3} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Add Volteira</p>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">
-                  Back on the Apps page, choose <span className="font-semibold text-ink">Create</span>. Name it <span className="font-semibold text-ink">Volteira</span>,
-                  paste your link where it asks for the server URL, set Authentication to <span className="font-semibold text-ink">No authentication</span>, tick
-                  that you trust it, and choose Create.
-                </p>
-              </div>
-            </li>
-
-            <li className="flex gap-3">
-              <Step n={4} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Start a chat</p>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">
-                  In a new chat, tap <span className="font-semibold text-ink">+</span>, choose Volteira, and ask &ldquo;What&apos;s on today?&rdquo;.
-                  Once it&apos;s added, it&apos;s there in the ChatGPT app on your phone too.
-                </p>
-              </div>
-            </li>
+          <ol id="app-steps" role="tabpanel" aria-labelledby={`app-tab-${app}`} className="mt-4 space-y-4">
+            {app === "chatgpt" ? (
+              <>
+                <li className="flex gap-3">
+                  <Step n={3} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Open Plugins</p>
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
+                      At <span className="font-semibold text-ink">chatgpt.com</span>, click your profile picture, then{" "}
+                      <span className="font-semibold text-ink">Settings → Plugins</span>, and open the{" "}
+                      <span className="font-semibold text-ink">MCPs</span> tab.
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-ink-faint">
+                      No Plugins? Your ChatGPT has the older layout: go to Settings → Apps (or Connectors) → Advanced settings, switch
+                      on Developer mode, and use Create in the next step.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <Step n={4} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Add Volteira</p>
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
+                      Click <span className="font-semibold text-ink">Add</span> and choose to add an MCP server. Name it{" "}
+                      <span className="font-semibold text-ink">Volteira</span>. If it asks for a type, choose{" "}
+                      <span className="font-semibold text-ink">Streamable HTTP</span>, not STDIO. Paste your link as the server
+                      URL, leave authentication off (it may say None or No authentication), accept the warning about custom
+                      servers, and save.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <Step n={5} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Start a chat</p>
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
+                      In a new chat, click <span className="font-semibold text-ink">+</span>, turn on Volteira, and ask
+                      &ldquo;What&apos;s on today?&rdquo;
+                    </p>
+                  </div>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="flex gap-3">
+                  <Step n={3} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Open Connectors</p>
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
+                      At <span className="font-semibold text-ink">claude.ai</span>, sign in (or make a free account), then go to{" "}
+                      <span className="font-semibold text-ink">Customize → Connectors</span> and click{" "}
+                      <span className="font-semibold text-ink">Add custom connector</span>.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <Step n={4} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Add Volteira</p>
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
+                      Paste your link as the <span className="font-semibold text-ink">MCP server URL</span> (name it Volteira if
+                      it asks). For Authentication choose <span className="font-semibold text-ink">No sign-in</span>, then click{" "}
+                      <span className="font-semibold text-ink">Add</span>.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <Step n={5} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Start a chat</p>
+                    <p className="mt-1 text-sm leading-6 text-ink-muted">
+                      In a new chat, click <span className="font-semibold text-ink">+</span>, choose{" "}
+                      <span className="font-semibold text-ink">Connectors</span>, turn on Volteira, and ask &ldquo;What&apos;s on
+                      today?&rdquo;
+                    </p>
+                  </div>
+                </li>
+              </>
+            )}
           </ol>
 
           <div className="mt-6 rounded-control bg-white/[0.025] p-4">
@@ -155,8 +255,8 @@ export function ChatGptConnectionCard({
               ))}
             </ul>
             <p className="mt-3 text-xs leading-5 text-ink-faint">
-              Customers only ever see an invoice&apos;s total, never your parts list. Developer mode depends on your ChatGPT plan; if
-              ChatGPT says it can only read, ask it for the answer and paste it into Volteira yourself.
+              Customers only ever see an invoice&apos;s total, never your parts list. If ChatGPT says it can only read, not save,
+              your plan allows read-only apps: ask it for the answer and paste it into Volteira yourself, or use Claude.
             </p>
           </div>
         </>
