@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
@@ -64,7 +64,11 @@ export async function POST(request: Request, context: { params: Promise<{ token:
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
     if (!credential) return rpcError(401, -32001, "This ChatGPT connection has been revoked or expired");
-    void database.from("mcp_business_credentials").update({ last_used_at: new Date().toISOString() }).eq("id", session.credentialId);
+    // A query only runs once awaited, and `after` keeps it off the reply's path.
+    const credentialId = session.credentialId;
+    after(async () => {
+      await database.from("mcp_business_credentials").update({ last_used_at: new Date().toISOString() }).eq("id", credentialId);
+    });
   }
 
   let body: unknown;

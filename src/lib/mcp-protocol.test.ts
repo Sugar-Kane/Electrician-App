@@ -117,11 +117,26 @@ test("a tool the server does not have is refused before it is run", async () => 
 
 test("an unknown method is method-not-found", async () => {
   const reply = await handleMcpRequest(
-    { jsonrpc: "2.0", id: 6, method: "resources/list" },
+    { jsonrpc: "2.0", id: 6, method: "completion/complete" },
     server(),
   );
   const body = reply.body as { error: { code: number } };
   assert.equal(body.error.code, -32601);
+});
+
+test("resource and prompt lists are empty, not errors", async () => {
+  const reply = await handleMcpRequest(
+    [
+      { jsonrpc: "2.0", id: 7, method: "resources/list" },
+      { jsonrpc: "2.0", id: 8, method: "resources/templates/list" },
+      { jsonrpc: "2.0", id: 9, method: "prompts/list" },
+    ],
+    server(),
+  );
+  const [resources, templates, prompts] = reply.body as { result: Record<string, unknown[]> }[];
+  assert.deepEqual(resources!.result.resources, []);
+  assert.deepEqual(templates!.result.resourceTemplates, []);
+  assert.deepEqual(prompts!.result.prompts, []);
 });
 
 test("something that is not a JSON-RPC message is refused", async () => {

@@ -135,6 +135,18 @@ async function handleOne(
     case "tools/list":
       return resultBody(id, { tools: options.tools });
 
+    // We offer tools only, but ChatGPT asks for these lists straight after the
+    // tools whether or not they were offered, and treats an error as a broken
+    // server. An empty list is the honest answer.
+    case "resources/list":
+      return resultBody(id, { resources: [] });
+
+    case "resources/templates/list":
+      return resultBody(id, { resourceTemplates: [] });
+
+    case "prompts/list":
+      return resultBody(id, { prompts: [] });
+
     case "tools/call": {
       const name = typeof params.name === "string" ? params.name : "";
       const args = isRecord(params.arguments) ? params.arguments : {};
