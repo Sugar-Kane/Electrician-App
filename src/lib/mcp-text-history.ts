@@ -137,6 +137,7 @@ async function listConversations(database: HistoryDatabase, organizationId: stri
     .eq("organization_id", organizationId)
     .eq("channel", "sms")
     .is("archived_at", null)
+    .is("deleted_at", null)
     .order("last_message_at", { ascending: false })
     .limit(limit);
   const threads = rows(data);
