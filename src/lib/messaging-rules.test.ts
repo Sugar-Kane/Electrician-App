@@ -8,6 +8,7 @@ import {
   deliveryStatusApplies,
   displayNameFor,
   evaluateQuietHours,
+  firstTextOptsIn,
   inboxFingerprint,
   initialsFor,
   phoneMatches,
@@ -43,6 +44,18 @@ test("a callback confirmation never undoes a STOP, and records consent only when
     { record: true, mayText: true },
     "a row with neither date is not consent until recorded",
   );
+});
+
+test("a customer on file who texts first opts in, but never over a STOP", () => {
+  assert.equal(firstTextOptsIn(null), true, "nothing on file: their own text is the opt-in");
+  assert.equal(firstTextOptsIn({ optedInAt: null, optedOutAt: null }), true, "an empty row is the same as none");
+  assert.equal(
+    firstTextOptsIn({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: "2026-08-02T00:00:00Z" }),
+    false,
+    "a STOP stands until they text START",
+  );
+  assert.equal(firstTextOptsIn({ optedInAt: null, optedOutAt: "2026-08-02T00:00:00Z" }), false, "an opt-out with no opt-in also stands");
+  assert.equal(firstTextOptsIn({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: null }), false, "an active opt-in needs nothing written");
 });
 
 test("a customer who replied STOP is refused differently from one who never opted in", () => {

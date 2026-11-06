@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { readMessagePhotos } from "./message-media.ts";
+import { firstTextOptsIn } from "./messaging-rules.ts";
 
 // Exercise the actual webhook with isolated database/carrier/model adapters.
 // No real customer texts or appointments are created by this test.
@@ -40,7 +41,7 @@ async function receive(body: string, consentError = false, media: Record<string,
     require(name: string) {
       if (name === "@/lib/message-media") return { readMessagePhotos };
       if (name === "next/server") return { NextResponse: Response };
-      if (name === "@/lib/messaging-rules") return { phoneMatches: (a: string, b: string) => a === b };
+      if (name === "@/lib/messaging-rules") return { phoneMatches: (a: string, b: string) => a === b, firstTextOptsIn };
       if (name === "@/lib/supabase/admin") return { getSupabaseAdmin: () => database };
       if (name === "@/lib/sms-intake-runner") return { handleInboundText: async (input: Record<string, unknown>) => { intake.push(input); } };
       if (name === "@/lib/twilio") return { verifyTwilioSignature: () => true, isTwilioConfigured: () => true, twilioWebhookUrls: () => [] };
@@ -85,6 +86,17 @@ test("ordinary appointment replies still reach intake", async () => {
   const { response, intake } = await receive("Wednesday morning works for me");
   assert.equal(response.status, 200);
   assert.equal(intake.length, 1);
+});
+
+test("a customer on file with no consent who texts first is recorded as opted in", async () => {
+  const { response, writes } = await receive("Wednesday morning works for me");
+  assert.equal(response.status, 200);
+  const consent = writes.filter((w) => w.table === "messaging_consent");
+  assert.equal(consent.length, 1);
+  assert.equal(consent[0].operation, "upsert", "inserted only where no row exists, never overwriting one");
+  assert.equal(consent[0].value.source, "inbound_text");
+  assert.ok(consent[0].value.opted_in_at);
+  assert.equal(consent[0].value.opted_out_at, null);
 });
 
  test("photo-only MMS is saved and sent to intake", async () => {
