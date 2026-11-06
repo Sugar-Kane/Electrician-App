@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState, type ReactNode } from "react";
-import { Bot, Check, Copy, Link2Off, TriangleAlert } from "lucide-react";
+import Image from "next/image";
+import { Bot, Check, Copy, Download, Link2Off, TriangleAlert } from "lucide-react";
 
 import { onTabListKeyDown } from "@/components/ui/keyboard";
 import { createChatGptConnection, type ChatGptConnectionState } from "./chatgpt-actions";
@@ -217,6 +218,18 @@ export function ChatGptConnectionCard({
                           </li>
                           <li>
                             <B>Description:</B> Manage customers, jobs, schedules, estimates, and invoices.
+                          </li>
+                          <li>
+                            <B>Icon:</B> If it asks for one, upload the Volteira icon.
+                            <a
+                              href="/volteira-icon.png"
+                              download="Volteira icon.png"
+                              className="tap-target mt-1.5 flex min-h-11 w-fit items-center gap-2.5 rounded-control border border-line bg-surface py-1.5 pl-1.5 pr-3 text-sm font-semibold text-ink hover:border-brand/40"
+                            >
+                              <Image src="/volteira-icon.png" alt="" width={32} height={32} className="rounded-md" />
+                              <Download className="h-4 w-4 text-brand" aria-hidden />
+                              Download icon
+                            </a>
                           </li>
                           <li>
                             <B>Connection:</B> Server URL
