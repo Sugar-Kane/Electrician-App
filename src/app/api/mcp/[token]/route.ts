@@ -4,13 +4,16 @@ import { after, NextResponse } from "next/server";
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
 import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
+import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type HistoryDatabase } from "@/lib/mcp-text-history";
 import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
+import { organizationTimeZone } from "@/lib/job-billing-server";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { logMcpCall } from "@/lib/mcp-log";
 import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.6.0";
+const SERVER_VERSION = "1.7.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -79,7 +82,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -94,6 +97,14 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         ? await runWorkdayMcpTool({ database, session, name, args })
         : business && businessNames.has(name)
         ? await runBusinessMcpTool({ database, session, name, args })
+        : business && isTextHistoryTool(name)
+        ? await runTextHistoryTool({
+            database: database as unknown as HistoryDatabase,
+            organizationId: session.organizationId,
+            timeZone: await organizationTimeZone(asFlexibleClient(database), session.organizationId),
+            name,
+            args,
+          })
         : business && supplierNames.has(name)
           ? await runSupplierOrderMcpTool({ database, session, name, args })
           : await runBookingTool({ database, session, name, args });
@@ -102,7 +113,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         method: "tools/call",
         toolName: name,
         arguments: args,
-        resultText: result.text,
+        resultText: result.logText ?? result.text,
         isError: result.isError === true,
         durationMs: Date.now() - toolStartedAt,
         sessionKey,

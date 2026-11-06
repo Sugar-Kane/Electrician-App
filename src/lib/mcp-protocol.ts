@@ -62,6 +62,12 @@ export type ToolResult = {
    * `text` and `isError` go back over the wire.
    */
   record?: { bookingRequestId?: string; jobId?: string };
+  /**
+   * What the call log keeps instead of `text`, for results that carry
+   * customers' own words (a text conversation), so the log does not become a
+   * second copy of them. Never sent to the model.
+   */
+  logText?: string;
 };
 
 export type McpReply = { status: number; body?: unknown };

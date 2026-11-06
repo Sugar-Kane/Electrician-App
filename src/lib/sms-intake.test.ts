@@ -141,10 +141,20 @@ test("no model output at all still answers the customer", () => {
   const action = decideIntakeAction({
     decision: null,
     customerText: "hello?",
-    context: context(),
+    context: context({ isFirstReply: true }),
   });
   assert.equal(action.kind, "ask");
   assert.match(action.reply, /electrical problem/i);
+});
+
+test("with no model output, the opening question is not asked a second time", () => {
+  const action = decideIntakeAction({
+    decision: null,
+    customerText: "My panel is not working, 335 Main St",
+    context: context(),
+  });
+  assert.doesNotMatch(action.reply, /electrical problem/i);
+  assert.match(action.reply, /call you back/i);
 });
 
 test("replies fit in two segments and carry the opt-out only on the first", () => {
