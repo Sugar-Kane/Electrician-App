@@ -43,6 +43,23 @@ export function callbackConsentStep(existing: ConsentFacts | null): CallbackCons
 }
 
 /**
+ * Whether a text from a customer the business already has on file is their
+ * opt-in.
+ *
+ * Texting the business first is consent for a number nobody has seen before
+ * (the inbound route records it as it makes the customer). The same holds for
+ * a customer the business added itself, by the job page or from ChatGPT, who
+ * has never been asked: nothing on file means their own text is the first
+ * word on it. It never undoes a STOP, which only START reverses, and an
+ * active opt-in needs nothing written. `existing` is the row, or null.
+ */
+export function firstTextOptsIn(existing: ConsentFacts | null): boolean {
+  if (!existing) return true;
+  if (existing.optedOutAt) return false;
+  return !existing.optedInAt;
+}
+
+/**
  * Why this customer cannot be texted, or null when they can.
  *
  * Returned as prose because it is shown to staff in place of the composer:

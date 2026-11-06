@@ -1,7 +1,7 @@
 import { readMessagePhotos } from "@/lib/message-media";
 import { NextResponse } from "next/server";
 
-import { phoneMatches } from "@/lib/messaging-rules";
+import { firstTextOptsIn, phoneMatches } from "@/lib/messaging-rules";
 import { handleInboundText } from "@/lib/sms-intake-runner";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTwilioConfigured, twilioWebhookUrls, verifyTwilioSignature } from "@/lib/twilio";
@@ -165,6 +165,46 @@ export async function POST(request: Request) {
       );
 
     if (error) return new NextResponse("Could not record opt-in", { status: 500 });
+  } else if (customer && body.length > 0) {
+    // A customer already on file (added by the business, so never asked) who
+    // texts first has opted in, exactly as a new number does above. Written
+    // only where nothing says otherwise: a STOP stands until START.
+    const { data: consent } = await database
+      .from("messaging_consent")
+      .select("opted_in_at, opted_out_at")
+      .eq("organization_id", organizationId)
+      .eq("customer_id", customerId)
+      .eq("channel", "sms")
+      .eq("scope", "transactional")
+      .maybeSingle();
+    const facts = consent
+      ? { optedInAt: consent.opted_in_at ? String(consent.opted_in_at) : null, optedOutAt: consent.opted_out_at ? String(consent.opted_out_at) : null }
+      : null;
+    if (firstTextOptsIn(facts)) {
+      const record = {
+        opted_in_at: now,
+        source: "inbound_text",
+        proof_text: `Customer texted the business first: "${body.slice(0, 120)}"`,
+      };
+      // Neither write can overwrite an opt-out that lands in between: the
+      // insert skips an existing row, and the update needs both dates empty.
+      if (consent) {
+        await database
+          .from("messaging_consent")
+          .update(record)
+          .eq("organization_id", organizationId)
+          .eq("customer_id", customerId)
+          .eq("channel", "sms")
+          .eq("scope", "transactional")
+          .is("opted_in_at", null)
+          .is("opted_out_at", null);
+      } else {
+        await database.from("messaging_consent").upsert(
+          { organization_id: organizationId, customer_id: customerId, channel: "sms", scope: "transactional", opted_out_at: null, ...record },
+          { onConflict: "customer_id,channel,scope", ignoreDuplicates: true },
+        );
+      }
+    }
   }
 
   let { data: conversation } = await database
