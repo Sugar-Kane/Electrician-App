@@ -476,6 +476,13 @@ export function decideIntakeAction(input: {
 
   if (!decision) {
     if (visitReply) return { ...spokenIn, kind: "ask", missing: [], reply: visitReply };
+    // No answer from the model (an outage, a bad key). The opening question is
+    // right once; asked again after the customer has already answered it, it
+    // is a loop they cannot get out of. After the first reply, say a person
+    // will call: the thread is in the inbox for the business to pick up.
+    if (!context.isFirstReply) {
+      return { ...spokenIn, kind: "ask", missing: [], reply: composeReply(phrases.messageTaken(context.businessName), context, language) };
+    }
     return {
       ...spokenIn,
       kind: "ask",
