@@ -7,6 +7,9 @@ import {
   assignToAssistant,
   cancelExecution,
   listAssistants,
+  listChatgptWork,
+  startChatgptWork,
+  submitChatgptWork,
   reconcileStuckActions,
   rejectProposal,
   runExecution,
@@ -25,7 +28,7 @@ import { createTask, completeTask, type Actor } from "./tasks-service.ts";
 type Row = Record<string, unknown>;
 const ACTIVE = ["queued", "running", "waiting_input", "waiting_approval", "cancel_requested"];
 
-function fakeDatabase() {
+function fakeDatabase(options: { chatgpt?: boolean } = {}) {
   const tables: Record<string, Row[]> = {
     tasks: [],
     task_activity: [],
@@ -43,6 +46,12 @@ function fakeDatabase() {
     ],
     assistant_connections: [
       { id: "conn-a", organization_id: "org-a", display_name: "Volteira assistant (Claude)", provider: "anthropic", kind: "built_in", status: "active", capabilities: ["send_text", "add_job_note"], credential_ref: "env:TEST_KEY", created_at: "1" },
+      ...(options.chatgpt
+        ? [
+            { id: "conn-g", organization_id: "org-a", display_name: "Your ChatGPT", provider: "chatgpt", kind: "external", status: "active", capabilities: ["send_text", "add_job_note"], credential_ref: null, created_at: "2" },
+            { id: "conn-h", organization_id: "org-b", display_name: "Your ChatGPT", provider: "chatgpt", kind: "external", status: "active", capabilities: ["send_text", "add_job_note"], credential_ref: null, created_at: "2" },
+          ]
+        : []),
       { id: "conn-b", organization_id: "org-b", display_name: "Volteira assistant (Claude)", provider: "anthropic", kind: "built_in", status: "active", capabilities: ["send_text", "add_job_note"], credential_ref: "env:TEST_KEY", created_at: "1" },
     ],
     customers: [{ id: "cust-1", organization_id: "org-a", first_name: "Jo", last_name: "Smith", phone: "+15555550100" }],
@@ -387,5 +396,90 @@ test("turning an action down stops the work; asking for changes makes a new vers
   const rejected = await rejectProposal(database, ann, deps, String(second.id), { note: "No" });
   assert.ok(rejected.ok);
   assert.equal(tables.task_executions!.find((row) => row.id === executionId)!.status, "canceled");
+  assert.equal(sent.length, 0);
+});
+
+/* The user's own ChatGPT does the work, through the connection. */
+
+async function handToChatgpt(database: never, deps: AssistantDeps) {
+  const made = await createTask(database, ann, { title: "Confirm Thursday", job: "1042" });
+  assert.ok(made.ok);
+  const input = readAssignInput({ instructions: "Text the customer to confirm Thursday 9am." });
+  assert.ok(input.ok);
+  const assigned = await assignToAssistant(database, ann, deps, made.value.task.id, input.value);
+  assert.ok(assigned.ok, assigned.ok ? "" : assigned.error.message);
+  return { taskId: made.value.task.id, executionId: assigned.value.execution!.id, execution: assigned.value.execution! };
+}
+
+test("ChatGPT is the default and its work never enters the background queue", async () => {
+  const { database, tables } = fakeDatabase({ chatgpt: true });
+  tables.assistant_connections!.find((row) => row.id === "conn-a")!.status = "disabled";
+  const { deps } = stubs([]);
+  const listed = await listAssistants(database, ann, deps);
+  assert.equal(listed[0]!.kind, "external");
+  assert.equal(listed[0]!.state, "ready");
+  const { execution } = await handToChatgpt(database, deps);
+  assert.equal(execution.runs_in, "chatgpt");
+  assert.equal(execution.status, "queued");
+  assert.equal(tables.task_work!.length, 0, "nothing for the server to run");
+});
+
+test("only people who may decide, in the same business, can pick ChatGPT work up", async () => {
+  const { database } = fakeDatabase({ chatgpt: true });
+  const { deps } = stubs([]);
+  const { executionId } = await handToChatgpt(database, deps);
+  assert.equal((await listChatgptWork(database, ann)).length, 1);
+  assert.equal((await listChatgptWork(database, eve)).length, 0, "another business sees nothing");
+  assert.equal((await listChatgptWork(database, bob)).length, 0, "a technician who did not start it is not offered it");
+  const theirs = await startChatgptWork(database, eve, deps, executionId);
+  assert.equal(!theirs.ok && theirs.error.code, "NOT_FOUND");
+  const colleague = await startChatgptWork(database, bob, deps, executionId);
+  assert.equal(!colleague.ok && colleague.error.code, "FORBIDDEN");
+});
+
+test("a text ChatGPT proposes waits for approval and is sent once", async () => {
+  const { database, tables } = fakeDatabase({ chatgpt: true });
+  const { deps, sent } = stubs([]);
+  const { taskId, executionId } = await handToChatgpt(database, deps);
+  const started = await startChatgptWork(database, ann, deps, executionId);
+  assert.ok(started.ok, started.ok ? "" : started.error.message);
+  assert.deepEqual(started.value.context.allowed_actions, ["send_text", "add_job_note"]);
+  assert.equal(started.value.context.job?.customer_name, "Jo Smith");
+
+  const submitted = await submitChatgptWork(database, ann, deps, executionId, proposeText);
+  assert.ok(submitted.ok, submitted.ok ? "" : submitted.error.message);
+  assert.equal(submitted.value.execution?.status, "waiting_approval");
+  assert.equal(sent.length, 0, "proposing sends nothing");
+  const again = await submitChatgptWork(database, ann, deps, executionId, proposeText);
+  assert.equal(again.ok, false, "one report per pick-up");
+
+  const proposal = tables.task_proposals![0]!;
+  const approved = await approveProposal(database, ann, deps, String(proposal.id), { content_hash: String(proposal.content_hash) });
+  assert.ok(approved.ok && approved.value.proposal.status === "executed");
+  assert.equal(sent.length, 1);
+  assert.equal(tables.tasks!.find((row) => row.id === taskId)!.status, "complete");
+});
+
+test("ChatGPT cannot propose something the rules don't allow", async () => {
+  const { database, tables } = fakeDatabase({ chatgpt: true });
+  const { deps, sent } = stubs([]);
+  const { executionId } = await handToChatgpt(database, deps);
+  await startChatgptWork(database, ann, deps, executionId);
+  const refused = await submitChatgptWork(database, ann, deps, executionId, { kind: "propose", action: "charge_card", content: "Charge $900", reason: "x", finish_after: true, summary: "" });
+  assert.equal(!refused.ok && refused.error.code, "ACTION_REFUSED");
+  assert.equal(tables.task_proposals!.length, 0);
+  assert.equal(sent.length, 0);
+});
+
+test("stopping ChatGPT work takes effect at once, and a late report is refused", async () => {
+  const { database, tables } = fakeDatabase({ chatgpt: true });
+  const { deps, sent } = stubs([]);
+  const { executionId } = await handToChatgpt(database, deps);
+  await startChatgptWork(database, ann, deps, executionId);
+  const stopped = await cancelExecution(database, ann, deps, executionId);
+  assert.ok(stopped.ok && stopped.value.execution?.status === "canceled");
+  const late = await submitChatgptWork(database, ann, deps, executionId, proposeText);
+  assert.equal(late.ok, false);
+  assert.equal(tables.task_proposals!.length, 0);
   assert.equal(sent.length, 0);
 });

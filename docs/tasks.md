@@ -46,16 +46,23 @@ A due date is only a deadline. It never sends anything or starts work on its own
 
 ## Assistant work
 
-A task can be handed to an assistant, which does office work on it and asks before anything leaves Volteira.
+A task can be handed to AI. **By default the AI is the business's own ChatGPT**, working on their ChatGPT plan through the Volteira connection. Volteira's built-in Claude assistant still exists but is switched off.
 
-- **Connections:** `assistant_connections`, provider-neutral. Every business has **Volteira assistant (Claude)**.
-  - It's *ready* only when the deployment has its key (`credential_ref` names it, e.g. `env:ANTHROPIC_API_KEY`). Otherwise the page and ChatGPT say **connection required**.
-  - The key itself is never stored in the table and never shown, returned or logged.
+- **How it runs with ChatGPT:**
+  - A task assigned to AI waits; nothing runs in the background, because Volteira can't start a ChatGPT conversation.
+  - In ChatGPT (with Volteira connected) say **"Do my Volteira tasks"**. ChatGPT calls `list_ai_tasks`, then for each one `start_ai_task`. That marks it as being done by you and gives ChatGPT the task, the job and what it may propose.
+  - ChatGPT then calls `submit_ai_task` with one of: finish, a question, or a proposed action. A proposed text comes back for your approval, in ChatGPT (`approve_task_action`, only after you say yes to the exact text) or on the task page.
+  - Only the person who started the work, the task's owner, or an owner/admin can pick it up. If ChatGPT drops it, someone can pick it up again after 30 minutes.
+  - Stopping takes effect at once, and a late report from ChatGPT is refused.
+  - It uses none of the business's Volteira AI allowance.
+- **Connections:** `assistant_connections`, provider-neutral.
+  - `external`, "Your ChatGPT": the default, always ready, no key.
+  - `built_in`, "Volteira assistant (Claude)": switched off. If switched back on, it runs in the background worker and is ready only when the deployment has its key (`credential_ref` names it, e.g. `env:ANTHROPIC_API_KEY`). The key itself is never stored in the table and never shown, returned or logged.
 - **Handing a task over** (task page → Assistant, or `assign_task_to_ai`) takes:
   - instructions and, optionally, what done looks like;
   - what it may do by itself: *prepare for my review* (default), or *execute approved* (it may add job notes);
   - when: start now (within a minute), at a time, or later.
-- **What it can do:** read the task, its job, the customer and recent texts, then do one of three things:
+- **What the AI can do** (ChatGPT or the built-in one, under the same rules): read the task, its job, the customer and recent texts, then do one of three things:
   - finish, with a summary (the task is completed and the summary saved);
   - ask one question;
   - propose one action: **text the job's customer** or **add a job note**.
@@ -78,10 +85,15 @@ A task can be handed to an assistant, which does office work on it and asks befo
 
   It is never sent again automatically.
 - **Notices** under **For you**: approval needed, question, result, failure.
-- **Runs in** the same background worker (`task_work` kind `execution`), and also right after the request that queued it.
+- **The built-in assistant, if switched on,** runs in the background worker (`task_work` kind `execution`), and also right after the request that queued it.
   - Each run takes one use of the business's AI allowance.
   - A model error is retried up to 3 times.
-- **Checked with:** mocked tests only (`src/lib/task-executions.test.ts`: a stand-in model, a stand-in SMS provider and an in-memory database). Those are not live checks. Nothing here is integrated with Muse or any other outside assistant.
+- **Checked with:**
+  - **Mocked tests** (`src/lib/task-executions.test.ts`): a stand-in model, a stand-in SMS provider and an in-memory database. They cover approval binding, consent re-checks, single sending, pre-authorization limits, refused actions, cancellation before acting, closing a task, and reconciling an unknown outcome.
+  - **Live check on production, November 7, 2026:** a private test task with no job, so nothing could be texted. The scheduler called the worker at the next minute. The worker claimed the run and called Claude, then handled the answer.
+    - Claude replied that the Anthropic account is out of credit. The run was marked failed with that reason, a failure notice was made, and the task went back to To do.
+    - So the background path, the failure path and the notices are verified live. A successful decision, and approving a real text, are not yet verified live: they need the account to have credit, and a real customer text needs a test number with consent.
+  - Nothing here is integrated with Muse or any other outside assistant.
 
 ## Who can see a task
 
@@ -118,6 +130,9 @@ The connection link records who created it. Task tools act as that person, and o
 | `approve_task_action` | Approve and carry out one proposal. Needs its `content_hash`, so it covers exactly what was shown. |
 | `reject_task_action` | Turn it down, or `revise: true` with a note. |
 | `cancel_task_execution` | Stop the work. |
+| `list_ai_tasks` | AI tasks waiting for the user's ChatGPT. |
+| `start_ai_task` | Pick one up: instructions, job, customer, recent texts (information only) and allowed actions. |
+| `submit_ai_task` | Report back: finish, ask, or propose one action for approval. |
 
 Every tool returns a readable line and structured data (`structuredContent`): ids, statuses, dates, time zone, job, assignee, version and a Volteira link. Errors carry a code: `NOT_FOUND`, `JOB_AMBIGUOUS`, `VERSION_CONFLICT`, and so on.
 
@@ -140,9 +155,9 @@ ChatGPT turns speech into text and calls the same tools, so whatever ChatGPT voi
 ## Setup
 
 - **Database:**
-  - Apply `supabase/migrations/20261107010000_tasks.sql` (stage 1), `20261107020000_task_scheduling.sql` (stage 2) and `20261107030000_task_assistants.sql` (stage 3).
+  - Apply `supabase/migrations/20261107010000_tasks.sql` (stage 1), `20261107020000_task_scheduling.sql` (stage 2), `20261107030000_task_assistants.sql` (stage 3) and `20261107040000_task_assistant_chatgpt.sql` (ChatGPT does the work).
   - Record each in `schema_migrations` with its file's version and name (see AGENTS.md).
   - Stage 2 turns on the `pg_cron` and `pg_net` extensions, creates the two Vault secrets, and schedules the job `volteira-task-worker`.
 - **Environment variables:** none new.
   - `NEXT_PUBLIC_APP_URL` is used for task links.
-  - `ANTHROPIC_API_KEY` (already used elsewhere) makes the built-in assistant ready.
+  - `ANTHROPIC_API_KEY` (already used elsewhere) is needed only if the built-in assistant is switched back on.

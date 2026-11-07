@@ -134,6 +134,7 @@ function AssignForm({
   const [state, action, pending] = useActionState(assignTaskToAssistantAction, initial);
   const offset = useRef<HTMLInputElement>(null);
   const usable = assistants.filter((item) => item.usable);
+  const viaChatgpt = usable[0]?.kind === "external";
   return (
     <form
       action={action}
@@ -192,18 +193,23 @@ function AssignForm({
       <fieldset className="grid gap-2">
         <legend className="mb-1 text-xs font-semibold text-ink-muted">When</legend>
         <label className="flex items-center gap-2 text-sm text-ink">
-          <input type="radio" name="start" value="now" defaultChecked /> Start now
+          <input type="radio" name="start" value="now" defaultChecked /> {viaChatgpt ? "Now (your ChatGPT picks it up when you ask it)" : "Start now"}
         </label>
-        <label className="flex flex-wrap items-center gap-2 text-sm text-ink">
-          <input type="radio" name="start" value="scheduled" /> Start at
-          <input type="datetime-local" name="scheduled_at" aria-label="Start time" className={`${inputClass} w-auto`} />
-        </label>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
+          <label className="flex items-center gap-2">
+            <input type="radio" name="start" value="scheduled" /> Start at a time
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="sr-only">Start time, in your time zone</span>
+            <input type="datetime-local" name="scheduled_at" className={`${inputClass} w-auto`} />
+          </label>
+        </div>
         <label className="flex items-center gap-2 text-sm text-ink">
           <input type="radio" name="start" value="later" /> Don&apos;t start yet
         </label>
       </fieldset>
       <button type="submit" disabled={pending} className="tap-target min-h-11 justify-self-start rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-60">
-        {assigned ? "Save and hand over" : "Assign to assistant"}
+        {assigned ? "Save and hand over" : "Assign to AI"}
       </button>
       <Feedback state={state} />
     </form>
@@ -240,6 +246,7 @@ export function TaskAssistantPanel({
   const current = executions[0] ?? null;
   const active = current && ACTIVE.has(current.status) ? current : null;
   const usable = assistants.some((item) => item.usable);
+  const viaChatgpt = assistants.find((item) => item.usable)?.kind === "external";
   const pendingProposal = active?.proposals.find((proposal) => proposal.status === "pending") ?? null;
 
   return (
@@ -260,6 +267,18 @@ export function TaskAssistantPanel({
             {current.connection ? <span className="text-xs text-ink-faint">· {current.connection}</span> : null}
           </div>
           {current.instructions ? <p className="text-sm text-ink-muted">Asked to: {current.instructions}</p> : null}
+          {active && active.runs_in === "chatgpt" && (active.status === "queued" || active.status === "running") ? (
+            <p className="rounded-control border border-brand/40 bg-brand/5 p-3 text-sm text-ink">
+              {active.status === "queued" ? (
+                <>
+                  Waiting for your ChatGPT. Open ChatGPT (with Volteira connected) and say <strong>&ldquo;Do my Volteira tasks.&rdquo;</strong> It works on your
+                  ChatGPT plan, and any text it writes comes back here for your approval.
+                </>
+              ) : (
+                <>ChatGPT is working on it{active.claimed_by_you ? " in your conversation" : ""}. Its proposal will appear here.</>
+              )}
+            </p>
+          ) : null}
           {active?.status === "waiting_input" ? <Question taskId={taskId} execution={active} /> : null}
           {pendingProposal ? <Proposal taskId={taskId} proposal={pendingProposal} canDecide={active!.can_decide} timeZone={timeZone} /> : null}
           {current.result_summary ? (
@@ -297,7 +316,7 @@ export function TaskAssistantPanel({
               <form action={startTaskExecutionAction}>
                 <input type="hidden" name="task_id" value={taskId} />
                 <button type="submit" className="tap-target min-h-11 rounded-control border border-line bg-raised px-4 text-sm font-semibold text-ink">
-                  Run again
+                  {viaChatgpt ? "Queue for ChatGPT again" : "Run again"}
                 </button>
               </form>
             ) : null}
@@ -306,16 +325,18 @@ export function TaskAssistantPanel({
       ) : assignedToAssistant && usable && !closed ? (
         <form action={startTaskExecutionAction}>
           <input type="hidden" name="task_id" value={taskId} />
-          <p className="mb-2 text-sm text-ink-muted">Assigned to the assistant, not started yet.</p>
+          <p className="mb-2 text-sm text-ink-muted">Assigned to AI, not started yet.</p>
           <button type="submit" className="tap-target min-h-11 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand">
-            Start now
+            {viaChatgpt ? "Queue for ChatGPT" : "Start now"}
           </button>
         </form>
       ) : null}
 
       {usable && !active && !closed ? (
         <details open={!assignedToAssistant && !current} className="rounded-control border border-line p-3">
-          <summary className="tap-target cursor-pointer text-sm font-semibold text-ink">{assignedToAssistant ? "Change the assistant's instructions" : "Hand this task to the assistant"}</summary>
+          <summary className="tap-target cursor-pointer text-sm font-semibold text-ink">
+            {assignedToAssistant ? "Change the instructions" : viaChatgpt ? "Hand this task to your ChatGPT" : "Hand this task to the assistant"}
+          </summary>
           <div className="mt-3">
             <AssignForm taskId={taskId} version={version} assistants={assistants} instructions={instructions} criteria={criteria} mode={mode} assigned={assignedToAssistant} />
           </div>
