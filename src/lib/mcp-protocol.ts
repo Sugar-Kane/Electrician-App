@@ -68,6 +68,12 @@ export type ToolResult = {
    * second copy of them. Never sent to the model.
    */
   logText?: string;
+  /**
+   * The same answer as data, for clients that read MCP's structuredContent:
+   * stable ids, statuses and machine-readable error codes. The text stays the
+   * readable version for the model and for clients that ignore this.
+   */
+  structured?: Record<string, unknown>;
 };
 
 export type McpReply = { status: number; body?: unknown };
@@ -165,6 +171,7 @@ async function handleOne(
         const result = await options.callTool(name, args);
         return resultBody(id, {
           content: [{ type: "text", text: result.text }],
+          ...(result.structured ? { structuredContent: result.structured } : {}),
           isError: result.isError === true,
         });
       } catch {
