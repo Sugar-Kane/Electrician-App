@@ -74,6 +74,8 @@ export type AssistantConnection = {
   id: string;
   name: string;
   provider: string;
+  /** built_in runs in Volteira's worker; external is the business's own ChatGPT (or Claude), through the connection. */
+  kind: "built_in" | "external";
   state: "ready" | "connection_required" | "disabled";
   usable: boolean;
   note: string;
@@ -118,6 +120,9 @@ export type ExecutionView = {
   started_at: string | null;
   finished_at: string | null;
   connection: string | null;
+  /** Where the work happens: Volteira's own worker, or the business's ChatGPT when somebody asks it. */
+  runs_in: "volteira" | "chatgpt";
+  claimed_by_you: boolean;
   requested_by_you: boolean;
   can_decide: boolean;
   proposals: ProposalView[];
@@ -143,7 +148,7 @@ function clock(deps: Pick<AssistantDeps, "now">): Date {
 
 const ID = /^[0-9a-f-]{36}$/i;
 const EXECUTION_COLUMNS =
-  "id, organization_id, task_id, connection_id, requested_by, requested_via, task_version, instructions, completion_criteria, permission_mode, status, stage, attempt, rounds, scheduled_for, started_at, finished_at, cancel_requested_at, question, answer, feedback, result_summary, error, usage, idempotency_key, created_at";
+  "id, organization_id, task_id, connection_id, requested_by, requested_via, task_version, instructions, completion_criteria, permission_mode, status, stage, attempt, rounds, scheduled_for, started_at, finished_at, cancel_requested_at, question, answer, feedback, result_summary, error, usage, idempotency_key, claimed_by, created_at, updated_at";
 const PROPOSAL_COLUMNS =
   "id, organization_id, task_id, execution_id, version, task_version, action_type, target, content, reason, content_hash, limits, status, pre_authorized, decided_by, decided_via, decided_at, decision_note, expires_at, executing_at, executed_at, external_ref, receipt, error, created_at";
 
@@ -151,14 +156,32 @@ const PROPOSAL_COLUMNS =
 /* Connections                                                         */
 /* ------------------------------------------------------------------ */
 
+const CONNECTION_COLUMNS = "id, display_name, provider, kind, status, capabilities, credential_ref";
+
 function connectionView(row: Row, deps: Pick<AssistantDeps, "credentialAvailable">): AssistantConnection {
   const disabled = text(row.status) !== "active";
+  const external = text(row.kind) === "external";
+  if (external) {
+    return {
+      id: text(row.id),
+      name: text(row.display_name),
+      provider: text(row.provider),
+      kind: "external",
+      state: disabled ? "disabled" : "ready",
+      usable: !disabled,
+      note: disabled
+        ? "Turned off for this business."
+        : "Your own ChatGPT does the work, on your ChatGPT plan, through the Volteira connection. Open ChatGPT and say \u201cDo my Volteira tasks.\u201d It asks before texting anyone.",
+      capabilities: Array.isArray(row.capabilities) ? (row.capabilities as unknown[]).map(text).filter(Boolean) : [],
+    };
+  }
   const keyed = deps.credentialAvailable(text(row.credential_ref));
   const state = disabled ? "disabled" : keyed ? "ready" : "connection_required";
   return {
     id: text(row.id),
     name: text(row.display_name),
     provider: text(row.provider),
+    kind: "built_in",
     state,
     usable: state === "ready",
     note:
@@ -175,20 +198,27 @@ function connectionView(row: Row, deps: Pick<AssistantDeps, "credentialAvailable
 export async function listAssistants(db: Database, actor: Actor, deps: Pick<AssistantDeps, "credentialAvailable">): Promise<AssistantConnection[]> {
   const { data } = await db
     .from("assistant_connections")
-    .select("id, display_name, provider, status, capabilities, credential_ref")
+    .select(CONNECTION_COLUMNS)
     .eq("organization_id", actor.organizationId)
     .order("created_at", { ascending: true });
-  return rows(data).map((row) => connectionView(row, deps));
+  // The business's own ChatGPT first: it is the default.
+  return rows(data)
+    .map((row) => connectionView(row, deps))
+    .sort((a, b) => Number(b.kind === "external") - Number(a.kind === "external"));
 }
 
+/** A connection that can take work now: the one asked for, or by default the business's own ChatGPT, then the built-in one. */
 async function usableConnection(db: Database, organizationId: string, deps: Pick<AssistantDeps, "credentialAvailable">, id?: string | null): Promise<Result<Row>> {
-  let query = db
-    .from("assistant_connections")
-    .select("id, display_name, provider, status, capabilities, credential_ref")
-    .eq("organization_id", organizationId);
-  query = id ? query.eq("id", id) : query.eq("kind", "built_in");
-  const { data } = await query.limit(1).maybeSingle();
-  const row = data as Row | null;
+  let query = db.from("assistant_connections").select(CONNECTION_COLUMNS).eq("organization_id", organizationId);
+  if (id) query = query.eq("id", id);
+  const { data } = await query;
+  const all = rows(data);
+  const row = id
+    ? (all[0] ?? null)
+    : (all.find((item) => text(item.kind) === "external" && connectionView(item, deps).usable) ??
+      all.find((item) => connectionView(item, deps).usable) ??
+      all[0] ??
+      null);
   if (!row) return fail("ASSISTANT_UNAVAILABLE", "That assistant is not connected to this business.");
   const view = connectionView(row, deps);
   if (!view.usable) return fail("ASSISTANT_UNAVAILABLE", `${view.name}: ${view.note}`);
@@ -252,7 +282,23 @@ async function systemTaskUpdate(db: Database, organizationId: string, taskId: st
   return null;
 }
 
+async function connectionKind(db: Database, connectionId: string): Promise<string> {
+  if (!connectionId) return "";
+  const { data } = await db.from("assistant_connections").select("kind").eq("id", connectionId).maybeSingle();
+  return text((data as Row | null)?.kind);
+}
+
+/**
+ * Put work in the background queue. Work for the business's own ChatGPT is
+ * not queued: it waits, as "queued", until somebody asks ChatGPT to do it.
+ */
+export const WAITING_FOR_CHATGPT = "Waiting for ChatGPT: open ChatGPT and say \u201cDo my Volteira tasks\u201d";
+
 async function enqueue(db: Database, execution: Row, runAt: string): Promise<void> {
+  if ((await connectionKind(db, text(execution.connection_id))) === "external") {
+    await db.from("task_executions").update({ stage: WAITING_FOR_CHATGPT, claimed_by: null }).eq("id", text(execution.id)).eq("status", "queued");
+    return;
+  }
   const { error } = await db.from("task_work").insert({
     organization_id: execution.organization_id,
     task_id: execution.task_id,
@@ -306,7 +352,7 @@ function proposalView(row: Row): ProposalView {
   };
 }
 
-function executionView(row: Row, proposals: Row[], actor: Actor, task: Row, connections: Map<string, string>): ExecutionView {
+function executionView(row: Row, proposals: Row[], actor: Actor, task: Row, connections: Map<string, { name: string; kind: string }>): ExecutionView {
   const status = text(row.status) as ExecutionStatus;
   return {
     id: text(row.id),
@@ -326,7 +372,9 @@ function executionView(row: Row, proposals: Row[], actor: Actor, task: Row, conn
     scheduled_for: text(row.scheduled_for),
     started_at: text(row.started_at) || null,
     finished_at: text(row.finished_at) || null,
-    connection: connections.get(text(row.connection_id)) ?? null,
+    connection: connections.get(text(row.connection_id))?.name ?? null,
+    runs_in: connections.get(text(row.connection_id))?.kind === "external" ? "chatgpt" : "volteira",
+    claimed_by_you: text(row.claimed_by) === actor.userId,
     requested_by_you: text(row.requested_by) === actor.userId,
     can_decide: canDecide(actor, task, row),
     proposals: proposals.filter((proposal) => proposal.execution_id === row.id).map(proposalView),
@@ -351,9 +399,9 @@ export async function listExecutions(db: Database, actor: Actor, taskId: string,
     ids.length
       ? db.from("task_proposals").select(PROPOSAL_COLUMNS).eq("organization_id", actor.organizationId).in("execution_id", ids).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as Row[] }),
-    db.from("assistant_connections").select("id, display_name").eq("organization_id", actor.organizationId),
+    db.from("assistant_connections").select("id, display_name, kind").eq("organization_id", actor.organizationId),
   ]);
-  const names = new Map(rows(connections).map((row) => [text(row.id), text(row.display_name)]));
+  const names = new Map(rows(connections).map((row) => [text(row.id), { name: text(row.display_name), kind: text(row.kind) }]));
   return {
     ok: true,
     value: { task: found.value.task, executions: executions.map((row) => executionView(row, rows(proposals), actor, found.value.raw, names)) },
@@ -478,7 +526,12 @@ export async function startExecution(
       completion_criteria: text(raw.completion_criteria) || null,
       permission_mode: text(raw.ai_permission_mode) === "execute_approved" ? "execute_approved" : "prepare",
       status: "queued",
-      stage: runAt === now.toISOString() ? "Starting within a minute" : "Scheduled",
+      stage:
+        text(connection.value.kind) === "external"
+          ? WAITING_FOR_CHATGPT
+          : runAt === now.toISOString()
+            ? "Starting within a minute"
+            : "Scheduled",
       scheduled_for: runAt,
       idempotency_key: key,
     })
@@ -651,7 +704,9 @@ export async function cancelExecution(db: Database, actor: Actor, deps: Assistan
   const execution = current.value.execution;
   if (!execution) return fail("NOT_FOUND", "That assistant work was not found.");
   if (!execution.can_decide) return fail("FORBIDDEN", "Only the person who started this work, the task's owner, or an owner or admin can stop it.");
-  const outcome = cancelOutcome(execution.status);
+  // ChatGPT is not a process Volteira can interrupt; its work stops at once, and a late report back is refused.
+  const outcome: Result<"canceled" | "cancel_requested"> =
+    execution.runs_in === "chatgpt" && execution.status === "running" ? { ok: true, value: "canceled" } : cancelOutcome(execution.status);
   if (!outcome.ok) return outcome;
   const saved = await updateExecution(
     db,
@@ -954,6 +1009,28 @@ async function resolveTarget(db: Database, task: Row, action: ActionType): Promi
 
 export type ExecutionStep = "ran" | "skipped" | "canceled" | "failed" | "retry";
 
+/** Mark the work failed, put the task back to To do, and tell the person who started it. */
+function failer(db: Database, execution: Row, task: Row, now: Date) {
+  const organizationId = text(execution.organization_id);
+  const taskId = text(execution.task_id);
+  const executionId = text(execution.id);
+  return async (message: string): Promise<"failed"> => {
+    await updateExecution(db, executionId, { status: "failed", stage: "Failed", error: message.slice(0, 1000), finished_at: now.toISOString() }, ["queued", "running"]);
+    await systemTaskUpdate(db, organizationId, taskId, { status: "todo" });
+    await activity(db, organizationId, taskId, "execution_failed", { execution_id: executionId, error: message.slice(0, 300) }, "system");
+    await notify(db, {
+      organizationId,
+      userId: text(execution.requested_by) || null,
+      taskId,
+      kind: "failure",
+      title: `Assistant could not finish: ${text(task.title)}`,
+      body: message,
+      key: `failure:${executionId}:${text(execution.rounds)}`,
+    });
+    return "failed";
+  };
+}
+
 /**
  * One claimed queue row for an execution: run the assistant once and act on
  * what it decided. Never throws for a model problem; a model that fails is
@@ -972,7 +1049,6 @@ export async function runExecution(db: Database, deps: AssistantDeps, work: Row)
   if (!execution || text(execution.status) !== "queued") return text(execution?.status) === "canceled" ? "canceled" : "skipped";
   const organizationId = text(execution.organization_id);
   const taskId = text(execution.task_id);
-  const recipient = text(execution.requested_by) || null;
 
   const { data: taskData } = await db.from("tasks").select("*").eq("organization_id", organizationId).eq("id", taskId).maybeSingle();
   const task = taskData as Row | null;
@@ -981,16 +1057,12 @@ export async function runExecution(db: Database, deps: AssistantDeps, work: Row)
     return "canceled";
   }
 
-  const failWith = async (message: string) => {
-    await updateExecution(db, executionId, { status: "failed", stage: "Failed", error: message.slice(0, 1000), finished_at: now.toISOString() }, ["queued", "running"]);
-    await systemTaskUpdate(db, organizationId, taskId, { status: "todo" });
-    await activity(db, organizationId, taskId, "execution_failed", { execution_id: executionId, error: message.slice(0, 300) }, "system");
-    await notify(db, { organizationId, userId: recipient, taskId, kind: "failure", title: `Assistant could not finish: ${text(task.title)}`, body: message, key: `failure:${executionId}:${text(execution.rounds)}` });
-    return "failed" as const;
-  };
+  const failWith = failer(db, execution, task, now);
 
   const connection = await usableConnection(db, organizationId, deps, text(execution.connection_id) || null);
   if (!connection.ok) return failWith(connection.error.message);
+  // Work for the business's own ChatGPT is never run here.
+  if (text(connection.value.kind) === "external") return "skipped";
   if (Number(execution.rounds ?? 0) >= MAX_ROUNDS) return failWith("The assistant went back and forth too many times without finishing.");
 
   const claimed = await updateExecution(
@@ -1028,7 +1100,27 @@ export async function runExecution(db: Database, deps: AssistantDeps, work: Row)
     return "canceled";
   }
 
-  const decision = decided.decision;
+  return applyDecision(db, deps, { execution: claimed, task, connection: connection.value, decision: decided.decision, now });
+}
+
+/**
+ * Act on one decision, whoever made it (Volteira's runner or the business's
+ * own ChatGPT): finish, ask, or propose an action. The same rules apply
+ * either way: only known action types this connection may do, the target from
+ * the task's job, and a person's approval wherever the rules want one.
+ */
+async function applyDecision(
+  db: Database,
+  deps: AssistantDeps,
+  input: { execution: Row; task: Row; connection: Row; decision: AssistantDecision; now: Date },
+): Promise<ExecutionStep> {
+  const { execution: claimed, task, decision, now } = input;
+  const connection = { value: input.connection };
+  const executionId = text(claimed.id);
+  const organizationId = text(claimed.organization_id);
+  const taskId = text(claimed.task_id);
+  const recipient = text(claimed.requested_by) || null;
+  const failWith = failer(db, claimed, task, now);
   if (decision.kind === "finish") {
     const summary = decision.summary.trim().slice(0, 10000) || "Done.";
     await updateExecution(db, executionId, { status: "succeeded", stage: "Done", result_summary: summary, finished_at: now.toISOString() }, ["running"]);
@@ -1197,6 +1289,149 @@ export async function settleCancelRequests(db: Database, deps: AssistantDeps): P
     }
   }
   return settled;
+}
+
+/* ------------------------------------------------------------------ */
+/* Work done by the business's own ChatGPT                             */
+/* ------------------------------------------------------------------ */
+
+/** How long ChatGPT may hold work it picked up before someone else can pick it up again. */
+const CHATGPT_HOLD_MINUTES = 30;
+
+export type ChatgptWorkItem = {
+  execution_id: string;
+  task_id: string;
+  title: string;
+  url: string;
+  status: "queued" | "running";
+  claimed_by_you: boolean;
+  instructions: string | null;
+};
+
+/**
+ * Assistant work waiting for the business's own ChatGPT that this person may
+ * pick up: tasks they can see, work they may decide on.
+ */
+export async function listChatgptWork(db: Database, actor: Actor): Promise<ChatgptWorkItem[]> {
+  const { data: connections } = await db.from("assistant_connections").select("id").eq("organization_id", actor.organizationId).eq("kind", "external");
+  const ids = rows(connections).map((row) => text(row.id));
+  if (ids.length === 0) return [];
+  const { data } = await db
+    .from("task_executions")
+    .select(EXECUTION_COLUMNS)
+    .eq("organization_id", actor.organizationId)
+    .in("connection_id", ids)
+    .in("status", ["queued", "running"])
+    // Work scheduled for later is not offered before its time.
+    .lte("scheduled_for", new Date().toISOString())
+    .order("created_at", { ascending: true })
+    .limit(25);
+  const items: ChatgptWorkItem[] = [];
+  for (const row of rows(data)) {
+    const found = await getTask(db, actor, text(row.task_id));
+    if (!found.ok || !canDecide(actor, found.value.raw, row)) continue;
+    items.push({
+      execution_id: text(row.id),
+      task_id: found.value.task.id,
+      title: found.value.task.title,
+      url: found.value.task.url,
+      status: text(row.status) === "running" ? "running" : "queued",
+      claimed_by_you: text(row.claimed_by) === actor.userId,
+      instructions: text(row.instructions) || null,
+    });
+  }
+  return items;
+}
+
+async function chatgptExecution(db: Database, actor: Actor, executionId: string): Promise<Result<{ row: Row; task: Row; view: ExecutionView; summary: TaskSummary }>> {
+  const found = await getExecution(db, actor, { execution_id: executionId });
+  if (!found.ok) return found;
+  const view = found.value.execution;
+  if (!view) return fail("NOT_FOUND", "That assistant work was not found.");
+  if (view.runs_in !== "chatgpt") return fail("INVALID_INPUT", "That work runs in Volteira, not in ChatGPT.");
+  if (!view.can_decide) return fail("FORBIDDEN", "Only the person who started this work, the task's owner, or an owner or admin can do it.");
+  const [{ data: row }, { data: task }] = await Promise.all([
+    db.from("task_executions").select(EXECUTION_COLUMNS).eq("organization_id", actor.organizationId).eq("id", executionId).maybeSingle(),
+    db.from("tasks").select("*").eq("organization_id", actor.organizationId).eq("id", view.task_id).maybeSingle(),
+  ]);
+  if (!row || !task) return fail("NOT_FOUND", "That assistant work was not found.");
+  return { ok: true, value: { row: row as Row, task: task as Row, view, summary: found.value.task } };
+}
+
+/**
+ * ChatGPT picks up one piece of work: it is marked as being done by this
+ * person, and ChatGPT gets the task, the job and what it may propose.
+ */
+export async function startChatgptWork(
+  db: Database,
+  actor: Actor,
+  deps: AssistantDeps,
+  executionId: string,
+): Promise<Result<{ task: TaskSummary; execution: ExecutionView | null; context: AssistantContext }>> {
+  const now = clock(deps);
+  const loaded = await chatgptExecution(db, actor, executionId);
+  if (!loaded.ok) return loaded;
+  const { row, task } = loaded.value;
+  if (task.archived_at || isClosed(text(task.status))) return fail("INVALID_INPUT", "That task is closed.");
+  const status = text(row.status);
+  const mine = text(row.claimed_by) === actor.userId;
+  const stale = Date.parse(text(row.updated_at)) < now.getTime() - CHATGPT_HOLD_MINUTES * 60_000;
+  if (status === "running" && !mine && !stale) return fail("EXECUTION_ACTIVE", "Someone else's ChatGPT is working on this right now.");
+  if (status !== "queued" && status !== "running") return fail("INVALID_INPUT", `That work is ${text(row.status).replace("_", " ")}, not waiting to be done.`);
+  if (status === "queued" && Number(row.rounds ?? 0) >= MAX_ROUNDS) {
+    await failer(db, row, task, now)("The assistant went back and forth too many times without finishing.");
+    return fail("INVALID_INPUT", "This work went back and forth too many times and was stopped. Start it again from the task.");
+  }
+  const claimed = await updateExecution(
+    db,
+    executionId,
+    {
+      status: "running",
+      claimed_by: actor.userId,
+      stage: "ChatGPT is working on it",
+      started_at: text(row.started_at) || now.toISOString(),
+      ...(status === "queued" ? { attempt: Number(row.attempt ?? 0) + 1, rounds: Number(row.rounds ?? 0) + 1 } : {}),
+    },
+    [status],
+  );
+  if (!claimed) return fail("VERSION_CONFLICT", "That work changed at the same moment. Look at it again.");
+  if (status === "queued") {
+    await systemTaskUpdate(db, actor.organizationId, text(task.id), { status: "in_progress" });
+    await activity(db, actor.organizationId, text(task.id), "chatgpt_started", { execution_id: executionId }, actor);
+  }
+  const context = await buildContext(db, task, claimed);
+  const after = await getExecution(db, actor, { execution_id: executionId });
+  return { ok: true, value: { task: after.ok ? after.value.task : loaded.value.summary, execution: after.ok ? after.value.execution : null, context } };
+}
+
+/**
+ * ChatGPT reports back on work it picked up: finished, a question for the
+ * person, or one action to propose. It is handled exactly like Volteira's own
+ * assistant: a text always waits for the person's approval.
+ */
+export async function submitChatgptWork(
+  db: Database,
+  actor: Actor,
+  deps: AssistantDeps,
+  executionId: string,
+  decision: AssistantDecision,
+): Promise<Result<{ task: TaskSummary; execution: ExecutionView | null }>> {
+  const now = clock(deps);
+  const loaded = await chatgptExecution(db, actor, executionId);
+  if (!loaded.ok) return loaded;
+  const { row, task } = loaded.value;
+  if (text(row.status) !== "running") return fail("INVALID_INPUT", "Pick the work up first (start_ai_task), then report back.");
+  if (text(row.claimed_by) !== actor.userId) return fail("FORBIDDEN", "Someone else picked this work up.");
+  if (task.archived_at || isClosed(text(task.status))) {
+    await updateExecution(db, executionId, { status: "canceled", stage: "Stopped because the task was closed", finished_at: now.toISOString() }, ["running"]);
+    return fail("INVALID_INPUT", "The task was closed, so nothing was done.");
+  }
+  const connection = await usableConnection(db, actor.organizationId, deps, text(row.connection_id) || null);
+  if (!connection.ok) return connection;
+  const step = await applyDecision(db, deps, { execution: row, task, connection: connection.value, decision, now });
+  const after = await getExecution(db, actor, { execution_id: executionId });
+  if (step === "failed") return fail("ACTION_REFUSED", after.ok && after.value.execution?.error ? after.value.execution.error : "That could not be done.");
+  return after.ok ? { ok: true, value: { task: after.value.task, execution: after.value.execution } } : after;
 }
 
 export { taskUrl };
