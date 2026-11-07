@@ -81,7 +81,12 @@ A task can be handed to an assistant, which does office work on it and asks befo
 - **Runs in** the same background worker (`task_work` kind `execution`), and also right after the request that queued it.
   - Each run takes one use of the business's AI allowance.
   - A model error is retried up to 3 times.
-- **Checked with:** mocked tests only (`src/lib/task-executions.test.ts`: a stand-in model, a stand-in SMS provider and an in-memory database). Those are not live checks. Nothing here is integrated with Muse or any other outside assistant.
+- **Checked with:**
+  - **Mocked tests** (`src/lib/task-executions.test.ts`): a stand-in model, a stand-in SMS provider and an in-memory database. They cover approval binding, consent re-checks, single sending, pre-authorization limits, refused actions, cancellation before acting, closing a task, and reconciling an unknown outcome.
+  - **Live check on production, November 7, 2026:** a private test task with no job, so nothing could be texted. The scheduler called the worker at the next minute. The worker claimed the run and called Claude, then handled the answer.
+    - Claude replied that the Anthropic account is out of credit. The run was marked failed with that reason, a failure notice was made, and the task went back to To do.
+    - So the background path, the failure path and the notices are verified live. A successful decision, and approving a real text, are not yet verified live: they need the account to have credit, and a real customer text needs a test number with consent.
+  - Nothing here is integrated with Muse or any other outside assistant.
 
 ## Who can see a task
 

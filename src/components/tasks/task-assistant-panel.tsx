@@ -194,10 +194,15 @@ function AssignForm({
         <label className="flex items-center gap-2 text-sm text-ink">
           <input type="radio" name="start" value="now" defaultChecked /> Start now
         </label>
-        <label className="flex flex-wrap items-center gap-2 text-sm text-ink">
-          <input type="radio" name="start" value="scheduled" /> Start at
-          <input type="datetime-local" name="scheduled_at" aria-label="Start time" className={`${inputClass} w-auto`} />
-        </label>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
+          <label className="flex items-center gap-2">
+            <input type="radio" name="start" value="scheduled" /> Start at a time
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="sr-only">Start time, in your time zone</span>
+            <input type="datetime-local" name="scheduled_at" className={`${inputClass} w-auto`} />
+          </label>
+        </div>
         <label className="flex items-center gap-2 text-sm text-ink">
           <input type="radio" name="start" value="later" /> Don&apos;t start yet
         </label>
