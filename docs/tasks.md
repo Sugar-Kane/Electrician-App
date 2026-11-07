@@ -12,7 +12,7 @@ All three call one service, `src/lib/tasks-service.ts`. A task made in ChatGPT i
 
 - **Stage 1 (live):** the records, the Tasks page, job Tasks, the core ChatGPT tools and the access rules.
 - **Stage 2:** reminders, recurring tasks, the background worker and in-app notifications.
-- **Stage 3 (not built yet):** assistant connections, assistant work, approvals and execution tracking.
+- **Stage 3:** assistant connections, assistant work, approvals and execution tracking (below).
 
 A due date is only a deadline. It never sends anything or starts work on its own.
 
@@ -44,6 +44,45 @@ A due date is only a deadline. It never sends anything or starts work on its own
 - **No duplicate notices:** each reminder is re-checked against the task before it's sent, and notifies at most once, keyed on its queue row.
 - **Security:** the worker needs the `x-task-worker-token` header. The token is generated inside Supabase Vault (`task_worker_token`) and checked against Vault (`task_worker_token_ok`), so it isn't in the code, in environment variables, or known to anyone. The address it calls is the Vault secret `task_worker_url`.
 
+## Assistant work
+
+A task can be handed to an assistant, which does office work on it and asks before anything leaves Volteira.
+
+- **Connections:** `assistant_connections`, provider-neutral. Every business has **Volteira assistant (Claude)**.
+  - It's *ready* only when the deployment has its key (`credential_ref` names it, e.g. `env:ANTHROPIC_API_KEY`). Otherwise the page and ChatGPT say **connection required**.
+  - The key itself is never stored in the table and never shown, returned or logged.
+- **Handing a task over** (task page → Assistant, or `assign_task_to_ai`) takes:
+  - instructions and, optionally, what done looks like;
+  - what it may do by itself: *prepare for my review* (default), or *execute approved* (it may add job notes);
+  - when: start now (within a minute), at a time, or later.
+- **What it can do:** read the task, its job, the customer and recent texts, then do one of three things:
+  - finish, with a summary (the task is completed and the summary saved);
+  - ask one question;
+  - propose one action: **text the job's customer** or **add a job note**.
+
+  It can't take payments, buy anything, delete anything or change settings; those aren't actions it has. The target is always the task's own job and customer, worked out by the server.
+- **Approvals:** texting a customer always waits for a person. So does a job note in *prepare* mode.
+  - An approval is for one proposal version and its content hash. It's refused if the content changed, the task was edited since, or it is older than 24 hours.
+  - Right before acting, Volteira checks again: the task is open, the work wasn't stopped, the customer still has texting consent, and the phone number hasn't changed.
+  - Who approved, the action, target, content, expiry and time go in the task's history.
+  - Only the person who started the work, the task's owner, or an owner/admin can decide. A support session can look but can't decide.
+  - **Turn down** stops the work. **Ask for changes** sends it back with your note, and it proposes a new version.
+- **States:** queued, running, waiting_input, waiting_approval, succeeded, failed, cancel_requested, canceled. One active run per task (`task_executions_one_active_idx`).
+  - Each run keeps its attempts, rounds (at most 6), stage, result or error, token usage, and the proposals with receipts.
+- **Stopping:** queued or waiting work stops at once. Running work stops at its next check, before acting on anything it decided.
+  - Completing, canceling or archiving the task, or giving it to a person, stops it too (database trigger `stop_task_executions`).
+- **Uncertain outcomes:** an approved action is marked *executing* before it runs. If the process dies mid-send, the worker reads the message row it left after 5 minutes:
+  - sent → done;
+  - failed → failed;
+  - unknown → *uncertain*, and the person is told to check the conversation.
+
+  It is never sent again automatically.
+- **Notices** under **For you**: approval needed, question, result, failure.
+- **Runs in** the same background worker (`task_work` kind `execution`), and also right after the request that queued it.
+  - Each run takes one use of the business's AI allowance.
+  - A model error is retried up to 3 times.
+- **Checked with:** mocked tests only (`src/lib/task-executions.test.ts`: a stand-in model, a stand-in SMS provider and an in-memory database). Those are not live checks. Nothing here is integrated with Muse or any other outside assistant.
+
 ## Who can see a task
 
 - **Private** (the default for a task made on the Tasks page or in ChatGPT without a job): only its creator, its owner and the person it is assigned to.
@@ -71,6 +110,14 @@ The connection link records who created it. Task tools act as that person, and o
 | `complete_task` / `reopen_task` | Never changes the job's status. |
 | `archive_task` | Kept with its history. `restore: true` brings it back. |
 | `link_task_to_job` / `unlink_task_from_job` | Moves keep the task's history. The job itself is not changed. |
+| `list_task_assistants` | The business's assistants and whether each is ready. No credentials. |
+| `assign_task_to_ai` | Hand a task over: instructions, done-when, permission mode, start now / scheduled / later. |
+| `start_task_execution` | Run the assistant again on a task already handed over. |
+| `get_task_execution` | Status, stage, question, result, and any action waiting for approval with its exact content, `proposal_id` and `content_hash`. |
+| `answer_task_question` | Pass on the user's answer. |
+| `approve_task_action` | Approve and carry out one proposal. Needs its `content_hash`, so it covers exactly what was shown. |
+| `reject_task_action` | Turn it down, or `revise: true` with a note. |
+| `cancel_task_execution` | Stop the work. |
 
 Every tool returns a readable line and structured data (`structuredContent`): ids, statuses, dates, time zone, job, assignee, version and a Volteira link. Errors carry a code: `NOT_FOUND`, `JOB_AMBIGUOUS`, `VERSION_CONFLICT`, and so on.
 
@@ -93,7 +140,9 @@ ChatGPT turns speech into text and calls the same tools, so whatever ChatGPT voi
 ## Setup
 
 - **Database:**
-  - Apply `supabase/migrations/20261107010000_tasks.sql` (stage 1) and `20261107020000_task_scheduling.sql` (stage 2).
+  - Apply `supabase/migrations/20261107010000_tasks.sql` (stage 1), `20261107020000_task_scheduling.sql` (stage 2) and `20261107030000_task_assistants.sql` (stage 3).
   - Record each in `schema_migrations` with its file's version and name (see AGENTS.md).
   - Stage 2 turns on the `pg_cron` and `pg_net` extensions, creates the two Vault secrets, and schedules the job `volteira-task-worker`.
-- **Environment variables:** none new. `NEXT_PUBLIC_APP_URL` is used for task links.
+- **Environment variables:** none new.
+  - `NEXT_PUBLIC_APP_URL` is used for task links.
+  - `ANTHROPIC_API_KEY` (already used elsewhere) makes the built-in assistant ready.

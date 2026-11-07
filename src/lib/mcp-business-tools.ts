@@ -25,6 +25,7 @@ import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { sendSms } from "@/lib/twilio";
+import { sendCustomerText } from "@/lib/customer-text";
 
 const str = (description: string) => ({ type: "string", description });
 const confirmed = {
@@ -602,112 +603,14 @@ export async function runBusinessMcpTool(input: {
       if (!body) return { isError: true, text: "The message was empty. Nothing was sent." };
       const found = await findCustomer(database, organizationId, who);
       if (!found.row) return { isError: true, text: found.problem ?? "Customer not found." };
-      const customerId = text(found.row.id);
-      const phone = text(found.row.phone);
-      if (!phone) return { isError: true, text: `${displayCustomer(found.row)} has no phone number. Nothing was sent.` };
-
-      const { data: consent } = await database
-        .from("messaging_consent")
-        .select("opted_in_at,opted_out_at")
-        .eq("organization_id", organizationId)
-        .eq("customer_id", customerId)
-        .eq("channel", "sms")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!consent?.opted_in_at || consent.opted_out_at) {
-        return { isError: true, text: `${displayCustomer(found.row)} does not have active SMS consent. Nothing was sent.` };
-      }
-
-      const { data: settings } = await database
-        .from("messaging_settings")
-        .select("messaging_service_sid")
-        .eq("organization_id", organizationId)
-        .maybeSingle();
-      const sid = text(settings?.messaging_service_sid);
-      if (!sid) return { isError: true, text: "Messaging is not configured for this business. Nothing was sent." };
-      // The same steps as Send in the inbox, so a text sent from ChatGPT is in
-      // the customer's thread like any other: found or opened (and brought
-      // back if it was cleared from the inbox), saved before it is sent so a
-      // send that never answers is still visible, and the auto-reply stood
-      // down because a person is talking.
-      const now = new Date().toISOString();
-      const { data: existing } = await database
-        .from("conversations")
-        .select("id, deleted_at")
-        .eq("organization_id", organizationId)
-        .eq("customer_id", customerId)
-        .eq("channel", "sms")
-        .is("archived_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      let conversationId = text(existing?.id);
-      if (conversationId) {
-        await database
-          .from("conversations")
-          .update({ assistant_paused_at: now })
-          .eq("organization_id", organizationId)
-          .eq("id", conversationId)
-          .is("assistant_paused_at", null);
-        if (existing?.deleted_at) {
-          await database.from("conversations").update({ deleted_at: null, deleted_by: null }).eq("organization_id", organizationId).eq("id", conversationId);
-        }
-      } else {
-        const { data: created } = await database
-          .from("conversations")
-          .insert({ organization_id: organizationId, customer_id: customerId, channel: "sms", status: "open", assistant_paused_at: now })
-          .select("id")
-          .maybeSingle();
-        conversationId = text(created?.id);
-      }
-      if (!conversationId) return { isError: true, text: "The conversation could not be opened. Nothing was sent." };
-
-      const { data: saved } = await database
-        .from("messages")
-        .insert({ organization_id: organizationId, conversation_id: conversationId, direction: "outbound", body, status: "sending", approved_at: now })
-        .select("id")
-        .maybeSingle();
-      const messageId = text(saved?.id);
-      if (!messageId) return { isError: true, text: "The text could not be saved. Nothing was sent." };
-
-      const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
-      const result = await sendSms({
-        to: phone,
+      const outcome = await sendCustomerText(asFlexibleClient(database), {
+        organizationId,
+        customerId: text(found.row.id),
         body,
-        messagingServiceSid: sid,
-        statusCallbackUrl: origin && /^https?:\/\//.test(origin) ? `${origin}/api/twilio/status?message=${messageId}` : undefined,
+        send: sendSms,
       });
-
-      if (result.ok) {
-        await database
-          .from("messages")
-          .update({ status: result.status === "delivered" ? "delivered" : "sent", provider_message_id: result.providerMessageId, sent_at: new Date().toISOString() })
-          .eq("id", messageId);
-        await database
-          .from("conversations")
-          .update({ last_message_at: new Date().toISOString(), status: "open" })
-          .eq("organization_id", organizationId)
-          .eq("id", conversationId);
-        return { text: `Text sent to ${displayCustomer(found.row)} at ${phone}. It is in their conversation in Volteira.` };
-      }
-
-      await database
-        .from("messages")
-        .update({ status: "failed", error_code: result.errorCode, error_detail: result.errorDetail })
-        .eq("id", messageId);
-      // 21610 is the carrier's own STOP list: an opt-out this system missed.
-      // The ledger is brought in line, as the inbox does.
-      if (result.errorCode === "21610") {
-        await database
-          .from("messaging_consent")
-          .update({ opted_out_at: new Date().toISOString() })
-          .eq("organization_id", organizationId)
-          .eq("customer_id", customerId)
-          .eq("channel", "sms")
-          .eq("scope", "transactional");
-      }
-      return { isError: true, text: `The text could not be sent (${result.errorCode}: ${result.errorDetail}). It is marked not delivered in their conversation.` };
+      if (outcome.ok) return { text: `Text sent to ${displayCustomer(found.row)} at ${outcome.phone}. It is in their conversation in Volteira.` };
+      return { isError: true, text: `${displayCustomer(found.row)}: ${outcome.message}` };
     }
 
     case "draft_contract": {
