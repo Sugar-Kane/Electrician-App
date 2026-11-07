@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, UserRoundPlus } from "lucide-react";
+import { Bell, CircleAlert, CircleCheck, MessageSquareText, ShieldCheck, UserRoundPlus } from "lucide-react";
 
 import { markTaskNotificationsRead } from "@/app/tasks/actions";
 import type { TaskNotification } from "@/lib/tasks-service";
@@ -9,7 +9,8 @@ function when(iso: string, timeZone: string): string {
 }
 
 /**
- * Reminders and assignments for the signed-in person, unread first. They are
+ * Reminders, assignments and assistant news (approvals, questions, results,
+ * failures) for the signed-in person, unread first. They are
  * Volteira's own notices, shown here; nothing is texted or emailed.
  */
 export function TaskNotifications({ notifications, unread, timeZone }: { notifications: TaskNotification[]; unread: number; timeZone: string }) {
@@ -32,7 +33,19 @@ export function TaskNotifications({ notifications, unread, timeZone }: { notific
       <ul className="grid gap-1.5">
         {notifications.map((notice) => (
           <li key={notice.id} className={`flex items-start gap-2 rounded-control px-2 py-2 text-sm ${notice.read ? "text-ink-muted" : "bg-brand/5 text-ink"}`}>
-            {notice.kind === "assigned" ? <UserRoundPlus className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> : <Bell className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />}
+            {notice.kind === "assigned" ? (
+              <UserRoundPlus className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : notice.kind === "approval" ? (
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : notice.kind === "input" ? (
+              <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : notice.kind === "result" ? (
+              <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : notice.kind === "failure" ? (
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            ) : (
+              <Bell className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            )}
             <div className="min-w-0 flex-1">
               {notice.task_id ? (
                 <Link href={`/tasks/${notice.task_id}`} className="font-semibold hover:underline">

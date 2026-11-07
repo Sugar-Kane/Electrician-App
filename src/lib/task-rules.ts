@@ -70,6 +70,12 @@ export type TaskErrorCode =
   | "ARCHIVED"
   | "NOT_CONNECTED"
   | "RECURRENCE_SCOPE_REQUIRED"
+  | "ASSISTANT_UNAVAILABLE"
+  | "EXECUTION_ACTIVE"
+  | "PROPOSAL_EXPIRED"
+  | "PROPOSAL_CHANGED"
+  | "ACTION_REFUSED"
+  | "AI_LIMIT"
   | "SAVE_FAILED";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: TaskError };

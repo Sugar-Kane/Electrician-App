@@ -6,9 +6,12 @@ import { archiveTaskAction, toggleTaskComplete } from "@/app/tasks/actions";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { RefreshOnChange } from "@/components/refresh-on-change";
 import { TaskEditForm } from "@/components/tasks/task-edit-form";
+import { TaskAssistantPanel } from "@/components/tasks/task-assistant-panel";
 import { TaskJobForm } from "@/components/tasks/task-job-form";
 import { isoToZonedWallClock } from "@/lib/schedule-labels";
 import { appTaskActor } from "@/lib/task-actor";
+import { assistantDeps } from "@/lib/task-assistant-server";
+import { listAssistants, listExecutions } from "@/lib/task-executions";
 import { getTask, listAssignableMembers, tasksFingerprint, type TaskActivity } from "@/lib/tasks-service";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +29,20 @@ const EVENT_LABELS: Record<string, string> = {
   reminder_sent: "Reminder sent",
   repeat_started: "Set to repeat",
   series_changed: "Changed with its series",
+  assigned_to_assistant: "Handed to the assistant",
+  execution_queued: "Assistant work started",
+  execution_canceled: "Assistant work stopped",
+  execution_failed: "Assistant work failed",
+  assistant_asked: "The assistant asked a question",
+  assistant_answered: "Answered the assistant",
+  action_proposed: "The assistant proposed an action",
+  action_approved: "Approved an action",
+  action_rejected: "Turned down an action",
+  action_revision_requested: "Asked for changes to an action",
+  action_pre_authorized: "Pre-authorized action",
+  action_done: "Action carried out",
+  action_failed: "Action not carried out",
+  action_uncertain: "Action outcome unknown",
 };
 
 function describe(item: TaskActivity): string {
@@ -33,6 +50,7 @@ function describe(item: TaskActivity): string {
   const changes = item.detail.changes && typeof item.detail.changes === "object" ? Object.keys(item.detail.changes as object) : [];
   const what = changes.length ? `: ${changes.map((key) => key.replace(/_/g, " ").replace("user id", "")).join(", ")}` : "";
   const job = typeof item.detail.to_job === "string" ? ` (${item.detail.to_job})` : "";
+  if (item.event === "completed" && item.detail.by_assistant === true) return "Completed by the assistant";
   const shared = item.detail.made_shared === true ? " and shared with the business" : "";
   return `${label}${what}${job}${shared}`;
 }
@@ -47,10 +65,13 @@ export default async function TaskPage({ params }: { params: Promise<{ taskId: s
   const found = await getTask(session.db, session.actor, taskId);
   if (!found.ok) notFound();
   const { task, activity } = found.value;
-  const [members, fingerprint] = await Promise.all([
+  const [members, fingerprint, assistants, work] = await Promise.all([
     listAssignableMembers(session.db, session.actor),
     tasksFingerprint(session.db, session.actor, task.job?.id),
+    listAssistants(session.db, session.actor, assistantDeps()),
+    listExecutions(session.db, session.actor, task.id),
   ]);
+  const raw = found.value.raw;
   const done = task.status === "complete";
 
   return (
@@ -111,6 +132,24 @@ export default async function TaskPage({ params }: { params: Promise<{ taskId: s
                 currentJob={task.job?.label ?? null}
                 currentJobNumber={task.job?.number ?? null}
                 isPrivate={task.visibility === "private"}
+              />
+            </section>
+
+            <section aria-labelledby="assistant-heading" className="rounded-panel border border-line bg-surface p-4">
+              <h2 id="assistant-heading" className="mb-3 text-sm font-semibold text-ink">
+                Assistant
+              </h2>
+              <TaskAssistantPanel
+                taskId={task.id}
+                version={task.version}
+                closed={task.status === "complete" || task.status === "canceled"}
+                assignedToAssistant={task.assignee.type === "assistant"}
+                assistants={assistants}
+                executions={work.ok ? work.value.executions : []}
+                instructions={typeof raw.ai_instructions === "string" ? raw.ai_instructions : ""}
+                criteria={typeof raw.completion_criteria === "string" ? raw.completion_criteria : ""}
+                mode={typeof raw.ai_permission_mode === "string" ? raw.ai_permission_mode : "prepare"}
+                timeZone={session.actor.timeZone}
               />
             </section>
 

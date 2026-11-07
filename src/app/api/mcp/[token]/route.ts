@@ -5,6 +5,8 @@ import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
 import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
 import { TASK_MCP_TOOLS, isTaskTool, runTaskTool } from "@/lib/mcp-task-tools";
+import { TASK_ASSISTANT_MCP_TOOLS, isTaskAssistantTool, runTaskAssistantTool } from "@/lib/mcp-task-assistant-tools";
+import { assistantDeps, startQueuedWorkSoon } from "@/lib/task-assistant-server";
 import type { Actor } from "@/lib/tasks-service";
 import { isTimeZone } from "@/lib/task-rules";
 import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type HistoryDatabase } from "@/lib/mcp-text-history";
@@ -16,7 +18,7 @@ import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.8.0";
+const SERVER_VERSION = "1.9.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -112,7 +114,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...TASK_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...TASK_MCP_TOOLS, ...TASK_ASSISTANT_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -133,6 +135,15 @@ export async function POST(request: Request, context: { params: Promise<{ token:
             actor: await taskActor(database, session.organizationId, connectedBy),
             name,
             args,
+          })
+        : business && isTaskAssistantTool(name)
+        ? await runTaskAssistantTool({
+            database: asFlexibleClient(database),
+            actor: await taskActor(database, session.organizationId, connectedBy),
+            deps: assistantDeps(),
+            name,
+            args,
+            onQueued: startQueuedWorkSoon,
           })
         : business && isTextHistoryTool(name)
         ? await runTextHistoryTool({

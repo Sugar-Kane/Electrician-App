@@ -2,6 +2,7 @@ import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
 import { datesToMake, nextOccurrence, type RepeatRule } from "./task-recurrence.ts";
 import { isClosed, todayIn } from "./task-rules.ts";
 import { occurrenceFields } from "./tasks-service.ts";
+import { reconcileStuckActions, runExecution, settleCancelRequests, type AssistantDeps } from "./task-executions.ts";
 
 /**
  * The background worker for tasks. Runs on the server, called by the
@@ -35,7 +36,15 @@ export function backoffMinutes(attempt: number): number {
   return Math.min(30, 2 ** Math.max(0, attempt - 1));
 }
 
-export type WorkerReport = { reminders_sent: number; reminders_called_off: number; retried: number; failed: number; occurrences_made: number };
+export type WorkerReport = {
+  reminders_sent: number;
+  reminders_called_off: number;
+  executions_run: number;
+  actions_reconciled: number;
+  retried: number;
+  failed: number;
+  occurrences_made: number;
+};
 
 async function finish(db: Database, id: string, status: "done" | "canceled" | "failed", error?: string) {
   await db
@@ -166,11 +175,23 @@ export async function makeOccurrences(db: Database, now: Date = new Date()): Pro
 }
 
 /** One run: claim due work in batches until it is gone or time is short, then make occurrences. */
-export async function runTaskWorker(db: Database, options: { budgetMs?: number; now?: () => Date } = {}): Promise<WorkerReport> {
+export async function runTaskWorker(
+  db: Database,
+  options: { budgetMs?: number; now?: () => Date; assistant?: AssistantDeps } = {},
+): Promise<WorkerReport> {
   const started = Date.now();
   const budget = options.budgetMs ?? 40_000;
   const clock = options.now ?? (() => new Date());
-  const report: WorkerReport = { reminders_sent: 0, reminders_called_off: 0, retried: 0, failed: 0, occurrences_made: 0 };
+  const report: WorkerReport = { reminders_sent: 0, reminders_called_off: 0, executions_run: 0, actions_reconciled: 0, retried: 0, failed: 0, occurrences_made: 0 };
+  const assistant = options.assistant;
+
+  // Actions whose outcome was never written down are settled first, from the
+  // record they left; they are never carried out a second time.
+  if (assistant) {
+    const settled = await reconcileStuckActions(db, assistant);
+    report.actions_reconciled = settled.executed + settled.failed + settled.uncertain;
+    await settleCancelRequests(db, assistant);
+  }
 
   for (let batch = 0; batch < 20 && Date.now() - started < budget; batch += 1) {
     const { data, error } = await db.rpc("claim_task_work", { p_limit: 25, p_lease_seconds: 120 });
@@ -183,13 +204,43 @@ export async function runTaskWorker(db: Database, options: { budgetMs?: number; 
           const outcome = await processReminder(db, work, clock());
           if (outcome === "sent") report.reminders_sent += 1;
           else report.reminders_called_off += 1;
-        } else {
-          // Assistant work arrives in stage 3; until then it is not run, and says why.
-          await finish(db, text(work.id), "failed", "Assistant work is not available yet.");
+        } else if (!assistant) {
+          await finish(db, text(work.id), "failed", "Assistant work is not available on this server.");
           report.failed += 1;
+        } else if (Date.now() - started > budget) {
+          // Out of time for a model call: hand the row back untouched for the next run.
+          await db
+            .from("task_work")
+            .update({ status: "pending", lease_until: null, attempts: Math.max(0, Number(work.attempts ?? 1) - 1) })
+            .eq("id", text(work.id));
+        } else {
+          const step = await runExecution(db, assistant, work);
+          if (step === "retry") {
+            const attempts = Number(work.attempts ?? 1);
+            await db
+              .from("task_work")
+              .update({ status: "pending", lease_until: null, run_at: new Date(clock().getTime() + backoffMinutes(attempts) * 60_000).toISOString() })
+              .eq("id", text(work.id));
+            report.retried += 1;
+          } else {
+            await finish(db, text(work.id), step === "canceled" ? "canceled" : step === "failed" ? "failed" : "done");
+            if (step === "ran") report.executions_run += 1;
+            if (step === "failed") report.failed += 1;
+          }
         }
       } catch (error) {
+        // A run that broke part-way leaves its execution able to be picked up again.
+        if (text(work.kind) === "execution" && text(work.execution_id)) {
+          await db.from("task_executions").update({ status: "queued" }).eq("id", text(work.execution_id)).eq("status", "running");
+        }
         const outcome = await retryOrFail(db, work, error, clock());
+        if (outcome === "failed" && text(work.kind) === "execution" && text(work.execution_id)) {
+          await db
+            .from("task_executions")
+            .update({ status: "failed", error: "The work kept failing and was stopped.", finished_at: clock().toISOString() })
+            .eq("id", text(work.execution_id))
+            .eq("status", "queued");
+        }
         report[outcome === "retried" ? "retried" : "failed"] += 1;
       }
     }
