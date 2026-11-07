@@ -81,7 +81,11 @@ function fakeDatabase(seed: Record<string, Row[]> = {}) {
         for (const row of matched) Object.assign(row, payload);
         return { data: matched, error: null };
       }
-      const withJobs = matched.map((row) => (table === "tasks" ? { ...row, jobs: tables.jobs!.find((job) => job.id === row.job_id) ?? null } : row));
+      const withJobs = matched.map((row) =>
+        table === "tasks"
+          ? { ...row, jobs: tables.jobs!.find((job) => job.id === row.job_id) ?? null, task_series: (tables.task_series ?? []).find((series) => series.id === row.series_id) ?? null }
+          : row,
+      );
       return { data: withJobs.slice(0, limit), error: null };
     }
     return builder;
@@ -217,4 +221,37 @@ test("without a verified person behind the connection, task tools refuse", async
   assert.equal(refused.isError, true);
   assert.equal((refused.structured?.error as { code: string }).code, "NOT_CONNECTED");
   assert.equal(tables.tasks!.length, 0);
+});
+
+test("a reminder in the past is refused rather than firing at once", async () => {
+  const { database } = fakeDatabase();
+  const made = await createTask(database, ann, { title: "x", reminder_at: "2020-01-01T09:00" });
+  assert.equal(!made.ok && made.error.field, "reminder_at");
+});
+
+test("a repeating task is a series with its first occurrence, and needs a first date", async () => {
+  const { database, tables } = fakeDatabase();
+  const noDate = await createTask(database, ann, { title: "Check van stock", repeat: { freq: "weekly" } });
+  assert.equal(!noDate.ok && noDate.error.field, "due_date");
+  const made = await createTask(database, ann, { title: "Check van stock", due_date: "2030-11-11", due_time: "08:00", repeat: { freq: "weekly", weekdays: [1] } });
+  assert.ok(made.ok);
+  assert.equal(tables.task_series!.length, 1);
+  assert.equal(tables.task_series![0]!.next_date, "2030-11-18");
+  assert.equal(made.value.task.repeat?.description, "Every week on Mon");
+});
+
+test("changing a repeating task must say whether it is this one or this and future ones", async () => {
+  const { database, tables } = fakeDatabase();
+  const made = await createTask(database, ann, { title: "Check van stock", due_date: "2030-11-11", repeat: { freq: "daily" } });
+  assert.ok(made.ok);
+  const unscoped = await updateTask(database, ann, made.value.task.id, { title: "Check van and trailer stock" });
+  assert.equal(!unscoped.ok && unscoped.error.code, "RECURRENCE_SCOPE_REQUIRED");
+  const ruleOnThis = await updateTask(database, ann, made.value.task.id, { repeat: { freq: "weekly" } }, undefined, { scope: "this" });
+  assert.equal(!ruleOnThis.ok && ruleOnThis.error.code, "RECURRENCE_SCOPE_REQUIRED", "a new rule only ever applies to the future");
+  const onlyThis = await updateTask(database, ann, made.value.task.id, { title: "Just today: check the trailer" }, undefined, { scope: "this" });
+  assert.ok(onlyThis.ok);
+  assert.equal(tables.task_series![0]!.title, "Check van stock", "the series is untouched by a this-only change");
+  const future = await updateTask(database, ann, made.value.task.id, { title: "Check van and trailer stock" }, undefined, { scope: "future" });
+  assert.ok(future.ok);
+  assert.equal(tables.task_series![0]!.title, "Check van and trailer stock");
 });

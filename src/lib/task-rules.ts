@@ -69,6 +69,7 @@ export type TaskErrorCode =
   | "VISIBILITY_CHANGE_NEEDS_CONFIRMATION"
   | "ARCHIVED"
   | "NOT_CONNECTED"
+  | "RECURRENCE_SCOPE_REQUIRED"
   | "SAVE_FAILED";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: TaskError };
@@ -155,6 +156,8 @@ export type TaskInput = {
   due_date?: unknown;
   due_time?: unknown;
   time_zone?: unknown;
+  /** When to remind, as local wall-clock time "YYYY-MM-DDTHH:MM" in the task's zone. Empty clears it. */
+  reminder_at?: unknown;
 };
 
 export type CleanTaskFields = {
@@ -164,6 +167,7 @@ export type CleanTaskFields = {
   due_time?: string | null;
   due_at?: string | null;
   time_zone?: string;
+  reminder_at?: string | null;
 };
 
 /**
@@ -175,7 +179,12 @@ export type CleanTaskFields = {
  */
 export function readTaskFields(
   input: TaskInput,
-  options: { creating: boolean; defaultTimeZone: string; current?: { due_date: string | null; due_time: string | null; time_zone: string } },
+  options: {
+    creating: boolean;
+    defaultTimeZone: string;
+    current?: { due_date: string | null; due_time: string | null; time_zone: string };
+    now?: Date;
+  },
 ): Result<CleanTaskFields> {
   const out: CleanTaskFields = {};
 
@@ -210,6 +219,27 @@ export function readTaskFields(
     out.due_date = dueDate || null;
     out.due_time = dueTime || null;
     out.due_at = dueDate && dueTime ? dueInstant(dueDate, dueTime, zone) : null;
+  }
+
+  // A reminder is when somebody is told, separate from the deadline. It must
+  // be in the future: a reminder for a time already gone would only fire at
+  // once and be read as a mistake.
+  if (input.reminder_at !== undefined) {
+    const local = clean(input.reminder_at).replace(" ", "T").slice(0, 16);
+    if (!local) {
+      out.reminder_at = null;
+    } else {
+      const [date = "", time = ""] = local.split("T");
+      if (!isCalendarDate(date) || !isClockTime(time)) {
+        return fail("INVALID_INPUT", "A reminder looks like 2026-11-14T09:00, in the business's time zone.", "reminder_at");
+      }
+      const zone = out.time_zone ?? options.current?.time_zone ?? options.defaultTimeZone;
+      const instant = dueInstant(date, time, zone);
+      if (new Date(instant).getTime() < (options.now ?? new Date()).getTime() - 60_000) {
+        return fail("INVALID_INPUT", "That reminder time has already passed. Pick a time from now on.", "reminder_at");
+      }
+      out.reminder_at = instant;
+    }
   }
 
   return { ok: true, value: out };

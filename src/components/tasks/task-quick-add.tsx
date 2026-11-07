@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 
 import { quickAddTask, type TaskFormState } from "@/app/tasks/actions";
+import { RepeatFields } from "@/components/tasks/repeat-fields";
 import { inputClass } from "@/components/ui/field";
 
 const initial: TaskFormState = { error: "" };
@@ -100,6 +101,11 @@ export function TaskQuickAdd({
             Due time (optional)
             <input type="time" name="due_time" className={inputClass} />
           </label>
+          <label className="grid gap-1 text-xs font-semibold text-ink-muted">
+            Remind me at (optional)
+            <input type="datetime-local" name="reminder_at" className={inputClass} />
+          </label>
+          <RepeatFields />
           {members.length > 1 ? (
             <label className="grid gap-1 text-xs font-semibold text-ink-muted">
               Assign to

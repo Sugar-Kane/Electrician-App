@@ -7,6 +7,7 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { RefreshOnChange } from "@/components/refresh-on-change";
 import { TaskEditForm } from "@/components/tasks/task-edit-form";
 import { TaskJobForm } from "@/components/tasks/task-job-form";
+import { isoToZonedWallClock } from "@/lib/schedule-labels";
 import { appTaskActor } from "@/lib/task-actor";
 import { getTask, listAssignableMembers, tasksFingerprint, type TaskActivity } from "@/lib/tasks-service";
 
@@ -22,6 +23,9 @@ const EVENT_LABELS: Record<string, string> = {
   linked: "Linked to a job",
   moved: "Moved to another job",
   unlinked: "Taken off its job",
+  reminder_sent: "Reminder sent",
+  repeat_started: "Set to repeat",
+  series_changed: "Changed with its series",
 };
 
 function describe(item: TaskActivity): string {
@@ -85,7 +89,7 @@ export default async function TaskPage({ params }: { params: Promise<{ taskId: s
               <h2 id="edit-heading" className="mb-3 text-sm font-semibold text-ink">
                 Details
               </h2>
-              <TaskEditForm task={task} members={members} />
+              <TaskEditForm task={task} members={members} reminderLocal={task.reminder_at ? isoToZonedWallClock(task.reminder_at, task.time_zone) : ""} />
             </section>
 
             <section aria-labelledby="job-heading" className="rounded-panel border border-line bg-surface p-4">

@@ -42,6 +42,22 @@ const dueFields = {
   due_date: str("When the outcome is needed, YYYY-MM-DD, worked out in the business's time zone (list_tasks returns today's date). A due date never starts anything by itself. Empty string clears it."),
   due_time: str("Optional time on the due date, 24-hour HH:MM. Needs a due date. Ask if the time is unclear. Empty string clears it."),
   notes: str("Optional notes."),
+  reminder_at: str("Optional reminder, local time YYYY-MM-DDTHH:MM in the business's time zone (separate from the due date). The user is notified in Volteira then. Must be in the future. Empty string clears it."),
+};
+const repeat = {
+  type: "object",
+  description:
+    "Makes it repeat. Needs a due date (the first time). Daily, weekly (weekdays 0=Sun..6=Sat) or monthly (monthday 1-31; months without that day use their last day). Optional interval (every N), until (YYYY-MM-DD) or count. Each time is its own task; the next ones appear a week ahead.",
+  properties: {
+    freq: { type: "string", enum: ["daily", "weekly", "monthly"] },
+    interval: { type: "number" },
+    weekdays: { type: "array", items: { type: "number" } },
+    monthday: { type: "number" },
+    until: { type: "string" },
+    count: { type: "number" },
+  },
+  required: ["freq"],
+  additionalProperties: false,
 };
 
 export const TASK_MCP_TOOLS: McpTool[] = [
@@ -56,6 +72,7 @@ export const TASK_MCP_TOOLS: McpTool[] = [
         title: str("What needs doing, in a few words."),
         ...dueFields,
         job: str("Optional job: its number (1042) or the customer's name."),
+        repeat,
         request_id: str("Optional id for this request. Send the same one when retrying so the task is not made twice."),
       },
       required: ["title"],
@@ -124,7 +141,7 @@ export const TASK_MCP_TOOLS: McpTool[] = [
     name: "update_task",
     title: "Update task",
     description:
-      "Change a task's title, notes, due date or time, status (todo, in_progress, waiting_input, waiting_approval, complete, canceled) or assignee. Only the fields given change. Use link_task_to_job to change its job.",
+      "Change a task's title, notes, due date or time, reminder, repeat, status (todo, in_progress, waiting_input, waiting_approval, complete, canceled) or assignee. Only the fields given change. For a repeating task, say apply_to. Use link_task_to_job to change its job.",
     inputSchema: {
       type: "object",
       properties: {
@@ -133,6 +150,13 @@ export const TASK_MCP_TOOLS: McpTool[] = [
         ...dueFields,
         status: { type: "string", enum: [...TASK_STATUSES] },
         assignee_user_id: str("A team member's user id, or empty string to unassign."),
+        repeat: { ...repeat, description: "A new repeat rule. Always applies to this and future occurrences (apply_to future)." },
+        stop_repeating: { type: "boolean", description: "True to stop the task repeating from here on (apply_to future). Earlier and current occurrences stay." },
+        apply_to: {
+          type: "string",
+          enum: ["this", "future"],
+          description: "Required when the task repeats: 'this' changes only this occurrence; 'future' changes this one and the ones after it. Ask the user if unclear. Past occurrences never change.",
+        },
         version,
       },
       required: ["task_id"],
@@ -217,6 +241,8 @@ function optionalVersion(args: Args): number | undefined {
 export function describeTask(task: TaskSummary): string {
   const parts = [`"${task.title}"`, task.status_label];
   if (task.due_date) parts.push(`due ${sayDate(task.due_date)}${task.due_time ? ` at ${task.due_time}` : ""} (${task.time_zone})${task.overdue ? ", OVERDUE" : ""}`);
+  if (task.reminder_label) parts.push(`reminder ${task.reminder_label}${task.reminder_sent ? " (sent)" : ""}`);
+  if (task.repeat) parts.push(`repeats: ${task.repeat.description}${task.repeat.active ? "" : " (stopped)"}`);
   if (task.job) parts.push(`job ${task.job.label}`);
   if (task.assignee.name) parts.push(`assigned to ${task.assignee.name}`);
   parts.push(task.visibility === "private" ? "private" : "shared with the business");
@@ -237,6 +263,8 @@ function createInput(item: Args): CreateInput {
     notes: item.notes,
     due_date: item.due_date,
     due_time: item.due_time,
+    reminder_at: item.reminder_at,
+    ...(item.repeat !== undefined ? { repeat: item.repeat } : {}),
     ...(text(item.job) ? { job: text(item.job) } : {}),
   };
 }
@@ -324,8 +352,11 @@ export async function runTaskTool(input: { database: FlexibleSupabaseClient; act
           ...(args.due_time !== undefined ? { due_time: args.due_time } : {}),
           ...(args.status !== undefined ? { status: text(args.status) } : {}),
           ...(args.assignee_user_id !== undefined ? { assignee_user_id: text(args.assignee_user_id) } : {}),
+          ...(args.reminder_at !== undefined ? { reminder_at: args.reminder_at } : {}),
+          ...(args.stop_repeating === true ? { repeat: null } : args.repeat !== undefined ? { repeat: args.repeat } : {}),
         },
         optionalVersion(args),
+        { scope: args.apply_to === "this" || args.apply_to === "future" ? args.apply_to : undefined },
       );
       return changed.ok ? one(changed.value, "Task updated in Volteira.") : failure(changed);
     }
