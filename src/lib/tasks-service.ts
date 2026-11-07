@@ -1,6 +1,9 @@
 import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
+import { describeRule, nextOccurrence, readRule, addDaysTo, type RepeatRule } from "./task-recurrence.ts";
+import { isoToZonedWallClock } from "./schedule-labels.ts";
 import {
   BULK_MAX,
+  dueInstant,
   TASK_STATUS_LABELS,
   completeTransition,
   dueLabel,
@@ -50,7 +53,7 @@ type Database = FlexibleSupabaseClient;
 type Row = Record<string, unknown>;
 
 const TASK_COLUMNS =
-  "id, organization_id, created_by, owner_id, visibility, title, notes, status, assignee_type, assignee_user_id, assistant_connection_id, job_id, due_date, due_time, due_at, time_zone, reminder_at, execution_mode, scheduled_execution_at, recurrence, ai_instructions, completion_criteria, ai_permission_mode, completion_summary, artifacts, version, created_at, updated_at, completed_at, archived_at, jobs(id, job_number, customer_description, status, customers(first_name, last_name, company_name))";
+  "id, organization_id, created_by, owner_id, visibility, title, notes, status, assignee_type, assignee_user_id, assistant_connection_id, job_id, due_date, due_time, due_at, time_zone, reminder_at, execution_mode, scheduled_execution_at, recurrence, ai_instructions, completion_criteria, ai_permission_mode, completion_summary, artifacts, version, created_at, updated_at, completed_at, archived_at, reminder_sent_at, series_id, occurrence_date, task_series(id, rule, active, next_date), jobs(id, job_number, customer_description, status, customers(first_name, last_name, company_name))";
 
 export type TaskSummary = {
   id: string;
@@ -63,6 +66,12 @@ export type TaskSummary = {
   due_time: string | null;
   due_label: string | null;
   time_zone: string;
+  /** When the reminder goes off: the instant, and how it reads where the task is. */
+  reminder_at: string | null;
+  reminder_label: string | null;
+  reminder_sent: boolean;
+  /** For an occurrence of a recurring task: its series and how it repeats. */
+  repeat: { series_id: string; description: string; active: boolean; occurrence_date: string | null } | null;
   overdue: boolean;
   assignee: { type: "user" | "assistant" | "none"; user_id: string | null; name: string | null };
   job: { id: string; number: number; label: string; url: string } | null;
@@ -136,6 +145,10 @@ function summarize(row: Row, actor: Actor, names: Map<string, string>, now: Date
     | "none";
   const assigneeId = text(row.assignee_user_id) || null;
   const facts = { status, due_date: dueDate, due_at: text(row.due_at) || null, archived_at: text(row.archived_at) || null };
+  const reminderAt = text(row.reminder_at) || null;
+  const reminderLocal = reminderAt ? isoToZonedWallClock(reminderAt, zone) : "";
+  const series = one(row.task_series);
+  const rule = series.rule && typeof series.rule === "object" ? (series.rule as RepeatRule) : null;
   return {
     id: text(row.id),
     title: text(row.title),
@@ -147,6 +160,18 @@ function summarize(row: Row, actor: Actor, names: Map<string, string>, now: Date
     due_time: dueTime,
     due_label: dueDate ? dueLabel(dueDate, dueTime, zone, now) : null,
     time_zone: zone,
+    reminder_at: reminderAt,
+    reminder_label: reminderLocal ? dueLabel(reminderLocal.slice(0, 10), reminderLocal.slice(11, 16), zone, now) : null,
+    reminder_sent: Boolean(row.reminder_sent_at),
+    repeat:
+      text(row.series_id) && rule
+        ? {
+            series_id: text(row.series_id),
+            description: describeRule(rule),
+            active: series.active !== false,
+            occurrence_date: text(row.occurrence_date) || null,
+          }
+        : null,
     overdue: isOverdue(facts, zone, now),
     assignee: {
       type: assigneeType,
@@ -408,7 +433,55 @@ export type CreateInput = TaskInput & {
   assignee_user_id?: string;
   visibility?: TaskVisibility;
   idempotency_key?: string;
+  /** Makes it a recurring task: { freq, interval?, weekdays?, monthday?, until?, count? }. Needs a due date, which is the first occurrence. */
+  repeat?: unknown;
 };
+
+/** Days between two calendar dates, b - a. */
+function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * A series keeps a reminder as a time of day and how many days before each
+ * occurrence's date, so every occurrence gets one at the same local time.
+ */
+function seriesReminder(reminderAt: string | null | undefined, dueDate: string, timeZone: string): Result<{ time: string | null; daysBefore: number | null }> {
+  if (!reminderAt) return { ok: true, value: { time: null, daysBefore: null } };
+  const local = isoToZonedWallClock(reminderAt, timeZone);
+  const daysBefore = daysBetween(local.slice(0, 10), dueDate);
+  if (daysBefore < 0 || daysBefore > 30) {
+    return fail("INVALID_INPUT", "For a repeating task, the reminder must be on the due day or up to 30 days before it.", "reminder_at");
+  }
+  return { ok: true, value: { time: local.slice(11, 16), daysBefore } };
+}
+
+/** The fields of one occurrence of a series on a date, as the worker and the first creation both make it. */
+export function occurrenceFields(series: Row, date: string, now: Date = new Date()): Row {
+  const zone = text(series.time_zone) || "America/Los_Angeles";
+  const dueTime = text(series.due_time).slice(0, 5);
+  const reminderTime = text(series.reminder_time).slice(0, 5);
+  const before = Number(series.reminder_days_before ?? 0);
+  const reminderAt = reminderTime ? dueInstant(addDaysTo(date, -before), reminderTime, zone) : "";
+  return {
+    organization_id: series.organization_id,
+    created_by: series.created_by ?? null,
+    owner_id: series.owner_id ?? null,
+    visibility: series.job_id ? "workspace" : text(series.visibility) === "workspace" ? "workspace" : "private",
+    title: series.title,
+    notes: series.notes ?? null,
+    job_id: series.job_id ?? null,
+    assignee_type: series.assignee_user_id ? "user" : "none",
+    assignee_user_id: series.assignee_user_id ?? null,
+    due_date: date,
+    due_time: dueTime || null,
+    due_at: dueTime ? dueInstant(date, dueTime, zone) : null,
+    time_zone: zone,
+    reminder_at: reminderAt && new Date(reminderAt).getTime() > now.getTime() ? reminderAt : null,
+    series_id: series.id,
+    occurrence_date: date,
+  };
+}
 
 /**
  * Make one task. Only the title is needed. Without a job it is private and
@@ -446,6 +519,11 @@ export async function createTask(db: Database, actor: Actor, input: CreateInput)
   }
 
   const visibility: TaskVisibility = jobId ? "workspace" : input.visibility === "workspace" ? "workspace" : "private";
+
+  if (input.repeat !== undefined && input.repeat !== null && input.repeat !== "") {
+    return createRecurring(db, actor, input, fields.value, { jobId, assignee, visibility, key });
+  }
+
   const { data, error } = await db
     .from("tasks")
     .insert({
@@ -466,6 +544,68 @@ export async function createTask(db: Database, actor: Actor, input: CreateInput)
   if (error || !data) return fail("SAVE_FAILED", "The task could not be saved. Try again.");
   const id = text((data as Row).id);
   await record(db, actor, id, "created", { title: fields.value.title, job_id: jobId || null, visibility, assignee_user_id: assignee });
+  const created = await getTask(db, actor, id);
+  if (!created.ok) return created;
+  return { ok: true, value: { task: created.value.task, created: true } };
+}
+
+/**
+ * A recurring task: the series (template and rule) and its first occurrence,
+ * on the due date given. Later occurrences are made by the worker a week ahead
+ * of their dates; each is its own task with its own history.
+ */
+async function createRecurring(
+  db: Database,
+  actor: Actor,
+  input: CreateInput,
+  fields: Row,
+  made: { jobId: string; assignee: string; visibility: TaskVisibility; key: string },
+): Promise<Result<{ task: TaskSummary; created: boolean }>> {
+  const start = text(fields.due_date);
+  if (!start) return fail("INVALID_INPUT", "A repeating task needs a first due date. Which day does it start?", "due_date");
+  const rule = readRule(input.repeat, start);
+  if (!rule.ok) return fail("INVALID_INPUT", rule.message, "repeat");
+  const zone = text(fields.time_zone) || actor.timeZone;
+  const reminder = seriesReminder(text(fields.reminder_at) || null, start, zone);
+  if (!reminder.ok) return reminder;
+
+  const { data: series, error } = await db
+    .from("task_series")
+    .insert({
+      organization_id: actor.organizationId,
+      created_by: actor.userId,
+      owner_id: actor.userId,
+      visibility: made.visibility,
+      title: fields.title,
+      notes: fields.notes ?? null,
+      job_id: made.jobId || null,
+      assignee_user_id: made.assignee || null,
+      due_time: fields.due_time ?? null,
+      time_zone: zone,
+      reminder_time: reminder.value.time,
+      reminder_days_before: reminder.value.daysBefore,
+      rule: rule.rule,
+      start_date: start,
+      last_made: start,
+      made_count: 1,
+      next_date: nextOccurrence(rule.rule, start, start, 1),
+    })
+    .select("*")
+    .maybeSingle();
+  if (error || !series) return fail("SAVE_FAILED", "The repeating task could not be saved. Try again.");
+
+  const first = occurrenceFields(series as Row, start);
+  const { data, error: taskError } = await db
+    .from("tasks")
+    .insert({ ...first, assignee_type: "user", assignee_user_id: made.assignee, reminder_at: fields.reminder_at ?? null, idempotency_key: made.key || null })
+    .select("id")
+    .maybeSingle();
+  if (taskError || !data) {
+    await db.from("task_series").update({ active: false, ended_at: new Date().toISOString(), next_date: null }).eq("id", text((series as Row).id));
+    return fail("SAVE_FAILED", "The repeating task could not be saved. Try again.");
+  }
+  const id = text((data as Row).id);
+  await record(db, actor, id, "created", { title: fields.title, job_id: made.jobId || null, visibility: made.visibility, repeat: describeRule(rule.rule) });
   const created = await getTask(db, actor, id);
   if (!created.ok) return created;
   return { ok: true, value: { task: created.value.task, created: true } };
@@ -513,11 +653,27 @@ export async function createTasks(
 export type UpdateInput = TaskInput & {
   status?: string;
   assignee_user_id?: string;
+  /** A new repeat rule, or null to stop repeating. Only ever applies to the future. */
+  repeat?: unknown;
 };
+
+export type RecurrenceScope = "this" | "future";
+
+function sameInstant(a: unknown, b: unknown): boolean {
+  const left = text(a);
+  const right = text(b);
+  if (!left || !right) return !left && !right;
+  return Date.parse(left) === Date.parse(right);
+}
 
 /**
  * Change a task. `version` is the one the caller read: a change made since
  * then is not overwritten, and the caller is told to look again.
+ *
+ * On an occurrence of a recurring task the caller must say which it means:
+ * `this` changes only this occurrence; `future` changes this one, the series
+ * and the open occurrences after it. Past occurrences are never rewritten.
+ * A new repeat rule (or stopping) is always `future`.
  */
 export async function updateTask(
   db: Database,
@@ -525,6 +681,7 @@ export async function updateTask(
   taskId: string,
   input: UpdateInput,
   version?: number,
+  options: { scope?: RecurrenceScope } = {},
 ): Promise<Result<TaskSummary>> {
   const row = await loadRow(db, actor, taskId);
   if (!row) return fail("NOT_FOUND", "That task was not found, or it is private to someone else.");
@@ -535,13 +692,27 @@ export async function updateTask(
     due_time: text(row.due_time).slice(0, 5) || null,
     time_zone: text(row.time_zone) || actor.timeZone,
   };
-  const fields = readTaskFields(input, { creating: false, defaultTimeZone: actor.timeZone, current });
+  // A form sends the reminder back as it was; an unchanged reminder whose time
+  // has passed is not a new reminder in the past, so it is left alone.
+  const edited: UpdateInput = { ...input };
+  if (typeof input.reminder_at === "string" && input.reminder_at && row.reminder_at) {
+    const [date = "", time = ""] = input.reminder_at.replace(" ", "T").slice(0, 16).split("T");
+    if (date && time && sameInstant(dueInstant(date, time, current.time_zone), row.reminder_at)) delete edited.reminder_at;
+  }
+  const fields = readTaskFields(edited, { creating: false, defaultTimeZone: actor.timeZone, current });
   if (!fields.ok) return fields;
 
   const patch: Row = { ...fields.value };
   const changes: Row = {};
   for (const [key, value] of Object.entries(fields.value)) {
     if (key === "due_at") continue;
+    if (key === "reminder_at") {
+      if (!sameInstant(row.reminder_at, value)) {
+        changes.reminder_at = { from: row.reminder_at ?? null, to: value ?? null };
+        patch.reminder_sent_at = null;
+      }
+      continue;
+    }
     const before = key === "due_time" ? current.due_time : (row[key] ?? null);
     if ((before ?? null) !== (value ?? null)) changes[key] = { from: key === "notes" ? undefined : before, to: key === "notes" ? "(edited)" : value };
   }
@@ -569,11 +740,206 @@ export async function updateTask(
     }
   }
 
-  if (Object.keys(changes).length === 0) {
+  const seriesId = text(row.series_id);
+  const repeatGiven = input.repeat !== undefined;
+
+  // A one-off task that starts repeating becomes the first occurrence of a new series.
+  if (!seriesId && repeatGiven && input.repeat !== null && input.repeat !== "") {
+    return startRepeating(db, actor, row, patch, changes, input.repeat, version);
+  }
+  if (seriesId && (Object.keys(changes).length > 0 || repeatGiven)) {
+    if (!options.scope) {
+      return fail(
+        "RECURRENCE_SCOPE_REQUIRED",
+        "This task repeats. Should the change apply to this one only, or to this one and the ones after it?",
+        "apply_to",
+      );
+    }
+    if (repeatGiven && options.scope !== "future") {
+      return fail("RECURRENCE_SCOPE_REQUIRED", "Changing how a task repeats applies to this one and the ones after it. Say so to go ahead.", "apply_to");
+    }
+  }
+
+  if (Object.keys(changes).length === 0 && !repeatGiven) {
     const same = await getTask(db, actor, taskId);
     return same.ok ? { ok: true, value: same.value.task } : same;
   }
-  return writeChange(db, actor, row, patch, version, "updated", { changes });
+
+  let result: Result<TaskSummary> | null = null;
+  if (Object.keys(changes).length > 0) {
+    result = await writeChange(db, actor, row, patch, version, "updated", { changes, ...(seriesId ? { scope: options.scope } : {}) });
+    if (!result.ok) return result;
+  }
+  if (seriesId && options.scope === "future") {
+    const series = await changeSeries(db, actor, row, seriesId, patch, changes, repeatGiven ? input.repeat : undefined);
+    if (!series.ok) return series;
+  }
+  if (result) return result;
+  const after = await getTask(db, actor, taskId);
+  return after.ok ? { ok: true, value: after.value.task } : after;
+}
+
+/** Turn a one-off task into the first occurrence of a series, on its due date. */
+async function startRepeating(
+  db: Database,
+  actor: Actor,
+  row: Row,
+  patch: Row,
+  changes: Row,
+  repeat: unknown,
+  version: number | undefined,
+): Promise<Result<TaskSummary>> {
+  const start = text(patch.due_date ?? row.due_date);
+  if (!start) return fail("INVALID_INPUT", "A repeating task needs a due date for its first time. Which day?", "due_date");
+  const rule = readRule(repeat, start);
+  if (!rule.ok) return fail("INVALID_INPUT", rule.message, "repeat");
+  const zone = text(patch.time_zone ?? row.time_zone) || actor.timeZone;
+  const reminderAt = patch.reminder_at !== undefined ? text(patch.reminder_at) : text(row.reminder_at);
+  const reminder = seriesReminder(reminderAt || null, start, zone);
+  if (!reminder.ok) return reminder;
+
+  const { data: series, error } = await db
+    .from("task_series")
+    .insert({
+      organization_id: actor.organizationId,
+      created_by: actor.userId,
+      owner_id: text(row.owner_id) || actor.userId,
+      visibility: text(row.visibility) === "workspace" ? "workspace" : "private",
+      title: patch.title ?? row.title,
+      notes: patch.notes !== undefined ? patch.notes : (row.notes ?? null),
+      job_id: row.job_id ?? null,
+      assignee_user_id: patch.assignee_user_id !== undefined ? patch.assignee_user_id : (row.assignee_user_id ?? null),
+      due_time: (patch.due_time !== undefined ? patch.due_time : row.due_time) ?? null,
+      time_zone: zone,
+      reminder_time: reminder.value.time,
+      reminder_days_before: reminder.value.daysBefore,
+      rule: rule.rule,
+      start_date: start,
+      last_made: start,
+      made_count: 1,
+      next_date: nextOccurrence(rule.rule, start, start, 1),
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !series) return fail("SAVE_FAILED", "The repeat could not be saved. Try again.");
+  return writeChange(
+    db,
+    actor,
+    row,
+    { ...patch, series_id: text((series as Row).id), occurrence_date: start },
+    version,
+    "repeat_started",
+    { changes, repeat: describeRule(rule.rule) },
+  );
+}
+
+/**
+ * Carry a "this and future" change to the series and to the open occurrences
+ * after this one. A new rule re-anchors the series on this occurrence; open
+ * later occurrences made under the old rule are called off, and the worker
+ * makes the new ones. Done, canceled and earlier occurrences are left as they
+ * were.
+ */
+async function changeSeries(
+  db: Database,
+  actor: Actor,
+  row: Row,
+  seriesId: string,
+  patch: Row,
+  changes: Row,
+  repeat: unknown,
+): Promise<Result<true>> {
+  const { data } = await db
+    .from("task_series")
+    .select("*")
+    .eq("organization_id", actor.organizationId)
+    .eq("id", seriesId)
+    .maybeSingle();
+  const series = data as Row | null;
+  if (!series) return fail("NOT_FOUND", "That task's series was not found.");
+  const occurrence = text(row.occurrence_date) || text(row.due_date);
+  const zone = text(patch.time_zone ?? series.time_zone) || actor.timeZone;
+
+  const template: Row = {};
+  if ("title" in changes) template.title = patch.title;
+  if ("notes" in changes) template.notes = patch.notes;
+  if ("due_time" in changes) template.due_time = patch.due_time;
+  if ("assignee_user_id" in changes) template.assignee_user_id = patch.assignee_user_id;
+  if ("reminder_at" in changes) {
+    const reminder = seriesReminder(text(patch.reminder_at) || null, text(patch.due_date ?? row.due_date) || occurrence, zone);
+    if (!reminder.ok) return reminder;
+    template.reminder_time = reminder.value.time;
+    template.reminder_days_before = reminder.value.daysBefore;
+  }
+
+  let ruleChanged = false;
+  if (repeat === null || repeat === "") {
+    Object.assign(template, { active: false, next_date: null, ended_at: new Date().toISOString() });
+    ruleChanged = true;
+  } else if (repeat !== undefined) {
+    const rule = readRule(repeat, occurrence);
+    if (!rule.ok) return fail("INVALID_INPUT", rule.message, "repeat");
+    // Re-anchored on this occurrence, so the new rule's counting starts here.
+    // Open later occurrences from the old rule are canceled below and the
+    // worker makes the new rule's dates.
+    const next = nextOccurrence(rule.rule, occurrence, occurrence, 1);
+    Object.assign(template, {
+      rule: rule.rule,
+      start_date: occurrence,
+      made_count: 1,
+      last_made: occurrence,
+      next_date: next,
+      active: Boolean(next),
+      ended_at: next ? null : new Date().toISOString(),
+    });
+    ruleChanged = true;
+  }
+
+  if (Object.keys(template).length > 0) {
+    const { error } = await db
+      .from("task_series")
+      .update({ ...template, version: Number(series.version ?? 1) + 1 })
+      .eq("organization_id", actor.organizationId)
+      .eq("id", seriesId);
+    if (error) return fail("SAVE_FAILED", "The series could not be changed. This occurrence was saved.");
+  }
+
+  // The open occurrences after this one, already made a few days ahead.
+  const { data: later } = await db
+    .from("tasks")
+    .select("id, version, occurrence_date, due_date, time_zone, status, archived_at")
+    .eq("organization_id", actor.organizationId)
+    .eq("series_id", seriesId)
+    .is("archived_at", null);
+  for (const next of rows(later)) {
+    if (text(next.id) === text(row.id) || text(next.status) !== "todo" || text(next.occurrence_date) <= occurrence) continue;
+    if (ruleChanged) {
+      await db.from("tasks").update({ status: "canceled", version: Number(next.version ?? 1) + 1 }).eq("organization_id", actor.organizationId).eq("id", text(next.id));
+      await record(db, actor, text(next.id), "series_changed", { canceled: true, reason: "The repeat changed; this date is no longer in it." });
+      continue;
+    }
+    const nextPatch: Row = {};
+    if ("title" in template) nextPatch.title = template.title;
+    if ("notes" in template) nextPatch.notes = template.notes;
+    if ("assignee_user_id" in template) {
+      nextPatch.assignee_user_id = template.assignee_user_id ?? null;
+      nextPatch.assignee_type = template.assignee_user_id ? "user" : "none";
+    }
+    if ("due_time" in template) {
+      const time = text(template.due_time).slice(0, 5);
+      nextPatch.due_time = time || null;
+      nextPatch.due_at = time ? dueInstant(text(next.due_date), time, text(next.time_zone) || zone) : null;
+    }
+    if ("reminder_time" in template) {
+      const fresh = occurrenceFields({ ...series, ...template }, text(next.occurrence_date));
+      nextPatch.reminder_at = fresh.reminder_at;
+      nextPatch.reminder_sent_at = null;
+    }
+    if (Object.keys(nextPatch).length === 0) continue;
+    await db.from("tasks").update({ ...nextPatch, version: Number(next.version ?? 1) + 1 }).eq("organization_id", actor.organizationId).eq("id", text(next.id));
+    await record(db, actor, text(next.id), "series_changed", { changes: Object.keys(nextPatch) });
+  }
+  return { ok: true, value: true };
 }
 
 async function writeChange(
@@ -723,4 +1089,65 @@ export async function tasksFingerprint(db: Database, actor: Actor, jobId?: strin
   const { count } = await countQuery;
   const latest = rows(data)[0];
   return `${count ?? 0}:${text(latest?.updated_at)}:${text(latest?.id)}`;
+}
+
+export type TaskNotification = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  task_id: string | null;
+  url: string | null;
+  created_at: string;
+  read: boolean;
+};
+
+/** This person's own task notifications, newest first. Nobody else's are ever read here. */
+export async function listNotifications(
+  db: Database,
+  actor: Actor,
+  options: { unreadOnly?: boolean; limit?: number } = {},
+): Promise<{ notifications: TaskNotification[]; unread: number }> {
+  let query = db
+    .from("task_notifications")
+    .select("id, kind, title, body, task_id, created_at, read_at")
+    .eq("organization_id", actor.organizationId)
+    .eq("user_id", actor.userId)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(options.limit ?? 20, 1), 100));
+  if (options.unreadOnly) query = query.is("read_at", null);
+  const [{ data }, { count }] = await Promise.all([
+    query,
+    db
+      .from("task_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", actor.organizationId)
+      .eq("user_id", actor.userId)
+      .is("read_at", null),
+  ]);
+  return {
+    unread: count ?? 0,
+    notifications: rows(data).map((row) => ({
+      id: text(row.id),
+      kind: text(row.kind),
+      title: text(row.title),
+      body: text(row.body) || null,
+      task_id: text(row.task_id) || null,
+      url: text(row.task_id) ? taskUrl(text(row.task_id)) : null,
+      created_at: text(row.created_at),
+      read: Boolean(row.read_at),
+    })),
+  };
+}
+
+/** Mark this person's notifications read: the ones given, or all of them. */
+export async function markNotificationsRead(db: Database, actor: Actor, ids?: string[]): Promise<void> {
+  let query = db
+    .from("task_notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("organization_id", actor.organizationId)
+    .eq("user_id", actor.userId)
+    .is("read_at", null);
+  if (ids && ids.length) query = query.in("id", ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id)));
+  await query;
 }

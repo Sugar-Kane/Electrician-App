@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Bot, Briefcase, CheckCircle2, Circle, Clock, Lock, UserRound } from "lucide-react";
+import { AlertTriangle, Bell, Bot, Briefcase, CheckCircle2, Circle, Clock, Lock, Repeat, UserRound } from "lucide-react";
 
 import { toggleTaskComplete } from "@/app/tasks/actions";
 import type { TaskSummary } from "@/lib/tasks-service";
@@ -40,6 +40,18 @@ export function TaskRow({ task, showJob = true }: { task: TaskSummary; showJob?:
             <span className={`inline-flex items-center gap-1 ${task.overdue ? "font-semibold text-critical" : ""}`}>
               {task.overdue ? <AlertTriangle className="h-3.5 w-3.5" aria-hidden /> : <Clock className="h-3.5 w-3.5" aria-hidden />}
               {task.overdue ? `Overdue · ${task.due_label}` : task.due_label}
+            </span>
+          ) : null}
+          {task.reminder_label && !task.reminder_sent && !closed ? (
+            <span className="inline-flex items-center gap-1">
+              <Bell className="h-3.5 w-3.5" aria-hidden />
+              Reminder {task.reminder_label}
+            </span>
+          ) : null}
+          {task.repeat ? (
+            <span className="inline-flex items-center gap-1" title={task.repeat.description}>
+              <Repeat className="h-3.5 w-3.5" aria-hidden />
+              Repeats
             </span>
           ) : null}
           {showJob && task.job ? (

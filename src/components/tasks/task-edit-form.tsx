@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { saveTask, type TaskFormState } from "@/app/tasks/actions";
+import { RepeatFields } from "@/components/tasks/repeat-fields";
 import { inputClass } from "@/components/ui/field";
 import { TASK_STATUSES, TASK_STATUS_LABELS } from "@/lib/task-rules";
 import type { TaskSummary } from "@/lib/tasks-service";
@@ -14,7 +15,16 @@ const initial: TaskFormState = { error: "" };
  * changed since (in ChatGPT, or on another screen), Save is refused with a
  * message instead of quietly overwriting the newer change.
  */
-export function TaskEditForm({ task, members }: { task: TaskSummary; members: { user_id: string; name: string }[] }) {
+export function TaskEditForm({
+  task,
+  members,
+  reminderLocal,
+}: {
+  task: TaskSummary;
+  members: { user_id: string; name: string }[];
+  /** The reminder as the datetime-local box wants it, in the task's zone. */
+  reminderLocal: string;
+}) {
   const [state, action, pending] = useActionState(saveTask, initial);
   return (
     <form action={action} className="grid gap-4">
@@ -59,9 +69,38 @@ export function TaskEditForm({ task, members }: { task: TaskSummary; members: { 
           </select>
         </label>
       </div>
+      <label className="grid gap-1 text-xs font-semibold text-ink-muted">
+        Remind at ({task.time_zone}){task.reminder_sent ? " · sent" : ""}
+        <input type="datetime-local" name="reminder_at" defaultValue={reminderLocal} className={inputClass} />
+      </label>
       <p className="text-xs leading-5 text-ink-faint">
-        A due date says when it is needed. It does not send reminders or start anything; reminders and assistant work come in a later update.
+        The due date says when it is needed and never starts anything. The reminder is when you are told, in Volteira.
       </p>
+
+      <div className="grid gap-3 rounded-control border border-line p-3">
+        <p className="text-sm font-semibold text-ink">{task.repeat ? `Repeats: ${task.repeat.description}${task.repeat.active ? "" : " (stopped)"}` : "Does not repeat"}</p>
+        <RepeatFields label={task.repeat ? "Change how it repeats" : "Repeats"} />
+        {task.repeat?.active ? (
+          <label className="inline-flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" name="stop_repeating" value="yes" />
+            Stop repeating after this one
+          </label>
+        ) : null}
+        {task.repeat ? (
+          <fieldset className="grid gap-2">
+            <legend className="text-xs font-semibold text-ink-muted">Apply changes to</legend>
+            <label className="inline-flex items-center gap-2 text-sm text-ink">
+              <input type="radio" name="apply_to" value="this" defaultChecked />
+              Only this one{task.repeat.occurrence_date ? ` (${task.repeat.occurrence_date})` : ""}
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-ink">
+              <input type="radio" name="apply_to" value="future" />
+              This one and the ones after it
+            </label>
+            <p className="text-xs text-ink-faint">Earlier ones are never changed. Changing how it repeats always applies to this one and the ones after it.</p>
+          </fieldset>
+        ) : null}
+      </div>
       {state.error ? (
         <p role="alert" className="text-sm text-critical">
           {state.error}

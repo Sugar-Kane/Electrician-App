@@ -19,7 +19,8 @@ import {
   type TaskFilter,
   type TaskView,
 } from "@/lib/task-rules";
-import { listAssignableMembers, listTasks, tasksFingerprint } from "@/lib/tasks-service";
+import { listAssignableMembers, listNotifications, listTasks, tasksFingerprint } from "@/lib/tasks-service";
+import { TaskNotifications } from "@/components/tasks/task-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const view: TaskView = isTaskView(params.view ?? "") ? (params.view as TaskView) : "today";
   const filters = [params.f ?? []].flat().filter(isTaskFilter);
   const status = isTaskStatus(params.status ?? "") ? params.status : undefined;
-  const [listed, members, fingerprint] = await Promise.all([
+  const [listed, members, fingerprint, notices] = await Promise.all([
     listTasks(session.db, session.actor, {
       view,
       filters,
@@ -78,6 +79,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     }),
     listAssignableMembers(session.db, session.actor),
     tasksFingerprint(session.db, session.actor),
+    listNotifications(session.db, session.actor, { limit: 8 }),
   ]);
 
   const base: Params = { view, f: filters, q: params.q, job: params.job, status, from: params.from, to: params.to };
@@ -88,6 +90,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     <FieldPageShell title="Tasks" eyebrow="Work" description="Your to-dos and your team's. The same list ChatGPT and Claude see." compact>
       <RefreshOnChange source="/api/tasks/fingerprint" fingerprint={fingerprint} every={20_000} />
       <div className="mx-auto grid w-full max-w-3xl gap-4">
+        <TaskNotifications notifications={notices.notifications} unread={notices.unread} timeZone={session.actor.timeZone} />
         <TaskQuickAdd members={members} />
 
         <nav aria-label="Task views" className="flex gap-1 overflow-x-auto rounded-control border border-line p-1">

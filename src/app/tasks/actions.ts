@@ -12,6 +12,7 @@ import {
   linkTaskToJob,
   reopenTask,
   unlinkTaskFromJob,
+  markNotificationsRead,
   updateTask,
 } from "@/lib/tasks-service";
 import { splitTitles } from "@/lib/task-rules";
@@ -25,6 +26,21 @@ function field(formData: FormData, name: string): string {
 function versionOf(formData: FormData): number | undefined {
   const value = Number(formData.get("version"));
   return Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+/** The repeat fields of a form, as a rule, or undefined when the form did not touch them. */
+function repeatFrom(formData: FormData): unknown {
+  if (formData.get("stop_repeating") === "yes") return null;
+  const freq = field(formData, "repeat_freq");
+  if (!freq) return undefined;
+  return {
+    freq,
+    interval: field(formData, "repeat_interval") || 1,
+    weekdays: formData.getAll("repeat_weekdays").map(Number),
+    monthday: field(formData, "repeat_monthday") || null,
+    until: field(formData, "repeat_until") || null,
+    count: field(formData, "repeat_count") || null,
+  };
 }
 
 function refresh(jobNumber?: string) {
@@ -48,13 +64,16 @@ export async function quickAddTask(_previous: TaskFormState, formData: FormData)
     due_time: field(formData, "due_time") || undefined,
     notes: field(formData, "notes") || undefined,
     assignee_user_id: field(formData, "assignee_user_id") || undefined,
+    reminder_at: field(formData, "reminder_at") || undefined,
   };
+  const repeat = repeatFrom(formData);
 
   if (titles.length === 1) {
     const made = await createTask(session.db, session.actor, {
       title: titles[0],
       ...extra,
       ...(job ? { job } : {}),
+      ...(repeat ? { repeat } : {}),
       idempotency_key: requestKey || undefined,
     });
     if (!made.ok) return { error: made.error.message, code: made.error.code };
@@ -97,8 +116,11 @@ export async function saveTask(_previous: TaskFormState, formData: FormData): Pr
       due_time: field(formData, "due_time"),
       status: field(formData, "status"),
       assignee_user_id: field(formData, "assignee_user_id"),
+      reminder_at: field(formData, "reminder_at"),
+      ...(repeatFrom(formData) !== undefined ? { repeat: repeatFrom(formData) } : {}),
     },
     versionOf(formData),
+    { scope: field(formData, "apply_to") === "future" ? "future" : field(formData, "apply_to") === "this" ? "this" : undefined },
   );
   if (!changed.ok) return { error: changed.error.message, code: changed.error.code };
   refresh(changed.value.job ? String(changed.value.job.number) : undefined);
@@ -134,4 +156,12 @@ export async function archiveTaskAction(formData: FormData): Promise<void> {
   refresh(field(formData, "job_number"));
   if (result.ok && !restore) redirect("/tasks");
   revalidatePath(`/tasks/${id}`);
+}
+
+export async function markTaskNotificationsRead(formData: FormData): Promise<void> {
+  const session = await appTaskActor();
+  if (!session) return;
+  const id = field(formData, "notification_id");
+  await markNotificationsRead(session.db, session.actor, id ? [id] : undefined);
+  revalidatePath("/tasks");
 }
