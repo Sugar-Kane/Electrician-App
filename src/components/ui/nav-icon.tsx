@@ -15,6 +15,7 @@ import {
   KeyRound,
   Landmark,
   LayoutDashboard,
+  ListChecks,
   MessageCircle,
   Package,
   Search,
@@ -54,6 +55,7 @@ const ICONS: Record<string, LucideIcon> = {
   KeyRound,
   Landmark,
   LayoutDashboard,
+  ListChecks,
   MessageCircle,
   Package,
   // Missing until now, so the Search entry fell through to the cog below and

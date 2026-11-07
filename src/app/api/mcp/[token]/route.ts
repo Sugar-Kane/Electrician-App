@@ -4,6 +4,9 @@ import { after, NextResponse } from "next/server";
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
 import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
+import { TASK_MCP_TOOLS, isTaskTool, runTaskTool } from "@/lib/mcp-task-tools";
+import type { Actor } from "@/lib/tasks-service";
+import { isTimeZone } from "@/lib/task-rules";
 import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type HistoryDatabase } from "@/lib/mcp-text-history";
 import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
 import { organizationTimeZone } from "@/lib/job-billing-server";
@@ -13,7 +16,7 @@ import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.7.0";
+const SERVER_VERSION = "1.8.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -31,6 +34,30 @@ function json(body: unknown, status: number) {
 
 function rpcError(status: number, code: number, message: string) {
   return json({ jsonrpc: "2.0", id: null, error: { code, message } }, status);
+}
+
+/**
+ * Who task tools act as: the person who created this connection, but only
+ * while they are still a member of the business. Never anything the request
+ * says. A connection made before links recorded their creator gets none, and
+ * the tools ask for a new link.
+ */
+async function taskActor(database: ReturnType<typeof getSupabaseAdmin>, organizationId: string, userId: string): Promise<Actor | null> {
+  if (!userId) return null;
+  const [{ data: member }, { data: profile }, timeZone] = await Promise.all([
+    database.from("organization_members").select("role").eq("organization_id", organizationId).eq("user_id", userId).maybeSingle(),
+    database.from("user_profiles").select("timezone").eq("user_id", userId).maybeSingle(),
+    organizationTimeZone(asFlexibleClient(database), organizationId),
+  ]);
+  if (!member) return null;
+  const own = typeof profile?.timezone === "string" && isTimeZone(profile.timezone) ? profile.timezone : "";
+  return {
+    userId,
+    organizationId,
+    role: typeof member.role === "string" ? member.role : "",
+    timeZone: own || timeZone,
+    via: "chatgpt",
+  };
 }
 
 function describeRequest(body: unknown): { method: string; toolName?: string } {
@@ -56,17 +83,20 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   const sessionKey = createHash("sha256").update(token).digest("hex").slice(0, 32);
 
   const business = session.scope === "business";
+  // The person who made this connection link, from Volteira's own record of it.
+  let connectedBy = "";
   if (business) {
     if (!session.credentialId) return rpcError(401, -32001, "Reconnect ChatGPT from Volteira: Settings → Use in ChatGPT or Claude");
     const { data: credential } = await database
       .from("mcp_business_credentials")
-      .select("id")
+      .select("id, created_by")
       .eq("id", session.credentialId)
       .eq("organization_id", session.organizationId)
       .is("revoked_at", null)
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
     if (!credential) return rpcError(401, -32001, "This ChatGPT connection has been revoked or expired");
+    connectedBy = typeof credential.created_by === "string" ? credential.created_by : "";
     // A query only runs once awaited, and `after` keeps it off the reply's path.
     const credentialId = session.credentialId;
     after(async () => {
@@ -82,7 +112,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...TASK_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -97,6 +127,13 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         ? await runWorkdayMcpTool({ database, session, name, args })
         : business && businessNames.has(name)
         ? await runBusinessMcpTool({ database, session, name, args })
+        : business && isTaskTool(name)
+        ? await runTaskTool({
+            database: asFlexibleClient(database),
+            actor: await taskActor(database, session.organizationId, connectedBy),
+            name,
+            args,
+          })
         : business && isTextHistoryTool(name)
         ? await runTextHistoryTool({
             database: database as unknown as HistoryDatabase,

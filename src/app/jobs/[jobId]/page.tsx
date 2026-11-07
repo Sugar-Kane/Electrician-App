@@ -8,6 +8,7 @@ import { SpanishBadge } from "@/components/language-badge";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobFollowUps } from "@/components/job-follow-ups";
+import { JobTasks } from "@/components/tasks/job-tasks";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
@@ -485,6 +486,8 @@ export default async function JobDetailPage({
           ) : null}
         </section>
       ) : null}
+
+      {controls ? <JobTasks jobNumber={String(controls.jobNumber)} /> : null}
 
       {showFollowUps && controls ? (
         <JobFollowUps
