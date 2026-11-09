@@ -29,6 +29,10 @@ export type InvoiceFacts = {
   workSummary?: string;
   /** The customer's link to read the invoice itself. */
   viewUrl?: string;
+  /** For a paid invoice: when it was paid, e.g. "Nov 9, 2026". */
+  paidLabel?: string;
+  /** For a paid invoice: how, in words, e.g. "cash". */
+  paidHow?: string;
 };
 
 /** Two SMS segments. Beyond this carriers split the message and may reorder. */
@@ -215,6 +219,72 @@ export function invoicePreviewEmail(facts: InvoiceFacts): Mail {
   ]);
 
   return { subject, text, html };
+}
+
+/**
+ * A paid invoice, sent as the customer's record of a payment they already
+ * made (cash on the spot, a check). It must never read as a bill: no pay link,
+ * no due date, nothing owed, and it says plainly that it is paid.
+ */
+export function paidInvoiceSms(facts: InvoiceFacts): string {
+  const name = firstName(facts.contactName);
+  const opening = name ? `${name}: thank you!` : "Thank you!";
+  const how = facts.paidHow ? ` in ${facts.paidHow}` : "";
+  const when = facts.paidLabel ? ` on ${facts.paidLabel}` : "";
+  const link = facts.viewUrl ? ` Your paid invoice: ${facts.viewUrl}` : "";
+  return clamp(
+    `${opening} ${facts.businessName} invoice ${facts.invoiceNumber} for ${formatMoney(facts.amountDue)} is paid${how}${when}. Nothing is owed.${link}`,
+    SMS_LIMIT,
+  );
+}
+
+export function paidInvoiceEmail(facts: InvoiceFacts): Mail {
+  const name = firstName(facts.contactName);
+  const greeting = name ? `Hi ${name},` : "Hello,";
+  const amount = formatMoney(facts.amountDue);
+  const summary = facts.workSummary?.trim() ?? "";
+  const how = facts.paidHow ? ` in ${facts.paidHow}` : "";
+  const when = facts.paidLabel ? ` on ${facts.paidLabel}` : "";
+  const subject = `${facts.businessName}: paid invoice ${facts.invoiceNumber} (${amount})`;
+
+  const text = [
+    greeting,
+    "",
+    `Thank you for your payment. This is your paid invoice from ${facts.businessName}.`,
+    "",
+    `Invoice: ${facts.invoiceNumber}`,
+    `Amount paid: ${amount}${how}${when}`,
+    "Balance: $0.00. Nothing is owed.",
+    ...(summary ? ["", `For: ${summary}`] : []),
+    ...(facts.viewUrl ? ["", `View your paid invoice: ${facts.viewUrl}`] : []),
+    "",
+    `Questions? Call ${facts.businessPhone}.`,
+    "",
+    facts.businessName,
+  ].join("\n");
+
+  const telHref = facts.businessPhone.replace(/[^\d+]/g, "");
+  const html = wrap([
+    `<p>${escapeHtml(greeting)}</p>`,
+    `<p>Thank you for your payment. This is your <strong>paid</strong> invoice from <strong>${escapeHtml(facts.businessName)}</strong>.</p>`,
+    '<table style="border-collapse:collapse;margin:16px 0">',
+    `<tr><td style="padding:4px 24px 4px 0;color:#475569">Invoice</td><td style="padding:4px 0"><strong>${escapeHtml(facts.invoiceNumber)}</strong></td></tr>`,
+    `<tr><td style="padding:4px 24px 4px 0;color:#475569">Amount paid</td><td style="padding:4px 0"><strong>${escapeHtml(amount)}</strong>${escapeHtml(how + when)}</td></tr>`,
+    '<tr><td style="padding:4px 24px 4px 0;color:#475569">Balance</td><td style="padding:4px 0">$0.00 &middot; nothing is owed</td></tr>',
+    "</table>",
+    ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
+    ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your paid invoice</a></p>`] : []),
+    `<p>Questions? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
+    `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
+  ]);
+  return { subject, text, html };
+}
+
+/** Only a paid invoice goes out as a paid invoice. */
+export function paidInvoiceCanBeSent(input: { status: string; totalCents: number }): { ok: true } | { ok: false; reason: string } {
+  if (input.status.toLowerCase() !== "paid") return { ok: false, reason: "This invoice is not paid yet. Mark it paid first." };
+  if (!(input.totalCents > 0)) return { ok: false, reason: "This invoice has nothing on it." };
+  return { ok: true };
 }
 
 export type DeliveryChannel = "sms" | "email";

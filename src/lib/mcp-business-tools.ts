@@ -136,7 +136,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "send_invoice",
     title: "Send invoice and payment link",
     description:
-      "Send an existing invoice to its customer by SMS, email or both. The existing Stripe hosted payment URL is included when available. Explicit owner approval is required.",
+      "Send an existing unpaid invoice to its customer by SMS, email or both, asking them to pay. The existing Stripe hosted payment URL is included when available. Not for paid invoices (use send_paid_invoice) or customers who already paid in hand (use mark_invoice_paid). Explicit owner approval is required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -569,6 +569,10 @@ export async function runBusinessMcpTool(input: {
         .maybeSingle();
       if (!data) return { isError: true, text: `INV-${rawNumber} was not found. Nothing was sent.` };
       const row = data as Record<string, unknown>;
+      // A paid invoice sent as a bill reads as a second demand for money already handed over.
+      if (text(row.status) === "paid") {
+        return { isError: true, text: `INV-${rawNumber} is already paid. To send the customer their paid invoice, use send_paid_invoice. Nothing was sent.` };
+      }
       const job = record(row.jobs);
       const customer = record(job.customers);
       const organization = record(row.organizations);

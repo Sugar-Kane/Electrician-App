@@ -9,6 +9,9 @@ import {
   invoicePreviewEmail,
   invoicePreviewSms,
   invoiceSms,
+  paidInvoiceCanBeSent,
+  paidInvoiceEmail,
+  paidInvoiceSms,
   repliedStop,
   type DeliveryAttempt,
   type InvoiceFacts,
@@ -227,3 +230,36 @@ test("an invoice is never texted to a customer whose last word was STOP", () => 
   assert.equal(repliedStop({ optedInAt: "2026-09-03T00:00:00Z", optedOutAt: "2026-09-02T00:00:00Z" }), false, "START after STOP");
 });
 
+
+test("a paid invoice reads as a record of payment, never as a bill", () => {
+  const facts: InvoiceFacts = {
+    businessName: "Pacific Plains Electric",
+    businessPhone: "(555) 010-0000",
+    contactName: "Jo Smith",
+    invoiceNumber: "INV-1042",
+    amountDue: 450,
+    dueLabel: "Nov 20, 2026",
+    payUrl: "https://pay.example/should-not-appear",
+    viewUrl: "https://volteira.com/invoice/abc",
+    paidLabel: "Nov 9, 2026",
+    paidHow: "cash",
+  };
+  const sms = paidInvoiceSms(facts);
+  assert.match(sms, /paid in cash on Nov 9, 2026/);
+  assert.match(sms, /Nothing is owed/);
+  assert.ok(!sms.includes("pay.example"), "no pay link");
+  assert.ok(!/due/i.test(sms), "no due date");
+  assert.ok(sms.length <= 320);
+  const mail = paidInvoiceEmail(facts);
+  assert.match(mail.subject, /paid invoice INV-1042/);
+  assert.ok(!mail.text.includes("pay.example") && !mail.html.includes("pay.example"));
+  assert.match(mail.text, /Balance: \$0\.00/);
+  assert.ok(!/amount due/i.test(mail.text));
+});
+
+test("only a paid invoice can be sent as paid", () => {
+  assert.equal(paidInvoiceCanBeSent({ status: "paid", totalCents: 100 }).ok, true);
+  assert.equal(paidInvoiceCanBeSent({ status: "sent", totalCents: 100 }).ok, false);
+  assert.equal(paidInvoiceCanBeSent({ status: "draft", totalCents: 100 }).ok, false);
+  assert.equal(paidInvoiceCanBeSent({ status: "paid", totalCents: 0 }).ok, false);
+});

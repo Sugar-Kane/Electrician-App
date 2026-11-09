@@ -7,6 +7,8 @@ import {
   invoicePreviewEmail,
   invoicePreviewSms,
   invoiceSms,
+  paidInvoiceEmail,
+  paidInvoiceSms,
   invoiceViewUrl,
   repliedStop,
   type DeliveryAttempt,
@@ -42,7 +44,7 @@ export async function deliverInvoice(input: {
    * The bill, or a preview of it. A preview never makes the invoice sent: it
    * records only that the customer has seen what they will be billed.
    */
-  kind?: "invoice" | "preview";
+  kind?: "invoice" | "preview" | "paid";
   /**
    * Whose invoice it is, when the caller already knows. Found from the
    * invoice otherwise: every send checks STOP, whoever started it.
@@ -50,6 +52,8 @@ export async function deliverInvoice(input: {
   customerId?: string;
 }): Promise<DeliveryAttempt[]> {
   const preview = input.kind === "preview";
+  // A paid invoice is the customer's record, never a bill: no pay link, and it never changes the invoice's status.
+  const paidCopy = input.kind === "paid";
   const database = getSupabaseAdmin();
 
   // Read off the invoice itself, so the link and the STOP check do not depend
@@ -77,7 +81,9 @@ export async function deliverInvoice(input: {
     // The invoice link is where the customer pays, by bank or card, once the
     // business has its Stripe account set up; a Stripe-hosted invoice page,
     // where one exists, still wins.
-    payUrl: input.facts.payUrl || (!preview && viewUrl && (await onlinePaymentsEnabled(input.organizationId)) ? viewUrl : undefined),
+    payUrl: paidCopy
+      ? undefined
+      : input.facts.payUrl || (!preview && viewUrl && (await onlinePaymentsEnabled(input.organizationId)) ? viewUrl : undefined),
   };
   const attempts: DeliveryAttempt[] = [];
   const note = (attempt: Omit<DeliveryAttempt, "at">) =>
@@ -123,7 +129,7 @@ export async function deliverInvoice(input: {
     } else {
       const result = await sendSms({
         to: input.customerPhone,
-        body: preview ? invoicePreviewSms(facts) : invoiceSms(facts),
+        body: paidCopy ? paidInvoiceSms(facts) : preview ? invoicePreviewSms(facts) : invoiceSms(facts),
         messagingServiceSid,
       });
       note({
@@ -146,7 +152,7 @@ export async function deliverInvoice(input: {
           : "No email address on this customer.",
       });
     } else {
-      const mail = preview ? invoicePreviewEmail(facts) : invoiceEmail(facts);
+      const mail = paidCopy ? paidInvoiceEmail(facts) : preview ? invoicePreviewEmail(facts) : invoiceEmail(facts);
       const sent = await sendEmail({
         to: input.customerEmail,
         subject: mail.subject,
@@ -181,7 +187,7 @@ export async function deliverInvoice(input: {
     // the status at draft, so the job said Draft about a bill the customer
     // had in hand. Any later status (part paid, paid) is left as it is.
     const nowSent = !preview && succeeded && existing?.status === "draft";
-    const recorded = attempts.map((attempt) => (preview ? { ...attempt, kind: "preview" } : attempt));
+    const recorded = attempts.map((attempt) => (preview ? { ...attempt, kind: "preview" } : paidCopy ? { ...attempt, kind: "paid" } : attempt));
     await database
       .from("invoices")
       .update({

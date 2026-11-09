@@ -2,12 +2,14 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, Eye, LoaderCircle, Send, Wallet } from "lucide-react";
+import { CheckCircle2, Eye, HandCoins, LoaderCircle, Send, Wallet } from "lucide-react";
 
 import {
   recordInvoicePayment,
+  recordPaidInHand,
   sendInvoice,
   sendInvoicePreview,
+  sendPaidInvoiceAction,
   type InvoiceActionState,
 } from "@/app/invoices/actions";
 import { inputClass } from "@/components/ui/field";
@@ -161,6 +163,66 @@ function PaymentForm({ invoice }: { invoice: JobInvoiceSummary }) {
   );
 }
 
+/**
+ * The customer already paid in hand (cash on the spot, a check): mark the
+ * invoice paid in full, even a draft, and send them the paid invoice.
+ */
+export function PaidInHandForm({
+  invoiceId,
+  label,
+  owedCents,
+  hasPhone,
+  hasEmail,
+  open = false,
+}: {
+  invoiceId: string;
+  label: string;
+  owedCents: number;
+  hasPhone: boolean;
+  hasEmail: boolean;
+  open?: boolean;
+}) {
+  const [state, action] = useActionState(recordPaidInHand, initial);
+  return (
+    <details open={open} className="mt-3 rounded-control border border-line p-3">
+      <summary className="tap-target flex cursor-pointer items-center gap-2 text-sm font-semibold text-ink">
+        <HandCoins className="h-4 w-4 shrink-0" aria-hidden />
+        Customer already paid?
+      </summary>
+      <form action={action} className="mt-3">
+        <input type="hidden" name="invoiceId" value={invoiceId} />
+        <p className="mb-2 text-xs leading-5 text-ink-muted">
+          Marks {label} paid in full ({formatCents(owedCents)}), and can send them the paid invoice as their record. It shows
+          the payment and $0.00 owed, with no pay link.
+        </p>
+        <SelectField name="method" defaultValue="cash" label="How they paid" choices={PAYMENT_METHODS} />
+        <input name="note" placeholder="Note (check number, optional)" aria-label="Note" className={`${inputClass} mt-2`} />
+        <p className="mb-1 mt-3 text-xs font-semibold text-ink-muted">Send them the paid invoice</p>
+        <Channels hasPhone={hasPhone} hasEmail={hasEmail} />
+        <Submit label="Mark paid" pendingLabel="Recording…" icon={HandCoins} primary />
+        <Outcome state={state} />
+      </form>
+    </details>
+  );
+}
+
+/** Send a paid invoice to the customer as their record. */
+export function SendPaidForm({ invoiceId, hasPhone, hasEmail }: { invoiceId: string; hasPhone: boolean; hasEmail: boolean }) {
+  const [state, action] = useActionState(sendPaidInvoiceAction, initial);
+  return (
+    <details className="mt-2">
+      <summary className="tap-target cursor-pointer text-xs font-semibold text-brand">Send the paid invoice</summary>
+      <form action={action} className="mt-2">
+        <input type="hidden" name="invoiceId" value={invoiceId} />
+        <p className="mb-2 text-xs leading-5 text-ink-muted">Their record of the payment: it says paid, $0.00 owed, with no pay link.</p>
+        <Channels hasPhone={hasPhone} hasEmail={hasEmail} />
+        <Submit label="Send paid invoice" pendingLabel="Sending…" icon={Send} />
+        <Outcome state={state} />
+      </form>
+    </details>
+  );
+}
+
 export function InvoiceSteps({
   invoices,
   jobCompleted,
@@ -186,10 +248,13 @@ export function InvoiceSteps({
         return (
           <div key={invoice.id} className="rounded-control border border-line p-3">
             {paid ? (
-              <p className="flex items-center gap-2 text-sm font-semibold text-positive">
-                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                {invoice.label} paid{invoice.paidAt ? ` ${shortDate(invoice.paidAt)}` : ""}.
-              </p>
+              <>
+                <p className="flex items-center gap-2 text-sm font-semibold text-positive">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                  {invoice.label} paid{invoice.paidAt ? ` ${shortDate(invoice.paidAt)}` : ""}.
+                </p>
+                <SendPaidForm invoiceId={invoice.id} hasPhone={hasPhone} hasEmail={hasEmail} />
+              </>
             ) : sent ? (
               <PaymentForm invoice={invoice} />
             ) : jobCompleted ? (
@@ -202,6 +267,15 @@ export function InvoiceSteps({
                 invoice itself when the work is complete.
               </p>
             )}
+            {!paid && !sent && invoice.balanceDueCents > 0 ? (
+              <PaidInHandForm
+                invoiceId={invoice.id}
+                label={invoice.label}
+                owedCents={invoice.balanceDueCents}
+                hasPhone={hasPhone}
+                hasEmail={hasEmail}
+              />
+            ) : null}
           </div>
         );
       })}

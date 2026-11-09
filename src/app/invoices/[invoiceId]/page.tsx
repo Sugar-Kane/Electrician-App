@@ -4,6 +4,7 @@ import { ArrowUpRight, FileWarning } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
+import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { currentDocument } from "@/lib/pdf/store";
 import { currentContext } from "@/lib/request-context";
@@ -56,8 +57,8 @@ export default async function InvoicePage({
   const { data } = await database
     .from("invoices")
     .select(
-      `id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
-       jobs ( job_number, customers ( first_name, last_name, company_name ) )`,
+      `id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, stripe_invoice_id,
+       jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )`,
     )
     .eq("organization_id", context.organizationId)
     .eq("id", invoiceId)
@@ -123,6 +124,30 @@ export default async function InvoicePage({
           ) : null}
         </div>
       </section>
+
+      {(() => {
+        const status = str(invoice.status);
+        const owed = Number(invoice.balance_due_cents ?? invoice.total_cents ?? 0);
+        const hasPhone = Boolean(str(customer?.phone));
+        const hasEmail = Boolean(str(customer?.email));
+        if (status === "paid") {
+          return (
+            <section className="mt-3 rounded-panel border border-line bg-surface p-4">
+              <SendPaidForm invoiceId={invoiceId} hasPhone={hasPhone} hasEmail={hasEmail} />
+            </section>
+          );
+        }
+        if (status === "void" || owed <= 0 || str(invoice.stripe_invoice_id)) return null;
+        return (
+          <PaidInHandForm
+            invoiceId={invoiceId}
+            label={`invoice ${String(invoice.invoice_number ?? "")}`}
+            owedCents={owed}
+            hasPhone={hasPhone}
+            hasEmail={hasEmail}
+          />
+        );
+      })()}
 
       {document ? (
         <InvoiceDocumentPanel
