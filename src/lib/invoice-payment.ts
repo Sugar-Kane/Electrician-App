@@ -84,3 +84,30 @@ export function checkPayment(input: {
     balanceAfterCents,
   };
 }
+
+export type PaidInHandCheck = { ok: true; amountCents: number; method: PaymentMethod } | { ok: false; reason: string };
+
+/**
+ * Whether an invoice can be marked paid in full by a payment already taken in
+ * hand (the customer paid cash on the spot, say), so the paid invoice can be
+ * sent as their record. The same rule `record_invoice_paid_in_hand` applies.
+ *
+ * Unlike a part payment, a draft is allowed: somebody who paid on the spot was
+ * never sent a bill. What is owed is settled in full.
+ */
+export function checkPaidInHand(input: { invoice: PayableInvoice; method: string }): PaidInHandCheck {
+  const { invoice } = input;
+  if (invoice.status === "void") return { ok: false, reason: "This invoice is void." };
+  if (invoice.status === "paid") return { ok: false, reason: "This invoice is already paid." };
+  if (invoice.stripeInvoiceId) {
+    return { ok: false, reason: "This invoice is collected online, so its payment is recorded there." };
+  }
+  if (!isPaymentMethod(input.method)) return { ok: false, reason: "Choose how they paid." };
+  const owed = amountOwedCents(invoice);
+  if (owed <= 0) return { ok: false, reason: "Nothing is owed on this invoice." };
+  return { ok: true, amountCents: owed, method: input.method };
+}
+
+export function paymentMethodLabel(method: string): string {
+  return PAYMENT_METHODS.find((item) => item.value === method)?.label.toLowerCase() ?? "";
+}

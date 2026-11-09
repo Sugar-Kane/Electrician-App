@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { checkPayment } from "./invoice-payment.ts";
+import { checkPaidInHand, checkPayment } from "./invoice-payment.ts";
 
 const sent = { status: "sent", totalCents: 128_050, balanceDueCents: 128_050 };
 
@@ -38,4 +38,21 @@ test("a void, draft, paid, or online-collected invoice takes no payment here", (
   ]) {
     assert.equal(checkPayment({ invoice, method: "cash", amountText: "10" }).ok, false, JSON.stringify(invoice));
   }
+});
+
+test("paid in hand settles the whole balance, even on a draft the customer was never sent", () => {
+  const draft = { status: "draft", totalCents: 45_000, balanceDueCents: 45_000 };
+  assert.deepEqual(checkPaidInHand({ invoice: draft, method: "cash" }), { ok: true, amountCents: 45_000, method: "cash" });
+  const partPaid = { status: "partially_paid", totalCents: 45_000, balanceDueCents: 20_000 };
+  assert.deepEqual(checkPaidInHand({ invoice: partPaid, method: "check" }), { ok: true, amountCents: 20_000, method: "check" }, "only what is still owed");
+});
+
+test("paid in hand is refused when it would record money wrongly", () => {
+  const base = { status: "sent", totalCents: 45_000, balanceDueCents: 45_000 };
+  assert.equal(checkPaidInHand({ invoice: { ...base, status: "paid" }, method: "cash" }).ok, false, "already paid");
+  assert.equal(checkPaidInHand({ invoice: { ...base, status: "void" }, method: "cash" }).ok, false, "void");
+  assert.equal(checkPaidInHand({ invoice: { ...base, stripeInvoiceId: "in_123" }, method: "cash" }).ok, false, "collected online");
+  assert.equal(checkPaidInHand({ invoice: { ...base, balanceDueCents: 0 }, method: "cash" }).ok, false, "nothing owed");
+  assert.equal(checkPaidInHand({ invoice: base, method: "bitcoin" }).ok, false, "unknown method");
+  assert.equal(checkPaidInHand({ invoice: base, method: "bank" }).ok, false, "bank is only ever recorded by the online payment, never by hand");
 });

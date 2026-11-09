@@ -15,6 +15,7 @@ import { checkPayment } from "@/lib/invoice-payment";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { currentContext } from "@/lib/request-context";
 
 /**
  * Sending an invoice to the customer.
@@ -457,4 +458,64 @@ export async function regenerateInvoicePdf(
   revalidatePath("/invoices");
 
   return { error: "", notice: "Invoice rebuilt." };
+}
+
+/*
+ * Already paid in hand: the customer paid cash on the spot (or by check, or a
+ * card run outside the app). Mark the invoice paid in full, even a draft, and
+ * optionally send them the paid invoice as their record. The signed-in
+ * person's own client is used, so row-level security and the database
+ * function's membership check both apply.
+ */
+
+function refreshInvoice(invoiceId: string, jobNumber: string) {
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
+  if (jobNumber) {
+    revalidatePath(`/jobs/${jobNumber}`);
+    revalidatePath("/jobs");
+  }
+}
+
+export async function recordPaidInHand(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return { error: "That invoice could not be found." };
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+  const supabase = asFlexibleClient(await createClient());
+  const { markInvoicePaidInHand, sendPaidInvoice } = await import("@/lib/invoice-paid-in-hand");
+
+  const marked = await markInvoicePaidInHand(supabase, {
+    invoiceId,
+    organizationId: context.organizationId,
+    method: String(formData.get("method") ?? ""),
+    note: String(formData.get("note") ?? ""),
+    timeZone: context.timeZone,
+  });
+  if (!marked.ok) return { error: marked.message };
+
+  const channels = chosenChannels(formData);
+  if (channels.length === 0) {
+    refreshInvoice(invoiceId, marked.jobNumber);
+    return { error: "", notice: `${marked.message} Nothing was sent to the customer.` };
+  }
+  // The admin client sends, as for every invoice: delivery writes a log row the sender may read but not rewrite.
+  const sent = await sendPaidInvoice(asFlexibleClient(getSupabaseAdmin()), { invoiceId, organizationId: context.organizationId, channels });
+  refreshInvoice(invoiceId, marked.jobNumber);
+  return sent.ok ? { error: "", notice: `${marked.message} ${sent.message}` } : { error: `${marked.message} But the paid invoice was not sent: ${sent.message}` };
+}
+
+export async function sendPaidInvoiceAction(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return { error: "That invoice could not be found." };
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+  // Read through the person's own session first, so only an invoice they may see is sent.
+  const supabase = asFlexibleClient(await createClient());
+  const { data: visible } = await supabase.from("invoices").select("id").eq("organization_id", context.organizationId).eq("id", invoiceId).maybeSingle();
+  if (!visible) return { error: "That invoice could not be found." };
+  const { sendPaidInvoice } = await import("@/lib/invoice-paid-in-hand");
+  const sent = await sendPaidInvoice(asFlexibleClient(getSupabaseAdmin()), { invoiceId, organizationId: context.organizationId, channels: chosenChannels(formData) });
+  refreshInvoice(invoiceId, sent.jobNumber);
+  return sent.ok ? { error: "", notice: sent.message } : { error: sent.message };
 }
