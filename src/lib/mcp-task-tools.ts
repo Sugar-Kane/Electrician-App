@@ -17,6 +17,7 @@ import {
   type TaskSummary,
 } from "./tasks-service.ts";
 import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
+import { dayJob, jobTodos } from "./job-todos.ts";
 
 /**
  * Tasks from ChatGPT or Claude. These tools call the same service as the
@@ -61,6 +62,17 @@ const repeat = {
 };
 
 export const TASK_MCP_TOOLS: McpTool[] = [
+  {
+    name: "daily_task_list",
+    title: "Daily task list",
+    description:
+      "The user's daily list in one call: their tasks (overdue, due today, waiting on them), today's jobs in time order, and what the jobs say needs doing (finished work to bill, invoices to send or chase, booking requests to answer, jobs with nothing priced). Use for 'what's on my list today', 'my tasks', or a morning briefing. Each item says where it gets done; offer to do the next one.",
+    inputSchema: {
+      type: "object",
+      properties: { date: str("Optional day, YYYY-MM-DD in the business's time zone. Defaults to today.") },
+      additionalProperties: false,
+    },
+  },
   {
     name: "create_task",
     title: "Create task",
@@ -285,6 +297,22 @@ export async function runTaskTool(input: { database: FlexibleSupabaseClient; act
   const id = text(args.task_id);
 
   switch (name) {
+    case "daily_task_list": {
+      const plan = await jobTodos(db, actor.organizationId, actor.timeZone, text(args.date) || undefined);
+      const isToday = plan.date === plan.today;
+      const listed = await listTasks(db, actor, isToday ? { view: "today", limit: 50 } : { view: "all", from: plan.date, to: plan.date, limit: 50 });
+      if (!listed.ok) return failure(listed);
+      const tasks = listed.value.tasks;
+      const jobs = plan.jobs.map((job) => dayJob(job, actor.timeZone));
+      const lines: string[] = [`Daily list for ${sayDate(plan.date)}${isToday ? " (today)" : ""} | time zone ${actor.timeZone}`, ""];
+      lines.push(tasks.length ? `YOUR TASKS (${tasks.length})` : "YOUR TASKS: nothing due, overdue or waiting on you.");
+      tasks.forEach((task) => lines.push(`- ${describeTask(task)}`));
+      lines.push("", jobs.length ? `JOBS (${jobs.length})` : "JOBS: nothing scheduled.");
+      jobs.forEach((job) => lines.push(`- ${job.window} | #${job.number} ${job.kind} | ${job.status} | ${job.customer}${job.address ? ` | ${job.address}` : ""} | parts ${job.partsReady ? "ready" : "not marked ready"}`));
+      lines.push("", plan.todos.length ? `FROM THE JOBS (${plan.todos.length})` : "FROM THE JOBS: nothing waiting.");
+      plan.todos.slice(0, 40).forEach((todo, index) => lines.push(`${index + 1}. ${todo.title}${todo.tool ? ` (${todo.tool})` : ""}`));
+      return { text: lines.join("\n"), structured: { date: plan.date, today: plan.today, time_zone: actor.timeZone, tasks, jobs, job_todos: plan.todos } };
+    }
     case "create_task": {
       const made = await createTask(db, actor, { ...createInput(args), idempotency_key: text(args.request_id) || undefined });
       if (!made.ok) return failure(made);

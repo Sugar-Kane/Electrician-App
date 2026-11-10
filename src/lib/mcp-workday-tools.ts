@@ -1,7 +1,6 @@
 import "server-only";
 
 import { addDays, calendarDate, isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
-import { invoiceState } from "@/lib/dashboard-metrics";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
@@ -9,6 +8,7 @@ import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import { invoiceIsLive, invoiceIsOpenDraft, nextBillingStep } from "@/lib/job-billing";
 import { advanceVisit, callOffJob, changeJob, loadChangeJob } from "@/lib/job-changes-server";
 import { workflowStateOf } from "@/lib/job-workflow";
+import { jobTodos } from "@/lib/job-todos";
 import {
   claimUnbilledLines,
   jobInvoices,
@@ -336,87 +336,14 @@ function dayBounds(date: string, timeZone: string): { start: string; end: string
 
 async function todayPlan(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
   const timeZone = await organizationTimeZone(asFlexibleClient(database), organizationId);
-  const today = calendarDate(new Date().toISOString(), timeZone);
-  const date = isPlainDate(text(args.date)) ? text(args.date) : today;
-  const { start, end } = dayBounds(date, timeZone);
+  const plan = await jobTodos(asFlexibleClient(database), organizationId, timeZone, isPlainDate(text(args.date)) ? text(args.date) : undefined);
 
-  const [jobs, unbilled, invoices, requests, coming] = await Promise.all([
-    jobsBetween(database, organizationId, start, end),
-    database
-      .from("job_line_items")
-      .select("quantity, unit_price_cents, jobs!inner(job_number, status, archived_at, customers(first_name,last_name,company_name))")
-      .eq("organization_id", organizationId)
-      .is("invoice_id", null)
-      .eq("jobs.status", "completed")
-      .is("jobs.archived_at", null)
-      .limit(500),
-    database
-      .from("invoices")
-      .select("invoice_number, status, due_at, last_sent_at, balance_due_cents, total_cents, jobs(job_number, customers(first_name,last_name,company_name))")
-      .eq("organization_id", organizationId)
-      .not("status", "in", "(paid,void)")
-      .order("created_at", { ascending: false })
-      .limit(200),
-    database
-      .from("booking_requests")
-      .select("contact_name, phone, description, created_at, source")
-      .eq("organization_id", organizationId)
-      .in("status", ["new", "needs_review"])
-      .order("created_at", { ascending: false })
-      .limit(20),
-    jobsBetween(database, organizationId, end, zonedWallClockToIso(`${addDays(date, 4)}T00:00`, timeZone)),
-  ]);
+  const out: string[] = [`${dayLabel(plan.date)}${plan.date === plan.today ? " (today)" : ""}`, ""];
+  out.push(plan.jobs.length ? `JOBS (${plan.jobs.length})` : "JOBS: nothing scheduled.");
+  for (const job of plan.jobs) out.push(describeJob(job, timeZone));
 
-  const out: string[] = [`${dayLabel(date)}${date === today ? " (today)" : ""}`, ""];
-  out.push(jobs.length ? `JOBS (${jobs.length})` : "JOBS: nothing scheduled.");
-  for (const job of jobs) out.push(describeJob(job, timeZone));
-
-  const todo: string[] = [];
-
-  // Finished work with lines nobody has billed: money not yet asked for.
-  const toBill = new Map<string, { customer: string; cents: number }>();
-  for (const line of (unbilled.data ?? []) as Record<string, unknown>[]) {
-    const job = record(line.jobs);
-    const key = text(job.job_number);
-    const entry = toBill.get(key) ?? { customer: displayCustomer(record(job.customers)), cents: 0 };
-    entry.cents += Math.round(Number(line.quantity ?? 0) * Number(line.unit_price_cents ?? 0));
-    toBill.set(key, entry);
-  }
-  for (const [number, entry] of toBill) {
-    todo.push(`Bill job #${number} (${entry.customer}): ${money(entry.cents)} finished and not invoiced. bill_job can make and send it.`);
-  }
-
-  for (const row of (invoices.data ?? []) as Record<string, unknown>[]) {
-    const job = record(row.jobs);
-    const who = displayCustomer(record(job.customers));
-    const state = invoiceState({
-      status: text(row.status),
-      dueAt: text(row.due_at) || null,
-      balanceDueCents: Number(row.balance_due_cents ?? 0),
-      lastSentAt: text(row.last_sent_at) || null,
-    });
-    if (state === "draft") {
-      todo.push(`Send INV-${text(row.invoice_number)} (${who}, job #${text(job.job_number)}): ${money(Number(row.total_cents ?? 0))} drafted, not sent.`);
-    } else if (state === "overdue") {
-      todo.push(`Chase INV-${text(row.invoice_number)} (${who}): ${money(Number(row.balance_due_cents ?? 0))} overdue.`);
-    }
-  }
-
-  for (const request of (requests.data ?? []) as Record<string, unknown>[]) {
-    todo.push(
-      `Answer booking request from ${text(request.contact_name) || text(request.phone) || "a customer"}: ${text(request.description).slice(0, 140)}`,
-    );
-  }
-
-  for (const job of [...jobs, ...coming]) {
-    const lines = Array.isArray(job.job_line_items) ? job.job_line_items.length : 0;
-    if (lines === 0 && text(job.category) !== "diagnostic") {
-      todo.push(`Price job #${text(job.job_number)} (${displayCustomer(record(job.customers))}): no materials or labor on it yet.`);
-    }
-  }
-
-  out.push("", todo.length ? `TO DO (${todo.length})` : "TO DO: nothing waiting.");
-  todo.slice(0, 40).forEach((item, index) => out.push(`${index + 1}. ${item}`));
+  out.push("", plan.todos.length ? `TO DO (${plan.todos.length})` : "TO DO: nothing waiting.");
+  plan.todos.slice(0, 40).forEach((item, index) => out.push(`${index + 1}. ${item.title}${item.tool ? ` (${item.tool})` : ""}`));
   return { text: out.join("\n") };
 }
 

@@ -8,6 +8,17 @@ One task list shared by three ways in:
 
 All three call one service, `src/lib/tasks-service.ts`. A task made in ChatGPT is the task Volteira shows, and an edit in Volteira is what ChatGPT reads the next time it asks. Open Volteira screens refresh by themselves (every 20 seconds while visible) when tasks change. A ChatGPT answer that was already shown does not change afterwards; ask again. Volteira cannot push messages into ChatGPT.
 
+## From your jobs
+
+The Today view also lists what the jobs say needs doing, beside the tasks people wrote:
+- today's jobs, in time order;
+- finished work not billed;
+- invoices drafted and not sent (or marked paid in hand), and overdue invoices;
+- booking requests to answer;
+- coming jobs with nothing priced.
+
+These are worked out from the jobs, invoices and requests each time, never copied into tasks, so they are always in step: billing the job or answering the request clears the item. Each one links to where it gets done. The same list (`src/lib/job-todos.ts`) feeds ChatGPT's `daily_task_list` and `today_plan`.
+
 ## Status of the feature
 
 - **Stage 1 (live):** the records, the Tasks page, job Tasks, the core ChatGPT tools and the access rules.
@@ -114,6 +125,7 @@ The connection link records who created it. Task tools act as that person, and o
 
 | Tool | What it does |
 | --- | --- |
+| `daily_task_list` | The user's day in one call: their tasks (overdue, due today, waiting on them), today's jobs, and the job to-dos above. Optional `date`. |
 | `create_task` | One task. Only a title is needed. Optional due date and time, reminder, repeat, job, notes. `request_id` makes a retry safe. |
 | `create_tasks` | Up to 25 from one request, with a shared job. Reports each item's outcome. `request_id` makes a retry safe. |
 | `list_tasks` | View, job, status, filters, search, date range, paging. Also returns today's date and the time zone. |
