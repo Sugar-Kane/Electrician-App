@@ -1,12 +1,16 @@
 "use client";
 
 import { useActionState } from "react";
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { TimeField } from "@/components/ui/time-field";
+import { DateField } from "@/components/ui/date-field";
 
 import { saveTask, type TaskFormState } from "@/app/tasks/actions";
 import { RepeatFields } from "@/components/tasks/repeat-fields";
 import { inputClass } from "@/components/ui/field";
 import { TASK_STATUSES, TASK_STATUS_LABELS } from "@/lib/task-rules";
 import type { TaskSummary } from "@/lib/tasks-service";
+import { SelectField } from "@/components/ui/select-field";
 
 const initial: TaskFormState = { error: "" };
 
@@ -39,47 +43,44 @@ export function TaskEditForm({
         <textarea name="notes" rows={4} maxLength={10000} defaultValue={task.notes ?? ""} className={`${inputClass} py-3`} />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-          Due date
-          <input type="date" name="due_date" defaultValue={task.due_date ?? ""} className={inputClass} />
-        </label>
-        <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-          Due time ({task.time_zone})
-          <input type="time" name="due_time" defaultValue={task.due_time ?? ""} className={inputClass} />
-        </label>
-        <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-          Status
-          <select name="status" defaultValue={task.status} className={inputClass}>
-            {TASK_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {TASK_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-          Assigned to
-          <select name="assignee_user_id" defaultValue={task.assignee.type === "user" ? (task.assignee.user_id ?? "") : ""} className={inputClass}>
-            <option value="">Nobody</option>
-            {members.map((member) => (
-              <option key={member.user_id} value={member.user_id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+          <span>Due date</span>
+          <DateField name="due_date" label="Due date" defaultValue={task.due_date ?? ""} timeZone={task.time_zone} placeholder="No due date" />
+        </div>
+        <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+          <span>Due time ({task.time_zone})</span>
+          <TimeField name="due_time" label="Due time" defaultValue={task.due_time ?? ""} />
+        </div>
+        <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+          <span>Status</span>
+          <SelectField
+            name="status"
+            label="Status"
+            defaultValue={task.status}
+            choices={TASK_STATUSES.map((status) => ({ value: status, label: TASK_STATUS_LABELS[status] }))}
+          />
+        </div>
+        <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+          <span>Assigned to</span>
+          <SelectField
+            name="assignee_user_id"
+            label="Assigned to"
+            defaultValue={task.assignee.type === "user" ? (task.assignee.user_id ?? "") : ""}
+            choices={[{ value: "", label: "Nobody" }, ...members.map((member) => ({ value: member.user_id, label: member.name }))]}
+          />
+        </div>
       </div>
-      <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-        Remind at ({task.time_zone}){task.reminder_sent ? " · sent" : ""}
-        <input type="datetime-local" name="reminder_at" defaultValue={reminderLocal} className={inputClass} />
-      </label>
+      <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+        <span>Remind at ({task.time_zone}){task.reminder_sent ? " · sent" : ""}</span>
+        <DateTimeField name="reminder_at" label="Remind at" defaultValue={reminderLocal} timeZone={task.time_zone} />
+      </div>
       <p className="text-xs leading-5 text-ink-faint">
         The due date says when it is needed and never starts anything. The reminder is when you are told, in Volteira.
       </p>
 
       <div className="grid gap-3 rounded-control border border-line p-3">
         <p className="text-sm font-semibold text-ink">{task.repeat ? `Repeats: ${task.repeat.description}${task.repeat.active ? "" : " (stopped)"}` : "Does not repeat"}</p>
-        <RepeatFields label={task.repeat ? "Change how it repeats" : "Repeats"} />
+        <RepeatFields label={task.repeat ? "Change how it repeats" : "Repeats"} timeZone={task.time_zone} />
         {task.repeat?.active ? (
           <label className="inline-flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" name="stop_repeating" value="yes" />

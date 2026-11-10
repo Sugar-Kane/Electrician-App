@@ -40,6 +40,7 @@ import {
 } from "@/lib/material-list";
 import type { SavedMaterialList } from "@/lib/material-list-server";
 import { PART_UNITS } from "@/lib/stock-reservation";
+import { SelectField } from "@/components/ui/select-field";
 import {
   STORE_NAMES,
   STORES,
@@ -388,25 +389,21 @@ function PricingSheet({
                   Qty
                   <input value={row.quantity} inputMode="decimal" onChange={(event) => update(index, { quantity: event.target.value })} className={`${field} mt-1`} />
                 </label>
-                <label className="text-xs text-ink-muted">
-                  Unit
-                  <select
-                    value={row.unit}
-                    onChange={(event) => {
-                      const unit = event.target.value;
-                      // A store price is for one unit: in another, it is filled
-                      // again or cleared, never carried over.
-                      update(index, row.prices && (row.prices.homeDepot || row.prices.lowes) ? { unit, ...storePricing(row.prices, row.pick, unit, markupPercent) } : { unit });
-                    }}
-                    className={`${field} mt-1`}
-                  >
-                    {PART_UNITS.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="text-xs text-ink-muted">
+                  <span>Unit</span>
+                  <div className="mt-1">
+                    <SelectField
+                      label="Unit"
+                      value={row.unit}
+                      onChange={(unit) => {
+                        // A store price is for one unit: in another, it is filled
+                        // again or cleared, never carried over.
+                        update(index, row.prices && (row.prices.homeDepot || row.prices.lowes) ? { unit, ...storePricing(row.prices, row.pick, unit, markupPercent) } : { unit });
+                      }}
+                      choices={PART_UNITS.map((unit) => ({ value: unit, label: unit }))}
+                    />
+                  </div>
+                </div>
                 <label className="text-xs text-ink-muted">
                   Price each
                   <input

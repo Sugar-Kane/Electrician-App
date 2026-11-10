@@ -4,6 +4,7 @@ import {
   RecentActivity,
 } from "@/components/dashboard-shell";
 import { FieldPageShell } from "@/components/field-page-shell";
+import { DateField } from "@/components/ui/date-field";
 import { Download } from "lucide-react";
 
 import { canExportReports } from "@/lib/csv";
@@ -59,14 +60,14 @@ export default async function ReportsPage() {
             </p>
             <form action="/reports/export" method="get" className="mt-4">
               <div className="grid gap-3 sm:max-w-md sm:grid-cols-2">
-                <label className="text-xs font-semibold text-ink-muted">
-                  From
-                  <input type="date" name="from" defaultValue={yearStart} max={today} className="mt-1 min-h-11 w-full rounded-control border border-line bg-raised px-3 text-sm text-ink" />
-                </label>
-                <label className="text-xs font-semibold text-ink-muted">
-                  To
-                  <input type="date" name="to" defaultValue={today} max={today} className="mt-1 min-h-11 w-full rounded-control border border-line bg-raised px-3 text-sm text-ink" />
-                </label>
+                <div className="text-xs font-semibold text-ink-muted">
+                  <span>From</span>
+                  <div className="mt-1"><DateField name="from" label="From" defaultValue={yearStart} timeZone={zone} /></div>
+                </div>
+                <div className="text-xs font-semibold text-ink-muted">
+                  <span>To</span>
+                  <div className="mt-1"><DateField name="to" label="To" defaultValue={today} timeZone={zone} /></div>
+                </div>
               </div>
               <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                 {Object.entries(REPORT_EXPORTS).map(([key, report]) => (

@@ -251,9 +251,16 @@ summary:focus-visible,
 [role]:focus-visible,
 [contenteditable="true"]:focus-visible,
 [tabindex]:focus-visible {
+  /*
+   * No border-radius here. This rule used to set 4px, which overrode every
+   * control's own rounding while it had focus: a pill or a rounded card turned
+   * square and the yellow ring was drawn around the square, so the selected
+   * button never matched its own shape. Outlines follow the element's
+   * border-radius in every current browser, so leaving it alone gives each
+   * control a ring of its own shape.
+   */
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

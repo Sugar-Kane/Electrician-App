@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DateField } from "@/components/ui/date-field";
 import { redirect } from "next/navigation";
 import { Search } from "lucide-react";
 
@@ -24,6 +25,7 @@ import { TaskNotifications } from "@/components/tasks/task-notifications";
 import { JobTodoList } from "@/components/tasks/job-todo-list";
 import { dayJob, dayJobs } from "@/lib/job-todos";
 import { loadNeedsAction } from "@/lib/needs-action";
+import { SelectField } from "@/components/ui/select-field";
 
 export const dynamic = "force-dynamic";
 
@@ -101,7 +103,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <RefreshOnChange source="/api/tasks/fingerprint" fingerprint={fingerprint} every={20_000} />
       <div className="mx-auto grid w-full max-w-3xl gap-4">
         <TaskNotifications notifications={notices.notifications} unread={notices.unread} timeZone={session.actor.timeZone} />
-        <TaskQuickAdd members={members} />
+        <TaskQuickAdd members={members} timeZone={zone} />
         {fromJobs ? (
           <JobTodoList
             jobs={fromJobs[0].jobs.map((job) => dayJob(job, zone))}
@@ -161,25 +163,23 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               Job
               <input name="job" defaultValue={params.job ?? ""} placeholder="Job number or customer" className={inputClass} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-              Status
-              <select name="status" defaultValue={status ?? ""} className={inputClass}>
-                <option value="">Any</option>
-                {TASK_STATUSES.map((option) => (
-                  <option key={option} value={option}>
-                    {TASK_STATUS_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-              Due from
-              <input type="date" name="from" defaultValue={params.from ?? ""} className={inputClass} />
-            </label>
-            <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-              Due to
-              <input type="date" name="to" defaultValue={params.to ?? ""} className={inputClass} />
-            </label>
+            <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+              <span>Status</span>
+              <SelectField
+                name="status"
+                label="Status"
+                defaultValue={status ?? ""}
+                choices={[{ value: "", label: "Any" }, ...TASK_STATUSES.map((option) => ({ value: option, label: TASK_STATUS_LABELS[option] }))]}
+              />
+            </div>
+            <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+              <span>Due from</span>
+              <DateField name="from" label="Due from" defaultValue={params.from ?? ""} timeZone={zone} placeholder="Any day" />
+            </div>
+            <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+              <span>Due to</span>
+              <DateField name="to" label="Due to" defaultValue={params.to ?? ""} timeZone={zone} placeholder="Any day" />
+            </div>
             <div className="flex gap-2 sm:col-span-2">
               <button type="submit" className="tap-target min-h-11 rounded-control border border-line bg-raised px-4 text-sm font-semibold text-ink">
                 Apply
