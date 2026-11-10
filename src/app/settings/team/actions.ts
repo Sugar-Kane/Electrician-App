@@ -139,3 +139,29 @@ export async function revokeInvitation(
   revalidatePath("/settings/team");
   return { error: "", notice: "Invitation cancelled. The link no longer works." };
 }
+
+/**
+ * Whether technicians may change billing. Owner-only: the database refuses
+ * anyone else (guard_organization_settings), and this says so first.
+ */
+export async function setTechnicianBilling(formData: FormData): Promise<void> {
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+  const allowed = String(formData.get("allowed") ?? "") === "true";
+  const supabase = asFlexibleClient(await createClient());
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData.user?.id;
+  if (!organizationId || !userId) return;
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (text(membership?.role) !== "owner") return;
+  const { error } = await supabase
+    .from("organizations")
+    .update({ technicians_can_edit_billing: allowed })
+    .eq("id", organizationId);
+  if (error) console.error("technician billing setting not saved", { code: error.code });
+  revalidatePath("/settings/team");
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { TeamManager, type Invitation, type Member } from "@/components/team-manager";
+import { setTechnicianBilling } from "@/app/settings/team/actions";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,6 +30,12 @@ export default async function TeamSettingsPage() {
 
   const organizationId = text(membership?.organization_id);
   const canManage = ["owner", "admin"].includes(text(membership?.role));
+  const isOwner = text(membership?.role) === "owner";
+
+  const { data: organization } = organizationId
+    ? await supabase.from("organizations").select("technicians_can_edit_billing").eq("id", organizationId).maybeSingle()
+    : { data: null };
+  const techniciansCanEditBilling = (organization as Record<string, unknown> | null)?.technicians_can_edit_billing !== false;
 
   const { data: roster } = organizationId
     ? await supabase.rpc("organization_roster", { p_organization_id: organizationId })
@@ -71,12 +78,33 @@ export default async function TeamSettingsPage() {
       description="Who can open this business, and who has been invited to."
     >
       {organizationId ? (
-        <TeamManager
-          organizationId={organizationId}
-          members={members}
-          invitations={pending}
-          canManage={canManage}
-        />
+        <>
+          <TeamManager
+            organizationId={organizationId}
+            members={members}
+            invitations={pending}
+            canManage={canManage}
+          />
+          <section className="mt-6 rounded-panel border border-line bg-surface p-5 sm:p-6" aria-labelledby="technician-billing">
+            <h2 id="technician-billing" className="text-lg font-semibold">Technicians and billing</h2>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">
+              {techniciansCanEditBilling
+                ? "Technicians can raise, edit, send and delete invoices and record payments."
+                : "Technicians can see invoices and payments, but only owners, admins, dispatchers and accountants can change them."}
+            </p>
+            {isOwner ? (
+              <form action={setTechnicianBilling} className="mt-4">
+                <input type="hidden" name="organizationId" value={organizationId} />
+                <input type="hidden" name="allowed" value={techniciansCanEditBilling ? "false" : "true"} />
+                <button type="submit" className="tap-target min-h-11 rounded-control border border-line px-4 text-sm font-semibold">
+                  {techniciansCanEditBilling ? "Stop technicians changing billing" : "Let technicians change billing"}
+                </button>
+              </form>
+            ) : (
+              <p className="mt-3 text-xs text-ink-muted">Only an owner can change this.</p>
+            )}
+          </section>
+        </>
       ) : (
         <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">
           <h2 className="text-lg font-semibold">No business workspace yet</h2>

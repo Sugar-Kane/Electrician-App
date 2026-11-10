@@ -1,5 +1,6 @@
 "use server";
 
+import { billingRefusal } from "@/lib/billing-permission-server";
 import { revalidatePath } from "next/cache";
 
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
@@ -65,6 +66,8 @@ export async function raiseInvoice(
   const jobNumber = String(formData.get("jobNumber") ?? "").trim();
   const numeric = Number(jobNumber);
   if (!Number.isFinite(numeric)) return { error: "That job could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
 
   // Blank means "bill what the job says it is worth". A typed figure still
   // wins — an electrician who agreed a price on the doorstep is not overruled
