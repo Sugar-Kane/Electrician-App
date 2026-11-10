@@ -1,5 +1,7 @@
 import "server-only";
 
+import { billingParty } from "@/lib/customer-details";
+
 import { documentFolderId } from "@/lib/document-folders";
 import { InvoiceDocument, invoiceFileName } from "@/lib/pdf/invoice-document";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
@@ -68,7 +70,7 @@ export async function generateInvoicePdf(input: {
        total_cents, balance_due_cents, due_at, created_at,
        jobs (
          id, job_number, scheduled_start, technician_notes, customer_description,
-         customers ( first_name, last_name, company_name, phone, email ),
+         customers ( first_name, last_name, company_name, phone, email, address_line_1, address_line_2, city, state, postal_code, business_address_line_1, business_address_line_2, business_city, business_state, business_postal_code, bill_to ),
          properties ( address_line_1, address_line_2, city, state, postal_code ),
          technicians ( display_name )
        )`,
@@ -117,10 +119,9 @@ export async function generateInvoicePdf(input: {
       .join(" "),
   ].filter((line) => line.trim() !== "");
 
-  const customerName =
-    str(customer?.company_name) ||
-    [str(customer?.first_name), str(customer?.last_name)].filter(Boolean).join(" ") ||
-    "Customer";
+  // Made out to the person or the business, as the customer is set.
+  const party = billingParty(customer, property);
+  const customerName = party.name;
 
   const totalCents = num(invoice.total_cents);
   const balanceCents = num(invoice.balance_due_cents);
@@ -185,7 +186,7 @@ export async function generateInvoicePdf(input: {
         statusLabel: STATUS_WORDS[str(invoice.status)] ?? "Awaiting payment",
         customer: {
           name: customerName,
-          addressLines,
+          addressLines: party.attention ? [`Attn: ${party.attention}`, ...party.addressLines] : party.addressLines,
           phone: str(customer?.phone),
           email: str(customer?.email),
         },

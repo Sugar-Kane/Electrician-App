@@ -26,6 +26,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { sendSms } from "@/lib/twilio";
 import { sendCustomerText } from "@/lib/customer-text";
+import { billingParty } from "@/lib/customer-details";
 
 const str = (description: string) => ({ type: "string", description });
 const confirmed = {
@@ -652,7 +653,7 @@ export async function runBusinessMcpTool(input: {
       const { data: job } = await database
         .from("jobs")
         .select(
-          "id,job_number,category,customer_description,scheduled_start,diagnostic_fee_cents,customers(first_name,last_name,company_name),properties(address_line_1,city,state,postal_code),organizations(name,phone,timezone,created_by),invoices(total_cents)",
+          "id,job_number,category,customer_description,scheduled_start,diagnostic_fee_cents,customers(first_name,last_name,company_name,bill_to),properties(address_line_1,city,state,postal_code),organizations(name,phone,timezone,created_by),invoices(total_cents)",
         )
         .eq("organization_id", organizationId)
         .eq("job_number", jobNumber)
@@ -678,7 +679,7 @@ export async function runBusinessMcpTool(input: {
       const facts: Partial<ContractFacts> = {
         business_name: text(organization.name),
         business_phone: text(organization.phone),
-        customer_name: displayCustomer(customer),
+        customer_name: billingParty(customer, null).name,
         service_address: [text(property.address_line_1), text(property.city), text(property.state), text(property.postal_code)].filter(Boolean).join(", "),
         job_number: String(row.job_number ?? jobNumber),
         job_date: formatDate(text(row.scheduled_start)),

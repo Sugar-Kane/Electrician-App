@@ -6,6 +6,7 @@ import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools
 import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
 import { TASK_MCP_TOOLS, isTaskTool, runTaskTool } from "@/lib/mcp-task-tools";
 import { PAID_INVOICE_MCP_TOOLS, isPaidInvoiceTool, runPaidInvoiceTool } from "@/lib/mcp-paid-invoice-tools";
+import { CUSTOMER_MCP_TOOLS, isCustomerTool, runCustomerTool } from "@/lib/mcp-customer-tools";
 import { TASK_ASSISTANT_MCP_TOOLS, isTaskAssistantTool, runTaskAssistantTool } from "@/lib/mcp-task-assistant-tools";
 import { assistantDeps, startQueuedWorkSoon } from "@/lib/task-assistant-server";
 import type { Actor } from "@/lib/tasks-service";
@@ -19,7 +20,7 @@ import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.11.0";
+const SERVER_VERSION = "1.12.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -115,7 +116,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...TASK_MCP_TOOLS, ...TASK_ASSISTANT_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TASK_MCP_TOOLS, ...TASK_ASSISTANT_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -137,6 +138,8 @@ export async function POST(request: Request, context: { params: Promise<{ token:
             name,
             args,
           })
+        : business && isCustomerTool(name)
+        ? await runCustomerTool({ database: asFlexibleClient(database), organizationId: session.organizationId, name, args })
         : business && isPaidInvoiceTool(name)
         ? await runPaidInvoiceTool({
             database: asFlexibleClient(database),

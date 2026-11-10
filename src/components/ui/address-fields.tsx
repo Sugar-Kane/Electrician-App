@@ -50,8 +50,11 @@ export function AddressFields({
   withUnit = false,
   canBeBlank = true,
   hint,
+  namePrefix = "",
 }: {
   defaults?: AddressDefaults;
+  /** Posted names start with this, so one form can hold two addresses (e.g. "business_"). */
+  namePrefix?: string;
   /**
    * What the address is for, said under it. Without one, a blank-able address
    * explains blank in terms of a job, which is the form it was first built for.
@@ -240,7 +243,7 @@ export function AddressFields({
         >
           <div className="relative">
             <input
-              name="addressLine1"
+              name={`${namePrefix}addressLine1`}
               value={parts.line1}
               onChange={(event) => set("line1", event.target.value)}
               onKeyDown={onKeyDown}
@@ -311,7 +314,7 @@ export function AddressFields({
       {withUnit ? (
         <Field label="Apt, suite or floor" hint="Optional.">
           <TextInput
-            name="addressLine2"
+            name={`${namePrefix}addressLine2`}
             value={unit}
             onChange={(event) => setUnit(event.target.value)}
             autoComplete="off"
@@ -323,7 +326,7 @@ export function AddressFields({
 
       <Field label="City">
         <TextInput
-          name="city"
+          name={`${namePrefix}city`}
           value={parts.city}
           onChange={(event) => set("city", event.target.value)}
           autoComplete="off"
@@ -334,7 +337,7 @@ export function AddressFields({
         {/* A list, so only a real state can be posted. Picking an address
             above still fills it. */}
         <SelectField
-          name="state"
+          name={`${namePrefix}state`}
           value={parts.state}
           onChange={(value) => set("state", value)}
           label="State"
@@ -352,7 +355,7 @@ export function AddressFields({
         }
       >
         <TextInput
-          name="postalCode"
+          name={`${namePrefix}postalCode`}
           value={parts.postalCode}
           // Digits only, five of them: letters and a ZIP+4's dash never appear.
           // No maxLength, which would clip a pasted ZIP before the filter saw it.
