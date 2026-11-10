@@ -8,16 +8,11 @@ One task list shared by three ways in:
 
 All three call one service, `src/lib/tasks-service.ts`. A task made in ChatGPT is the task Volteira shows, and an edit in Volteira is what ChatGPT reads the next time it asks. Open Volteira screens refresh by themselves (every 20 seconds while visible) when tasks change. A ChatGPT answer that was already shown does not change afterwards; ask again. Volteira cannot push messages into ChatGPT.
 
-## From your jobs
+## Needs your action
 
-The Today view also lists what the jobs say needs doing, beside the tasks people wrote:
-- today's jobs, in time order;
-- finished work not billed;
-- invoices drafted and not sent (or marked paid in hand), and overdue invoices;
-- booking requests to answer;
-- coming jobs with nothing priced.
+The Tasks page's Today view shows the home screen's **Needs your action** list beside the tasks people wrote, with today's jobs under it. It covers past visits to confirm, quotes to price, overdue and draft invoices, finished work to invoice, estimates awaiting approval, booking requests, jobs with nobody assigned, the buy list and restocking.
 
-These are worked out from the jobs, invoices and requests each time, never copied into tasks, so they are always in step: billing the job or answering the request clears the item. Each one links to where it gets done. The same list (`src/lib/job-todos.ts`) feeds ChatGPT's `daily_task_list` and `today_plan`.
+It is one list with several views: the home screen, the Tasks page, and ChatGPT (`list_tasks`, `daily_task_list` and `today_plan`) all come from `needsActionFromInputs` in `src/lib/needs-action.ts`, so they use the same rules, counts and words. Nothing is copied into tasks, so it never goes stale: confirming the visit or pricing the quote clears it everywhere.
 
 ## Status of the feature
 

@@ -1,18 +1,11 @@
-import { invoiceState } from "./dashboard-metrics.ts";
-import { formatMoney } from "./invoice-messages.ts";
 import { jobCategoryLabel } from "./new-job-input.ts";
 import { addDays, calendarDate, zonedWallClockToIso } from "./schedule-labels.ts";
 import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
 
 /**
- * What the jobs say needs doing, worked out fresh from the jobs, invoices and
- * booking requests themselves: the day's jobs, finished work not billed,
- * invoices not sent or overdue, booking requests to answer, and coming jobs
- * with nothing priced.
- *
- * Nothing is copied into tasks, so it can never go stale: when a job is
- * billed or a request answered, it simply stops being listed. The Tasks page,
- * ChatGPT's daily list and today_plan all read it from here.
+ * A day's jobs, for the Tasks page, ChatGPT's daily list and today_plan. What
+ * needs doing is "Needs your action" (needs-action.ts), the home screen's own
+ * list.
  *
  * No server-only imports, so the task tools that use it stay testable.
  */
@@ -30,10 +23,6 @@ function text(value: unknown): string {
 function record(value: unknown): Row {
   const first = Array.isArray(value) ? value[0] : value;
   return typeof first === "object" && first !== null ? (first as Row) : {};
-}
-
-function money(cents: number): string {
-  return formatMoney(cents / 100);
 }
 
 export function displayCustomer(customer: Row): string {
@@ -106,119 +95,10 @@ export function dayJob(job: Row, timeZone: string): DayJob {
   };
 }
 
-export type JobTodo = {
-  kind: "bill_job" | "send_invoice" | "chase_invoice" | "answer_request" | "price_job";
-  title: string;
-  /** Where in Volteira it gets done. */
-  href: string;
-  jobNumber: string | null;
-  /** A hint for ChatGPT on which tool does it. */
-  tool: string | null;
-};
-
-/** The day's jobs and the job to-dos, for one date in the business's time zone. */
-export async function jobTodos(
-  db: Database,
-  organizationId: string,
-  timeZone: string,
-  date?: string,
-): Promise<{ date: string; today: string; jobs: Row[]; todos: JobTodo[] }> {
+/** The jobs of one day in the business's time zone, earliest first. */
+export async function dayJobs(db: Database, organizationId: string, timeZone: string, date?: string): Promise<{ date: string; today: string; jobs: Row[] }> {
   const today = calendarDate(new Date().toISOString(), timeZone);
   const day = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today;
   const { start, end } = dayBounds(day, timeZone);
-
-  const [jobs, unbilled, invoices, requests, coming] = await Promise.all([
-    jobsBetween(db, organizationId, start, end),
-    db
-      .from("job_line_items")
-      .select("quantity, unit_price_cents, jobs!inner(job_number, status, archived_at, customers(first_name,last_name,company_name))")
-      .eq("organization_id", organizationId)
-      .is("invoice_id", null)
-      .eq("jobs.status", "completed")
-      .is("jobs.archived_at", null)
-      .limit(500),
-    db
-      .from("invoices")
-      .select("id, invoice_number, status, due_at, last_sent_at, balance_due_cents, total_cents, jobs(job_number, customers(first_name,last_name,company_name))")
-      .eq("organization_id", organizationId)
-      .not("status", "in", "(paid,void)")
-      .order("created_at", { ascending: false })
-      .limit(200),
-    db
-      .from("booking_requests")
-      .select("contact_name, phone, description, created_at, source")
-      .eq("organization_id", organizationId)
-      .in("status", ["new", "needs_review"])
-      .order("created_at", { ascending: false })
-      .limit(20),
-    jobsBetween(db, organizationId, end, zonedWallClockToIso(`${addDays(day, 4)}T00:00`, timeZone)),
-  ]);
-
-  const todos: JobTodo[] = [];
-
-  // Finished work with lines nobody has billed: money not yet asked for.
-  const toBill = new Map<string, { customer: string; cents: number }>();
-  for (const line of (unbilled.data ?? []) as Row[]) {
-    const job = record(line.jobs);
-    const key = text(job.job_number);
-    const entry = toBill.get(key) ?? { customer: displayCustomer(record(job.customers)), cents: 0 };
-    entry.cents += Math.round(Number(line.quantity ?? 0) * Number(line.unit_price_cents ?? 0));
-    toBill.set(key, entry);
-  }
-  for (const [number, entry] of toBill) {
-    todos.push({ kind: "bill_job", title: `Bill job #${number} (${entry.customer}): ${money(entry.cents)} finished and not invoiced.`, href: `/jobs/${number}`, jobNumber: number, tool: "bill_job" });
-  }
-
-  for (const row of (invoices.data ?? []) as Row[]) {
-    const job = record(row.jobs);
-    const who = displayCustomer(record(job.customers));
-    const state = invoiceState({
-      status: text(row.status),
-      dueAt: text(row.due_at) || null,
-      balanceDueCents: Number(row.balance_due_cents ?? 0),
-      lastSentAt: text(row.last_sent_at) || null,
-    });
-    if (state === "draft") {
-      todos.push({
-        kind: "send_invoice",
-        title: `Send INV-${text(row.invoice_number)} (${who}, job #${text(job.job_number)}): ${money(Number(row.total_cents ?? 0))} drafted, not sent. If they already paid in hand, mark it paid instead.`,
-        href: `/invoices/${text(row.id)}`,
-        jobNumber: text(job.job_number) || null,
-        tool: "send_invoice or mark_invoice_paid",
-      });
-    } else if (state === "overdue") {
-      todos.push({
-        kind: "chase_invoice",
-        title: `Chase INV-${text(row.invoice_number)} (${who}): ${money(Number(row.balance_due_cents ?? 0))} overdue.`,
-        href: `/invoices/${text(row.id)}`,
-        jobNumber: text(job.job_number) || null,
-        tool: "send_invoice",
-      });
-    }
-  }
-
-  for (const request of (requests.data ?? []) as Row[]) {
-    todos.push({
-      kind: "answer_request",
-      title: `Answer booking request from ${text(request.contact_name) || text(request.phone) || "a customer"}: ${text(request.description).slice(0, 140)}`,
-      href: "/booking-requests",
-      jobNumber: null,
-      tool: null,
-    });
-  }
-
-  for (const job of [...jobs, ...coming]) {
-    const lines = Array.isArray(job.job_line_items) ? job.job_line_items.length : 0;
-    if (lines === 0 && text(job.category) !== "diagnostic") {
-      todos.push({
-        kind: "price_job",
-        title: `Price job #${text(job.job_number)} (${displayCustomer(record(job.customers))}): no materials or labor on it yet.`,
-        href: `/jobs/${text(job.job_number)}`,
-        jobNumber: text(job.job_number),
-        tool: "add_job_lines",
-      });
-    }
-  }
-
-  return { date: day, today, jobs, todos };
+  return { date: day, today, jobs: await jobsBetween(db, organizationId, start, end) };
 }
