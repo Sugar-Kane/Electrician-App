@@ -16,6 +16,7 @@ import {
   type InvoiceFacts,
 } from "@/lib/invoice-messages";
 import { onlinePaymentsEnabled } from "@/lib/invoice-online-pay";
+import { invoicePdf } from "@/lib/invoice-pdf-file";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
 
@@ -152,13 +153,20 @@ export async function deliverInvoice(input: {
           : "No email address on this customer.",
       });
     } else {
-      const mail = paidCopy ? paidInvoiceEmail(facts) : preview ? invoicePreviewEmail(facts) : invoiceEmail(facts);
+      // The invoice itself goes with the bill or the paid copy, so the customer
+      // has it to keep without opening a link. Best effort: if the PDF cannot
+      // be read, the email still goes, and its link has the PDF too.
+      const pdf = preview ? null : await invoicePdf(input.organizationId, input.invoiceId).catch(() => null);
+      const attachable = pdf && pdf.bytes.byteLength <= 10 * 1024 * 1024 ? pdf : null;
+      const withPdf = { ...facts, pdfAttached: Boolean(attachable) };
+      const mail = paidCopy ? paidInvoiceEmail(withPdf) : preview ? invoicePreviewEmail(withPdf) : invoiceEmail(withPdf);
       const sent = await sendEmail({
         to: input.customerEmail,
         subject: mail.subject,
         text: mail.text,
         html: mail.html,
         from: emailSender(input.facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+        ...(attachable ? { attachments: [{ filename: attachable.fileName, content: Buffer.from(attachable.bytes).toString("base64") }] } : {}),
       });
       note({
         channel: "email",

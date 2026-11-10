@@ -33,6 +33,8 @@ export type InvoiceFacts = {
   paidLabel?: string;
   /** For a paid invoice: how, in words, e.g. "cash". */
   paidHow?: string;
+  /** Whether the invoice PDF is attached to the email. */
+  pdfAttached?: boolean;
 };
 
 /** Two SMS segments. Beyond this carriers split the message and may reorder. */
@@ -84,7 +86,7 @@ export function invoiceSms(facts: InvoiceFacts): string {
 
   const settle = facts.payUrl
     ? ` Pay: ${facts.payUrl}`
-    : ` Call ${facts.businessPhone} to pay.${facts.viewUrl ? ` View it: ${facts.viewUrl}` : ""}`;
+    : ` Call ${facts.businessPhone} to pay.${facts.viewUrl ? ` View or download the PDF: ${facts.viewUrl}` : ""}`;
 
   const message =
     `${opening} ${facts.businessName} invoice ${facts.invoiceNumber} for ` +
@@ -128,6 +130,7 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
     `Amount due: ${amount}`,
     ...(due ? [due] : []),
     ...(summary ? ["", `For: ${summary}`] : []),
+    ...(facts.pdfAttached ? ["", "Your invoice is attached as a PDF."] : []),
     "",
     facts.payUrl
       ? `Pay online: ${facts.payUrl}`
@@ -154,6 +157,7 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
       : []),
     "</table>",
     ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
+    ...(facts.pdfAttached ? ["<p>Your invoice is attached as a PDF.</p>"] : []),
     facts.payUrl
       ? `<p><a href="${escapeHtml(facts.payUrl)}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Pay ${escapeHtml(amount)}</a></p>`
       : `<p>To pay, call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
@@ -256,6 +260,7 @@ export function paidInvoiceEmail(facts: InvoiceFacts): Mail {
     `Amount paid: ${amount}${how}${when}`,
     "Balance: $0.00. Nothing is owed.",
     ...(summary ? ["", `For: ${summary}`] : []),
+    ...(facts.pdfAttached ? ["", "Your paid invoice is attached as a PDF."] : []),
     ...(facts.viewUrl ? ["", `View your paid invoice: ${facts.viewUrl}`] : []),
     "",
     `Questions? Call ${facts.businessPhone}.`,
@@ -273,6 +278,7 @@ export function paidInvoiceEmail(facts: InvoiceFacts): Mail {
     '<tr><td style="padding:4px 24px 4px 0;color:#475569">Balance</td><td style="padding:4px 0">$0.00 &middot; nothing is owed</td></tr>',
     "</table>",
     ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
+    ...(facts.pdfAttached ? ["<p>Your paid invoice is attached as a PDF.</p>"] : []),
     ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your paid invoice</a></p>`] : []),
     `<p>Questions? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
