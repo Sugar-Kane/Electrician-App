@@ -46,7 +46,7 @@ export async function JobTasks({ jobNumber }: { jobNumber: string }) {
         </Link>
       </div>
 
-      <TaskQuickAdd job={jobNumber} jobNumber={jobNumber} members={members} placeholder="Add a task for this job" />
+      <TaskQuickAdd job={jobNumber} jobNumber={jobNumber} members={members} placeholder="Add a task for this job" timeZone={session.actor.timeZone} />
       <p className="mt-2 text-xs text-ink-faint">Tasks on this job are visible to everyone in your business. Finishing them does not finish the job.</p>
 
       {openTasks.length === 0 && doneTasks.length === 0 ? (

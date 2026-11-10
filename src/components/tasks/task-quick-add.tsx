@@ -1,11 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { TimeField } from "@/components/ui/time-field";
+import { DateField } from "@/components/ui/date-field";
 import { ChevronDown, Plus } from "lucide-react";
 
 import { quickAddTask, type TaskFormState } from "@/app/tasks/actions";
 import { RepeatFields } from "@/components/tasks/repeat-fields";
 import { inputClass } from "@/components/ui/field";
+import { SelectField } from "@/components/ui/select-field";
 
 const initial: TaskFormState = { error: "" };
 
@@ -22,11 +26,14 @@ export function TaskQuickAdd({
   jobNumber,
   members = [],
   placeholder = "Add a task",
+  timeZone,
 }: {
   job?: string;
   jobNumber?: string;
   members?: { user_id: string; name: string }[];
   placeholder?: string;
+  /** The person's own zone, for "today" in the date pickers. */
+  timeZone: string;
 }) {
   const [state, action, pending] = useActionState(quickAddTask, initial);
   const [open, setOpen] = useState(false);
@@ -93,33 +100,32 @@ export function TaskQuickAdd({
 
       {open ? (
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-            Due date
-            <input type="date" name="due_date" className={inputClass} />
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-            Due time (optional)
-            <input type="time" name="due_time" className={inputClass} />
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-            Remind me at (optional)
-            <input type="datetime-local" name="reminder_at" className={inputClass} />
-          </label>
-          <RepeatFields />
+          <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+            <span>Due date</span>
+            <DateField name="due_date" label="Due date" timeZone={timeZone} placeholder="No due date" />
+          </div>
+          <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+            <span>Due time (optional)</span>
+            <TimeField name="due_time" label="Due time" />
+          </div>
+          <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+            <span>Remind me at (optional)</span>
+            <DateTimeField name="reminder_at" label="Remind me at" timeZone={timeZone} />
+          </div>
+          <RepeatFields timeZone={timeZone} />
           {members.length > 1 ? (
-            <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-              Assign to
-              <select name="assignee_user_id" className={inputClass} defaultValue="">
-                <option value="">Me</option>
-                {members
-                  .filter((member) => member.name !== "You")
-                  .map((member) => (
-                    <option key={member.user_id} value={member.user_id}>
-                      {member.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+              <span>Assign to</span>
+              <SelectField
+                name="assignee_user_id"
+                label="Assign to"
+                defaultValue=""
+                choices={[
+                  { value: "", label: "Me" },
+                  ...members.filter((member) => member.name !== "You").map((member) => ({ value: member.user_id, label: member.name })),
+                ]}
+              />
+            </div>
           ) : null}
           <label className="grid gap-1 text-xs font-semibold text-ink-muted sm:col-span-2">
             Notes

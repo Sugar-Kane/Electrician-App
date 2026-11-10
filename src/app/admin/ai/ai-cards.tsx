@@ -3,6 +3,7 @@ import { aiUsageSummary } from "@/lib/ai-allowance";
 import { DEFAULT_MONTHLY_AI_USES, monthlyAiLimit, paidPlanActive } from "@/lib/ai-allowance-rules";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { setBusinessAiAllowance, setDefaultAiLimit } from "./actions";
+import { SelectField } from "@/components/ui/select-field";
 
 /**
  * The built-in AI allowance in the admin console: what a business has used
@@ -63,14 +64,21 @@ export async function BusinessAiCard({
       {owner ? (
         <form action={setBusinessAiAllowance} className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <input type="hidden" name="organizationId" value={organizationId} />
-          <label className="text-xs text-ink-muted">
-            Allowance
-            <select name="mode" defaultValue={mode} className={`${FIELD} mt-1`}>
-              <option value="default">Platform default</option>
-              <option value="custom">A number a month</option>
-              <option value="unlimited">Unlimited</option>
-            </select>
-          </label>
+          <div className="text-xs text-ink-muted">
+            <span>Allowance</span>
+            <div className="mt-1">
+              <SelectField
+                name="mode"
+                label="Allowance"
+                defaultValue={mode}
+                choices={[
+                  { value: "default", label: "Platform default" },
+                  { value: "custom", label: "A number a month" },
+                  { value: "unlimited", label: "Unlimited" },
+                ]}
+              />
+            </div>
+          </div>
           <label className="text-xs text-ink-muted">
             Uses a month (for &ldquo;A number a month&rdquo;)
             <input

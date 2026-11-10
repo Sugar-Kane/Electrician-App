@@ -8,6 +8,7 @@ import { saveCustomerDetailsAction, type CustomerDetailsState } from "@/app/cust
 import { AddressFields } from "@/components/ui/address-fields";
 import { inputClass } from "@/components/ui/field";
 import type { CustomerDetails } from "@/lib/customer-details";
+import { SelectField } from "@/components/ui/select-field";
 
 const initial: CustomerDetailsState = { error: "" };
 
@@ -74,15 +75,20 @@ export function CustomerDetailsForm({
           <Text name="lastName" label="Last name" defaultValue={details.lastName} autoComplete="family-name" />
           <Text name="phone" label="Phone" defaultValue={details.phone} type="tel" inputMode="tel" autoComplete="tel" />
           <Text name="email" label="Email" defaultValue={details.email} type="email" inputMode="email" autoComplete="email" />
-          <label className="grid gap-1 text-xs font-semibold text-ink-muted sm:col-span-2">
-            Prefers
-            <select name="preferredContact" defaultValue={details.preferredContact} className={inputClass}>
-              <option value="">No preference</option>
-              <option value="sms">Text</option>
-              <option value="phone">Call</option>
-              <option value="email">Email</option>
-            </select>
-          </label>
+          <div className="grid gap-1 text-xs font-semibold text-ink-muted sm:col-span-2">
+            <span>Prefers</span>
+            <SelectField
+              name="preferredContact"
+              label="Prefers"
+              defaultValue={details.preferredContact}
+              choices={[
+                { value: "", label: "No preference" },
+                { value: "sms", label: "Text" },
+                { value: "phone", label: "Call" },
+                { value: "email", label: "Email" },
+              ]}
+            />
+          </div>
         </fieldset>
 
         <fieldset className="grid gap-3 sm:grid-cols-2">

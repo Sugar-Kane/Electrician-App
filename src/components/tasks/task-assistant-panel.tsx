@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef } from "react";
+import { DateTimeField } from "@/components/ui/date-time-field";
 import { Bot, CircleAlert, MessageSquareText, ShieldCheck } from "lucide-react";
 
 import {
@@ -14,6 +15,7 @@ import {
 import { inputClass } from "@/components/ui/field";
 import { PERMISSION_LABELS, PERMISSION_MODES } from "@/lib/task-execution-rules";
 import type { AssistantConnection, ExecutionView, ProposalView } from "@/lib/task-executions";
+import { SelectField } from "@/components/ui/select-field";
 
 const initial: AssistantFormState = { error: "" };
 const ACTIVE = new Set(["queued", "running", "waiting_input", "waiting_approval", "cancel_requested"]);
@@ -122,6 +124,7 @@ function AssignForm({
   criteria,
   mode,
   assigned,
+  timeZone,
 }: {
   taskId: string;
   version: number;
@@ -130,6 +133,7 @@ function AssignForm({
   criteria: string;
   mode: string;
   assigned: boolean;
+  timeZone: string;
 }) {
   const [state, action, pending] = useActionState(assignTaskToAssistantAction, initial);
   const offset = useRef<HTMLInputElement>(null);
@@ -151,16 +155,15 @@ function AssignForm({
       <input type="hidden" name="version" value={version} />
       <input ref={offset} type="hidden" name="tz_offset" defaultValue="" />
       {usable.length > 1 ? (
-        <label className="grid gap-1 text-xs font-semibold text-ink-muted">
-          Assistant
-          <select name="connection_id" className={inputClass}>
-            {usable.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid gap-1 text-xs font-semibold text-ink-muted">
+          <span>Assistant</span>
+          <SelectField
+            name="connection_id"
+            label="Assistant"
+            defaultValue={usable[0]?.id ?? ""}
+            choices={usable.map((item) => ({ value: item.id, label: item.name }))}
+          />
+        </div>
       ) : (
         <input type="hidden" name="connection_id" value={usable[0]?.id ?? ""} />
       )}
@@ -199,10 +202,9 @@ function AssignForm({
           <label className="flex items-center gap-2">
             <input type="radio" name="start" value="scheduled" /> Start at a time
           </label>
-          <label className="flex items-center gap-2">
-            <span className="sr-only">Start time, in your time zone</span>
-            <input type="datetime-local" name="scheduled_at" className={`${inputClass} w-auto`} />
-          </label>
+          <div className="min-w-56">
+            <DateTimeField name="scheduled_at" label="Start time, in your time zone" timeZone={timeZone} />
+          </div>
         </div>
         <label className="flex items-center gap-2 text-sm text-ink">
           <input type="radio" name="start" value="later" /> Don&apos;t start yet
@@ -338,7 +340,7 @@ export function TaskAssistantPanel({
             {assignedToAssistant ? "Change the instructions" : viaChatgpt ? "Hand this task to your ChatGPT" : "Hand this task to the assistant"}
           </summary>
           <div className="mt-3">
-            <AssignForm taskId={taskId} version={version} assistants={assistants} instructions={instructions} criteria={criteria} mode={mode} assigned={assignedToAssistant} />
+            <AssignForm taskId={taskId} version={version} assistants={assistants} instructions={instructions} criteria={criteria} mode={mode} assigned={assignedToAssistant} timeZone={timeZone} />
           </div>
         </details>
       ) : null}
