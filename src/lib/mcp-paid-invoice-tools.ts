@@ -3,6 +3,7 @@ import "server-only";
 import { invoiceViewUrl } from "@/lib/invoice-messages";
 import { checkPaidInHand, isPaymentMethod, paymentMethodLabel } from "@/lib/invoice-payment";
 import { markInvoicePaidInHand, sendPaidInvoice } from "@/lib/invoice-paid-in-hand";
+import { closeOutPaidJob } from "@/lib/job-close-out";
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
@@ -35,9 +36,22 @@ export const PAID_INVOICE_MCP_TOOLS: McpTool[] = [
         method: { type: "string", enum: ["cash", "check", "card", "other"], description: "How the customer paid." },
         note: str("Optional note, such as a check number."),
         send: { type: "string", enum: ["none", "sms", "email", "both"], description: "Send the customer the paid invoice afterwards. Default none." },
+        close_out_job: { type: "boolean", description: "True if the work is done, to close out the job (mark it completed) once paid. Ask the user if unsure." },
         confirmed,
       },
       required: ["method", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "close_out_job",
+    title: "Close out job",
+    description:
+      "Mark a job completed in one step because it's done and paid (for example, paid in cash on the spot), without walking it through scheduling and the visit steps. Only works when every invoice on the job is paid and nothing is left unbilled. Nothing is sent to the customer. Call once without confirmed to get the proposal, then again with confirmed true only if the user says yes.",
+    inputSchema: {
+      type: "object",
+      properties: { job_number: str("The job number."), confirmed },
+      required: ["job_number", "confirmed"],
       additionalProperties: false,
     },
   },
@@ -172,6 +186,7 @@ export async function runPaidInvoiceTool(input: {
     const proposal =
       `Mark ${number} for ${customer.name} paid in full: ${dollars(check.amountCents)} in ${paymentMethodLabel(method)}` +
       `${text(args.note) ? ` (note: ${text(args.note)})` : ""}` +
+      (args.close_out_job === true ? `, close out job #${text(one(row.jobs)?.job_number)} as completed` : "") +
       (send.length ? `, then send them the paid invoice by ${sayChannels(send, customer)}.` : ". Nothing is sent to the customer.");
     if (args.confirmed !== true) {
       return {
@@ -188,15 +203,30 @@ export async function runPaidInvoiceTool(input: {
       timeZone: input.timeZone,
     });
     if (!marked.ok) return { isError: true, text: marked.message };
+    let closed = "";
+    if (args.close_out_job === true && marked.jobNumber) {
+      const out = await closeOutPaidJob(db, { organizationId, jobNumber: Number(marked.jobNumber), via: "chatgpt" });
+      closed = ` ${out.message}`;
+    }
     if (send.length === 0) {
-      return { text: `${marked.message} Nothing was sent to the customer. To send the paid invoice, use send_paid_invoice.`, structured: { invoice_number: number, status: "paid", sent: false } };
+      return { text: `${marked.message}${closed} Nothing was sent to the customer. To send the paid invoice, use send_paid_invoice.`, structured: { invoice_number: number, status: "paid", sent: false } };
     }
     const sent = await sendPaidInvoice(db, { invoiceId: text(row.id), organizationId, channels: send });
     return {
       isError: !sent.ok,
-      text: sent.ok ? `${marked.message} ${sent.message}` : `${marked.message} The paid invoice was not sent: ${sent.message}`,
+      text: sent.ok ? `${marked.message}${closed} ${sent.message}` : `${marked.message}${closed} The paid invoice was not sent: ${sent.message}`,
       structured: { invoice_number: number, status: "paid", sent: sent.ok },
     };
+  }
+
+  if (input.name === "close_out_job") {
+    const jobNumber = Number(text(args.job_number).replace(/^#/, ""));
+    if (!Number.isInteger(jobNumber)) return { isError: true, text: "That job number could not be read. Nothing was changed." };
+    if (args.confirmed !== true) {
+      return { text: `CONFIRMATION REQUIRED. Nothing was changed. Proposed action: close out job #${jobNumber} as completed (it must be fully paid). Nothing is sent to the customer.` };
+    }
+    const out = await closeOutPaidJob(db, { organizationId, jobNumber, via: "chatgpt" });
+    return { isError: !out.ok, text: out.message, structured: { job_number: jobNumber, completed: out.ok } };
   }
 
   if (input.name === "send_paid_invoice") {

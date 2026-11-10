@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { CheckCircle2, Eye, HandCoins, LoaderCircle, Send, Wallet } from "lucide-react";
 
 import {
+  closeOutJobAction,
   recordInvoicePayment,
   recordPaidInHand,
   sendInvoice,
@@ -197,12 +198,29 @@ export function PaidInHandForm({
         </p>
         <SelectField name="method" defaultValue="cash" label="How they paid" choices={PAYMENT_METHODS} />
         <input name="note" placeholder="Note (check number, optional)" aria-label="Note" className={`${inputClass} mt-2`} />
-        <p className="mb-1 mt-3 text-xs font-semibold text-ink-muted">Send them the paid invoice</p>
+        <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" name="closeOut" defaultChecked className="h-4 w-4" />
+          The work is done: close out the job too
+        </label>
+        <p className="mb-1 mt-2 text-xs font-semibold text-ink-muted">Send them the paid invoice</p>
         <Channels hasPhone={hasPhone} hasEmail={hasEmail} />
         <Submit label="Mark paid" pendingLabel="Recording…" icon={HandCoins} primary />
         <Outcome state={state} />
       </form>
     </details>
+  );
+}
+
+/** Close out a job whose invoices are all paid, without walking it through the visit steps. */
+export function CloseOutForm({ invoiceId }: { invoiceId: string }) {
+  const [state, action] = useActionState(closeOutJobAction, initial);
+  return (
+    <form action={action} className="mt-2">
+      <input type="hidden" name="invoiceId" value={invoiceId} />
+      <p className="mb-2 text-xs leading-5 text-ink-muted">Paid in full. If the work is done, close out the job.</p>
+      <Submit label="Close out job" pendingLabel="Closing out…" icon={CheckCircle2} primary />
+      <Outcome state={state} />
+    </form>
   );
 }
 
@@ -253,6 +271,7 @@ export function InvoiceSteps({
                   <CheckCircle2 className="h-4 w-4" aria-hidden />
                   {invoice.label} paid{invoice.paidAt ? ` ${shortDate(invoice.paidAt)}` : ""}.
                 </p>
+                {!jobCompleted ? <CloseOutForm invoiceId={invoice.id} /> : null}
                 <SendPaidForm invoiceId={invoice.id} hasPhone={hasPhone} hasEmail={hasEmail} />
               </>
             ) : sent ? (

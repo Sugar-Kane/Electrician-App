@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { checkPaidInHand, checkPayment } from "./invoice-payment.ts";
+import { checkCloseOut, checkPaidInHand, checkPayment } from "./invoice-payment.ts";
 
 const sent = { status: "sent", totalCents: 128_050, balanceDueCents: 128_050 };
 
@@ -55,4 +55,14 @@ test("paid in hand is refused when it would record money wrongly", () => {
   assert.equal(checkPaidInHand({ invoice: { ...base, balanceDueCents: 0 }, method: "cash" }).ok, false, "nothing owed");
   assert.equal(checkPaidInHand({ invoice: base, method: "bitcoin" }).ok, false, "unknown method");
   assert.equal(checkPaidInHand({ invoice: base, method: "bank" }).ok, false, "bank is only ever recorded by the online payment, never by hand");
+});
+
+test("a job closes out only when every live invoice is paid and nothing is left unbilled", () => {
+  assert.deepEqual(checkCloseOut({ jobStatus: "draft", invoices: [{ status: "paid" }], unbilledCents: 0 }), { ok: true });
+  assert.deepEqual(checkCloseOut({ jobStatus: "draft", invoices: [{ status: "paid" }, { status: "void" }], unbilledCents: 0 }), { ok: true }, "a void invoice doesn't count");
+  assert.equal(checkCloseOut({ jobStatus: "draft", invoices: [], unbilledCents: 0 }).ok, false, "no invoice");
+  assert.equal(checkCloseOut({ jobStatus: "draft", invoices: [{ status: "paid" }, { status: "sent" }], unbilledCents: 0 }).ok, false, "one still owed");
+  assert.equal(checkCloseOut({ jobStatus: "draft", invoices: [{ status: "paid" }], unbilledCents: 5000 }).ok, false, "work not billed");
+  assert.equal(checkCloseOut({ jobStatus: "completed", invoices: [{ status: "paid" }], unbilledCents: 0 }).ok, false, "already done");
+  assert.equal(checkCloseOut({ jobStatus: "canceled", invoices: [{ status: "paid" }], unbilledCents: 0 }).ok, false, "called off");
 });

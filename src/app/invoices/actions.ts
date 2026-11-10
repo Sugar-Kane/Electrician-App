@@ -494,15 +494,23 @@ export async function recordPaidInHand(_previous: InvoiceActionState, formData: 
   });
   if (!marked.ok) return { error: marked.message };
 
+  // The work is done and paid for: close the job out too, when asked.
+  let closed = "";
+  if (formData.get("closeOut") === "on" && marked.jobNumber) {
+    const { closeOutPaidJob } = await import("@/lib/job-close-out");
+    const out = await closeOutPaidJob(supabase, { organizationId: context.organizationId, jobNumber: Number(marked.jobNumber), via: "app" });
+    closed = ` ${out.message}`;
+  }
+
   const channels = chosenChannels(formData);
   if (channels.length === 0) {
     refreshInvoice(invoiceId, marked.jobNumber);
-    return { error: "", notice: `${marked.message} Nothing was sent to the customer.` };
+    return { error: "", notice: `${marked.message}${closed} Nothing was sent to the customer.` };
   }
   // The admin client sends, as for every invoice: delivery writes a log row the sender may read but not rewrite.
   const sent = await sendPaidInvoice(asFlexibleClient(getSupabaseAdmin()), { invoiceId, organizationId: context.organizationId, channels });
   refreshInvoice(invoiceId, marked.jobNumber);
-  return sent.ok ? { error: "", notice: `${marked.message} ${sent.message}` } : { error: `${marked.message} But the paid invoice was not sent: ${sent.message}` };
+  return sent.ok ? { error: "", notice: `${marked.message}${closed} ${sent.message}` } : { error: `${marked.message}${closed} But the paid invoice was not sent: ${sent.message}` };
 }
 
 export async function sendPaidInvoiceAction(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
@@ -518,4 +526,19 @@ export async function sendPaidInvoiceAction(_previous: InvoiceActionState, formD
   const sent = await sendPaidInvoice(asFlexibleClient(getSupabaseAdmin()), { invoiceId, organizationId: context.organizationId, channels: chosenChannels(formData) });
   refreshInvoice(invoiceId, sent.jobNumber);
   return sent.ok ? { error: "", notice: sent.message } : { error: sent.message };
+}
+
+/** Close out the job an invoice is on, once everything on it is paid. Through the person's own session. */
+export async function closeOutJobAction(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+  const supabase = asFlexibleClient(await createClient());
+  const { data } = await supabase.from("invoices").select("job_id").eq("organization_id", context.organizationId).eq("id", invoiceId).maybeSingle();
+  const jobId = text((data as Record<string, unknown> | null)?.job_id);
+  if (!jobId) return { error: "That invoice is not on a job." };
+  const { closeOutPaidJob } = await import("@/lib/job-close-out");
+  const out = await closeOutPaidJob(supabase, { organizationId: context.organizationId, jobId, via: "app" });
+  if (out.ok) refreshInvoice(invoiceId, out.jobNumber);
+  return out.ok ? { error: "", notice: out.message } : { error: out.message };
 }
