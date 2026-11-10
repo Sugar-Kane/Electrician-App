@@ -1,5 +1,6 @@
 "use server";
 
+import { BREACHED_PASSWORD_MESSAGE, passwordIsBreached } from "@/lib/pwned-password";
 import { randomUUID } from "node:crypto";
 import type { User } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
@@ -455,6 +456,9 @@ export async function updatePassword(formData: FormData) {
   }
   if (!currentPassword) {
     redirect(accountUrl("security", "error", "Enter your current password."));
+  }
+  if (await passwordIsBreached(password)) {
+    redirect(accountUrl("security", "error", BREACHED_PASSWORD_MESSAGE));
   }
 
   const { error } = await context.supabase.auth.updateUser({

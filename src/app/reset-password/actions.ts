@@ -1,5 +1,6 @@
 "use server";
 
+import { BREACHED_PASSWORD_MESSAGE, passwordIsBreached } from "@/lib/pwned-password";
 import { redirect } from "next/navigation";
 
 import { mayResetPassword, newPasswordProblem } from "@/lib/password-reset";
@@ -23,6 +24,7 @@ export async function resetPassword(
 
   const problem = newPasswordProblem(password, confirmation);
   if (problem) return { error: problem };
+  if (await passwordIsBreached(password)) return { error: BREACHED_PASSWORD_MESSAGE };
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();

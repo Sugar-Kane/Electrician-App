@@ -1,5 +1,6 @@
 "use client";
 
+import { BREACHED_PASSWORD_MESSAGE, passwordIsBreached } from "@/lib/pwned-password";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,12 @@ export function AuthForm({ mode, nextPath, initialError, defaultEmail }: { mode:
     }
 
     setSubmitting(true);
+    // Only the first five characters of the password's hash leave the browser.
+    if (isSignup && (await passwordIsBreached(password))) {
+      setError(BREACHED_PASSWORD_MESSAGE);
+      setSubmitting(false);
+      return;
+    }
     try {
       const supabase = createClient();
       if (isSignup) {
