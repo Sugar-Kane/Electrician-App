@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CheckCircle2, Clock, Eye, Landmark, Phone, ReceiptText } from "lucide-react";
+import { CheckCircle2, Clock, Download, Eye, FileText, Landmark, Phone, ReceiptText } from "lucide-react";
 
 import { invoiceForPayment, type InvoiceForPayment } from "@/lib/invoice-online-pay";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -169,6 +169,26 @@ export default async function InvoiceByLinkPage({
             </div>
           ) : null}
         </dl>
+
+        {/* The invoice itself, to keep: opens in the browser, or saves. */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <a
+            href={`/invoice/${token}/pdf`}
+            target="_blank"
+            rel="noopener"
+            className="tap-target inline-flex min-h-11 items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold text-white hover:bg-white/5"
+          >
+            <FileText className="h-4 w-4" aria-hidden />
+            View PDF
+          </a>
+          <a
+            href={`/invoice/${token}/pdf?download=1`}
+            className="tap-target inline-flex min-h-11 items-center gap-2 rounded-control border border-line px-4 text-sm font-semibold text-white hover:bg-white/5"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Download PDF
+          </a>
+        </div>
 
         {processingCents > 0 ? (
           <p className="mt-6 flex gap-3 rounded-control border border-info/40 bg-info-bg/40 p-3 text-sm leading-6">

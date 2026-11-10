@@ -35,6 +35,8 @@ export async function sendEmail(input: {
   replyTo?: string;
   /** Overrides the configured From line, for a tenant-named sender. */
   from?: string;
+  /** Files to attach, such as the invoice PDF. Content is base64. */
+  attachments?: { filename: string; content: string }[];
 }): Promise<EmailResult> {
   const auth = credentials();
   if (!auth) {
@@ -61,6 +63,7 @@ export async function sendEmail(input: {
         // So a customer replying to a confirmation reaches the business rather
         // than a no-reply mailbox nobody watches.
         ...(input.replyTo ? { reply_to: input.replyTo } : {}),
+        ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       }),
     });
 
