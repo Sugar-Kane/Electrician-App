@@ -17,7 +17,7 @@ import {
   type TaskSummary,
 } from "./tasks-service.ts";
 import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
-import { dayJob, jobTodos } from "./job-todos.ts";
+import { dayJob, dayJobs } from "./job-todos.ts";
 
 /**
  * Tasks from ChatGPT or Claude. These tools call the same service as the
@@ -66,7 +66,7 @@ export const TASK_MCP_TOOLS: McpTool[] = [
     name: "daily_task_list",
     title: "Daily task list",
     description:
-      "The user's daily list in one call: their tasks (overdue, due today, waiting on them), today's jobs in time order, and what the jobs say needs doing (finished work to bill, invoices to send or chase, booking requests to answer, jobs with nothing priced). Use for 'what's on my list today', 'my tasks', or a morning briefing. Each item says where it gets done; offer to do the next one.",
+      "The user's daily list in one call: their tasks (overdue, due today, waiting on them), today's jobs in time order, and NEEDS YOUR ACTION, the same list as Volteira's home screen (past visits to confirm, quotes to price, invoices to send or chase, booking requests, finished work to invoice, estimates awaiting approval, buy list, restocking). Use for 'what's on my list today', 'my tasks', or a morning briefing. Each item says where it gets done; offer to do the next one.",
     inputSchema: {
       type: "object",
       properties: { date: str("Optional day, YYYY-MM-DD in the business's time zone. Defaults to today.") },
@@ -123,7 +123,7 @@ export const TASK_MCP_TOOLS: McpTool[] = [
     name: "list_tasks",
     title: "List tasks",
     description:
-      "The user's tasks in Volteira, current as of now. Views: today (due today, overdue, or waiting on the user), upcoming (due later, by date), all (every open task, dated or not), completed. Filter by job (number or customer name), status, filters (mine, ai, waiting_input, waiting_approval, overdue), words, or due-date range. Also returns today's date and the time zone, for working out relative dates.",
+      "The user's tasks in Volteira, current as of now. Views: today (due today, overdue, or waiting on the user), upcoming (due later, by date), all (every open task, dated or not), completed. Filter by job (number or customer name), status, filters (mine, ai, waiting_input, waiting_approval, overdue), words, or due-date range. Also returns today's date and the time zone, for working out relative dates. Unless the view is completed, it also returns NEEDS YOUR ACTION: the jobs' own to-dos, the same list as Volteira's home screen (past visits to confirm, quotes to price, invoices to send or chase, booking requests, and so on). When reporting what the user has to do, include both; never say they're caught up while that list has items.",
     inputSchema: {
       type: "object",
       properties: {
@@ -285,7 +285,16 @@ function createInput(item: Args): CreateInput {
  * Run a task tool for an actor the route has already verified: the person who
  * created this connection, still a member of the business.
  */
-export async function runTaskTool(input: { database: FlexibleSupabaseClient; actor: Actor | null; name: string; args: Args }): Promise<ToolResult> {
+/** The home screen's "Needs your action", handed in by the route (it reads server-only data). */
+export type NeedsActionSource = () => Promise<{ lines: string[]; items: unknown[] }>;
+
+export async function runTaskTool(input: {
+  database: FlexibleSupabaseClient;
+  actor: Actor | null;
+  name: string;
+  args: Args;
+  needsAction?: NeedsActionSource;
+}): Promise<ToolResult> {
   const { database: db, actor, name, args } = input;
   if (!actor) {
     return {
@@ -298,7 +307,10 @@ export async function runTaskTool(input: { database: FlexibleSupabaseClient; act
 
   switch (name) {
     case "daily_task_list": {
-      const plan = await jobTodos(db, actor.organizationId, actor.timeZone, text(args.date) || undefined);
+      const [plan, needs] = await Promise.all([
+        dayJobs(db, actor.organizationId, actor.timeZone, text(args.date) || undefined),
+        input.needsAction ? input.needsAction() : Promise.resolve({ lines: [] as string[], items: [] as unknown[] }),
+      ]);
       const isToday = plan.date === plan.today;
       const listed = await listTasks(db, actor, isToday ? { view: "today", limit: 50 } : { view: "all", from: plan.date, to: plan.date, limit: 50 });
       if (!listed.ok) return failure(listed);
@@ -309,9 +321,8 @@ export async function runTaskTool(input: { database: FlexibleSupabaseClient; act
       tasks.forEach((task) => lines.push(`- ${describeTask(task)}`));
       lines.push("", jobs.length ? `JOBS (${jobs.length})` : "JOBS: nothing scheduled.");
       jobs.forEach((job) => lines.push(`- ${job.window} | #${job.number} ${job.kind} | ${job.status} | ${job.customer}${job.address ? ` | ${job.address}` : ""} | parts ${job.partsReady ? "ready" : "not marked ready"}`));
-      lines.push("", plan.todos.length ? `FROM THE JOBS (${plan.todos.length})` : "FROM THE JOBS: nothing waiting.");
-      plan.todos.slice(0, 40).forEach((todo, index) => lines.push(`${index + 1}. ${todo.title}${todo.tool ? ` (${todo.tool})` : ""}`));
-      return { text: lines.join("\n"), structured: { date: plan.date, today: plan.today, time_zone: actor.timeZone, tasks, jobs, job_todos: plan.todos } };
+      if (needs.lines.length) lines.push("", ...needs.lines);
+      return { text: lines.join("\n"), structured: { date: plan.date, today: plan.today, time_zone: actor.timeZone, tasks, jobs, needs_your_action: needs.items } };
     }
     case "create_task": {
       const made = await createTask(db, actor, { ...createInput(args), idempotency_key: text(args.request_id) || undefined });
@@ -353,7 +364,12 @@ export async function runTaskTool(input: { database: FlexibleSupabaseClient; act
       const head = `Today is ${sayDate(today)} (${time_zone}). ${total} task${total === 1 ? "" : "s"} in "${view}"${filters.length ? ` filtered by ${filters.join(", ")}` : ""}.`;
       const body = tasks.length ? tasks.map((task) => `- ${describeTask(task)}`).join("\n") : "Nothing here.";
       const more = next_offset !== null ? `\nMore: call again with offset ${next_offset}.` : "";
-      return { text: `${head}\n${body}${more}`, structured: listed.value };
+      // Tasks people wrote are one half of what needs doing; the jobs' own
+      // "Needs your action" (the home screen's list) is the other. Both go
+      // back, so "no tasks" is never mistaken for "nothing to do".
+      const needs = String(view) !== "completed" && input.needsAction ? await input.needsAction() : null;
+      const also = needs && needs.items.length ? `\n\n${needs.lines.join("\n")}` : "";
+      return { text: `${head}\n${body}${more}${also}`, structured: { ...listed.value, ...(needs ? { needs_your_action: needs.items } : {}) } };
     }
     case "get_task": {
       const found = await getTask(db, actor, id);

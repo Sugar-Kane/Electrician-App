@@ -22,7 +22,8 @@ import {
 import { listAssignableMembers, listNotifications, listTasks, tasksFingerprint } from "@/lib/tasks-service";
 import { TaskNotifications } from "@/components/tasks/task-notifications";
 import { JobTodoList } from "@/components/tasks/job-todo-list";
-import { dayJob, jobTodos } from "@/lib/job-todos";
+import { dayJob, dayJobs } from "@/lib/job-todos";
+import { loadNeedsAction } from "@/lib/needs-action";
 
 export const dynamic = "force-dynamic";
 
@@ -82,8 +83,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     listAssignableMembers(session.db, session.actor),
     tasksFingerprint(session.db, session.actor),
     listNotifications(session.db, session.actor, { limit: 8 }),
-    // The jobs' own to-dos, on the Today view only.
-    view === "today" ? jobTodos(session.db, session.actor.organizationId, session.actor.timeZone) : Promise.resolve(null),
+    // The home screen's "Needs your action" and today's jobs, on the Today view.
+    view === "today"
+      ? Promise.all([
+          dayJobs(session.db, session.actor.organizationId, session.actor.timeZone),
+          loadNeedsAction(session.db, session.actor.organizationId, session.actor.timeZone),
+        ])
+      : Promise.resolve(null),
   ]);
 
   const base: Params = { view, f: filters, q: params.q, job: params.job, status, from: params.from, to: params.to };
@@ -98,9 +104,9 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         <TaskQuickAdd members={members} />
         {fromJobs ? (
           <JobTodoList
-            jobs={fromJobs.jobs.map((job) => dayJob(job, zone))}
-            todos={fromJobs.todos}
-            dateLabel={`Today's jobs · ${dueLabel(fromJobs.date, null, zone)}`}
+            jobs={fromJobs[0].jobs.map((job) => dayJob(job, zone))}
+            items={fromJobs[1].items}
+            dateLabel={`Today's jobs · ${dueLabel(fromJobs[0].date, null, zone)}`}
           />
         ) : null}
 

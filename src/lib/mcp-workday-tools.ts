@@ -8,7 +8,8 @@ import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import { invoiceIsLive, invoiceIsOpenDraft, nextBillingStep } from "@/lib/job-billing";
 import { advanceVisit, callOffJob, changeJob, loadChangeJob } from "@/lib/job-changes-server";
 import { workflowStateOf } from "@/lib/job-workflow";
-import { jobTodos } from "@/lib/job-todos";
+import { dayJobs } from "@/lib/job-todos";
+import { loadNeedsAction, describeNeedsAction } from "@/lib/needs-action";
 import {
   claimUnbilledLines,
   jobInvoices,
@@ -336,14 +337,15 @@ function dayBounds(date: string, timeZone: string): { start: string; end: string
 
 async function todayPlan(database: Database, organizationId: string, args: Record<string, unknown>): Promise<ToolResult> {
   const timeZone = await organizationTimeZone(asFlexibleClient(database), organizationId);
-  const plan = await jobTodos(asFlexibleClient(database), organizationId, timeZone, isPlainDate(text(args.date)) ? text(args.date) : undefined);
+  const [plan, needs] = await Promise.all([
+    dayJobs(asFlexibleClient(database), organizationId, timeZone, isPlainDate(text(args.date)) ? text(args.date) : undefined),
+    loadNeedsAction(asFlexibleClient(database), organizationId, timeZone),
+  ]);
 
   const out: string[] = [`${dayLabel(plan.date)}${plan.date === plan.today ? " (today)" : ""}`, ""];
   out.push(plan.jobs.length ? `JOBS (${plan.jobs.length})` : "JOBS: nothing scheduled.");
   for (const job of plan.jobs) out.push(describeJob(job, timeZone));
-
-  out.push("", plan.todos.length ? `TO DO (${plan.todos.length})` : "TO DO: nothing waiting.");
-  plan.todos.slice(0, 40).forEach((item, index) => out.push(`${index + 1}. ${item.title}${item.tool ? ` (${item.tool})` : ""}`));
+  out.push("", ...describeNeedsAction(needs));
   return { text: out.join("\n") };
 }
 

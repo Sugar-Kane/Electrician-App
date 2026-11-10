@@ -112,7 +112,7 @@ function rebaseDemoJobs(jobs: PilotJob[], timeZone: string): PilotJob[] {
 
 // deno-lint-ignore-file
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapJob(row: any, timeZone: string): PilotJob {
+export function mapJob(row: any, timeZone: string): PilotJob {
   const customer = row.customers ?? {};
   const property = row.properties ?? {};
   const technician = row.technicians ?? {};
@@ -180,7 +180,7 @@ function mapJob(row: any, timeZone: string): PilotJob {
   };
 }
 
-const JOB_SELECT = `
+export const JOB_SELECT = `
   id, job_number, status, category, customer_description, ai_summary,
   scheduled_start, scheduled_end,
   customers ( first_name, last_name, company_name, phone, email, preferred_language ),
@@ -227,6 +227,23 @@ export const getJobs = cache(async function getJobs(): Promise<{
  * uses to call older copies superseded. Change orders are left out: they are
  * changes to work already agreed, not the approval itself.
  */
+/** Contract rows (newest first) as each job's agreement state. Shared with the server-side Needs your action. */
+export function agreementStatesFrom(rows: Record<string, unknown>[]): Record<string, AgreementState> {
+  const states: Record<string, AgreementState> = {};
+  for (const row of rows) {
+    if (row.kind === "change_order") continue;
+    const job = (Array.isArray(row.jobs) ? row.jobs[0] : row.jobs) as { job_number?: unknown } | null;
+    const number = job?.job_number === undefined || job?.job_number === null ? "" : String(job.job_number);
+    if (!number || states[number]) continue;
+    states[number] = {
+      signed: row.status === "signed" || Boolean(row.signed_at),
+      sent: row.status === "sent" || Boolean(row.signature_sent_at),
+      totalCents: typeof row.total_cents === "number" ? row.total_cents : null,
+    };
+  }
+  return states;
+}
+
 export const getAgreementStates = cache(async function getAgreementStates(): Promise<
   Record<string, AgreementState>
 > {
@@ -241,19 +258,7 @@ export const getAgreementStates = cache(async function getAgreementStates(): Pro
     .order("created_at", { ascending: false });
   if (error) return {};
 
-  const states: Record<string, AgreementState> = {};
-  for (const row of (data ?? []) as Record<string, unknown>[]) {
-    if (row.kind === "change_order") continue;
-    const job = (Array.isArray(row.jobs) ? row.jobs[0] : row.jobs) as { job_number?: unknown } | null;
-    const number = job?.job_number === undefined || job?.job_number === null ? "" : String(job.job_number);
-    if (!number || states[number]) continue;
-    states[number] = {
-      signed: row.status === "signed" || Boolean(row.signed_at),
-      sent: row.status === "sent" || Boolean(row.signature_sent_at),
-      totalCents: typeof row.total_cents === "number" ? row.total_cents : null,
-    };
-  }
-  return states;
+  return agreementStatesFrom((data ?? []) as Record<string, unknown>[]);
 });
 
 export async function getJob(id: string): Promise<{ job: PilotJob | null; source: Source }> {
@@ -347,7 +352,7 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
 }
 
 /** How far back finished work is checked for a missing invoice. */
-const UNBILLED_WINDOW_DAYS = 30;
+export const UNBILLED_WINDOW_DAYS = 30;
 
 /**
  * Finished work from the last month with nothing billed for it: the cents of
@@ -358,21 +363,8 @@ const UNBILLED_WINDOW_DAYS = 30;
  * reminder nobody could ever clear. A voided invoice bills nothing, so a job
  * whose only invoice was voided counts as unbilled.
  */
-export async function getUnbilledWork(): Promise<Record<string, number>> {
-  const context = await resolveContext();
-  if (!context) return {};
-
-  const since = new Date(Date.now() - UNBILLED_WINDOW_DAYS * 86_400_000).toISOString();
-  const { data, error } = await context.database
-    .from("jobs")
-    .select("job_number, invoices ( id, status ), job_line_items ( kind, quantity, unit_price_cents, invoice_id )")
-    .eq("organization_id", context.organizationId)
-    .eq("status", "completed")
-    .is("archived_at", null)
-    .gte("scheduled_start", since);
-
-  if (error || !data) return {};
-
+/** Completed-job rows (with invoices and lines) as cents of unbilled work by job number. Shared with the server-side Needs your action. */
+export function unbilledFrom(data: unknown[]): Record<string, number> {
   const unbilled: Record<string, number> = {};
   for (const raw of data) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -406,6 +398,24 @@ export async function getUnbilledWork(): Promise<Record<string, number>> {
   }
 
   return unbilled;
+}
+
+export async function getUnbilledWork(): Promise<Record<string, number>> {
+  const context = await resolveContext();
+  if (!context) return {};
+
+  const since = new Date(Date.now() - UNBILLED_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data, error } = await context.database
+    .from("jobs")
+    .select("job_number, invoices ( id, status ), job_line_items ( kind, quantity, unit_price_cents, invoice_id )")
+    .eq("organization_id", context.organizationId)
+    .eq("status", "completed")
+    .is("archived_at", null)
+    .gte("scheduled_start", since);
+
+  if (error || !data) return {};
+
+  return unbilledFrom(data as unknown[]);
 }
 
 /** What the jobs list needs to show each job's unfinished steps. */
