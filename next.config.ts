@@ -79,6 +79,13 @@ const nextConfig: NextConfig = {
             key: "X-Frame-Options",
             value: isPreviewDeployment ? "SAMEORIGIN" : "DENY",
           },
+          // Invoice, contract, booking and MCP links carry their secret in the
+          // path. Other sites a page links to get the origin only, never it.
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          // HTTPS only from here on. Not includeSubDomains: tenants' own
+          // domains are theirs to configure.
+          { key: "Strict-Transport-Security", value: "max-age=63072000" },
         ],
       },
     ];

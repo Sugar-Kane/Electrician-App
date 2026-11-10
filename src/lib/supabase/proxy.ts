@@ -66,7 +66,8 @@ export async function updateSession(request: NextRequest) {
   if (!data?.claims && fetchingPage && request.nextUrl.pathname === "/") {
     const front = request.nextUrl.clone();
     front.pathname = "/welcome";
-    const rewrite = NextResponse.rewrite(front);
+    // The request's headers go with it: they carry the page's script nonce.
+    const rewrite = NextResponse.rewrite(front, { request });
     response.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie));
     return rewrite;
   }

@@ -19,6 +19,7 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { logMcpCall } from "@/lib/mcp-log";
 import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
+import { connectionHolderAllowed } from "@/lib/mcp-session-token";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SERVER_VERSION = "1.14.0";
@@ -102,6 +103,20 @@ export async function POST(request: Request, context: { params: Promise<{ token:
       .maybeSingle();
     if (!credential) return rpcError(401, -32001, "This ChatGPT connection has been revoked or expired");
     connectedBy = typeof credential.created_by === "string" ? credential.created_by : "";
+    // The connection acts for the whole business, so it lasts only while the
+    // person who made it is still an owner there. Removed or demoted, their
+    // link stops working at once rather than at its expiry.
+    const { data: holder } = connectedBy
+      ? await database
+          .from("organization_members")
+          .select("role")
+          .eq("organization_id", session.organizationId)
+          .eq("user_id", connectedBy)
+          .maybeSingle()
+      : { data: null };
+    if (!connectionHolderAllowed(holder?.role)) {
+      return rpcError(401, -32001, "The owner who connected ChatGPT is no longer an owner here. Reconnect from Volteira: Settings → Use in ChatGPT or Claude");
+    }
     // A query only runs once awaited, and `after` keeps it off the reply's path.
     const credentialId = session.credentialId;
     after(async () => {

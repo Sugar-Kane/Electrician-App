@@ -102,3 +102,20 @@ export function readMcpSessionToken(input: {
     expiresAt,
   };
 }
+
+/**
+ * Whether a business connection may still be used: only while the person who
+ * made it is an owner of that business (making one is owner-only). A member
+ * who was removed, or is no longer an owner, has no business link left.
+ */
+export function connectionHolderAllowed(role: unknown): boolean {
+  return role === "owner";
+}
+
+/** A shared secret compared in constant time; an unset expected value accepts nothing. */
+export function secretMatches(presented: string, expected: string): boolean {
+  if (!expected) return false;
+  const a = Buffer.from(presented);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}

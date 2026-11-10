@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   readMcpSessionToken,
+  secretMatches,
   signMcpSessionToken,
   type McpScope,
   type McpSession,
@@ -48,5 +49,5 @@ export function bearerAccepted(header: string | null): boolean {
   const expected = process.env.MCP_BEARER_TOKEN ?? "";
   if (!expected) return true;
   const presented = (header ?? "").replace(/^Bearer\s+/i, "").trim();
-  return presented.length === expected.length && presented === expected;
+  return secretMatches(presented, expected);
 }

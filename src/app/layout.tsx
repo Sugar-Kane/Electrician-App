@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import "./globals.css";
 
 import { ImpersonationBanner } from "@/components/impersonation-banner";
@@ -32,11 +33,14 @@ export const viewport: Viewport = {
   themeColor: "#06131d",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Every page is drawn per request: its scripts carry that request's CSP
+  // nonce (src/proxy.ts), which a page built ahead of time could not.
+  await connection();
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       {/*

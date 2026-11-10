@@ -16,6 +16,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { currentContext } from "@/lib/request-context";
+import { billingRefusal } from "@/lib/billing-permission-server";
 
 /**
  * Sending an invoice to the customer.
@@ -120,6 +121,8 @@ export async function sendInvoice(
 ): Promise<InvoiceActionState> {
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
   if (!invoiceId) return { error: "That invoice could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
 
   const channels = chosenChannels(formData);
   if (channels.length === 0) {
@@ -248,6 +251,8 @@ export async function recordInvoicePayment(
 ): Promise<InvoiceActionState> {
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
   if (!invoiceId) return { error: "That invoice could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
 
   const supabase = asFlexibleClient(await createClient());
   const { data } = await supabase
@@ -352,6 +357,8 @@ export async function deleteInvoice(
 ): Promise<InvoiceActionState> {
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
   if (!invoiceId) return { error: "That invoice could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
 
   const context = await callerContext();
   if (!context) return { error: "You are not a member of a business." };
@@ -480,6 +487,8 @@ function refreshInvoice(invoiceId: string, jobNumber: string) {
 export async function recordPaidInHand(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
   if (!invoiceId) return { error: "That invoice could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
   const context = await currentContext();
   if (!context) return { error: "Sign in first." };
   const supabase = asFlexibleClient(await createClient());
@@ -516,6 +525,8 @@ export async function recordPaidInHand(_previous: InvoiceActionState, formData: 
 export async function sendPaidInvoiceAction(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
   if (!invoiceId) return { error: "That invoice could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
   const context = await currentContext();
   if (!context) return { error: "Sign in first." };
   // Read through the person's own session first, so only an invoice they may see is sent.
