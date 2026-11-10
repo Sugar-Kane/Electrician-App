@@ -40,8 +40,10 @@
 | V-06 | `MCP_BEARER_TOKEN` compared with `===` | Low | Confirmed | `src/lib/mcp-session.ts` | Fixed |
 | V-07 | Missing `Referrer-Policy`, `X-Content-Type-Options`, HSTS headers | Low | Confirmed | `next.config.ts` | Fixed |
 | V-08 | PostgREST `or()` filter built from search text without removing `( ) " \` | Low (confined to own business by RLS and an org filter) | Confirmed | `src/app/search/actions.ts:71` | Fixed |
-| V-09 | No script-src Content Security Policy (only `frame-ancestors`) | Low / hardening | Confirmed | `next.config.ts` | Open: needs a per-origin policy for Maps, Stripe, Supabase |
-| V-10 | Every member role (including technician) can edit and delete invoices, estimates, line items and payments through the API | Medium (insider) | Confirmed; matches the app, which offers these to every member | RLS on `invoices`, `estimates`, `job_line_items`, `payments` | Open: product decision on role limits |
+| V-09 | No script-src Content Security Policy (only `frame-ancestors`) | Low / hardening | Confirmed | `next.config.ts` | Fixed: nonce + `'strict-dynamic'` policy from `src/proxy.ts` |
+| V-10 | Every member role (including technician) can edit and delete invoices and payments through the API | Medium (insider) | Confirmed; matches the app, which offers these to every member | RLS on `invoices`, `payments` | Fixed: owner toggle, on by default (migration `20261111020000`) |
+| V-14 | An org admin could set `organizations.created_by` to themselves, and the owner guards trust the creator | High | Confirmed (admins may update `organizations`; no column guard) | `organizations` UPDATE policy | Fixed in migration `20261111020000` |
+| V-15 | The "Owners can delete organizations" policy compares `membership.organization_id = membership.id`, so it never matches | Informational (fails closed) | Confirmed | `organizations` DELETE policy | Open: owners cannot delete their business through the API; platform deletion still works |
 | V-11 | Supabase Auth leaked-password protection is off | Low | Advisor | Supabase dashboard | Open: dashboard toggle |
 | V-12 | `/settings/payments/start` acts on GET (cross-site link could start Stripe onboarding for a signed-in owner) | Informational | Confirmed; Stripe's `refresh_url` requires GET; outcome is a redirect to Stripe's own page | `src/app/settings/payments/start/route.ts` | Accepted |
 | V-13 | 8 moderate advisories in dev-only lint tooling (`typescript-eslint` → `minimatch`) | Low | `npm audit` | devDependencies | Open: waits on upstream |
@@ -96,10 +98,18 @@ No changes were reverted.
 - **Team management:** owner flows unchanged; admins can still invite and manage non-owner roles (tested).
 - **Customer creation from the job form and phone intake:** the `authenticated` and `service_role` grants are kept. Only `anon` was removed.
 
+## Follow-up batch (same day)
+
+| Change | Files | Detail | Tests |
+|---|---|---|---|
+| Owner toggle: technicians and billing (V-10) | `supabase/migrations/20261111020000_technician_billing_toggle.sql`, `src/lib/billing-permission*.ts`, `src/app/invoices/actions.ts`, `src/app/jobs/[jobId]/invoice-actions.ts`, `src/app/settings/team/*` | `organizations.technicians_can_edit_billing` (default on). When off, technicians can see invoices but can't raise, edit, send or delete one, or record or edit a payment. That rule is applied in RLS, in `record_invoice_payment`/`record_invoice_paid_in_hand`, and in the app actions; the app check is the only guard on sending. Only an owner can flip it, on Settings → Team. | 11 disposable-DB checks, 3 unit tests |
+| `created_by` cannot be rewritten (V-14) | same migration | Trigger `guard_organization_settings` | covered above |
+| Script-blocking CSP (V-09) | `src/lib/csp.ts`, `src/proxy.ts`, `src/lib/supabase/proxy.ts`, `src/app/layout.tsx`, `src/app/welcome/page.tsx`, `src/app/demo/page.tsx` | Per-request nonce plus `'strict-dynamic'`; `object-src 'none'`, `base-uri 'self'`, `worker-src 'self' blob:`. `'unsafe-eval'` and `blob:` are kept for the Google Maps JavaScript API. Previews send it report-only, so Vercel's toolbar loads. Every page is now rendered per request; `/welcome` and `/demo` were static and could not carry a nonce, and they still arrive complete. | 3 unit tests. Headless Chromium against `next start`: 6 public pages hydrate with no violations, and injected inline scripts, external scripts and inline handlers are all blocked. |
+
 ## Remaining risks
 1. **The migration is not applied yet.** Until it runs in Supabase, V-01, V-02 and V-03 remain exploitable in production.
-2. **V-10:** all roles can change financial records. Decide whether technicians and dispatchers should be read-only on invoices and payments; enforcing that needs both RLS and app changes.
-3. **V-09:** no script CSP.
+2. **Not checked in a browser:** the CSP on map pages (`/schedule`, `/route`, a job page) after deploy. Previews report rather than block, so check the console there first.
+3. **Still in the policy:** `'unsafe-eval'` is allowed for Maps. Remove it if Maps works without it.
 4. **V-11:** leaked-password protection is off.
 5. **Not reviewed:** the Supabase Edge Functions that live outside this repository.
 

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { contentSecurityPolicy, newNonce } from "@/lib/csp";
 import { updateSession } from "@/lib/supabase/proxy";
 import { bookingHostFor } from "@/lib/tenant-domain";
 
@@ -34,6 +35,19 @@ import { bookingHostFor } from "@/lib/tenant-domain";
  * keeps the SMS consent checkbox honest.
  */
 export async function proxy(request: NextRequest) {
+  // A fresh nonce per response, on the request so Next.js puts it on every
+  // script it renders, and on the response so the browser enforces it.
+  // Previews report rather than block, so Vercel's own toolbar still loads.
+  const csp = contentSecurityPolicy({ nonce: newNonce(), preview: process.env.VERCEL_ENV === "preview" });
+  request.headers.set("content-security-policy", csp);
+  const withPolicy = (response: NextResponse) => {
+    response.headers.set(
+      process.env.VERCEL_ENV === "preview" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy",
+      csp,
+    );
+    return response;
+  };
+
   const bookingHost = bookingHostFor({
     host: request.headers.get("host"),
     forwardedHost: request.headers.get("x-forwarded-host"),
@@ -57,10 +71,10 @@ export async function proxy(request: NextRequest) {
     const headers = new Headers(request.headers);
     headers.set("x-booking-host", bookingHost);
 
-    return NextResponse.rewrite(url, { request: { headers } });
+    return withPolicy(NextResponse.rewrite(url, { request: { headers } }));
   }
 
-  return updateSession(request);
+  return withPolicy(await updateSession(request));
 }
 
 export const config = {
