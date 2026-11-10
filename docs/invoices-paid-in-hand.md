@@ -23,6 +23,15 @@ Refused:
 - one with nothing owed;
 - an unknown method (cash, check, card or other only).
 
+## Closing out the job
+
+Work that is done and paid on the spot never went through scheduling or Start trip, Arrived and Finish, so it can be closed in one step:
+
+- **Customer already paid?** has "The work is done: close out the job too" ticked by default.
+- **On a paid invoice** whose job isn't completed, **Close out job** marks it completed.
+
+A job closes out only when every invoice on it (void ones aside) is paid and nothing on it is left unbilled (`checkCloseOut`). Reserved parts come off the stock count, as when finishing a visit, and nothing is sent to the customer.
+
 ## From ChatGPT or Claude
 
 - `mark_invoice_paid`:
@@ -30,6 +39,8 @@ Refused:
   - Needs `method`, plus an optional `note`.
   - `send`: `none` (the default), `sms`, `email` or `both`.
 - `send_paid_invoice`: send an already-paid invoice by `sms`, `email` or `both`.
+- `mark_invoice_paid` also takes `close_out_job: true` to close the job at the same time.
+- `close_out_job`: close out a paid job by its number.
 
 Both answer first with the exact proposal (invoice, customer, amount, method, how it will be sent) and do nothing until called again with `confirmed: true`, after the user says yes. ChatGPT is told to ask how the customer paid, never to assume it.
 

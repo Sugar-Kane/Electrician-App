@@ -111,3 +111,28 @@ export function checkPaidInHand(input: { invoice: PayableInvoice; method: string
 export function paymentMethodLabel(method: string): string {
   return PAYMENT_METHODS.find((item) => item.value === method)?.label.toLowerCase() ?? "";
 }
+
+export type CloseOutCheck = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Whether a job can be closed out straight away because it is paid: work
+ * done and paid for (cash on the spot, say) without ever being scheduled or
+ * walked through Start trip, Arrived and Finish.
+ *
+ * Only when every invoice still standing on the job is paid, there is at least
+ * one, and nothing on the job is left unbilled. A job that is already
+ * completed or canceled has nothing to close.
+ */
+export function checkCloseOut(input: {
+  jobStatus: string;
+  invoices: { status: string }[];
+  unbilledCents: number;
+}): CloseOutCheck {
+  if (input.jobStatus === "completed") return { ok: false, reason: "This job is already completed." };
+  if (input.jobStatus === "canceled" || input.jobStatus === "no_show") return { ok: false, reason: "This job was called off, so there is nothing to close out." };
+  const live = input.invoices.filter((invoice) => invoice.status !== "void");
+  if (live.length === 0) return { ok: false, reason: "This job has no invoice. Make one and mark it paid first." };
+  if (live.some((invoice) => invoice.status !== "paid")) return { ok: false, reason: "Not every invoice on this job is paid yet." };
+  if (input.unbilledCents > 0) return { ok: false, reason: "Some work on this job isn't on any invoice yet. Bill it first." };
+  return { ok: true };
+}

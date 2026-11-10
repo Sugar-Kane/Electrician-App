@@ -21,7 +21,7 @@ import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.13.0";
+const SERVER_VERSION = "1.14.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
