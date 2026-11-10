@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { readMcpSessionToken, signMcpSessionToken } from "./mcp-session-token.ts";
+import { connectionHolderAllowed, readMcpSessionToken, secretMatches, signMcpSessionToken } from "./mcp-session-token.ts";
 
 const SECRET = "a-secret-that-is-not-the-service-role-key";
 const SESSION = {
@@ -114,4 +114,18 @@ test("a call back's request is pinned in the token, and pointing it at another r
     "utf-8",
   ).toString("base64url");
   assert.equal(readMcpSessionToken({ token: `${forged}.${signature}`, secret: SECRET }), null);
+});
+
+test("a business connection works only while its maker is still an owner", () => {
+  assert.equal(connectionHolderAllowed("owner"), true);
+  for (const role of ["admin", "dispatcher", "technician", "accountant", "", null, undefined, "Owner"]) {
+    assert.equal(connectionHolderAllowed(role), false, String(role));
+  }
+});
+
+test("a shared secret must match exactly, and an unset one matches nothing", () => {
+  assert.equal(secretMatches("abc123", "abc123"), true);
+  assert.equal(secretMatches("abc124", "abc123"), false);
+  assert.equal(secretMatches("abc12", "abc123"), false);
+  assert.equal(secretMatches("", ""), false);
 });
