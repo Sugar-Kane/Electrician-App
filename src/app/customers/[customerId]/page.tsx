@@ -12,12 +12,18 @@ import {
 } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { CustomerDetailsForm } from "@/components/customer-details-form";
 import { CustomerLanguageControl } from "@/components/customer-language-control";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { SpanishBadge } from "@/components/language-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { todayInZone } from "@/lib/calendar";
+import { billingParty } from "@/lib/customer-details";
+import { CUSTOMER_DETAIL_COLUMNS, loadCustomerDetails } from "@/lib/customer-details-save";
 import { getCustomerProfile } from "@/lib/customer-profile";
+import { currentContext } from "@/lib/request-context";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/job-lines";
 
 function recordingLabel(startedAt: string, timeZone: string): string {
@@ -66,6 +72,23 @@ export default async function CustomerPage({
   const { customerId } = await params;
   const profile = await getCustomerProfile(customerId);
   if (!profile) notFound();
+  const context = await currentContext();
+  const db = asFlexibleClient(await createClient());
+  const [details, { data: customerRow }, { data: firstProperty }] = await Promise.all([
+    context ? loadCustomerDetails(db, context.organizationId, profile.id) : Promise.resolve(null),
+    db.from("customers").select(CUSTOMER_DETAIL_COLUMNS).eq("id", profile.id).maybeSingle(),
+    db
+      .from("properties")
+      .select("address_line_1, address_line_2, city, state, postal_code")
+      .eq("customer_id", profile.id)
+      .is("archived_at", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const service = (firstProperty ?? null) as Record<string, unknown> | null;
+  const party = billingParty((customerRow ?? null) as Record<string, unknown> | null, service);
+  const asText = (value: unknown) => (typeof value === "string" ? value : "");
 
   return (
     <FieldPageShell
@@ -128,6 +151,39 @@ export default async function CustomerPage({
             </div>
           ) : null}
         </dl>
+
+        <div className="mt-4 rounded-control border border-line bg-raised p-3 text-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Invoices and contracts go to</p>
+          <p className="mt-1 font-semibold">{party.name}</p>
+          {party.attention ? <p className="text-ink-muted">Attn: {party.attention}</p> : null}
+          {party.addressLines.length ? (
+            party.addressLines.map((line) => (
+              <p key={line} className="text-ink-muted">
+                {line}
+              </p>
+            ))
+          ) : (
+            <p className="text-caution">No address yet. Add one below.</p>
+          )}
+        </div>
+
+        {details ? (
+          <CustomerDetailsForm
+            customerId={profile.id}
+            details={details}
+            personalDefault={
+              service
+                ? {
+                    line1: asText(service.address_line_1),
+                    line2: asText(service.address_line_2),
+                    city: asText(service.city),
+                    state: asText(service.state),
+                    postalCode: asText(service.postal_code),
+                  }
+                : null
+            }
+          />
+        ) : null}
 
         <CustomerLanguageControl customerId={profile.id} language={profile.language} />
       </section>

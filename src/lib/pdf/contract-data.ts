@@ -1,5 +1,7 @@
 import "server-only";
 
+import { billingParty } from "@/lib/customer-details";
+
 import {
   ContractDocument,
   contractFileName,
@@ -76,7 +78,7 @@ export async function loadContractDocument(input: {
        contractor_signature_title, contractor_signature_image,
        jobs (
          id, job_number, scheduled_start,
-         customers ( first_name, last_name, company_name, phone, email ),
+         customers ( first_name, last_name, company_name, phone, email, address_line_1, address_line_2, city, state, postal_code, business_address_line_1, business_address_line_2, business_city, business_state, business_postal_code, bill_to ),
          properties ( address_line_1, address_line_2, city, state, postal_code )
        )`,
     )
@@ -107,10 +109,9 @@ export async function loadContractDocument(input: {
       .join(" "),
   ].filter((line) => line.trim() !== "");
 
-  const customerName =
-    str(customer?.company_name) ||
-    [str(customer?.first_name), str(customer?.last_name)].filter(Boolean).join(" ") ||
-    "Customer";
+  // Made out to the person or the business, as the customer is set.
+  const party = billingParty(customer, property);
+  const customerName = party.name;
 
   const scheduled = dateLabel(job?.scheduled_start, input.timeZone);
   const unfilled = Array.isArray(contract.unfilled)
@@ -131,7 +132,7 @@ export async function loadContractDocument(input: {
       createdLabel: dateLabel(contract.created_at, input.timeZone),
       customer: {
         name: customerName,
-        addressLines,
+        addressLines: party.attention ? [`Attn: ${party.attention}`, ...party.addressLines] : party.addressLines,
         phone: str(customer?.phone),
         email: str(customer?.email),
       },

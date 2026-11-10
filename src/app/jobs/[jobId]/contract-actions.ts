@@ -1,5 +1,6 @@
 "use server";
 
+import { billingParty } from "@/lib/customer-details";
 import { revalidatePath } from "next/cache";
 
 import { recordActivity } from "@/lib/activity";
@@ -207,7 +208,7 @@ export async function generateContract(
     .select(
       `id, job_number, category, customer_description, scheduled_start, diagnostic_fee_cents,
        diagnostic_paid, follow_up_of,
-       customers ( first_name, last_name, company_name ),
+       customers ( first_name, last_name, company_name, bill_to ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
        invoices ( id, status, total_cents, diagnostic_credit_cents ),
@@ -251,9 +252,8 @@ export async function generateContract(
         }).format(new Date(iso))
       : "";
 
-  const customerName =
-    text(customer?.company_name) ||
-    [text(customer?.first_name), text(customer?.last_name)].filter(Boolean).join(" ");
+  // The party the contract is made with: the business or the person, as the customer is set.
+  const customerName = billingParty(customer, null).name;
 
   const address = [
     text(property?.address_line_1),
@@ -468,7 +468,7 @@ export async function generateChangeOrder(
     .from("jobs")
     .select(
       `id, job_number,
-       customers ( first_name, last_name, company_name ),
+       customers ( first_name, last_name, company_name, bill_to ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
        contracts ( id, kind, status, created_at, signed_at ),
@@ -531,9 +531,7 @@ export async function generateChangeOrder(
     facts: {
       business_name: text(organization?.name),
       business_phone: text(organization?.phone),
-      customer_name:
-        text(customer?.company_name) ||
-        [text(customer?.first_name), text(customer?.last_name)].filter(Boolean).join(" "),
+      customer_name: billingParty(customer, null).name,
       service_address: [
         text(property?.address_line_1),
         text(property?.city),
