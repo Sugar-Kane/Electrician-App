@@ -69,7 +69,9 @@ export async function searchCustomers(query: string): Promise<CustomerMatch[]> {
    * `or`, so all three are escaped — a customer called "50%" is not a reason to
    * return the whole book.
    */
-  const safe = needle.replace(/[%_,]/g, (match) => `\\${match}`);
+  // Parentheses, quotes and backslashes group or end terms in a PostgREST
+  // filter string; they carry nothing a search needs, so they are dropped.
+  const safe = needle.replace(/[()"\\]/g, " ").replace(/[%_,]/g, (match) => `\\${match}`);
   const digits = digitsOf(needle);
 
   const terms = [
