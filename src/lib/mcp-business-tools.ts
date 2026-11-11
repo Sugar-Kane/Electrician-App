@@ -1,7 +1,7 @@
 import "server-only";
 
 import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
-import { completeDraftFields, fillTemplate, placeholdersUsed, scopePrompt, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
+import { completeDraftFields, fillTemplate, placeholdersUsed, scopePrompt, serviceAddress, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
@@ -709,7 +709,7 @@ export async function runBusinessMcpTool(input: {
       const { data: job } = await database
         .from("jobs")
         .select(
-          "id,job_number,category,customer_description,scheduled_start,diagnostic_fee_cents,customers(first_name,last_name,company_name,bill_to),properties(address_line_1,city,state,postal_code),organizations(name,phone,timezone,created_by),invoices(total_cents)",
+          "id,job_number,category,customer_description,scheduled_start,diagnostic_fee_cents,customers(first_name,last_name,company_name,bill_to,address_line_1,city,state,postal_code),properties(address_line_1,city,state,postal_code),organizations(name,phone,timezone,created_by),invoices(total_cents)",
         )
         .eq("organization_id", organizationId)
         .eq("job_number", jobNumber)
@@ -736,7 +736,7 @@ export async function runBusinessMcpTool(input: {
         business_name: text(organization.name),
         business_phone: text(organization.phone),
         customer_name: billingParty(customer, null).name,
-        service_address: [text(property.address_line_1), text(property.city), text(property.state), text(property.postal_code)].filter(Boolean).join(", "),
+        service_address: serviceAddress(property, customer),
         job_number: String(row.job_number ?? jobNumber),
         job_date: formatDate(text(row.scheduled_start)),
         work_type: text(row.category).replace(/_/g, " "),

@@ -251,3 +251,53 @@ export function completeDraftFields(body: string, values: Record<string, string>
   });
   return { body: completed, unfilled: placeholdersUsed(completed) };
 }
+
+/**
+ * Where the work happens, as the contract prints it: the job's address, or,
+ * when the job was saved without one, the customer's own address. A contract
+ * should not stop at "Service Address" for a customer whose address is on file.
+ */
+export function serviceAddress(
+  property: Record<string, unknown> | null | undefined,
+  customer: Record<string, unknown> | null | undefined,
+): string {
+  const line = (row: Record<string, unknown> | null | undefined) =>
+    [row?.address_line_1, row?.city, row?.state, row?.postal_code]
+      .map((part) => (typeof part === "string" ? part.trim() : ""))
+      .filter(Boolean)
+      .join(", ");
+  const fromJob = line(property);
+  if (typeof property?.address_line_1 === "string" && property.address_line_1.trim()) return fromJob;
+  return typeof customer?.address_line_1 === "string" && customer.address_line_1.trim() ? line(customer) : fromJob;
+}
+
+/**
+ * A scope paragraph built only from what the job says, for when the AI that
+ * usually writes it is not available (an outage, or the month's allowance
+ * used). Plain facts, nothing promised that the job does not state: what the
+ * customer asked for and the work items written on the job. Empty when the
+ * job says nothing about the work, which leaves {{scope}} to be filled.
+ */
+export function plainScope(input: {
+  workType: string;
+  description: string;
+  workItems: string[];
+  visitOnly?: boolean;
+}): string {
+  const clean = (value: string) => value.replace(/\s+/g, " ").trim();
+  const description = clean(input.description).replace(/[.\s]+$/, "");
+  const items = [...new Set(input.workItems.map(clean).filter(Boolean))].slice(0, 12);
+  if (!description && items.length === 0) return "";
+  const kind = clean(input.workType) || "electrical work";
+  if (input.visitOnly) {
+    return clean(
+      `This agreement covers a diagnostic visit to inspect and identify the cause of the problem${description ? `: ${description}` : ""}. Any repair or installation found to be needed will be quoted and agreed separately before it is done.`,
+    ).slice(0, 1200);
+  }
+  const parts = [
+    description ? `The contractor will perform ${kind} as requested: ${description}.` : `The contractor will perform ${kind}.`,
+    items.length ? `The work includes: ${items.join("; ")}.` : "",
+    "Any work beyond this scope will be agreed in writing before it is done.",
+  ];
+  return clean(parts.filter(Boolean).join(" ")).slice(0, 1200);
+}
