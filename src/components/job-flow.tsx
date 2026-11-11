@@ -9,8 +9,8 @@ import type { FlowStage } from "@/lib/job-flow";
 /**
  * Where the job is in its own flow, and the one thing to do next.
  *
- * Four steps, named for the kind of job (a diagnostic's Visit, a work order's
- * Estimate), the status in words, and a single primary action. When the visit
+ * A segment for every stage of the kind of job (seven for a diagnostic, nine
+ * for a work order), the status in words, and a single primary action. When the visit
  * card's own button is the action (Start trip, Begin work), this card says so
  * and draws no second button: one primary per screen.
  *
@@ -40,7 +40,12 @@ export function JobStageCard({
         </p>
       </div>
 
-      <ol className="mt-3 grid grid-cols-4 gap-1.5" aria-label={`Step ${current ? stage.steps.indexOf(current) + 1 : stage.steps.length} of ${stage.steps.length}`}>
+      {/* One segment per stage. Two rows on a phone so every name stays
+          readable, one line from tablet width up. */}
+      <ol
+        className={`mt-3 grid gap-x-1.5 gap-y-3 ${
+          stage.steps.length > 7 ? "grid-cols-5 sm:grid-cols-9" : "grid-cols-4 sm:grid-cols-7"
+        }`} aria-label={`Step ${current ? stage.steps.indexOf(current) + 1 : stage.steps.length} of ${stage.steps.length}`}>
         {stage.steps.map((step) => (
           <li key={step.key} aria-current={step.state === "current" ? "step" : undefined}>
             <span
@@ -49,8 +54,12 @@ export function JobStageCard({
               }`}
               aria-hidden
             />
-            <span className="mt-1.5 flex items-center gap-1 text-xs font-semibold">
-              {step.state === "done" ? <Check className="h-3 w-3 shrink-0 text-positive" aria-hidden /> : null}
+            <span
+              className={`mt-1.5 flex items-center gap-0.5 text-[11px] font-semibold sm:text-xs ${
+                step.state === "todo" ? "text-ink-muted" : ""
+              }`}
+            >
+              {step.state === "done" ? <Check className="hidden h-3 w-3 shrink-0 text-positive sm:inline" aria-hidden /> : null}
               <span className="truncate">{step.label}</span>
             </span>
             <span className="sr-only">, {STATE_WORDS[step.state]}</span>

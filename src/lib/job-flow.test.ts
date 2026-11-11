@@ -48,7 +48,7 @@ test("A: a scheduled diagnostic starts the trip", () => {
   const stage = jobFlow(input({ kindOfWork: "Diagnostic" }));
   assert.equal(stage.flow, "diagnostic");
   assert.deepEqual(stage.primary, { kind: "visit", label: "Start trip" });
-  assert.deepEqual(stage.steps.map((step) => step.label), ["Intake", "Visit", "Work", "Complete"]);
+  assert.deepEqual(stage.steps.map((step) => step.label), ["Intake", "Schedule", "Travel", "Diagnose", "Next step", "Invoice", "Paid"]);
 });
 
 test("B: a finished diagnostic asks what happens next before it is billed", () => {
@@ -75,7 +75,7 @@ test("C: once a repair is booked, the diagnostic goes to billing", () => {
 test("D: a work order with no scope builds the material list first", () => {
   const stage = jobFlow(input());
   assert.equal(stage.primary.kind === "go" && stage.primary.label, "Build material list");
-  assert.deepEqual(stage.steps.map((step) => step.label), ["Intake", "Estimate", "Work", "Complete"]);
+  assert.deepEqual(stage.steps.map((step) => step.label), ["Scope", "Quotes", "Estimate", "Approval", "Materials", "Schedule", "Work", "Invoice", "Paid"]);
 });
 
 test("E: unpriced list items need supplier quotes, never a made-up price", () => {

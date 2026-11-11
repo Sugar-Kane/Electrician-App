@@ -2,9 +2,10 @@
  * Where a job stands in its own flow, and the one thing to do next.
  *
  * A diagnostic and a work order are different jobs. A diagnostic is a visit to
- * find the fault: Intake · Visit · Work · Complete, and the question at the end
- * of it is what to do about what was found. A work order is agreed work:
- * Intake · Estimate · Work · Complete, and nobody drives out until the scope is
+ * find the fault: Intake · Schedule · Travel · Diagnose · Next step · Invoice ·
+ * Paid, and the question at the end of it is what to do about what was found.
+ * A work order is agreed work: Scope · Quotes · Estimate · Approval ·
+ * Materials · Schedule · Work · Invoice · Paid, and nobody drives out until the scope is
  * priced, approved and the materials are in hand (or somebody says otherwise).
  *
  * Everything is read off what the job page already loads: the visit's state,
@@ -18,7 +19,20 @@ import type { ProgressStep, StepAction } from "./job-progress.ts";
 
 export type JobFlow = "diagnostic" | "work_order";
 
-export type StageKey = "intake" | "visit" | "estimate" | "work" | "complete";
+export type StageKey =
+  | "intake"
+  | "schedule"
+  | "travel"
+  | "diagnose"
+  | "decide"
+  | "scope"
+  | "quotes"
+  | "estimate"
+  | "approval"
+  | "materials"
+  | "work"
+  | "invoice"
+  | "paid";
 
 export type StageStep = {
   key: StageKey;
@@ -117,7 +131,7 @@ function fromStepAction(action: StepAction | null, fallback: string): PrimaryAct
  * Read from the invoice and paid steps so the wording and the rules stay the
  * ones the billing section already follows.
  */
-function billing(progress: ProgressStep[]): { primary: PrimaryAction; status: string; hint: string; paid: boolean } {
+function billing(progress: ProgressStep[]): { primary: PrimaryAction; status: string; hint: string; paid: boolean; key: StageKey } {
   const invoice = progress.find((step) => step.key === "invoice");
   const paid = progress.find((step) => step.key === "paid");
   if (invoice && invoice.state !== "done" && invoice.state !== "skipped") {
@@ -127,30 +141,43 @@ function billing(progress: ProgressStep[]): { primary: PrimaryAction; status: st
       status: generate ? "Ready to invoice" : "Invoice draft",
       hint: invoice.note,
       paid: false,
+      key: "invoice",
     };
   }
   if (paid && paid.state === "current") {
-    return { primary: fromStepAction(paid.action, "Record payment"), status: "Invoiced", hint: paid.note, paid: false };
+    return { primary: fromStepAction(paid.action, "Record payment"), status: "Invoiced", hint: paid.note, paid: false, key: "paid" };
   }
   if (paid && paid.state === "done") {
-    return { primary: { kind: "none", label: "Job closed" }, status: "Paid", hint: "Paid in full. Nothing left to do.", paid: true };
+    return { primary: { kind: "none", label: "Job closed" }, status: "Paid", hint: "Paid in full. Nothing left to do.", paid: true, key: "paid" };
   }
   return {
     primary: go("Generate invoice", "#billing"),
     status: "Ready to invoice",
     hint: paid?.note ?? "No invoice yet",
     paid: false,
+    key: "invoice",
   };
 }
 
 function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[] {
-  const order: StageKey[] = flow === "diagnostic" ? ["intake", "visit", "work", "complete"] : ["intake", "estimate", "work", "complete"];
+  const order: StageKey[] =
+    flow === "diagnostic"
+      ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice", "paid"]
+      : ["scope", "quotes", "estimate", "approval", "materials", "schedule", "work", "invoice", "paid"];
   const labels: Record<StageKey, string> = {
     intake: "Intake",
-    visit: "Visit",
+    schedule: "Schedule",
+    travel: "Travel",
+    diagnose: "Diagnose",
+    decide: "Next step",
+    scope: "Scope",
+    quotes: "Quotes",
     estimate: "Estimate",
+    approval: "Approval",
+    materials: "Materials",
     work: "Work",
-    complete: "Complete",
+    invoice: "Invoice",
+    paid: "Paid",
   };
   const at = order.indexOf(current);
   return order.map((key, index) => ({
@@ -167,7 +194,7 @@ export function jobFlow(input: StageInput): FlowStage {
   if (input.canceled || state === "canceled") {
     return {
       flow,
-      steps: steps(flow, "intake", false),
+      steps: steps(flow, flow === "diagnostic" ? "intake" : "scope", false),
       status: "Canceled",
       primary: { kind: "none", label: "Canceled" },
       hint: "",
@@ -182,7 +209,7 @@ export function jobFlow(input: StageInput): FlowStage {
     const decide = flow === "diagnostic" && ON_SITE.has(state) && input.followUpCount === 0;
     return {
       flow,
-      steps: steps(flow, flow === "diagnostic" && state === "en_route" ? "visit" : "work", false),
+      steps: steps(flow, flow === "work_order" ? "work" : state === "en_route" ? "travel" : "diagnose", false),
       status: visit.status,
       primary: { kind: "visit", label: visit.label },
       hint:
@@ -205,7 +232,7 @@ export function jobFlow(input: StageInput): FlowStage {
       if (input.followUpCount === 0 && !money.paid && !input.progress.some((s) => s.key === "invoice" && s.state === "done")) {
         return {
           flow,
-          steps: steps(flow, "complete", false),
+          steps: steps(flow, "decide", false),
           status: "Diagnosed",
           primary: go("Select next action", "#next-action"),
           hint: "Repair now, send an estimate, book a return visit, or bill the diagnostic only.",
@@ -214,7 +241,7 @@ export function jobFlow(input: StageInput): FlowStage {
       }
       return {
         flow,
-        steps: steps(flow, "complete", money.paid),
+        steps: steps(flow, money.key, money.paid),
         status: money.status,
         primary: money.primary,
         hint: money.hint,
@@ -224,7 +251,7 @@ export function jobFlow(input: StageInput): FlowStage {
     if (!input.scheduled) {
       return {
         flow,
-        steps: steps(flow, "intake", false),
+        steps: steps(flow, "schedule", false),
         status: "Needs a time",
         primary: go("Schedule visit", input.scheduleHref),
         hint: "Set the arrival window, then the customer is told.",
@@ -233,7 +260,7 @@ export function jobFlow(input: StageInput): FlowStage {
     }
     return {
       flow,
-      steps: steps(flow, "visit", false),
+      steps: steps(flow, "travel", false),
       status: "Scheduled",
       primary: { kind: "visit", label: "Start trip" },
       hint: "The customer is texted that you are on the way.",
@@ -246,7 +273,7 @@ export function jobFlow(input: StageInput): FlowStage {
     const money = billing(input.progress);
     return {
       flow,
-      steps: steps(flow, "complete", money.paid),
+      steps: steps(flow, money.key, money.paid),
       status: money.status,
       primary: money.primary,
       hint: money.hint,
@@ -261,7 +288,7 @@ export function jobFlow(input: StageInput): FlowStage {
   if (input.lineCount === 0 && input.materialListCount === 0) {
     return {
       flow,
-      steps: steps(flow, "intake", false),
+      steps: steps(flow, "scope", false),
       status: "Scope",
       primary: go("Build material list", "#work-materials"),
       hint: "List the parts and labor, or type them in yourself.",
@@ -272,7 +299,7 @@ export function jobFlow(input: StageInput): FlowStage {
   if (input.lineCount === 0 && input.unpricedMaterialCount > 0) {
     return {
       flow,
-      steps: steps(flow, "intake", false),
+      steps: steps(flow, "quotes", false),
       status: "Quotes needed",
       primary: go("Get supplier quotes", "#work-materials"),
       hint: `${input.unpricedMaterialCount} ${input.unpricedMaterialCount === 1 ? "item has" : "items have"} no price yet.`,
@@ -282,8 +309,8 @@ export function jobFlow(input: StageInput): FlowStage {
   if (input.lineCount === 0) {
     return {
       flow,
-      steps: steps(flow, "intake", false),
-      status: "Scope",
+      steps: steps(flow, "estimate", false),
+      status: "Estimate",
       primary: go("Add work & materials", "#work-materials"),
       hint: "Put the priced list on the job to make the estimate.",
       needsDecision: false,
@@ -292,7 +319,7 @@ export function jobFlow(input: StageInput): FlowStage {
   if (!signed) {
     return {
       flow,
-      steps: steps(flow, "estimate", false),
+      steps: steps(flow, sent ? "approval" : "estimate", false),
       status: sent ? "Awaiting approval" : "Estimate",
       primary: sent ? go("View approval", "#contract") : go("Send estimate", "#contract"),
       hint: sent
@@ -304,7 +331,7 @@ export function jobFlow(input: StageInput): FlowStage {
   if (input.partCount > 0 && !input.materialsReady) {
     return {
       flow,
-      steps: steps(flow, "work", false),
+      steps: steps(flow, "materials", false),
       status: "Materials",
       primary: { kind: "materials_ready", label: "Mark materials ready" },
       hint: input.scheduled
@@ -316,7 +343,7 @@ export function jobFlow(input: StageInput): FlowStage {
   if (!input.scheduled) {
     return {
       flow,
-      steps: steps(flow, "work", false),
+      steps: steps(flow, "schedule", false),
       status: "Ready to schedule",
       primary: go("Confirm appointment", input.scheduleHref),
       hint: "Approved and ready. Set the arrival window.",
