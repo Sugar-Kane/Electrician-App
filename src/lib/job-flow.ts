@@ -170,11 +170,11 @@ function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[]
     travel: "Travel",
     diagnose: "Diagnose",
     decide: "Next step",
-    scope: "Scope",
-    quotes: "Quotes",
+    scope: "Materials list",
+    quotes: "Supplier quotes",
     estimate: "Estimate",
     approval: "Approval",
-    materials: "Materials",
+    materials: "Pick up parts",
     work: "Work",
     invoice: "Invoice",
     paid: "Paid",
@@ -283,7 +283,33 @@ export function jobFlow(input: StageInput): FlowStage {
     };
   }
 
-  const signed = Boolean(input.agreement?.signed);
+  /*
+   * Billed before the work: an invoice already went out, so the estimate and
+   * approval are behind it. Collecting is next; once it is paid, the visit
+   * is, without asking for an estimate nobody needs any more.
+   */
+  const invoiceStep = input.progress.find((step) => step.key === "invoice");
+  const paidStep = input.progress.find((step) => step.key === "paid");
+  const invoiced = invoiceStep?.state === "done" || (paidStep !== undefined && paidStep.state !== "todo");
+  const paidUp = paidStep?.state === "done";
+  if (invoiced && !paidUp) {
+    const money = billing(input.progress);
+    // The billing steps are done; the visit's are as they really are.
+    const still = (key: StageKey) =>
+      key === "work" ||
+      (key === "schedule" && !input.scheduled) ||
+      (key === "materials" && input.partCount > 0 && !input.materialsReady);
+    return {
+      flow,
+      steps: steps(flow, money.key, false).map((step) => (still(step.key) ? { ...step, state: "todo" as const } : step)),
+      status: money.status,
+      primary: money.primary,
+      hint: input.scheduled ? `${money.hint}. The visit is still booked.` : money.hint,
+      needsDecision: false,
+    };
+  }
+
+  const signed = Boolean(input.agreement?.signed) || paidUp;
   const sent = Boolean(input.agreement?.sent);
 
   // Scope: nothing on the job, and no list to start from.
@@ -291,7 +317,7 @@ export function jobFlow(input: StageInput): FlowStage {
     return {
       flow,
       steps: steps(flow, "scope", false),
-      status: "Scope",
+      status: "Materials list",
       primary: go("Build material list", "#work-materials"),
       hint: "List the parts and labor, or type them in yourself.",
       needsDecision: false,
@@ -334,7 +360,7 @@ export function jobFlow(input: StageInput): FlowStage {
     return {
       flow,
       steps: steps(flow, "materials", false),
-      status: "Materials",
+      status: "Pick up parts",
       primary: { kind: "materials_ready", label: "Mark materials ready" },
       hint: input.scheduled
         ? "Have the parts in hand before you drive out. You can still start the trip if they are on the truck."
