@@ -139,6 +139,21 @@ export async function signContract(
     console.error("signed contract PDF failed", { signedId, error });
   }
 
+  // The customer's own copy: emailed with the PDF, texted as a link when they
+  // have texting consent. After the PDF above, so the link shows the signed one.
+  try {
+    const { sendSignedContractCopy } = await import("@/lib/contract-copy");
+    const sent = await sendSignedContractCopy({
+      organizationId: contract.organization_id,
+      contractId: signedId,
+      token,
+      timeZone: contract.time_zone || "America/Los_Angeles",
+    });
+    if (sent.email !== "sent" && sent.sms !== "sent") console.warn("signed contract copy not delivered", { signedId, ...sent });
+  } catch (error) {
+    console.error("signed contract copy failed", { signedId, error });
+  }
+
   revalidatePath(`/contract/${token}`);
   return { error: "", signed: true };
 }
