@@ -26,7 +26,11 @@ import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { sendSms } from "@/lib/twilio";
-import { sendCustomerText } from "@/lib/customer-text";
+import { sendCustomerText, textingAllowed } from "@/lib/customer-text";
+import { recordActivity } from "@/lib/activity";
+import { contractSendRefusal } from "@/lib/contract-send";
+import { signingLinkMessage } from "@/lib/contract-signing";
+import { formatForDisplay, toE164 } from "@/lib/phone-format";
 import { billingParty } from "@/lib/customer-details";
 
 const str = (description: string) => ({ type: "string", description });
@@ -176,6 +180,21 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
       properties: {
         job_number: str("The existing job number."),
         scope: str("The scope-of-work paragraph you wrote, following the rules the first call returns. Leave empty to get them."),
+        confirmed,
+      },
+      required: ["job_number", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "send_contract_for_signature",
+    title: "Text a contract for signature",
+    description:
+      "Text the customer a link to sign a job's contract on their phone: the job's newest contract that is not cancelled, once it is fully filled in. The business signs it first with the saved signature of the owner who connected ChatGPT, then the customer gets the link at the phone number on their customer record. Only for a customer with active SMS consent. Explicit owner approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The existing job number."),
         confirmed,
       },
       required: ["job_number", "confirmed"],
@@ -723,6 +742,184 @@ export async function runBusinessMcpTool(input: {
       }
       const blanks = filled.unfilled.length ? ` ${filled.unfilled.length} template field(s) still need review.` : "";
       return { text: `Draft contract created for job #${jobNumber}.${blanks} ${pdfNote} It has not been sent for signature.` };
+    }
+
+    case "send_contract_for_signature": {
+      const number = Number(text(String(args.job_number ?? "")).replace(/^#/, ""));
+      if (!Number.isInteger(number) || number <= 0) return { isError: true, text: "That job number could not be read. Nothing was sent." };
+      const gate = requireConfirmation(args, `Sign job #${number}'s contract for the business and text the customer the link to sign it.`);
+      if (gate) return gate;
+
+      const { data: jobRow } = await database
+        .from("jobs")
+        .select("id, job_number, customer_id")
+        .eq("organization_id", organizationId)
+        .eq("job_number", number)
+        .maybeSingle();
+      const job = (jobRow ?? null) as Record<string, unknown> | null;
+      if (!job) return { isError: true, text: `Job #${number} was not found. Nothing was sent.` };
+      const jobId = text(job.id);
+
+      // The newest contract that is not cancelled is the only one that can be
+      // signed; an older one has been replaced.
+      const { data: contractRow } = await database
+        .from("contracts")
+        .select("id, organization_id, kind, status, unfilled, public_token, signed_at, signature_provider, signature_sent_at, contractor_signed_at")
+        .eq("organization_id", organizationId)
+        .eq("job_id", jobId)
+        .neq("status", "void")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const contract = (contractRow ?? null) as Record<string, unknown> | null;
+
+      // Who signs for the business: the owner who connected ChatGPT, with
+      // their own saved signature.
+      let signerId = "";
+      if (session.credentialId) {
+        const { data: credential } = await database
+          .from("mcp_business_credentials")
+          .select("created_by")
+          .eq("id", session.credentialId)
+          .eq("organization_id", organizationId)
+          .is("revoked_at", null)
+          .maybeSingle();
+        signerId = text(credential?.created_by);
+      }
+      let signerReady = false;
+      if (signerId) {
+        const [{ data: member }, { data: signature }] = await Promise.all([
+          database.from("organization_members").select("user_id").eq("organization_id", organizationId).eq("user_id", signerId).maybeSingle(),
+          database.from("contract_signers").select("user_id").eq("organization_id", organizationId).eq("user_id", signerId).maybeSingle(),
+        ]);
+        signerReady = Boolean(member && signature);
+      }
+
+      const customerId = text(job.customer_id);
+      const texting = customerId
+        ? await textingAllowed(asFlexibleClient(database), organizationId, customerId)
+        : ({ ok: false, code: "NO_PHONE", message: "The job has no customer." } as const);
+      const { data: messaging } = await database
+        .from("messaging_settings")
+        .select("messaging_service_sid")
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+      const messagingServiceSid = text(messaging?.messaging_service_sid);
+
+      const refusal = contractSendRefusal({
+        contract: contract
+          ? {
+              status: text(contract.status) || "draft",
+              signedAt: text(contract.signed_at) || null,
+              signatureProvider: text(contract.signature_provider) || null,
+              unfilled: Array.isArray(contract.unfilled) ? (contract.unfilled as string[]) : [],
+              signatureSentAt: text(contract.signature_sent_at) || null,
+            }
+          : null,
+        signerReady,
+        textingAllowed: texting.ok,
+        textingRefusal: texting.ok ? undefined : texting.message,
+        hasMessagingService: Boolean(messagingServiceSid),
+        now: Date.now(),
+      });
+      if (refusal || !contract) return { isError: true, text: refusal || "Nothing was sent.", record: { jobId } };
+
+      const phone = texting.ok ? toE164(texting.phone) : "";
+      const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+      const token = text(contract.public_token);
+      if (!phone || !origin || !token) return { isError: true, text: "The signing link could not be built. Nothing was sent.", record: { jobId } };
+      const contractId = text(contract.id);
+
+      const { data: organization } = await database.from("organizations").select("name, timezone").eq("id", organizationId).maybeSingle();
+
+      // The business signs first, so the contract the customer opens already
+      // carries the sender's signature. Signed once: a re-send keeps it.
+      if (!contract.contractor_signed_at) {
+        const { data: signedAt, error } = await database.rpc("sign_contract_as_contractor_for", {
+          p_contract_id: contractId,
+          p_user_id: signerId,
+        });
+        if (error || !signedAt) return { isError: true, text: "The contract could not be signed for the business. Nothing was sent.", record: { jobId } };
+        try {
+          const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+          const pdf = await generateContractPdf({
+            database: asFlexibleClient(database),
+            organizationId,
+            contractId,
+            timeZone: text(organization?.timezone) || "America/Los_Angeles",
+            uploadedBy: signerId,
+          });
+          if (pdf.error) console.error("business-signed contract PDF failed", { contractId, error: pdf.error });
+        } catch (error) {
+          console.error("business-signed contract PDF failed", { contractId, error });
+        }
+      }
+
+      // An older contract on this job still out for signature has been replaced.
+      await database
+        .from("contracts")
+        .update({ status: "draft" })
+        .eq("job_id", jobId)
+        .eq("status", "sent")
+        .eq("signature_provider", "in_app")
+        .is("signed_at", null)
+        .neq("id", contractId);
+
+      // The claim, before anybody is texted: matches only if nothing changed
+      // since it was read, so two sends at once text the customer once.
+      const previousStatus = text(contract.status) || "draft";
+      const previousProvider = text(contract.signature_provider) || null;
+      const previousSentAt = text(contract.signature_sent_at) || null;
+      const claim = database
+        .from("contracts")
+        .update({ status: "sent", signature_provider: "in_app", signature_sent_at: new Date().toISOString() })
+        .eq("id", contractId)
+        .is("signed_at", null);
+      const { data: claimed, error: claimError } = await (previousSentAt ? claim.eq("signature_sent_at", previousSentAt) : claim.is("signature_sent_at", null))
+        .select("id")
+        .maybeSingle();
+      if (claimError || !claimed) {
+        return {
+          isError: true,
+          text: claimError?.code === "23505"
+            ? "Another contract for this job is already out for signature, so this one was not sent."
+            : "That contract changed a moment ago — it may have just been sent or signed. Nothing was sent.",
+          record: { jobId },
+        };
+      }
+
+      const sent = await sendSms({
+        to: phone,
+        body: signingLinkMessage({ businessName: text(organization?.name), jobNumber: job.job_number, link: `${origin}/contract/${token}`, kind: contract.kind }),
+        messagingServiceSid,
+      });
+      if (!sent.ok) {
+        await database
+          .from("contracts")
+          .update({ status: previousStatus, signature_provider: previousProvider, signature_sent_at: previousSentAt })
+          .eq("id", contractId)
+          .is("signed_at", null);
+        await recordActivity(asFlexibleClient(database), {
+          organizationId,
+          eventType: "estimate.send_failed",
+          label: "Approval text not sent",
+          jobId,
+          metadata: { via: "sms", contract_id: contractId, source: "chatgpt", reason: `The text could not be sent (${sent.errorDetail || sent.errorCode})` },
+        });
+        return { isError: true, text: `The text could not be sent (${sent.errorDetail || sent.errorCode}). The contract is not marked sent.`, record: { jobId } };
+      }
+
+      await recordActivity(asFlexibleClient(database), {
+        organizationId,
+        eventType: "estimate.sent",
+        label: "Sent for approval",
+        jobId,
+        metadata: { via: "sms", contract_id: contractId, source: "chatgpt" },
+      });
+      return {
+        text: `Signed for the business and texted the signing link for job #${job.job_number}'s contract to ${formatForDisplay(phone)}. The job page shows when the customer signs.`,
+        record: { jobId },
+      };
     }
 
     case "supplier_integration_status": {
