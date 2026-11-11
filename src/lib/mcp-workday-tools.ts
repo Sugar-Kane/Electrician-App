@@ -101,6 +101,7 @@ export const WORKDAY_MCP_TOOLS: McpTool[] = [
         },
         description: str("What the customer needs done."),
         start: str("Optional start as local wall-clock time YYYY-MM-DDTHH:MM in the business's time zone."),
+        arrival_window_end: str("Required with start: when the arrival window ends, local wall-clock time YYYY-MM-DDTHH:MM, after start. Ask the electrician if not given."),
         duration_hours: { type: "number", description: "Optional visit length in hours. A diagnostic is always 2." },
         confirmed,
       },
@@ -554,6 +555,7 @@ async function createJob(database: Database, organizationId: string, args: Recor
     category: text(args.category),
     description: text(args.description),
     startLocal: text(args.start),
+    arrivalEndLocal: text(args.arrival_window_end),
     durationHours: text(args.duration_hours),
     cost: "",
     mode: "save",
@@ -568,6 +570,7 @@ async function createJob(database: Database, organizationId: string, args: Recor
   const timeZone = await organizationTimeZone(asFlexibleClient(database), organizationId);
   const start = job.startLocal ? zonedWallClockToIso(job.startLocal, timeZone) : "";
   const end = start ? new Date(new Date(start).getTime() + job.durationMinutes * 60_000).toISOString() : "";
+  const arrivalEnd = start && job.arrivalEndLocal ? zonedWallClockToIso(job.arrivalEndLocal, timeZone) : "";
 
   const when = start
     ? `on ${dayLabel(calendarDate(start, timeZone))} at ${timeLabel(start, timeZone)} for ${job.durationMinutes / 60} hours`
@@ -630,7 +633,8 @@ async function createJob(database: Database, organizationId: string, args: Recor
       customer_description: job.description || null,
       status: start ? "confirmed" : "draft",
       ...(start ? { scheduled_start: start, arrival_window_start: start } : {}),
-      ...(end ? { scheduled_end: end, arrival_window_end: end } : {}),
+      ...(end ? { scheduled_end: end } : {}),
+      ...(start ? { arrival_window_end: arrivalEnd || end } : {}),
     })
     .select("id, job_number")
     .maybeSingle();
@@ -651,7 +655,7 @@ async function createJob(database: Database, organizationId: string, args: Recor
     created_job_id: createdJob.id,
     category: job.category,
     ...(start ? { arrival_window_start: start } : {}),
-    ...(end ? { arrival_window_end: end } : {}),
+    ...(start ? { arrival_window_end: arrivalEnd || end } : {}),
   });
 
   return {

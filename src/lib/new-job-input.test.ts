@@ -30,6 +30,7 @@ const raw = (over: Partial<NewJobRaw> = {}): NewJobRaw => ({
   category: "work_order",
   description: "Panel is buzzing.",
   startLocal: "2026-08-18T08:00",
+  arrivalEndLocal: "2026-08-18T10:00",
   durationHours: "2",
   cost: "1280",
   mode: "save",
@@ -439,4 +440,16 @@ test("a ZIP code is five digits on a real save", () => {
   }
   // A draft keeps a half-typed ZIP, like the rest of a half-typed address.
   assert.equal(parseNewJob(raw({ postalCode: "934", mode: "draft" })).ok, true);
+});
+
+test("a job with a start needs the end of its arrival window, after the start", () => {
+  const missing = parseNewJob(raw({ arrivalEndLocal: "" }));
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.equal(missing.field, "arrivalEndLocal");
+  const backwards = parseNewJob(raw({ arrivalEndLocal: "2026-08-18T07:30" }));
+  assert.equal(backwards.ok, false);
+  const unscheduled = parseNewJob(raw({ startLocal: "", arrivalEndLocal: "" }));
+  assert.equal(unscheduled.ok, true);
+  const good = parseNewJob(raw());
+  assert.equal(good.ok && good.value.arrivalEndLocal, "2026-08-18T10:00");
 });

@@ -167,6 +167,17 @@ export type JobWorkflowProps = {
    */
   reservedParts?: ReservedPart[];
   /**
+   * What the primary button says, when the job's flow words it differently
+   * ("Start diagnostic", "Begin work"). Defaults to the workflow's own label.
+   */
+  actionLabel?: string | null;
+  /**
+   * The job's next step is not the visit (the materials are not ready, say),
+   * so the visit's button steps back: no sticky bar, and a quiet button in the
+   * card for going anyway.
+   */
+  holdPrimary?: boolean;
+  /**
    * Who, what and where, rendered above the status.
    *
    * Passed in from the page rather than duplicated here so it stays one card:
@@ -212,6 +223,8 @@ export function JobWorkflow({
   phone,
   unscheduled = false,
   reservedParts = [],
+  actionLabel = null,
+  holdPrimary = false,
   children,
 }: JobWorkflowProps) {
   const [result, submit, pending] = useActionState(advanceJob, initialState);
@@ -337,7 +350,8 @@ export function JobWorkflow({
     advance("en_route", "manual");
   }
 
-  const step = nextStep(state);
+  const workflowStep = nextStep(state);
+  const step = workflowStep && actionLabel ? { ...workflowStep, label: actionLabel } : workflowStep;
   const closed = state === "completed" || state === "canceled" || state === "no_show";
   const travelling = state === "en_route";
   const dialable = phone.replace(/[^\d+]/g, "");
@@ -515,6 +529,17 @@ export function JobWorkflow({
               got on with it never tapped Start trip, and used to have no way to
               record work without first pretending to drive there.
             */}
+            {holdPrimary && step && state === "scheduled" && !unscheduled ? (
+              <button
+                type="button"
+                onClick={startTrip}
+                disabled={pending}
+                className={`${QUIET} mt-3 mr-4`}
+              >
+                {step.label} anyway
+              </button>
+            ) : null}
+
             {state === "scheduled" || travelling ? (
               <button
                 type="button"
@@ -529,7 +554,7 @@ export function JobWorkflow({
         )}
       </section>
 
-      {step && !closed && !asking && !confirmingParts && !(unscheduled && state === "scheduled") ? (
+      {step && !closed && !asking && !confirmingParts && !(unscheduled && state === "scheduled") && !(holdPrimary && state === "scheduled") ? (
         <ActionBar
           state={state}
           step={step}
