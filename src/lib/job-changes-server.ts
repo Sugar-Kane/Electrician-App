@@ -184,7 +184,10 @@ export async function changeJob(
     return { error: "That change could not be saved." };
   }
 
-  const moved = changeNeedsCustomerNotice({
+  // Marking a job done is not moving it: the customer is never told a
+  // finished visit has a new time.
+  const finishing = status === "completed" && job.status !== "completed";
+  const moved = !finishing && changeNeedsCustomerNotice({
     canceled: false,
     previousStart: job.start,
     nextStart: start,
@@ -192,6 +195,15 @@ export async function changeJob(
     nextEnd: end,
   });
 
+  if (finishing) {
+    // The business's "Work complete" message, if it sends one — not a move.
+    const told = await sendJobEventMessage({ jobId: job.id, trigger: "job_completed" });
+    return {
+      error: "",
+      notice: ["Job completed.", told.sent ? "Customer told the work is complete." : "", ...partsUsed].filter(Boolean).join(" "),
+      partsUsed,
+    };
+  }
   if (!moved) return { error: "", notice: ["Job updated.", ...partsUsed].join(" "), partsUsed };
   if (!input.notifyCustomer) {
     return { error: "", notice: "Job moved. The customer was not told, as you asked.", partsUsed };
@@ -486,6 +498,9 @@ export async function advanceVisit(
   });
 
   if (requested === "completed") {
+    // The business's "Work complete" message, if it sends one; consent, the
+    // STOP ledger and quiet hours are decided where every automatic text is.
+    await sendJobEventMessage({ jobId: job.id, trigger: "job_completed" });
     return {
       error: "",
       state: requested,

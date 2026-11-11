@@ -180,3 +180,28 @@ test("shortening the window alone still counts as a change worth sending", () =>
     true,
   );
 });
+
+
+test("a job saved with its time untouched is not a move, whatever format the time is in", async () => {
+  const { changeNeedsCustomerNotice } = await import("./job-change-messages.ts");
+  assert.equal(
+    changeNeedsCustomerNotice({
+      canceled: false,
+      previousStart: "2026-11-11 04:30:00+00",
+      nextStart: "2026-11-11T04:30:00.000Z",
+      previousEnd: "2026-11-11 04:45:00+00",
+      nextEnd: "2026-11-11T04:45:00.000Z",
+    }),
+    false,
+  );
+  assert.equal(
+    changeNeedsCustomerNotice({
+      canceled: false,
+      previousStart: "2026-11-11 04:30:00+00",
+      nextStart: "2026-11-11T05:30:00.000Z",
+      previousEnd: "2026-11-11 04:45:00+00",
+      nextEnd: "2026-11-11T05:45:00.000Z",
+    }),
+    true,
+  );
+});

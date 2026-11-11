@@ -370,6 +370,12 @@ export async function handleInvoiceCheckoutEvent(
     jobId,
     metadata: { amount_cents: amountCents, method: paid.method, via: "online", invoice_id: invoiceId },
   });
+  // Proof of payment, as soon as it is paid in full: the invoice document is
+  // rebuilt to read Paid, and the customer is sent it as their receipt by
+  // email and text — the same paid copy the electrician can send by hand,
+  // which never asks for money. Best effort: the payment stands either way.
+  if (result.status === "paid") await sendOnlineReceipt(database, organizationId, invoiceId);
+
   if ((result.overpaid_cents ?? 0) > 0) {
     await recordActivity(activity, {
       organizationId,
@@ -380,4 +386,30 @@ export async function handleInvoiceCheckoutEvent(
     });
   }
   return true;
+}
+
+async function sendOnlineReceipt(database: Database, organizationId: string, invoiceId: string): Promise<void> {
+  try {
+    const { data: organization } = await database
+      .from("organizations")
+      .select("timezone, created_by")
+      .eq("id", organizationId)
+      .maybeSingle();
+    const uploadedBy = text(organization?.created_by);
+    if (uploadedBy) {
+      const { generateInvoicePdf } = await import("@/lib/pdf/invoice-data");
+      await generateInvoicePdf({
+        database: asFlexibleClient(database),
+        organizationId,
+        invoiceId,
+        timeZone: text(organization?.timezone) || "America/Los_Angeles",
+        uploadedBy,
+      });
+    }
+    const { sendPaidInvoice } = await import("@/lib/invoice-paid-in-hand");
+    const sent = await sendPaidInvoice(asFlexibleClient(database), { invoiceId, organizationId, channels: ["email", "sms"] });
+    if (!sent.ok) console.error("online payment receipt not sent", { invoiceId, message: sent.message.slice(0, 200) });
+  } catch (failure) {
+    console.error("online payment receipt failed", { invoiceId, message: failure instanceof Error ? failure.message : "unknown" });
+  }
 }

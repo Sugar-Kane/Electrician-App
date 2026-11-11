@@ -134,10 +134,39 @@ export async function sendJobEventMessage(input: {
       null;
 
     const technician = (job.technicians ?? {}) as Record<string, unknown>;
+
+    // "Work complete" links the job's invoice when there is one. Without one,
+    // the same message without the link, rather than no message at all.
+    let invoiceLink = "";
+    let body = templateRow ? text(templateRow.body) : "";
+    if (input.trigger === "job_completed") {
+      const { data: invoice } = await database
+        .from("invoices")
+        .select("preview_token")
+        .eq("organization_id", organizationId)
+        .eq("job_id", input.jobId)
+        .neq("status", "void")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+      const token = text(invoice?.preview_token);
+      if (origin && token) {
+        const { invoiceViewUrl } = await import("@/lib/invoice-messages");
+        invoiceLink = invoiceViewUrl(origin, token) ?? "";
+      }
+      if (!invoiceLink && body.includes("{{invoice_link}}")) {
+        body =
+          language === "es"
+            ? "El trabajo #{{job_number}} está terminado. Gracias por elegir a {{business_name}}."
+            : "Work is complete on job #{{job_number}}. Thank you for choosing {{business_name}}.";
+      }
+    }
+
     const decision = decideAutomaticSend({
       trigger: input.trigger,
       template: templateRow
-        ? { body: text(templateRow.body), isActive: templateRow.is_active === true }
+        ? { body, isActive: templateRow.is_active === true }
         : null,
       currentlyQuiet: quietHours.currentlyQuiet,
       variables: {
@@ -159,6 +188,7 @@ export async function sendJobEventMessage(input: {
           typeof serviceRow?.diagnostic_fee_cents === "number"
             ? `$${(serviceRow.diagnostic_fee_cents / 100).toFixed(0)}`
             : "",
+        ...(invoiceLink ? { invoice_link: invoiceLink } : {}),
       },
     });
 
