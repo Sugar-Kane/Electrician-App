@@ -133,15 +133,16 @@ export function Letterhead({
     <View>
       <View style={[sheet.row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
         <View style={{ maxWidth: 300 }}>
-          {/* The logo, then the name and licence in text under it: the logo
-              is how the business looks, the name and licence are what an
-              inspector, a bank or a screen reader reads off the page. Sized
-              by height so a wide wordmark and a square mark sit the same. */}
+          {/* The logo, then the licence under it. Sized by height so a wide
+              wordmark and a square mark sit the same. */}
           {business.logo ? (
             // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf's Image takes no alt; the name is printed as text below it.
             <Image src={business.logo} style={{ height: 48, maxWidth: 240, objectFit: "contain", marginBottom: 6 }} />
           ) : null}
-          <Text style={business.logo ? [sheet.businessName, { fontSize: 14 }] : sheet.businessName}>{business.name}</Text>
+          {/* The name only when there is no logo: a logo that carries the
+              name, with the name typed again under it, reads twice. The name
+              stays in text in the footer. */}
+          {business.logo ? null : <Text style={sheet.businessName}>{business.name}</Text>}
           {/* The licence straight under the name: what makes this a
               contractor's paperwork. Omitted rather than faked when not set. */}
           {business.licenseNumber ? <Text style={[sheet.muted, { marginBottom: 2 }]}>{licenseLine(business.licenseNumber)}</Text> : null}
