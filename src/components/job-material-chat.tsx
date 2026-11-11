@@ -72,6 +72,8 @@ type Props = {
   forChatGpt: { businessName: string; facts: string[] };
   jobDescription: string;
   hasLines: boolean;
+  /** Start folded whatever the list says: a diagnostic with no repair on it buys nothing. */
+  startFolded?: boolean;
 };
 
 /** "Home Depot $5.98/ft · Lowe's $6.48/ft", each a link to the product page. */
@@ -583,7 +585,7 @@ function FromChatGpt({
   );
 }
 
-export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, jobDescription, hasLines }: Props) {
+export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, jobDescription, hasLines, startFolded = false }: Props) {
   const [list, setList] = useState<MaterialList>(saved.list);
   const [messages, setMessages] = useState<ChatTurn[]>(saved.messages);
   const [draft, setDraft] = useState("");
@@ -601,7 +603,7 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
   // Open or folded is decided once, as the page loads: adding items to the
   // estimate gives the job lines, and that must not fold the chat shut under
   // the person using it.
-  const [startsOpen] = useState(() => !hasContent(saved.list) || !hasLines);
+  const [startsOpen] = useState(() => !startFolded && (!hasContent(saved.list) || !hasLines));
   const [fromChatGpt, setFromChatGpt] = useState(false);
   // Typing the list by hand, item by item, with no AI at all.
   const [typing, setTyping] = useState(false);
