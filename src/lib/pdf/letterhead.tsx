@@ -109,6 +109,12 @@ export const sheet = StyleSheet.create({
   },
 });
 
+/** "1162180" → "Lic. 1162180"; "CSLB #1162180" stays as written. */
+export function licenseLine(license: string): string {
+  const value = license.trim();
+  return /[a-z]/i.test(value) ? value : `Lic. ${value}`;
+}
+
 /** The business, top-left, with the document's own name opposite it. */
 export function Letterhead({
   business,
@@ -127,17 +133,19 @@ export function Letterhead({
     <View>
       <View style={[sheet.row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
         <View style={{ maxWidth: 300 }}>
-          {/* The logo in place of the name, when the business has one: a
-              logo is the name drawn the way the business draws it, and the
-              two together read as the same line twice. The name is still in
-              text in the footer, for anyone copying it out of the PDF. Sized
-              by height so a wide wordmark and a square mark sit the same. */}
+          {/* The logo, then the licence under it. Sized by height so a wide
+              wordmark and a square mark sit the same. */}
           {business.logo ? (
-            // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf's Image takes no alt; the name is printed as text in the footer.
+            // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf's Image takes no alt; the name is printed as text below it.
             <Image src={business.logo} style={{ height: 48, maxWidth: 240, objectFit: "contain", marginBottom: 6 }} />
-          ) : (
-            <Text style={sheet.businessName}>{business.name}</Text>
-          )}
+          ) : null}
+          {/* The name only when there is no logo: a logo that carries the
+              name, with the name typed again under it, reads twice. The name
+              stays in text in the footer. */}
+          {business.logo ? null : <Text style={sheet.businessName}>{business.name}</Text>}
+          {/* The licence straight under the name: what makes this a
+              contractor's paperwork. Omitted rather than faked when not set. */}
+          {business.licenseNumber ? <Text style={[sheet.muted, { marginBottom: 2 }]}>{licenseLine(business.licenseNumber)}</Text> : null}
           {business.addressLine1 ? (
             <Text style={sheet.muted}>{business.addressLine1}</Text>
           ) : null}
@@ -154,9 +162,7 @@ export function Letterhead({
           ) : null}
           {/* The one line that makes this a contractor's paperwork rather than
               a receipt. Omitted rather than faked when it is not set. */}
-          {business.licenseNumber ? (
-            <Text style={[sheet.muted, { marginTop: 4 }]}>Lic. {business.licenseNumber}</Text>
-          ) : null}
+
         </View>
 
         <View>
@@ -212,7 +218,7 @@ export function DocumentFooter({
     <View style={sheet.footer}>
       {note ? <Text style={{ marginBottom: 3 }}>{note}</Text> : null}
       <Text>
-        {[business.name, business.phone, business.licenseNumber ? `Lic. ${business.licenseNumber}` : ""]
+        {[business.name, business.phone, business.licenseNumber ? licenseLine(business.licenseNumber) : ""]
           .filter(Boolean)
           .join("  ·  ")}
       </Text>

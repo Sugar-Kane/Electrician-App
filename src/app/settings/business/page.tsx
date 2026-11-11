@@ -26,6 +26,7 @@ export default async function BusinessSettingsPage() {
   const empty: BusinessDetails = {
     name: "",
     phone: "",
+    licenseNumber: "",
     addressLine1: "",
     city: "",
     state: "",
@@ -50,7 +51,7 @@ export default async function BusinessSettingsPage() {
     const { data } = await supabase
       .from("organizations")
       .select(
-        "name, phone, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color, materials_markup_percent",
+        "name, phone, license_number, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color, materials_markup_percent",
       )
       .eq("id", context.organizationId)
       .maybeSingle();
@@ -61,6 +62,7 @@ export default async function BusinessSettingsPage() {
     details = {
       name: text(row.name),
       phone: text(row.phone),
+      licenseNumber: text(row.license_number),
       addressLine1: text(row.base_address_line_1),
       city: text(row.base_city),
       state: text(row.base_state),

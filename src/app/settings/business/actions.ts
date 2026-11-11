@@ -80,6 +80,8 @@ export async function saveBusinessDetails(
     .update({
       name,
       phone: phone || null,
+      // Missing from a form that predates it: leave the license as it is.
+      ...(formData.has("licenseNumber") ? { license_number: field(formData, "licenseNumber").slice(0, 60) || null } : {}),
       base_address_line_1: field(formData, "addressLine1") || null,
       base_city: field(formData, "city") || null,
       base_state: field(formData, "state") || null,
