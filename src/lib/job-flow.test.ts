@@ -51,25 +51,34 @@ test("A: a scheduled diagnostic starts the trip", () => {
   assert.deepEqual(stage.steps.map((step) => step.label), ["Intake", "Schedule", "Travel", "Diagnose", "Next step", "Invoice", "Paid"]);
 });
 
-test("B: a finished diagnostic asks what happens next before it is billed", () => {
+test("B: a finished diagnostic whose fee is owed asks what happens next", () => {
   const stage = jobFlow(
-    input({ kindOfWork: "Diagnostic", workflowState: "completed", progress: progress({ kindOfWork: "Diagnostic", workflowState: "completed" }) }),
+    input({ kindOfWork: "Diagnostic", workflowState: "completed", diagnosticFeeDue: true, progress: progress({ kindOfWork: "Diagnostic", workflowState: "completed" }) }),
   );
   assert.equal(stage.needsDecision, true);
   assert.equal(stage.primary.kind === "go" && stage.primary.label, "Select next action");
 });
 
-test("C: once a repair is booked, the diagnostic goes to billing", () => {
+test("C: once the fee or a repair is on the job, the diagnostic goes to billing", () => {
   const stage = jobFlow(
     input({
       kindOfWork: "Diagnostic",
       workflowState: "completed",
-      followUpCount: 1,
-      progress: progress({ kindOfWork: "Diagnostic", workflowState: "completed" }),
+      lineCount: 1,
+      diagnosticFeeDue: true,
+      progress: progress({ kindOfWork: "Diagnostic", workflowState: "completed", pricedCents: 18_000 }),
     }),
   );
   assert.equal(stage.needsDecision, false);
   assert.equal(stage.primary.kind === "go" && stage.primary.label, "Generate invoice");
+});
+
+test("C2: a fee paid at booking with the repair booked as a work order bills nothing more here", () => {
+  const stage = jobFlow(
+    input({ kindOfWork: "Diagnostic", workflowState: "completed", followUpCount: 1, progress: progress({ kindOfWork: "Diagnostic", workflowState: "completed" }) }),
+  );
+  assert.equal(stage.primary.kind, "none");
+  assert.equal(stage.needsDecision, false);
 });
 
 test("D: a work order with no scope builds the material list first", () => {

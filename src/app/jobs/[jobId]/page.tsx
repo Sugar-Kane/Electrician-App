@@ -210,6 +210,10 @@ export default async function JobDetailPage({
     (item) => !item.prices || !Object.keys(item.prices).some((key) => key !== "use"),
   ).length;
 
+  // The diagnostic's own fee, still owed: not paid at booking, not a follow-up.
+  const diagnosticFeeDue = Boolean(
+    controls && controls.diagnostic.feeCents > 0 && !controls.diagnostic.paid && !controls.diagnostic.followUp,
+  );
   const stage = jobFlow({
     kindOfWork: job.kindOfWork,
     workflowState: state,
@@ -228,6 +232,7 @@ export default async function JobDetailPage({
         }
       : null,
     followUpCount: followUps.booked.length,
+    diagnosticFeeDue,
     canceled,
   });
   const primaryHref = stage.primary.kind === "go" ? stage.primary.href : "";
@@ -387,7 +392,9 @@ export default async function JobDetailPage({
       {controls && !canceled && stage.needsDecision ? (
         <DiagnosticDecision
           jobNumber={controls.jobNumber}
-          creditLabel={followUps.creditCents > 0 ? formatCents(followUps.creditCents) : ""}
+          completed={state === "completed"}
+          feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
+          feeDue={diagnosticFeeDue}
         />
       ) : null}
 

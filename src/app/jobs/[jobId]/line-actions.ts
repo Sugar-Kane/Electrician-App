@@ -424,3 +424,49 @@ export async function saveTechnicianNotes(
   revalidatePath(`/jobs/${jobNumber}`);
   return { error: "", notice: "Saved." };
 }
+
+/**
+ * How a diagnostic visit ends (diagnostic-outcome.ts): diagnostic only, fix it
+ * now, or schedule it as a work order. Puts the diagnostic fee on the job as a
+ * line when it is to be billed here, once; the screen then goes to where the
+ * outcome is finished.
+ */
+export async function chooseDiagnosticOutcome(jobNumber: string, outcome: string): Promise<LineActionState> {
+  const { DIAGNOSTIC_FEE_LINE, diagnosticFeeLineNeeded, isDiagnosticOutcome } = await import("@/lib/diagnostic-outcome");
+  if (!isDiagnosticOutcome(outcome)) return { error: "That is not a way a diagnostic ends." };
+
+  const context = await findJob(jobNumber);
+  if (!context) return { error: "That job could not be found." };
+  if (context.status === "canceled") return { error: "This job is canceled." };
+
+  const { data: existing } = await context.supabase
+    .from("job_line_items")
+    .select("id")
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", context.jobId)
+    .eq("description", DIAGNOSTIC_FEE_LINE)
+    .limit(1);
+
+  const needed = diagnosticFeeLineNeeded(outcome, {
+    feeCents: context.billedJob.diagnosticFeeCents,
+    paid: context.billedJob.diagnosticPaid,
+    followUpOf: context.billedJob.followUpOf,
+    hasFeeLine: Array.isArray(existing) && existing.length > 0,
+  });
+
+  if (needed) {
+    const { error } = await context.supabase.from("job_line_items").insert({
+      organization_id: context.organizationId,
+      job_id: context.jobId,
+      kind: "labor",
+      description: DIAGNOSTIC_FEE_LINE,
+      quantity: 1,
+      unit: "visit",
+      unit_price_cents: context.billedJob.diagnosticFeeCents,
+    });
+    if (error) return { error: "The diagnostic fee could not be added to the job. Try again." };
+  }
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  return { error: "", notice: needed ? `${DIAGNOSTIC_FEE_LINE} added to the job.` : "" };
+}
