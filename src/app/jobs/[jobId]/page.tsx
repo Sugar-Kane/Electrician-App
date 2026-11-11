@@ -35,6 +35,7 @@ import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges, unbilledCents } from "@/lib/job-billing";
 import { isProgressKey, jobProgress } from "@/lib/job-progress";
 import { jobFlow, visitActionLabel } from "@/lib/job-flow";
+import { DIAGNOSTIC_FEE_LINE } from "@/lib/diagnostic-outcome";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
@@ -237,10 +238,14 @@ export default async function JobDetailPage({
   });
   const primaryHref = stage.primary.kind === "go" ? stage.primary.href : "";
   // Hours, parts and billing are on screen whenever they are the next step.
+  // A diagnostic with nothing on it but its fee (diagnostic only, or not
+  // decided yet) buys no materials, so they stay folded until a repair is.
+  const repairLineCount = lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length;
+  const materialsFolded = stage.flow === "diagnostic" && repairLineCount === 0;
   const linesStepOpen =
     primaryHref === "#work-materials" ||
     primaryHref === "#billing" ||
-    stage.needsDecision ||
+    (stage.needsDecision && !materialsFolded) ||
     initialStep === "estimate" ||
     initialStep === "materials" ||
     initialStep === "invoice" ||
@@ -591,7 +596,7 @@ export default async function JobDetailPage({
                 ? `${listItems.length} on the list${unpricedItems > 0 ? `, ${unpricedItems} unpriced` : ""}`
                 : "Nothing listed yet"
           }
-          open={linesStepOpen || workspaceOpen}
+          open={linesStepOpen || (workspaceOpen && !materialsFolded)}
         >
           <div className="divide-y divide-line">
           {materialChat ? (
@@ -603,6 +608,7 @@ export default async function JobDetailPage({
                 forChatGpt={materialChat.forChatGpt}
                 jobDescription={job.summary}
                 hasLines={lines.length > 0}
+                startFolded={materialsFolded}
               />
             </div>
           ) : null}
