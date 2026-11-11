@@ -452,7 +452,7 @@ export default async function JobDetailPage({
          * which on a van's signal is most of the time. The summary stays
          * readable closed, so nothing that was on this card has moved.
          */
-        <section className="mt-3 rounded-panel border border-line bg-surface">
+        <section id="request" className="mt-3 scroll-mt-24 rounded-panel border border-line bg-surface">
           {callRecord ? (
             <details className="group">
               <summary className="tap-target flex cursor-pointer list-none items-start justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
@@ -554,6 +554,7 @@ export default async function JobDetailPage({
 
       {showFollowUps && controls ? (
         <SectionRow
+          id="repairs"
           title="Repair work orders"
           summary={
             followUps.booked.length === 0

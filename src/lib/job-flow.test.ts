@@ -75,7 +75,7 @@ test("C: once a repair is booked, the diagnostic goes to billing", () => {
 test("D: a work order with no scope builds the material list first", () => {
   const stage = jobFlow(input());
   assert.equal(stage.primary.kind === "go" && stage.primary.label, "Build material list");
-  assert.deepEqual(stage.steps.map((step) => step.label), ["Scope", "Quotes", "Estimate", "Approval", "Materials", "Schedule", "Work", "Invoice", "Paid"]);
+  assert.deepEqual(stage.steps.map((step) => step.label), ["Materials list", "Supplier quotes", "Estimate", "Approval", "Pick up parts", "Schedule", "Work", "Invoice", "Paid"]);
 });
 
 test("E: unpriced list items need supplier quotes, never a made-up price", () => {
@@ -122,4 +122,34 @@ test("H: billing runs invoice, payment, then closed; a canceled job offers nothi
   assert.equal(owed.primary.kind === "go" && owed.primary.label, "Record payment");
 
   assert.equal(jobFlow(input({ canceled: true })).primary.kind, "none");
+});
+
+test("an invoice sent before signing waits for the signature, and says the invoice is out", () => {
+  const sentSteps = progress({
+    pricedCents: 159014,
+    invoices: [{ status: "sent", lastSentAt: "2026-11-10T00:00:00Z", paidAt: null }],
+  });
+  const unsigned = jobFlow(input({ lineCount: 16, partCount: 15, progress: sentSteps }));
+  assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "Send estimate");
+  assert.match(unsigned.status, /Invoiced/);
+  assert.equal(unsigned.steps.find((step) => step.key === "invoice")?.state, "done");
+  assert.equal(unsigned.steps.find((step) => step.key === "work")?.state, "todo");
+
+  const waiting = jobFlow(input({ lineCount: 16, partCount: 15, agreement: { sent: true, signed: false }, progress: sentSteps }));
+  assert.equal(waiting.primary.kind === "go" && waiting.primary.label, "View approval");
+
+  const signed = jobFlow(input({ lineCount: 16, partCount: 15, agreement: { sent: true, signed: true }, progress: sentSteps }));
+  assert.equal(signed.primary.kind === "go" && signed.primary.label, "Record payment");
+});
+
+test("paid before signing still waits for the signature; signed and paid goes to the visit", () => {
+  const paidSteps = progress({
+    pricedCents: 159014,
+    invoices: [{ status: "paid", lastSentAt: "2026-11-10T00:00:00Z", paidAt: "2026-11-11T00:00:00Z" }],
+  });
+  const unsigned = jobFlow(input({ lineCount: 16, partCount: 15, materialsReady: true, agreement: { sent: true, signed: false }, progress: paidSteps }));
+  assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "View approval");
+  assert.equal(unsigned.steps.find((step) => step.key === "paid")?.state, "done");
+  const signed = jobFlow(input({ lineCount: 16, partCount: 15, materialsReady: true, agreement: { sent: true, signed: true }, progress: paidSteps }));
+  assert.deepEqual(signed.primary, { kind: "visit", label: "Start trip", href: "#work" });
 });
