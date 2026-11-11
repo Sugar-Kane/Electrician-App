@@ -356,6 +356,50 @@ export function JobWorkflow({
   const travelling = state === "en_route";
   const dialable = phone.replace(/[^\d+]/g, "");
 
+  /*
+   * The visit's next step, from wherever it is asked for: the yellow button on
+   * the progress card (which sends `volteira:visit-advance`) or the bar that
+   * follows the thumb once that card has scrolled away. One function, so the
+   * permission question, the parts check and every rule run the same way.
+   */
+  const actionable = Boolean(step) && !closed && !(unscheduled && state === "scheduled");
+  function onAdvance() {
+    if (!step || closed) return;
+    if (state === "scheduled") startTrip();
+    else if (step.to === "completed" && reservedParts.length > 0) setConfirmingParts(true);
+    else advance(step.to, "manual");
+  }
+  const advanceRef = useRef(onAdvance);
+  useEffect(() => {
+    advanceRef.current = onAdvance;
+  });
+  useEffect(() => {
+    const handle = () => advanceRef.current();
+    window.addEventListener("volteira:visit-advance", handle);
+    return () => window.removeEventListener("volteira:visit-advance", handle);
+  }, []);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("volteira:visit-pending", { detail: pending }));
+  }, [pending]);
+  // A question the yellow button raised is answered here, so bring it into view.
+  const section = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (asking || confirmingParts) section.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [asking, confirmingParts]);
+
+  // The bar under the thumb only once the progress card's button is off screen,
+  // so there is one yellow button in view at a time.
+  const [stageInView, setStageInView] = useState(true);
+  useEffect(() => {
+    const card = document.getElementById("job-stage");
+    // No progress card (it is always there on a signed-in job page): the
+    // visit card's own steps still work from the card itself.
+    if (!card || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setStageInView(Boolean(entry?.isIntersecting)));
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, []);
+
   /**
    * What the customer is about to be sent, before any of it happens.
    *
@@ -391,7 +435,7 @@ export function JobWorkflow({
 
   return (
     <>
-      <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
+      <section ref={section} className="scroll-mt-24 rounded-panel border border-line bg-surface p-4 sm:p-5">
         {children ? <div className="mb-4">{children}</div> : null}
 
         <Headline
@@ -491,7 +535,7 @@ export function JobWorkflow({
                   of thing that makes a screen feel busier than it is. Gone
                   entirely once arrived — directions to where you are standing.
                 */}
-                {state === "scheduled" ? (
+                {state === "scheduled" || travelling ? (
                   <a
                     href={navigateUrl}
                     target="_blank"
@@ -554,19 +598,13 @@ export function JobWorkflow({
         )}
       </section>
 
-      {step && !closed && !asking && !confirmingParts && !(unscheduled && state === "scheduled") && !(holdPrimary && state === "scheduled") ? (
+      {step && actionable && !stageInView && !asking && !confirmingParts && !(holdPrimary && state === "scheduled") ? (
         <ActionBar
           state={state}
           step={step}
           pending={pending}
           navigateUrl={navigateUrl}
-          onAdvance={() =>
-            state === "scheduled"
-              ? startTrip()
-              : step.to === "completed" && reservedParts.length > 0
-                ? setConfirmingParts(true)
-                : advance(step.to, "manual")
-          }
+          onAdvance={onAdvance}
         />
       ) : null}
     </>
@@ -883,7 +921,7 @@ function ActionBar({
         // home indicator underneath it.
         "fixed inset-x-2 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-30 rounded-control " +
         "border border-line bg-sunken/95 p-2 shadow-2xl shadow-black/40 backdrop-blur " +
-        "lg:static lg:mt-3 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none"
+        "lg:hidden"
       }
     >
       {travelling ? (
