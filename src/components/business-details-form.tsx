@@ -32,6 +32,8 @@ function SaveButton({ disabled }: { disabled: boolean }) {
 export type BusinessDetails = {
   name: string;
   phone: string;
+  /** Printed on invoices and contracts, e.g. "CSLB #1162180". */
+  licenseNumber: string;
   addressLine1: string;
   city: string;
   state: string;
@@ -81,6 +83,10 @@ export function BusinessDetailsForm({
 
           <Field label="Phone" hint="The number customers are told to call back on.">
             <TextInput name="phone" type="tel" inputMode="tel" autoComplete="tel" defaultValue={details.phone} placeholder="209-626-9313" />
+          </Field>
+
+          <Field label="Contractor license" hint="Printed under the business name on every invoice and contract.">
+            <TextInput name="licenseNumber" defaultValue={details.licenseNumber} maxLength={60} placeholder="CSLB #1162180" />
           </Field>
 
           <Field label="Timezone" hint="Arrival windows and quiet hours use this.">
