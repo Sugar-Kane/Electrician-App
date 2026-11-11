@@ -226,7 +226,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "store_cart",
     title: "Get a job's Home Depot or Lowe's cart",
     description:
-      "When the electrician wants a job's materials put in their Home Depot or Lowe's cart: read the job's saved, priced materials list as that store's products (link, item number, how many), with the steps for filling the cart and the Volteira page that holds them. Neither store has an ordering connection, so the cart is filled in a web browser signed in to the electrician's own store account (ChatGPT agent mode). Nothing is bought.",
+      "When the electrician wants a job's materials put in their Home Depot or Lowe's cart: read the job's saved, priced materials list as that store's products (link, item number, how many), with the steps for filling the cart and the Volteira page that holds them. Items the store has no match for, and items with no quantity, come back marked for you to recommend a product and a quantity. Neither store has an ordering connection, so the cart is filled in a web browser signed in to the electrician's own store account (ChatGPT agent mode). Nothing is bought.",
     inputSchema: {
       type: "object",
       properties: {
@@ -839,6 +839,14 @@ export async function runBusinessMcpTool(input: {
       const { job, saved } = found;
       const { label, lines, unmatched } = storeCart(saved.list, store);
       const number = String(job.job_number);
+      const jobPlace = record(Array.isArray(job.properties) ? job.properties[0] : job.properties);
+      const facts = materialJobFacts({
+        category: job.category,
+        customerDescription: job.customer_description,
+        technicianNotes: job.technician_notes,
+        city: jobPlace.city,
+        state: jobPlace.state,
+      });
       const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
       const page = origin ? `${origin}/jobs/${number}/cart/${cartSlug(store)}` : "";
       if (lines.length === 0) {
@@ -852,6 +860,9 @@ export async function runBusinessMcpTool(input: {
           `${label.toUpperCase()} CART FOR JOB #${number}`,
           page ? `The same list as a page to work from: ${page} (opens when signed in to Volteira).` : "",
           "",
+          "THE JOB (for recommending products and quantities)",
+          ...(facts.length ? facts : ["The job record says nothing about the work; ask the electrician before guessing quantities."]),
+          "",
           "HOW TO FILL THE CART",
           `This needs a web browser signed in to the electrician's ${label} account: ChatGPT agent mode. If this conversation is not in agent mode, tell the electrician to switch to agent mode and say: "Fill my ${label} cart for job #${number} from Volteira."`,
           ...cartAgentSteps(store).map((step, index) => `${index + 1}. ${step}`),
@@ -859,9 +870,15 @@ export async function runBusinessMcpTool(input: {
           "ADD TO CART",
           ...lines.map(
             (line, index) =>
-              `${index + 1}. ${line.product}: needed ${line.qty} (list: "${line.listed}")${line.sku ? `, item ${line.sku}` : ""}, matched ${formatMoney(line.cents / 100)} per ${line.per}${line.note ? `, note: ${line.note}` : ""}\n   ${line.url}`,
+              `${index + 1}. ${line.product}: needed ${line.needsQty ? "NO QUANTITY ON THE LIST, recommend one" : line.qty} (list: "${line.listed}")${line.sku ? `, item ${line.sku}` : ""}, matched ${formatMoney(line.cents / 100)} per ${line.per}${line.note ? `, note: ${line.note}` : ""}\n   ${line.url}`,
           ),
-          ...(unmatched.length ? ["", `NOT MATCHED AT ${label.toUpperCase()} (do not add; list these at the end)`, ...unmatched.map((item) => `- ${item}`)] : []),
+          ...(unmatched.length
+            ? [
+                "",
+                `NOT MATCHED AT ${label.toUpperCase()} (search ${label} and recommend a product for each, as the steps say)`,
+                ...unmatched.map((item) => `- ${item.listed}${item.note ? ` (${item.note})` : ""}${item.needsQty ? ": NO QUANTITY ON THE LIST, recommend one" : ""}`),
+              ]
+            : []),
         ]
           .filter((line, index, all) => line !== "" || all[index - 1] !== "")
           .join("\n"),
