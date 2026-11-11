@@ -19,6 +19,7 @@ import { zonedWallClockToIso } from "@/lib/schedule-labels";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { sendSms } from "@/lib/twilio";
+import { invoiceLabel, invoiceRef } from "@/lib/invoice-label";
 
 /**
  * The actions somebody has actually approved.
@@ -50,7 +51,7 @@ export async function runConfirmedTool(
 
   switch (name) {
     case "send_invoice": {
-      const number = text(input.invoice_number).replace(/^INV-/i, "");
+      const number = invoiceRef(input.invoice_number);
       const channel = text(input.channel);
       const channels =
         channel === "both" ? (["sms", "email"] as const) : channel === "email" ? (["email"] as const) : (["sms"] as const);
@@ -58,12 +59,12 @@ export async function runConfirmedTool(
       const { data } = await supabase
         .from("invoices")
         .select(
-          `id, invoice_number, status, total_cents, due_at, stripe_hosted_invoice_url,
+          `id, invoice_number, number_label, status, total_cents, due_at, stripe_hosted_invoice_url,
            jobs ( customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
            organizations ( name, phone, timezone )`,
         )
         .eq("organization_id", organizationId)
-        .eq("invoice_number", Number(number))
+        .eq("number_label", number)
         .maybeSingle();
 
       if (!data) return `Invoice ${text(input.invoice_number)} could not be found. Nothing was sent.`;
@@ -86,7 +87,7 @@ export async function runConfirmedTool(
           contactName:
             text(customer?.company_name) ||
             [text(customer?.first_name), text(customer?.last_name)].filter(Boolean).join(" "),
-          invoiceNumber: `INV-${text(row.invoice_number) || number}`,
+          invoiceNumber: `INV-${invoiceLabel(row) || number}`,
           amountDue: amount,
           dueLabel: "",
           payUrl: text(row.stripe_hosted_invoice_url) || undefined,
@@ -489,7 +490,7 @@ export async function runConfirmedTool(
     }
 
     case "edit_invoice_lines": {
-      const number = text(input.invoice_number).replace(/^INV-/i, "");
+      const number = invoiceRef(input.invoice_number);
       const proposed = Array.isArray(input.lines) ? input.lines : [];
 
       const lines = proposed
@@ -507,7 +508,7 @@ export async function runConfirmedTool(
           "id, job_id, status, last_sent_at, paid_at, diagnostic_credit_cents, tax_cents",
         )
         .eq("organization_id", organizationId)
-        .eq("invoice_number", Number(number))
+        .eq("number_label", number)
         .maybeSingle();
 
       const invoice = (found ?? null) as Record<string, unknown> | null;

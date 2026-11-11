@@ -12,6 +12,7 @@ import {
   usedSentence,
 } from "@/lib/stock-reservation";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * The database half of billing a job's lines, and of the stock they take.
@@ -45,7 +46,7 @@ export async function jobInvoices(
   const { data } = await database
     .from("invoices")
     .select(
-      "id, invoice_number, status, subtotal_cents, tax_cents, diagnostic_credit_cents, total_cents, last_sent_at, paid_at, created_at",
+      "id, invoice_number, number_label, status, subtotal_cents, tax_cents, diagnostic_credit_cents, total_cents, last_sent_at, paid_at, created_at",
     )
     .eq("organization_id", organizationId)
     .eq("job_id", jobId)
@@ -53,7 +54,7 @@ export async function jobInvoices(
 
   return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
     id: text(row.id),
-    number: String(row.invoice_number ?? ""),
+    number: invoiceLabel(row),
     status: text(row.status) || "draft",
     totalCents: Number(row.total_cents ?? 0),
     subtotalCents: Number(row.subtotal_cents ?? 0),

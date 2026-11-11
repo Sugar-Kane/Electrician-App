@@ -7,6 +7,7 @@ import { invoiceStatusLabel } from "@/lib/dashboard-metrics";
 import type { InvoiceStanding } from "@/lib/job-billing";
 import { jobStockLines, reservedStock, type JobStockLine } from "@/lib/job-billing-server";
 import { jobLineTotals, type JobLine, type JobLineTotals } from "@/lib/job-lines";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * The hours and parts on a job, read from the database.
@@ -148,7 +149,7 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
 
   const { data, error } = await context.database
     .from("invoices")
-    .select("id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, created_at, preview_sent_at")
+    .select("id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, created_at, preview_sent_at")
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false });
@@ -171,7 +172,7 @@ export async function getJobInvoices(jobNumber: string): Promise<JobInvoiceSumma
 
   return rows.map((row) => {
     const status = str(row.status) || "draft";
-    const number = String(row.invoice_number ?? "");
+    const number = invoiceLabel(row);
     return {
       id: str(row.id),
       number,

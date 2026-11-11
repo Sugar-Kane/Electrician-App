@@ -24,6 +24,7 @@ import type { McpSession } from "@/lib/mcp-session-token";
 import { jobCategoryLabel, parseNewJob, splitName, type NewJobParsed } from "@/lib/new-job-input";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * The working day, run from ChatGPT.
@@ -819,11 +820,11 @@ async function billJob(database: Database, organizationId: string, args: Record<
         balance_due_cents: totals.totalCents,
         stripe_application_fee_cents: totals.applicationFeeCents,
       })
-      .select("id, invoice_number")
+      .select("id, invoice_number, number_label")
       .maybeSingle();
     if (error || !created) return { isError: true, text: "The invoice could not be saved. Nothing was sent." };
     invoiceId = text(created.id);
-    invoiceNumber = text(created.invoice_number);
+    invoiceNumber = invoiceLabel(created);
 
     const claimed = await claimUnbilledLines(flexible, { organizationId, jobId, invoiceId, voidInvoiceIds });
     if (claimed && claimed.cents !== step.cents) {

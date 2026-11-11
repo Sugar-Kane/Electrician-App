@@ -21,6 +21,7 @@ import { agreementChanges, type ContractStanding } from "./job-billing.ts";
 import { formatCents, lineTotalCents } from "./job-lines.ts";
 import { JOB_STAGE_LABELS, jobStage, jobStatusLabel } from "./job-stage.ts";
 import { kindOfWork } from "./new-job-input.ts";
+import { invoiceLabel } from "./invoice-label.ts";
 
 export type SendAttempt = { channel: string; to: string; ok: boolean; detail: string; at: string };
 
@@ -223,7 +224,7 @@ export function parseTrace(raw: unknown): JobTrace | null {
     })),
     invoices: list(root.invoices).map((row) => ({
       id: str(row.id),
-      number: str(row.invoice_number),
+      number: invoiceLabel(row),
       status: str(row.status),
       subtotalCents: num(row.subtotal_cents),
       creditCents: num(row.diagnostic_credit_cents),

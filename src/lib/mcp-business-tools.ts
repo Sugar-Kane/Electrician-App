@@ -32,6 +32,7 @@ import { contractSendRefusal } from "@/lib/contract-send";
 import { signingLinkMessage } from "@/lib/contract-signing";
 import { formatForDisplay, toE164 } from "@/lib/phone-format";
 import { billingParty } from "@/lib/customer-details";
+import { invoiceLabel, invoiceRef } from "@/lib/invoice-label";
 
 const str = (description: string) => ({ type: "string", description });
 const confirmed = {
@@ -527,7 +528,7 @@ export async function runBusinessMcpTool(input: {
       const requested = text(args.status) || "all";
       let query = database
         .from("invoices")
-        .select("invoice_number,status,total_cents,balance_due_cents,due_at,last_sent_at,jobs(customers(first_name,last_name,company_name))")
+        .select("invoice_number, number_label,status,total_cents,balance_due_cents,due_at,last_sent_at,jobs(customers(first_name,last_name,company_name))")
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -539,7 +540,7 @@ export async function runBusinessMcpTool(input: {
         text: rows.map((row) => {
           const job = record(row.jobs);
           const customer = record(job.customers);
-          return `INV-${row.invoice_number} | ${displayCustomer(customer)} | ${formatMoney(Number(row.total_cents ?? 0) / 100)} | ${text(row.status)} | balance ${formatMoney(Number(row.balance_due_cents ?? 0) / 100)}`;
+          return `INV-${invoiceLabel(row)} | ${displayCustomer(customer)} | ${formatMoney(Number(row.total_cents ?? 0) / 100)} | ${text(row.status)} | balance ${formatMoney(Number(row.balance_due_cents ?? 0) / 100)}`;
         }).join("\n"),
       };
     }
@@ -564,7 +565,7 @@ export async function runBusinessMcpTool(input: {
       const totals = invoiceTotals({ subtotalCents: cents });
       const { data: duplicate } = await database
         .from("invoices")
-        .select("invoice_number")
+        .select("invoice_number, number_label")
         .eq("organization_id", organizationId)
         .eq("job_id", text(job.id))
         .eq("status", "draft")
@@ -572,7 +573,7 @@ export async function runBusinessMcpTool(input: {
         .limit(1)
         .maybeSingle();
       if (duplicate) {
-        return { isError: true, text: `Duplicate refused. INV-${duplicate.invoice_number} is already a draft on job #${jobNumber} for that amount.` };
+        return { isError: true, text: `Duplicate refused. INV-${invoiceLabel(duplicate)} is already a draft on job #${jobNumber} for that amount.` };
       }
 
       const { data: created, error } = await database
@@ -588,7 +589,7 @@ export async function runBusinessMcpTool(input: {
           balance_due_cents: totals.totalCents,
           stripe_application_fee_cents: totals.applicationFeeCents,
         })
-        .select("id,invoice_number,total_cents")
+        .select("id,invoice_number, number_label,total_cents")
         .maybeSingle();
       if (error || !created) return { isError: true, text: "The invoice could not be created." };
 
@@ -605,24 +606,23 @@ export async function runBusinessMcpTool(input: {
         voidInvoiceIds: voided,
       });
 
-      return { text: `Draft INV-${created.invoice_number} created for ${formatMoney(Number(created.total_cents) / 100)}. It has not been sent.` };
+      return { text: `Draft INV-${invoiceLabel(created)} created for ${formatMoney(Number(created.total_cents) / 100)}. It has not been sent.` };
     }
 
     case "send_invoice": {
-      const rawNumber = text(args.invoice_number).replace(/^INV-/i, "");
-      const number = Number(rawNumber);
+      const rawNumber = invoiceRef(args.invoice_number);
       const channel = text(args.channel);
       const proposal = `Send INV-${rawNumber} by ${channel}.`;
       const gate = requireConfirmation(args, proposal);
       if (gate) return gate;
-      if (!Number.isFinite(number)) return { isError: true, text: "That invoice number could not be read." };
+      if (!/^\d+(-\d+)?$/.test(rawNumber)) return { isError: true, text: "That invoice number could not be read." };
       const { data } = await database
         .from("invoices")
         .select(
-          "id,invoice_number,status,total_cents,due_at,stripe_hosted_invoice_url,jobs(customer_description,customers(first_name,last_name,company_name,phone,email)),organizations(name,phone,timezone)",
+          "id,invoice_number, number_label,status,total_cents,due_at,stripe_hosted_invoice_url,jobs(customer_description,customers(first_name,last_name,company_name,phone,email)),organizations(name,phone,timezone)",
         )
         .eq("organization_id", organizationId)
-        .eq("invoice_number", number)
+        .eq("number_label", rawNumber)
         .maybeSingle();
       if (!data) return { isError: true, text: `INV-${rawNumber} was not found. Nothing was sent.` };
       const row = data as Record<string, unknown>;
@@ -644,7 +644,7 @@ export async function runBusinessMcpTool(input: {
           businessName: text(organization.name) || "Your electrician",
           businessPhone: text(organization.phone) || "our office",
           contactName: displayCustomer(customer),
-          invoiceNumber: `INV-${row.invoice_number}`,
+          invoiceNumber: `INV-${invoiceLabel(row)}`,
           amountDue: Number(row.total_cents ?? 0) / 100,
           dueLabel: "",
           payUrl: text(row.stripe_hosted_invoice_url) || undefined,

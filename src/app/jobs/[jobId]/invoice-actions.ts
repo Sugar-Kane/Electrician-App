@@ -18,6 +18,7 @@ import {
 import { parseCostToCents } from "@/lib/new-job-input";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Billing what a job has not billed yet.
@@ -189,13 +190,13 @@ export async function raiseInvoice(
       balance_due_cents: totals.totalCents,
       stripe_application_fee_cents: totals.applicationFeeCents,
     })
-    .select("id, invoice_number")
+    .select("id, invoice_number, number_label")
     .maybeSingle();
 
   if (error || !created) return { error: "That invoice could not be saved." };
 
   const invoiceId = text(created.id);
-  const number = String(created.invoice_number ?? "");
+  const number = invoiceLabel(created);
 
   // The lines this invoice bills: everything unbilled, claimed in one go. A
   // typed amount claims them too — it is the price of those lines, and leaving
