@@ -236,3 +236,32 @@ export async function setJobDiagnosticFee(
       : "Diagnostic fee turned off for this job. Draft the contract again if one was already made, so it matches.",
   };
 }
+
+/**
+ * End the visit under way with the job still open, and book the next one
+ * (job-visits-server.ts). The visit is kept in the job's history.
+ */
+export async function endVisitForReturnAction(
+  _previousState: JobActionState,
+  formData: FormData,
+): Promise<JobActionState> {
+  const jobNumber = String(formData.get("jobNumber") ?? "").trim();
+  const job = await loadJob(jobNumber);
+  if (!job) return { error: "That job could not be found." };
+  const { data: auth } = await job.supabase.auth.getUser();
+
+  const { endVisitForReturn } = await import("@/lib/job-visits-server");
+  const result = await endVisitForReturn(job, {
+    startLocal: String(formData.get("start") ?? "").trim(),
+    endLocal: String(formData.get("end") ?? "").trim(),
+    note: String(formData.get("note") ?? ""),
+    notifyCustomer: formData.get("notifyCustomer") === "on",
+    userId: auth.user?.id ?? "",
+  });
+  if (result.error) return { error: result.error };
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath("/schedule");
+  revalidatePath("/");
+  return { error: "", notice: result.notice };
+}

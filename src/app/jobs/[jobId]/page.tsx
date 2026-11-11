@@ -8,7 +8,6 @@ import { SpanishBadge } from "@/components/language-badge";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobFollowUps } from "@/components/job-follow-ups";
-import { JobTasks } from "@/components/tasks/job-tasks";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
@@ -40,6 +39,8 @@ import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
 import { JobMaterialChat } from "@/components/job-material-chat";
+import { EndVisitForReturn } from "@/components/job-visits";
+import { getJobVisitsByNumber } from "@/lib/job-visits-server";
 
 /**
  * One job, in the order somebody standing outside a house needs it.
@@ -150,9 +151,10 @@ export default async function JobDetailPage({
 
   // What each stock part holds back or has taken, for the lines list and for
   // "Confirm parts used" when the job is finished.
-  const [stockLines, materialChat] = await Promise.all([
+  const [stockLines, materialChat, pastVisits] = await Promise.all([
     lineJobId && controls ? getJobStock(lineJobId, !canceled && state !== "completed") : Promise.resolve([]),
     lineJobId && controls ? loadJobMaterialChat(lineJobId) : Promise.resolve(null),
+    controls ? getJobVisitsByNumber(jobId) : Promise.resolve([]),
   ]);
   const lineStock = Object.fromEntries(
     stockLines.map((line) => [line.lineId, { reserved: line.reserved, taken: line.taken, itemUnit: line.itemUnit }]),
@@ -380,7 +382,7 @@ export default async function JobDetailPage({
         </section>
       ) : null}
 
-      {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} /> : null}
+      {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} canEndVisit={state === "arrived" || state === "working" || state === "review"} /> : null}
 
       {controls && !canceled && stage.needsDecision ? (
         <DiagnosticDecision
@@ -662,34 +664,56 @@ export default async function JobDetailPage({
         </SectionRow>
       ) : null}
 
-      {controls && stage.flow === "work_order" && !canceled ? (
-        <SectionRow title="Scheduled visits" summary={job.startsAt ? `${job.dateLabel} · ${job.time}` : "Not scheduled yet"}>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2.5">
+      {controls && !canceled ? (
+        <SectionRow
+          id="visits"
+          title="Visits"
+          summary={`${pastVisits.length + 1} ${pastVisits.length === 0 ? "visit" : "visits"} · next ${
+            job.startsAt ? `${job.dateLabel} · ${job.time}` : "not scheduled yet"
+          }`}
+          open={pastVisits.length > 0 && !showsWorkspace(state)}
+        >
+          <ol className="space-y-2 text-sm">
+            {pastVisits.map((visit, index) => (
+              <li key={visit.id} className="rounded-control border border-line px-3 py-2.5">
+                <span className="block font-semibold">
+                  Visit {index + 1} · {visitDay(visit.arrivedAt || visit.windowStart || visit.endedAt, history.timeZone)}
+                </span>
+                <span className="block text-ink-muted">
+                  {visit.arrivedAt ? `Arrived ${visitTime(visit.arrivedAt, history.timeZone)} · ` : ""}
+                  Ended {visitTime(visit.endedAt, history.timeZone)}
+                </span>
+                {visit.note ? <span className="mt-1 block whitespace-pre-line leading-6">{visit.note}</span> : null}
+              </li>
+            ))}
+            <li className="flex items-center justify-between gap-3 rounded-control border border-brand/40 px-3 py-2.5">
               <span>
-                <span className="block font-semibold">{job.startsAt ? `${job.dateLabel}` : "No time set"}</span>
+                <span className="block font-semibold">
+                  {pastVisits.length > 0 ? `Visit ${pastVisits.length + 1} · ` : ""}
+                  {job.startsAt ? job.dateLabel : "No time set"}
+                </span>
                 {job.startsAt ? (
                   <span className="block text-ink-muted">
                     {job.time}–{job.endTime}
+                    {showsWorkspace(state) && state !== "completed" ? " · under way" : ""}
                   </span>
                 ) : null}
               </span>
-              <Link
-                href={`/jobs/${job.id}/edit#window`}
-                className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand"
-              >
-                {job.startsAt ? "Change time" : "Schedule"}
-              </Link>
+              {!showsWorkspace(state) ? (
+                <Link
+                  href={`/jobs/${job.id}/edit#window`}
+                  className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand"
+                >
+                  {job.startsAt ? "Change time" : "Schedule"}
+                </Link>
+              ) : null}
             </li>
-          </ul>
-        </SectionRow>
-      ) : null}
-
-      {controls ? (
-        <SectionRow title={stage.flow === "diagnostic" ? "Tasks & checklist" : "Tasks"} summary="To-dos for this job">
-          <div className="[&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
-            <JobTasks jobNumber={String(controls.jobNumber)} />
-          </div>
+          </ol>
+          {state === "arrived" || state === "working" || state === "review" ? (
+            <div className="mt-4 border-t border-line pt-4">
+              <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
+            </div>
+          ) : null}
         </SectionRow>
       ) : null}
 
@@ -840,4 +864,14 @@ function SectionRow({
       <div className="border-t border-line px-4 py-4 sm:px-5">{children}</div>
     </details>
   );
+}
+
+function visitDay(iso: string, timeZone: string): string {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric" }).format(new Date(iso));
+}
+
+function visitTime(iso: string, timeZone: string): string {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 }

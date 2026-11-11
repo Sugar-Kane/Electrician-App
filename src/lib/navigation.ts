@@ -67,12 +67,6 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Every job, by where it stands",
       },
       {
-        label: "Tasks",
-        href: "/tasks",
-        icon: "ListChecks",
-        description: "To-dos for you, your team and your assistant",
-      },
-      {
         label: "Customers",
         href: "/customers",
         icon: "Contact",

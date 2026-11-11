@@ -3,11 +3,11 @@ import { addDays, calendarDate, zonedWallClockToIso } from "./schedule-labels.ts
 import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
 
 /**
- * A day's jobs, for the Tasks page, ChatGPT's daily list and today_plan. What
+ * A day's jobs, for ChatGPT's today_plan. What
  * needs doing is "Needs your action" (needs-action.ts), the home screen's own
  * list.
  *
- * No server-only imports, so the task tools that use it stay testable.
+ * No server-only imports, so the tools that use it stay testable.
  */
 
 type Database = FlexibleSupabaseClient;

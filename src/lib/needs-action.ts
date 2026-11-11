@@ -10,12 +10,12 @@ import type { PilotJob } from "@/lib/pilot-data";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
 /**
- * "Needs your action": one list, three places to see it. The home screen, the
- * Tasks page and ChatGPT's daily list all come from `needsActionFromInputs`,
- * with the same rules, counts and words, so they can't disagree.
+ * "Needs your action": one list, two places to see it. The home screen and
+ * ChatGPT's today_plan both come from `needsActionFromInputs`, with the same
+ * rules, counts and words, so they can't disagree.
  *
- * The home screen passes what it has already loaded for itself. The Tasks page
- * and ChatGPT call `loadNeedsAction`, which reads the same rows (filtered to
+ * The home screen passes what it has already loaded for itself. ChatGPT calls
+ * `loadNeedsAction`, which reads the same rows (filtered to
  * the business) and passes them through the same mappers and rules.
  */
 
@@ -95,8 +95,8 @@ function dayIn(at: Date, timeZone: string): string {
 }
 
 /**
- * The same list, read straight from the business's rows: for the Tasks page
- * (the signed-in person's client) and ChatGPT (the server client). Every
+ * The same list, read straight from the business's rows, for ChatGPT (the
+ * server client). Every
  * query is filtered to the business.
  */
 export async function loadNeedsAction(db: FlexibleSupabaseClient, organizationId: string, timeZone: string): Promise<NeedsAction> {

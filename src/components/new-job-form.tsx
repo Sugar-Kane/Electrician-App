@@ -120,7 +120,7 @@ export function NewJobForm({
    * Booking the work a diagnostic found: where the form starts, and the
    * diagnostic it is linked back to.
    */
-  followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number };
+  followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number; intent?: NewJobIntent };
   /** The business's customers, at each address, for Returning customer. */
   customers?: CustomerChoice[];
   /** What is on the shelf, so a work order's parts can be picked from it. */
@@ -162,7 +162,7 @@ export function NewJobForm({
   }
 
   const [intent, setIntent] = useState<NewJobIntent>(
-    state.intent ?? (followUp ? "agreed" : kept?.category === "work_order" ? "agreed" : "fault"),
+    state.intent ?? (followUp ? (followUp.intent ?? "agreed") : kept?.category === "work_order" ? "agreed" : "fault"),
   );
   const category = intent === "fault" ? "diagnostic" : "work_order";
 

@@ -4,6 +4,7 @@ import { getCustomerChoices, getFollowUpStart } from "@/lib/job-data";
 import { getStockOptions } from "@/lib/job-line-data";
 import { getOrganizationTimezone } from "@/lib/organization-timezone";
 import { timezoneLabel } from "@/lib/timezones";
+import { isoToZonedWallClock } from "@/lib/schedule-labels";
 
 /**
  * A job entered by hand.
@@ -22,23 +23,40 @@ import { timezoneLabel } from "@/lib/timezones";
  * the customer paid for the diagnostic comes off this one's invoice. A number
  * that is not a diagnostic of this business's is ignored, and the form starts
  * empty as it always did.
+ *
+ * `&plan=` is the choice made on the diagnostic: `now` books the repair for
+ * right now (an hour's window from the next quarter hour), `estimate` starts
+ * it as a quote with no time, `return` books it for a time still to pick.
  */
 export default async function NewJobPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; plan?: string }>;
 }) {
-  const [{ from }, timeZone, customers, stock] = await Promise.all([
+  const [{ from, plan }, timeZone, customers, stock] = await Promise.all([
     searchParams,
     getOrganizationTimezone(),
     getCustomerChoices(),
     getStockOptions(),
   ]);
   const followUp = from ? await getFollowUpStart(from) : null;
+  const intent = plan === "estimate" ? ("quote" as const) : ("agreed" as const);
+  let values = followUp?.values;
+  if (followUp && values && plan === "now") {
+    const quarter = 15 * 60_000;
+    const start = new Date(Math.ceil(Date.now() / quarter) * quarter);
+    values = {
+      ...values,
+      startLocal: isoToZonedWallClock(start.toISOString(), timeZone),
+      arrivalEndLocal: isoToZonedWallClock(new Date(start.getTime() + 60 * 60_000).toISOString(), timeZone),
+    };
+  } else if (followUp && values && plan) {
+    values = { ...values, startLocal: "", arrivalEndLocal: "" };
+  }
 
   return (
     <FieldPageShell
-      title={followUp ? "Book work order" : "New job"}
+      title={followUp ? (plan === "estimate" ? "Repair estimate" : plan === "now" ? "Repair now" : plan === "return" ? "Return visit" : "Book work order") : "New job"}
       eyebrow={followUp ? `From diagnostic #${followUp.jobNumber}` : "Add work"}
       description={
         followUp
@@ -56,7 +74,8 @@ export default async function NewJobPage({
           followUp
             ? {
                 jobNumber: followUp.jobNumber,
-                values: followUp.values,
+                values: values ?? followUp.values,
+                intent,
                 creditCents: followUp.creditCents,
               }
             : undefined
