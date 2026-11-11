@@ -90,6 +90,7 @@ export async function createJob(
     category: field(formData, "category"),
     description: field(formData, "description"),
     startLocal: field(formData, "startLocal"),
+    arrivalEndLocal: field(formData, "arrivalEndLocal"),
     durationHours: field(formData, "durationHours"),
     cost: field(formData, "cost"),
     mode: field(formData, "mode"),
@@ -105,6 +106,7 @@ export async function createJob(
   if (intent === "quote") {
     raw.category = "work_order";
     raw.startLocal = "";
+    raw.arrivalEndLocal = "";
     raw.cost = "";
   } else if (intent === "agreed") {
     raw.category = "work_order";
@@ -342,7 +344,10 @@ export async function createJob(
        */
       status: draft || !start ? "draft" : "confirmed",
       ...(start ? { scheduled_start: start, arrival_window_start: start } : {}),
-      ...(end ? { scheduled_end: end, arrival_window_end: end } : {}),
+      ...(end ? { scheduled_end: end } : {}),
+      // The arrival window the customer is told: from the start to the end
+      // the electrician gave, which is required with a start.
+      ...(start ? { arrival_window_end: job.arrivalEndLocal ? zonedWallClockToIso(job.arrivalEndLocal, timeZone) : end } : {}),
       // A follow-up has no diagnostic fee of its own. The one the customer
       // paid belongs to the visit it follows, and is credited from there.
       ...(followed ? { follow_up_of: followed.id, diagnostic_fee_cents: 0 } : {}),

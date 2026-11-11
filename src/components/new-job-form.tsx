@@ -395,8 +395,8 @@ export function NewJobForm({
           <Optional
             title="Schedule now"
             summary={start ? "A time is set" : "Leave it to save without a time"}
-            open={Boolean(start) || intent === "agreed" || state.field === "durationHours"}
-            error={state.field === "durationHours"}
+            open={Boolean(start) || intent === "agreed" || state.field === "durationHours" || state.field === "arrivalEndLocal"}
+            error={state.field === "durationHours" || state.field === "arrivalEndLocal"}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Start" hint={`Times are ${timeZoneLabel}. Leave blank to save it unscheduled.`} group>
@@ -408,6 +408,21 @@ export function NewJobForm({
                   onValueChange={setStart}
                 />
               </Field>
+              {start ? (
+                <Field
+                  label="Arrival window ends"
+                  hint="Required. The customer is told you will arrive between the start and this time."
+                  error={errorFor("arrivalEndLocal")}
+                  group
+                >
+                  <DateTimeField
+                    name="arrivalEndLocal"
+                    label="Arrival window ends"
+                    timeZone={timeZone}
+                    defaultValue={kept?.arrivalEndLocal ?? ""}
+                  />
+                </Field>
+              ) : null}
               <Field
                 label="How long it should take"
                 hint={

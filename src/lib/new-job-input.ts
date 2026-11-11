@@ -171,6 +171,8 @@ export type NewJobRaw = {
   description: string;
   /** Wall clock in the business's zone, from a datetime-local input. */
   startLocal: string;
+  /** When the arrival window closes, wall clock like startLocal. Required with a start. */
+  arrivalEndLocal?: string;
   /** Hours. Blank means the default. */
   durationHours: string;
   /** What the work costs, as typed: "1280", "$1,280.00", "1280.5". */
@@ -199,6 +201,8 @@ export type NewJobParsed = {
   category: JobCategory;
   description: string;
   startLocal: string;
+  /** When the arrival window closes; empty when there is no start. */
+  arrivalEndLocal: string;
   durationMinutes: number;
   /** Cents. Zero means no invoice is to be raised. */
   costCents: number;
@@ -483,6 +487,18 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
   // and a locked field is a courtesy, not a control.
   if (category === "diagnostic") durationMinutes = DIAGNOSTIC_MINUTES;
 
+  // A visit with a start has an arrival window with an end: "between 8 and
+  // 10", never just "from 8". Both are YYYY-MM-DDTHH:mm in the same zone, so
+  // they compare as text.
+  const startLocal = raw.startLocal.trim();
+  const arrivalEndLocal = (raw.arrivalEndLocal ?? "").trim();
+  if (startLocal && !arrivalEndLocal) {
+    return { ok: false, error: "Add when the arrival window ends.", field: "arrivalEndLocal" };
+  }
+  if (startLocal && arrivalEndLocal <= startLocal) {
+    return { ok: false, error: "The arrival window has to end after it starts.", field: "arrivalEndLocal" };
+  }
+
   const cost = readCost(raw.cost);
   if (!cost.ok) {
     return {
@@ -515,7 +531,8 @@ export function parseNewJob(raw: NewJobRaw): ParseResult {
       accessNotes,
       category,
       description: raw.description.trim(),
-      startLocal: raw.startLocal.trim(),
+      startLocal,
+      arrivalEndLocal: startLocal ? arrivalEndLocal : "",
       durationMinutes,
       costCents: cost.cents,
       mode,
