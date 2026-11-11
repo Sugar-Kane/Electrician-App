@@ -77,8 +77,14 @@ function stepChips(job: PilotJob, stage: JobStage, facts: JobProgressFacts | und
     unbilledCents: facts?.unbilledCents ?? 0,
     formatMoney: formatCents,
   });
+  // A finished job has nothing left to estimate, approve, gather or work:
+  // the only thing it can still need is money collected. Billing shows only
+  // when something was priced to bill (or an invoice already exists).
+  const finished = stage === "completed" || workflowStateOf(job.stage ?? "") === "completed";
+  const billable = (facts?.pricedCents ?? 0) > 0 || (facts?.invoices ?? []).some((invoice) => invoice.status !== "void");
   const chips: StepChip[] = [];
   for (const step of openSteps(steps)) {
+    if (finished && !(billable && (step.key === "invoice" || step.key === "paid") && step.action?.kind === "go" && step.action.href === "#billing")) continue;
     if (!step.action || chips.some((chip) => chip.label === step.action?.label)) continue;
     chips.push({ key: step.key, label: step.action.label });
   }
