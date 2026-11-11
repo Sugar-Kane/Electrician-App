@@ -21,6 +21,7 @@ import { readMaterialList, writeMaterialList, type SavedMaterialList } from "@/l
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { McpSession } from "@/lib/mcp-session-token";
 import { parseCostToCents } from "@/lib/new-job-input";
+import { cartAgentSteps, cartSlug, cartStore, storeCart } from "@/lib/store-cart";
 import { getSupplierIntegrations } from "@/lib/supplier-integrations";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
@@ -220,6 +221,22 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     },
     // It replaces the job's saved list.
     annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  },
+  {
+    name: "store_cart",
+    title: "Get a job's Home Depot or Lowe's cart",
+    description:
+      "When the electrician wants a job's materials put in their Home Depot or Lowe's cart: read the job's saved, priced materials list as that store's products (link, item number, how many), with the steps for filling the cart and the Volteira page that holds them. Items the store has no match for, and items with no quantity, come back marked for you to recommend a product and a quantity. Neither store has an ordering connection, so the cart is filled in a web browser signed in to the electrician's own store account (ChatGPT agent mode). Nothing is bought.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The existing job number."),
+        store: { type: "string", enum: ["home-depot", "lowes"], description: "Which store's cart to fill." },
+      },
+      required: ["job_number", "store"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
   },
 ];
 
@@ -811,6 +828,61 @@ export async function runBusinessMcpTool(input: {
       return {
         text: `Saved ${count} ${count === 1 ? "item" : "items"} to job #${job.job_number}. Nothing was ordered or sent to the customer. In Volteira, open job #${job.job_number} → Materials chat to change items, price them and add them to the estimate.\nlist_version for the next change: ${write.updatedAt}`,
         record: { jobId },
+      };
+    }
+
+    case "store_cart": {
+      const store = cartStore(args.store);
+      if (!store) return { isError: true, text: 'Say which store: "home-depot" or "lowes".' };
+      const found = await materialsJob(database, organizationId, args.job_number);
+      if (!found) return { isError: true, text: `Job #${String(args.job_number ?? "")} was not found.` };
+      const { job, saved } = found;
+      const { label, lines, unmatched } = storeCart(saved.list, store);
+      const number = String(job.job_number);
+      const jobPlace = record(Array.isArray(job.properties) ? job.properties[0] : job.properties);
+      const facts = materialJobFacts({
+        category: job.category,
+        customerDescription: job.customer_description,
+        technicianNotes: job.technician_notes,
+        city: jobPlace.city,
+        state: jobPlace.state,
+      });
+      const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+      const page = origin ? `${origin}/jobs/${number}/cart/${cartSlug(store)}` : "";
+      if (lines.length === 0) {
+        return {
+          text: `Nothing on job #${number}'s materials list is matched to a ${label} product yet${hasContent(saved.list) ? "" : " (the job has no saved list)"}. Write and save the list, price it in the job's Materials chat in Volteira, and ask again.`,
+          record: { jobId: text(job.id) },
+        };
+      }
+      return {
+        text: [
+          `${label.toUpperCase()} CART FOR JOB #${number}`,
+          page ? `The same list as a page to work from: ${page} (opens when signed in to Volteira).` : "",
+          "",
+          "THE JOB (for recommending products and quantities)",
+          ...(facts.length ? facts : ["The job record says nothing about the work; ask the electrician before guessing quantities."]),
+          "",
+          "HOW TO FILL THE CART",
+          `This needs a web browser signed in to the electrician's ${label} account: ChatGPT agent mode. If this conversation is not in agent mode, tell the electrician to switch to agent mode and say: "Fill my ${label} cart for job #${number} from Volteira."`,
+          ...cartAgentSteps(store).map((step, index) => `${index + 1}. ${step}`),
+          "",
+          "ADD TO CART",
+          ...lines.map(
+            (line, index) =>
+              `${index + 1}. ${line.product}: needed ${line.needsQty ? "NO QUANTITY ON THE LIST, recommend one" : line.qty} (list: "${line.listed}")${line.sku ? `, item ${line.sku}` : ""}, matched ${formatMoney(line.cents / 100)} per ${line.per}${line.note ? `, note: ${line.note}` : ""}\n   ${line.url}`,
+          ),
+          ...(unmatched.length
+            ? [
+                "",
+                `NOT MATCHED AT ${label.toUpperCase()} (search ${label} and recommend a product for each, as the steps say)`,
+                ...unmatched.map((item) => `- ${item.listed}${item.note ? ` (${item.note})` : ""}${item.needsQty ? ": NO QUANTITY ON THE LIST, recommend one" : ""}`),
+              ]
+            : []),
+        ]
+          .filter((line, index, all) => line !== "" || all[index - 1] !== "")
+          .join("\n"),
+        record: { jobId: text(job.id) },
       };
     }
 
