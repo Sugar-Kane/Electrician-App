@@ -1,7 +1,7 @@
 import "server-only";
 
 import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
-import { fillTemplate, scopePrompt, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
+import { completeDraftFields, fillTemplate, placeholdersUsed, scopePrompt, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
@@ -183,6 +183,26 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
         confirmed,
       },
       required: ["job_number", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "complete_contract_details",
+    title: "Fill in a contract's missing details",
+    description:
+      "Fill in the details a job's draft contract is still missing (for example service_address or scope), the way the job page's \"Save contract details\" does: it saves a new completed draft and rebuilds the PDF; the old draft is left as it was. Call once with only job_number to see which fields are missing and, for scope, the rules for writing it; then call again with values and confirmed true. Explicit owner approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The existing job number."),
+        values: {
+          type: "object",
+          description: "Each missing field by its name, e.g. {\"service_address\": \"335 Kestrel Way, Nipomo, CA 93444\", \"scope\": \"...\"}. Plain text, up to 5,000 characters each.",
+          additionalProperties: { type: "string" },
+        },
+        confirmed,
+      },
+      required: ["job_number"],
       additionalProperties: false,
     },
   },
@@ -742,6 +762,137 @@ export async function runBusinessMcpTool(input: {
       }
       const blanks = filled.unfilled.length ? ` ${filled.unfilled.length} template field(s) still need review.` : "";
       return { text: `Draft contract created for job #${jobNumber}.${blanks} ${pdfNote} It has not been sent for signature.` };
+    }
+
+    case "complete_contract_details": {
+      const number = Number(text(String(args.job_number ?? "")).replace(/^#/, ""));
+      if (!Number.isInteger(number) || number <= 0) return { isError: true, text: "That job number could not be read. Nothing was saved." };
+      const { data: jobRow } = await database
+        .from("jobs")
+        .select("id, job_number, category, customer_description")
+        .eq("organization_id", organizationId)
+        .eq("job_number", number)
+        .maybeSingle();
+      const job = (jobRow ?? null) as Record<string, unknown> | null;
+      if (!job) return { isError: true, text: `Job #${number} was not found. Nothing was saved.` };
+      const jobId = text(job.id);
+
+      // Only the newest contract can be completed, and only while it is an unsigned draft.
+      const { data: sourceRow } = await database
+        .from("contracts")
+        .select("id, kind, body, scope, status, signed_at, created_at, total_cents, deposit_cents, deposit_paid")
+        .eq("organization_id", organizationId)
+        .eq("job_id", jobId)
+        .neq("status", "void")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const source = (sourceRow ?? null) as Record<string, unknown> | null;
+      if (!source) return { isError: true, text: `Job #${number} has no contract yet. Draft one with draft_contract.`, record: { jobId } };
+      if (source.status !== "draft" || source.signed_at) {
+        return { isError: true, text: "Only an unsigned draft can be completed. This contract has already been sent or signed.", record: { jobId } };
+      }
+      const body = text(source.body);
+      const fields = placeholdersUsed(body);
+      if (!fields.length) return { text: `Job #${number}'s contract has no missing details. It is ready to send for signature.`, record: { jobId } };
+
+      const given = record(args.values);
+      if (Object.keys(given).length === 0) {
+        return {
+          text: [
+            `Job #${number}'s draft contract is missing: ${fields.join(", ")}. Nothing has been saved yet.`,
+            "Ask the electrician for anything you do not know, then call complete_contract_details again with values for every one of these fields and confirmed true.",
+            ...(fields.includes("scope")
+              ? [
+                  "",
+                  "For scope, write one plain paragraph:",
+                  `KIND OF WORK: ${text(job.category).replace(/_/g, " ") || "not given"}`,
+                  `WHAT THE CUSTOMER DESCRIBED: ${text(job.customer_description).slice(0, 2000) || "nothing yet; ask the electrician"}`,
+                  "RULES",
+                  scopePrompt(),
+                ]
+              : []),
+          ].join("\n"),
+          record: { jobId },
+        };
+      }
+
+      const values: Record<string, string> = Object.create(null);
+      for (const field of fields) {
+        const raw = given[field];
+        let value = typeof raw === "string" ? raw.trim() : "";
+        if (field === "scope") value = value.replace(/\s+/g, " ");
+        if (!value || value.length > 5000 || value.includes("{{") || value.includes("}}")) {
+          return { isError: true, text: `Give ${field} (up to 5,000 characters, without template brackets). Nothing was saved.`, record: { jobId } };
+        }
+        values[field] = value;
+      }
+      const gate = requireConfirmation(
+        args,
+        `Save a completed draft of job #${number}'s contract with ${fields.map((field) => `${field}: "${values[field].slice(0, 300)}"`).join("; ")}.`,
+      );
+      if (gate) return gate;
+
+      // A line written since this draft was made is work it does not cover.
+      const { count: writtenSince } = await database
+        .from("job_line_items")
+        .select("id", { count: "exact", head: true })
+        .eq("job_id", jobId)
+        .gt("created_at", text(source.created_at));
+      if (writtenSince) {
+        return {
+          isError: true,
+          text: source.kind === "change_order"
+            ? "Items were added after this change order was made. Generate a new change order so it includes them. Nothing was saved."
+            : "Items were added after this draft was made. Generate another draft with draft_contract so it includes them. Nothing was saved.",
+          record: { jobId },
+        };
+      }
+
+      const filled = completeDraftFields(body, values);
+      if (filled.unfilled.length) return { isError: true, text: `Still missing: ${filled.unfilled.join(", ")}. Nothing was saved.`, record: { jobId } };
+      const { data: created, error } = await database
+        .from("contracts")
+        .insert({
+          organization_id: organizationId,
+          job_id: jobId,
+          kind: source.kind === "change_order" ? "change_order" : "agreement",
+          body: filled.body,
+          scope: values.scope ?? text(source.scope),
+          unfilled: [],
+          status: "draft",
+          ...("total" in values || "deposit" in values
+            ? { total_cents: null, deposit_cents: null, deposit_paid: null }
+            : { total_cents: source.total_cents ?? null, deposit_cents: source.deposit_cents ?? null, deposit_paid: source.deposit_paid ?? null }),
+        })
+        .select("id")
+        .maybeSingle();
+      if (error || !created) return { isError: true, text: "The completed draft could not be saved. Try again.", record: { jobId } };
+
+      // Filed under the owner who connected ChatGPT, or the business's creator.
+      let uploadedBy = "";
+      if (session.credentialId) {
+        const { data: credential } = await database.from("mcp_business_credentials").select("created_by").eq("id", session.credentialId).maybeSingle();
+        uploadedBy = text(credential?.created_by);
+      }
+      const { data: organization } = await database.from("organizations").select("timezone, created_by").eq("id", organizationId).maybeSingle();
+      uploadedBy = uploadedBy || text(organization?.created_by);
+      let pdfNote = "PDF not rebuilt: open the job's contract and choose Build the PDF.";
+      if (uploadedBy) {
+        const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+        const pdf = await generateContractPdf({
+          database: asFlexibleClient(database),
+          organizationId,
+          contractId: text(created.id),
+          timeZone: text(organization?.timezone) || "America/Los_Angeles",
+          uploadedBy,
+        });
+        pdfNote = pdf.error ? `PDF needs to be rebuilt: ${pdf.error}` : "PDF rebuilt.";
+      }
+      return {
+        text: `Saved a completed draft of job #${number}'s contract (${fields.join(", ")} filled in). ${pdfNote} It has not been sent; use send_contract_for_signature when the electrician says to send it.`,
+        record: { jobId },
+      };
     }
 
     case "send_contract_for_signature": {
