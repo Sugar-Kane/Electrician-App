@@ -163,3 +163,76 @@ export async function cancelJob(
   revalidatePath("/");
   return { error: "", notice: result.notice };
 }
+
+/**
+ * The job's diagnostic fee, off or back on, from Job settings.
+ *
+ * Off is a fee of zero, so the job's next contract has no diagnostic fee line
+ * and nothing is credited on its invoice. Money on the job, so it follows the
+ * billing permission: a technician may change it only where the owner allows
+ * technicians to edit billing. A contract already drafted keeps what it says;
+ * draft it again to match.
+ */
+export async function setJobDiagnosticFee(
+  _previousState: JobActionState,
+  formData: FormData,
+): Promise<JobActionState> {
+  const jobNumber = Number(String(formData.get("jobNumber") ?? "").trim());
+  const charge = formData.get("charge") === "on";
+  if (!Number.isInteger(jobNumber) || jobNumber <= 0) return { error: "That job could not be found." };
+
+  const { billingRefusal } = await import("@/lib/billing-permission-server");
+  const blocked = await billingRefusal();
+  if (blocked) return { error: blocked };
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: membership } = await supabase.from("organization_members").select("organization_id").limit(1).maybeSingle();
+  const organizationId = text(membership?.organization_id);
+  if (!organizationId) return { error: "You are not signed in." };
+
+  const [{ data: jobRow }, { data: settings }] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("id, status, diagnostic_fee_cents, diagnostic_paid, follow_up_of")
+      .eq("organization_id", organizationId)
+      .eq("job_number", jobNumber)
+      .maybeSingle(),
+    supabase.from("service_settings").select("diagnostic_fee_cents").eq("organization_id", organizationId).maybeSingle(),
+  ]);
+  const job = jobRow as Record<string, unknown> | null;
+  if (!job) return { error: "That job could not be found." };
+
+  const { diagnosticFeeChange } = await import("@/lib/diagnostic-toggle");
+  const change = diagnosticFeeChange(
+    {
+      feeCents: Number(job.diagnostic_fee_cents ?? 0),
+      paid: job.diagnostic_paid === true,
+      followUp: Boolean(text(job.follow_up_of)),
+      canceled: job.status === "canceled",
+    },
+    charge,
+    typeof settings?.diagnostic_fee_cents === "number" ? settings.diagnostic_fee_cents : null,
+  );
+  if ("error" in change) return { error: change.error };
+
+  const { data: saved, error } = await supabase
+    .from("jobs")
+    .update({ diagnostic_fee_cents: change.feeCents })
+    .eq("id", text(job.id))
+    .eq("organization_id", organizationId)
+    .eq("diagnostic_paid", false)
+    .select("id")
+    .maybeSingle();
+  if (error || !saved) {
+    return { error: charge ? "The diagnostic fee could not be turned on. Try again." : "The diagnostic fee could not be turned off. It may have just been paid; reload the job." };
+  }
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath(`/jobs/${jobNumber}/edit`);
+  return {
+    error: "",
+    notice: charge
+      ? `Diagnostic fee turned on: $${(change.feeCents / 100).toFixed(2)}.`
+      : "Diagnostic fee turned off for this job. Draft the contract again if one was already made, so it matches.",
+  };
+}

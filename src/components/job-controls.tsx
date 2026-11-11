@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CalendarClock, Ban, MapPin, X } from "lucide-react";
+import { CalendarClock, Ban, MapPin, Receipt, X } from "lucide-react";
 
 import {
   cancelJob,
+  setJobDiagnosticFee,
   updateJob,
   updateJobPlace,
   type JobActionState,
@@ -133,6 +134,7 @@ export function JobControls({
   customerPhone,
   customerEmail,
   place,
+  diagnostic,
 }: {
   jobNumber: string;
   status: string;
@@ -147,6 +149,8 @@ export function JobControls({
   customerEmail: string;
   /** Null when the job has no address, so nothing to keep a unit or notes with. */
   place: JobPlaceDetails | null;
+  /** The job's diagnostic fee, for turning it off or back on. */
+  diagnostic?: { feeCents: number; paid: boolean; followUp: boolean };
 }) {
   const [editState, editAction] = useActionState(updateJob, initialState);
   const [cancelState, cancelAction] = useActionState(cancelJob, initialState);
@@ -259,6 +263,8 @@ export function JobControls({
 
       {place ? <JobPlace jobNumber={jobNumber} place={place} /> : null}
 
+      {diagnostic ? <JobDiagnosticFee jobNumber={jobNumber} diagnostic={diagnostic} /> : null}
+
       <section id="cancel" className="rounded-panel border border-line bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold tracking-tight">Cancel this job</h2>
         <p className="mt-1 text-sm leading-6 text-ink-muted">
@@ -318,5 +324,56 @@ export function JobControls({
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * The diagnostic fee on this job: off for work nobody needs to visit for
+ * first, back on if that was a mistake. One button, saying what it will do.
+ */
+function JobDiagnosticFee({
+  jobNumber,
+  diagnostic,
+}: {
+  jobNumber: string;
+  diagnostic: { feeCents: number; paid: boolean; followUp: boolean };
+}) {
+  const [state, action] = useActionState(setJobDiagnosticFee, initialState);
+  const charging = diagnostic.feeCents > 0;
+  const amount = `$${(diagnostic.feeCents / 100).toFixed(2)}`;
+
+  return (
+    <section id="diagnostic" className="scroll-mt-24 rounded-panel border border-line bg-surface p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand/10 text-brand">
+          <Receipt className="h-5 w-5" aria-hidden />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Diagnostic fee</h2>
+          <p className="text-sm leading-6 text-ink-muted">
+            {diagnostic.followUp
+              ? "Booked from a diagnostic: the fee was charged on the visit before, and comes off this work."
+              : diagnostic.paid
+                ? `${amount}, paid by the customer. It comes off the invoice.`
+                : charging
+                  ? `${amount} on this job. It shows on the contract and comes off the invoice once paid.`
+                  : "Off. This job has no diagnostic fee."}
+          </p>
+        </div>
+      </div>
+
+      {diagnostic.followUp || diagnostic.paid ? null : (
+        <form action={action} className="mt-5">
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <input type="hidden" name="charge" value={charging ? "off" : "on"} />
+          <FormMessage error={state.error} notice={state.notice} />
+          <div className="mt-3">
+            <SubmitButton variant={charging ? "secondary" : "primary"} pendingLabel="Saving…">
+              {charging ? "Don't charge a diagnostic fee" : "Charge the diagnostic fee"}
+            </SubmitButton>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }

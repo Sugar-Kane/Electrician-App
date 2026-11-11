@@ -508,6 +508,8 @@ export async function getJobControls(jobNumber: string): Promise<{
   technicianNotes: string;
   /** When the parts were marked gathered and ready, or null. */
   materialsReadyAt: string | null;
+  /** The job's diagnostic fee: what it carries, whether it was paid, whether it is a follow-up. */
+  diagnostic: { feeCents: number; paid: boolean; followUp: boolean };
   /**
    * Where the work is: the address as saved, which can be corrected, and the
    * details the street does not say, the unit and the access notes. Null when
@@ -533,6 +535,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     .from("jobs")
     .select(
       `job_number, status, canceled_at, cancellation_reason, technician_notes, materials_ready_at,
+       diagnostic_fee_cents, diagnostic_paid, follow_up_of,
        scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        customers ( phone, email ),
        properties ( address_line_1, address_line_2, city, state, postal_code, access_notes )`,
@@ -564,6 +567,11 @@ export async function getJobControls(jobNumber: string): Promise<{
     customerEmail: str(customer?.email),
     technicianNotes: str(row.technician_notes),
     materialsReadyAt: str(row.materials_ready_at) || null,
+    diagnostic: {
+      feeCents: Number(row.diagnostic_fee_cents ?? 0),
+      paid: row.diagnostic_paid === true,
+      followUp: Boolean(str(row.follow_up_of)),
+    },
     place: street
       ? {
           street,
