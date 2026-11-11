@@ -54,10 +54,19 @@ const EMPTY_CUSTOMER: ReturnType<typeof choiceFill> = {
 
 const DIAGNOSTIC_HOURS = String(DIAGNOSTIC_MINUTES / 60);
 
+/*
+ * Two kinds of job. A work order is priced, approved and then booked on the
+ * job page whether or not the customer has already said yes out loud, so
+ * "quote" and "agreed work" were the same job started two ways. ("quote" is
+ * still how a diagnostic's "estimate first" follow-up starts: no time.)
+ */
 const INTENTS: { value: NewJobIntent; label: string; description: string }[] = [
-  { value: "quote", label: "Quote new work", description: "Price it and send it for approval. No time, no invoice." },
-  { value: "fault", label: "Find a fault", description: "A diagnostic visit, for the fee." },
-  { value: "agreed", label: "Schedule agreed work", description: "Work the customer already said yes to." },
+  { value: "fault", label: "Diagnostic", description: "Find the fault. A visit for the diagnostic fee." },
+  {
+    value: "agreed",
+    label: "Work order",
+    description: "Price it, get it approved, then schedule it. Add a time now if it is already booked.",
+  },
 ];
 
 /**
@@ -239,15 +248,15 @@ export function NewJobForm({
       ) : (
         /*
           The first question. What somebody is doing decides what the form
-          needs from them: a quote has no time and no invoice yet, a fault is a
-          diagnostic visit, and agreed work is ready to book.
+          needs from them: a diagnostic is a visit for the fee, a work order is
+          priced and approved on the job, with a time now or later.
         */
         <fieldset key={`intent-${round}`} className="rounded-panel border border-line bg-surface p-4 sm:p-6">
           <legend className="sr-only">What do you need to do?</legend>
           <p aria-hidden className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-muted">
             What do you need to do?
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {INTENTS.map((option) => (
               <label
                 key={option.value}
@@ -395,7 +404,7 @@ export function NewJobForm({
           <Optional
             title="Schedule now"
             summary={start ? "A time is set" : "Leave it to save without a time"}
-            open={Boolean(start) || intent === "agreed" || state.field === "durationHours" || state.field === "arrivalEndLocal"}
+            open={Boolean(start) || state.field === "durationHours" || state.field === "arrivalEndLocal"}
             error={state.field === "durationHours" || state.field === "arrivalEndLocal"}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -507,7 +516,7 @@ export function NewJobForm({
           ) : (
             <Plus className="h-4 w-4" aria-hidden />
           )}
-          {pending ? "Saving" : quote ? "Save quote and price it" : start ? "Schedule job" : "Save job"}
+          {pending ? "Saving" : quote ? "Save quote and price it" : start ? "Schedule job" : diagnostic ? "Save job" : "Save and price it"}
         </button>
 
         <button

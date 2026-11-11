@@ -496,6 +496,8 @@ export async function createJob(
 
   revalidatePath("/jobs");
 
-  // A quote opens where it gets priced.
-  redirect(`/jobs/${String(createdJob.job_number ?? "")}${intent === "quote" ? "#work-materials" : ""}`);
+  // A work order with no time yet opens where it gets priced: its next step is
+  // the material list and the estimate.
+  const toPricing = intent === "quote" || (job.category === "work_order" && !job.startLocal);
+  redirect(`/jobs/${String(createdJob.job_number ?? "")}${toPricing ? "#work-materials" : ""}`);
 }
