@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, CalendarPlus, Check, ClipboardCheck, FileText, Hammer, LoaderCircle, Receipt } from "lucide-react";
 
 import { MaterialsForm, goTo } from "@/components/job-progress";
-import type { FlowStage } from "@/lib/job-flow";
+import type { FlowStage, StageKey } from "@/lib/job-flow";
 
 /**
  * Where the job is in its own flow, and the one thing to do next.
@@ -18,6 +18,32 @@ import type { FlowStage } from "@/lib/job-flow";
  * Each step's state is written out as well as drawn, never colour alone.
  */
 const STATE_WORDS = { done: "done", current: "now", todo: "to do" } as const;
+
+/*
+ * Where each stage is done on the job page, best first. A section that is not
+ * on the page for this job (no visit under way yet, nothing billed) falls
+ * through to the next, and the visit card, which is always there, is last.
+ */
+const STEP_TARGETS: Record<StageKey, string[]> = {
+  intake: ["#request", "#work"],
+  schedule: ["#visits", "#work"],
+  travel: ["#work"],
+  diagnose: ["#findings", "#work"],
+  decide: ["#next-action", "#repairs", "#work"],
+  scope: ["#work-materials", "#work"],
+  quotes: ["#work-materials", "#work"],
+  estimate: ["#contract", "#work-materials", "#work"],
+  approval: ["#contract", "#work"],
+  materials: ["#work-materials", "#work"],
+  work: ["#findings", "#work"],
+  invoice: ["#billing", "#work-materials", "#work"],
+  paid: ["#billing", "#work-materials", "#work"],
+};
+
+function goToFirst(targets: string[]) {
+  const found = targets.find((href) => document.getElementById(href.slice(1)));
+  if (found) goTo(found);
+}
 
 export function JobStageCard({
   stage,
@@ -53,29 +79,38 @@ export function JobStageCard({
         </p>
       </div>
 
-      {/* One segment per stage. Two rows on a phone so every name stays
-          readable, one line from tablet width up. */}
+      {/* One segment per stage, each a way to its section of the page. Two
+          rows on a phone so every name stays readable, one line from tablet
+          width up. */}
       <ol
-        className={`mt-3 grid gap-x-1.5 gap-y-3 ${
+        className={`mt-3 grid gap-x-1.5 gap-y-2 ${
           stage.steps.length > 7 ? "grid-cols-5 sm:grid-cols-9" : "grid-cols-4 sm:grid-cols-7"
-        }`} aria-label={`Step ${current ? stage.steps.indexOf(current) + 1 : stage.steps.length} of ${stage.steps.length}`}>
+        }`}
+        aria-label={`Step ${current ? stage.steps.indexOf(current) + 1 : stage.steps.length} of ${stage.steps.length}`}
+      >
         {stage.steps.map((step) => (
           <li key={step.key} aria-current={step.state === "current" ? "step" : undefined}>
-            <span
-              className={`block h-1.5 rounded-full ${
-                step.state === "done" ? "bg-positive" : step.state === "current" ? "bg-brand" : "bg-line"
-              }`}
-              aria-hidden
-            />
-            <span
-              className={`mt-1.5 flex items-start gap-0.5 text-[11px] font-semibold sm:text-xs ${
-                step.state === "todo" ? "text-ink-muted" : ""
-              }`}
+            <button
+              type="button"
+              onClick={() => goToFirst(STEP_TARGETS[step.key])}
+              className="group/step block min-h-11 w-full rounded-chip pb-1 pt-0.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
             >
-              {step.state === "done" ? <Check className="hidden h-3 w-3 shrink-0 text-positive sm:inline" aria-hidden /> : null}
-              <span className="leading-tight [overflow-wrap:anywhere]">{step.label}</span>
-            </span>
-            <span className="sr-only">, {STATE_WORDS[step.state]}</span>
+              <span
+                className={`block h-1.5 rounded-full transition group-hover/step:opacity-80 ${
+                  step.state === "done" ? "bg-positive" : step.state === "current" ? "bg-brand" : "bg-line"
+                }`}
+                aria-hidden
+              />
+              <span
+                className={`mt-1.5 flex items-start gap-0.5 text-[11px] font-semibold group-hover/step:underline sm:text-xs ${
+                  step.state === "todo" ? "text-ink-muted" : ""
+                }`}
+              >
+                {step.state === "done" ? <Check className="hidden h-3 w-3 shrink-0 text-positive sm:inline" aria-hidden /> : null}
+                <span className="leading-tight [overflow-wrap:anywhere]">{step.label}</span>
+              </span>
+              <span className="sr-only">, {STATE_WORDS[step.state]}. Go to it.</span>
+            </button>
           </li>
         ))}
       </ol>
