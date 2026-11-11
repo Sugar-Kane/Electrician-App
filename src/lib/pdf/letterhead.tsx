@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { TEXT_FONT } from "@/lib/pdf/fonts";
 
@@ -26,7 +26,11 @@ export type BusinessLetterhead = {
   postalCode: string;
   /** Printed verbatim under the address. Empty when the business has not set one. */
   licenseNumber: string;
+  /** The business's logo, when it has saved one the PDF can draw. */
+  logo?: LetterheadLogo | null;
 };
+
+export type LetterheadLogo = { data: Buffer; format: "png" | "jpg" };
 
 export const INK = "#0f172a";
 export const MUTED = "#64748b";
@@ -123,7 +127,17 @@ export function Letterhead({
     <View>
       <View style={[sheet.row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
         <View style={{ maxWidth: 300 }}>
-          <Text style={sheet.businessName}>{business.name}</Text>
+          {/* The logo in place of the name, when the business has one: a
+              logo is the name drawn the way the business draws it, and the
+              two together read as the same line twice. The name is still in
+              text in the footer, for anyone copying it out of the PDF. Sized
+              by height so a wide wordmark and a square mark sit the same. */}
+          {business.logo ? (
+            // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf's Image takes no alt; the name is printed as text in the footer.
+            <Image src={business.logo} style={{ height: 48, maxWidth: 240, objectFit: "contain", marginBottom: 6 }} />
+          ) : (
+            <Text style={sheet.businessName}>{business.name}</Text>
+          )}
           {business.addressLine1 ? (
             <Text style={sheet.muted}>{business.addressLine1}</Text>
           ) : null}

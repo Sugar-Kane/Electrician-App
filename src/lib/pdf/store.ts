@@ -4,8 +4,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import type { ReactElement } from "react";
 
+import { BRANDING_BUCKET } from "@/lib/branding-storage";
 import { DOCUMENTS_BUCKET, documentStoragePath, ensureDocumentsBucket } from "@/lib/document-storage";
-import type { BusinessLetterhead } from "@/lib/pdf/letterhead";
+import type { BusinessLetterhead, LetterheadLogo } from "@/lib/pdf/letterhead";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
@@ -34,6 +35,30 @@ function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+/** A logo is a few hundred kilobytes at most; anything larger is not printed. */
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+/**
+ * The business's saved logo, as bytes the PDF can embed.
+ *
+ * Read here rather than handed to the renderer as a URL, so a slow or missing
+ * file costs the document its logo and never the document itself. PNG and JPEG
+ * only: those are what the PDF renderer draws. A logo saved as SVG or WebP
+ * (the booking page takes both) is left off rather than printed broken.
+ */
+async function letterheadLogo(path: string): Promise<LetterheadLogo | null> {
+  const clean = path.trim().replace(/^\/+/, "");
+  const format = /\.png$/i.test(clean) ? "png" : /\.jpe?g$/i.test(clean) ? "jpg" : null;
+  if (!clean || !format) return null;
+  try {
+    const { data, error } = await getSupabaseAdmin().storage.from(BRANDING_BUCKET).download(clean);
+    if (error || !data || data.size === 0 || data.size > MAX_LOGO_BYTES) return null;
+    return { data: Buffer.from(await data.arrayBuffer()), format };
+  } catch {
+    return null;
+  }
+}
+
 /** The business, as it appears at the top of everything it sends. */
 export async function businessLetterhead(
   database: FlexibleSupabaseClient,
@@ -42,7 +67,7 @@ export async function businessLetterhead(
   const { data } = await database
     .from("organizations")
     .select(
-      `name, phone, owner_notification_email, license_number,
+      `name, phone, owner_notification_email, license_number, logo_path,
        base_address_line_1, base_city, base_state, base_postal_code`,
     )
     .eq("id", organizationId)
@@ -59,6 +84,7 @@ export async function businessLetterhead(
     state: str(row.base_state),
     postalCode: str(row.base_postal_code),
     licenseNumber: str(row.license_number),
+    logo: await letterheadLogo(str(row.logo_path)),
   };
 }
 
