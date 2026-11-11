@@ -17,6 +17,7 @@ import type { HideableBooking } from "@/lib/booking-duplicates";
 import type { TextFacts } from "@/lib/recovery/text-recovery";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 export type OrganizationSummary = {
   id: string;
@@ -599,7 +600,7 @@ export async function listOrgInvoices(id: string): Promise<OrgInvoice[]> {
   const { data } = await supabase.rpc("admin_org_invoices", { p_organization_id: id, p_limit: 150 });
   return rows(data).map((row) => ({
     id: text(row.id),
-    number: String(row.invoice_number ?? ""),
+    number: invoiceLabel(row),
     jobNumber: row.job_number === null || row.job_number === undefined ? "" : String(row.job_number),
     status: text(row.status),
     totalCents: count(row.total_cents),

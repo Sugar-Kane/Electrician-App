@@ -6,6 +6,7 @@ import { markInvoicePaidInHand, sendPaidInvoice } from "@/lib/invoice-paid-in-ha
 import { closeOutPaidJob } from "@/lib/job-close-out";
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { invoiceLabel, invoiceRef } from "@/lib/invoice-label";
 
 /**
  * Invoices the customer already paid in hand, from ChatGPT or Claude: mark one
@@ -95,7 +96,7 @@ function one(value: unknown): Row | null {
 }
 
 const COLUMNS =
-  "id, invoice_number, status, total_cents, balance_due_cents, stripe_invoice_id, preview_token, jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )";
+  "id, invoice_number, number_label, status, total_cents, balance_due_cents, stripe_invoice_id, preview_token, jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )";
 
 /** The invoice the user means: by number, or the one open (or paid) invoice on a job. Several are listed, never guessed between. */
 async function findInvoice(
@@ -104,11 +105,10 @@ async function findInvoice(
   args: Row,
   want: "unpaid" | "paid",
 ): Promise<{ row: Row } | { problem: string }> {
-  const rawNumber = text(args.invoice_number).replace(/^INV-/i, "");
+  const rawNumber = invoiceRef(args.invoice_number);
   if (rawNumber) {
-    const number = Number(rawNumber);
-    if (!Number.isInteger(number)) return { problem: "That invoice number could not be read." };
-    const { data } = await db.from("invoices").select(COLUMNS).eq("organization_id", organizationId).eq("invoice_number", number).maybeSingle();
+    if (!/^\d+(-\d+)?$/.test(rawNumber)) return { problem: "That invoice number could not be read." };
+    const { data } = await db.from("invoices").select(COLUMNS).eq("organization_id", organizationId).eq("number_label", rawNumber).maybeSingle();
     return data ? { row: data as Row } : { problem: `INV-${rawNumber} was not found.` };
   }
   const jobNumber = Number(text(args.job_number).replace(/^#/, ""));
@@ -133,7 +133,7 @@ async function findInvoice(
     };
   }
   if (invoices.length > 1) {
-    const list = invoices.map((row) => `INV-${text(row.invoice_number)} (${text(row.status)}, ${dollars(Number(row.total_cents ?? 0))})`).join(", ");
+    const list = invoices.map((row) => `INV-${invoiceLabel(row)} (${text(row.status)}, ${dollars(Number(row.total_cents ?? 0))})`).join(", ");
     return { problem: `Job #${jobNumber} has more than one: ${list}. Ask the user which, then use its invoice_number.` };
   }
   return { row: invoices[0]! };
@@ -170,7 +170,7 @@ export async function runPaidInvoiceTool(input: {
     const found = await findInvoice(db, organizationId, args, "unpaid");
     if ("problem" in found) return { isError: true, text: `${found.problem} Nothing was changed.` };
     const row = found.row;
-    const number = `INV-${text(row.invoice_number)}`;
+    const number = `INV-${invoiceLabel(row)}`;
     const check = checkPaidInHand({
       invoice: {
         status: text(row.status),
@@ -233,7 +233,7 @@ export async function runPaidInvoiceTool(input: {
     const found = await findInvoice(db, organizationId, args, "paid");
     if ("problem" in found) return { isError: true, text: `${found.problem} Nothing was sent.` };
     const row = found.row;
-    const number = `INV-${text(row.invoice_number)}`;
+    const number = `INV-${invoiceLabel(row)}`;
     if (text(row.status) !== "paid") return { isError: true, text: `${number} is not paid yet. Mark it paid first (mark_invoice_paid). Nothing was sent.` };
     const send = channels(text(args.channel));
     if (send.length === 0) return { isError: true, text: "Choose sms, email or both. Nothing was sent." };

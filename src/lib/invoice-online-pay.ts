@@ -15,6 +15,7 @@ import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor, readyPaymentAccount, volteiraFeeCents } from "@/lib/stripe-connect";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Paying an invoice online from the customer's invoice link, by bank (ACH) or
@@ -65,7 +66,7 @@ export async function invoiceForPayment(token: string, database: Database = getS
   const { data } = await database
     .from("invoices")
     .select(
-      `id, organization_id, job_id, invoice_number, status, total_cents, balance_due_cents, last_sent_at,
+      `id, organization_id, job_id, invoice_number, number_label, status, total_cents, balance_due_cents, last_sent_at,
        organizations ( name ), jobs ( customers ( email ) )`,
     )
     .eq("preview_token", token)
@@ -95,7 +96,7 @@ export async function invoiceForPayment(token: string, database: Database = getS
     organizationId: text(row.organization_id),
     stripeAccount: account?.accountId ?? null,
     jobId: text(row.job_id) || null,
-    invoiceNumber: String(row.invoice_number ?? ""),
+    invoiceNumber: invoiceLabel(row),
     businessName: text(organization?.name) || "Your electrician",
     customerEmail: text(customer?.email),
     check: checkOnlinePayment({

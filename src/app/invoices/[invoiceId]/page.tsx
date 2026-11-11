@@ -10,6 +10,7 @@ import { currentDocument } from "@/lib/pdf/store";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,7 @@ export default async function InvoicePage({
   const { data } = await database
     .from("invoices")
     .select(
-      `id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, stripe_invoice_id,
+      `id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, stripe_invoice_id,
        jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )`,
     )
     .eq("organization_id", context.organizationId)
@@ -103,7 +104,7 @@ export default async function InvoicePage({
   return (
     <FieldPageShell
       compact
-      title={`Invoice ${String(invoice.invoice_number ?? "")}`}
+      title={`Invoice ${invoiceLabel(invoice)}`}
       eyebrow={customerName}
       backHref="/invoices"
     >
@@ -141,7 +142,7 @@ export default async function InvoicePage({
         return (
           <PaidInHandForm
             invoiceId={invoiceId}
-            label={`invoice ${String(invoice.invoice_number ?? "")}`}
+            label={`invoice ${invoiceLabel(invoice)}`}
             owedCents={owed}
             hasPhone={hasPhone}
             hasEmail={hasEmail}

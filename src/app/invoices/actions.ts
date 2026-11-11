@@ -17,6 +17,7 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { currentContext } from "@/lib/request-context";
 import { billingRefusal } from "@/lib/billing-permission-server";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Sending an invoice to the customer.
@@ -62,7 +63,7 @@ async function loadInvoiceForCustomer(
   const { data } = await supabase
     .from("invoices")
     .select(
-      `id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at,
+      `id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at, last_sent_at,
        stripe_hosted_invoice_url, organization_id, preview_token,
        jobs ( id, job_number, customer_id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
@@ -87,7 +88,7 @@ async function loadInvoiceForCustomer(
       businessName: text(organization?.name) || "Your electrician",
       businessPhone: text(organization?.phone) || "our office",
       contactName: customerName(customer),
-      invoiceNumber: `INV-${text(row.invoice_number) || String(row.invoice_number ?? "")}`,
+      invoiceNumber: `INV-${invoiceLabel(row)}`,
       // The invoice total, which is what the business asked for. A partly-paid
       // invoice therefore still shows its full figure rather than the remainder —
       // the owner's call, so that the number in the message matches the number on
@@ -365,7 +366,7 @@ export async function deleteInvoice(
 
   const { data: invoice } = await context.supabase
     .from("invoices")
-    .select("id, invoice_number, status, total_cents, balance_due_cents, paid_at, job_id")
+    .select("id, invoice_number, number_label, status, total_cents, balance_due_cents, paid_at, job_id")
     .eq("organization_id", context.organizationId)
     .eq("id", invoiceId)
     .maybeSingle();
@@ -423,7 +424,7 @@ export async function deleteInvoice(
   revalidatePath("/");
   if (text(row.job_id)) revalidatePath(`/jobs`);
 
-  return { error: "", notice: `Invoice ${String(row.invoice_number ?? "")} deleted.` };
+  return { error: "", notice: `Invoice ${invoiceLabel(row)} deleted.` };
 }
 
 /**

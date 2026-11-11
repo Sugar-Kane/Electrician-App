@@ -11,6 +11,7 @@ import { currentContext } from "@/lib/request-context";
 import { createClient } from "@/lib/supabase/server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { toE164 } from "@/lib/phone-format";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * One customer, read for their own page.
@@ -183,7 +184,7 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
   const { data: invoiceRows } = jobIds.length
     ? await supabase
         .from("invoices")
-        .select("id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, job_id")
+        .select("id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at, last_sent_at, job_id")
         .eq("organization_id", context.organizationId)
         .in("job_id", jobIds)
         .order("created_at", { ascending: false })
@@ -237,7 +238,7 @@ export async function getCustomerProfile(customerId: string): Promise<CustomerPr
       });
       return {
         id: text(row.id),
-        number: String(row.invoice_number ?? ""),
+        number: invoiceLabel(row),
         jobNumber: jobNumberById.get(text(row.job_id)) ?? "",
         totalCents: Number(row.total_cents ?? 0),
         balanceCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),

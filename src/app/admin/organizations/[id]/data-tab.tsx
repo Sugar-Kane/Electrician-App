@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { deleteBusiness, deleteOneRecord, removeStrayFiles, wipeBusinessData } from "./data-actions";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Deleting a business's data: one record, everything customer-side, or the
@@ -51,7 +52,7 @@ async function records(organizationId: string, query: string) {
   const [customers, jobs, invoices, bookings, contracts] = await Promise.all([
     db.from("customers").select("id, first_name, last_name, company_name, phone, email, created_at, jobs(count)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
     db.from("jobs").select("id, job_number, status, category, customer_description, customers(first_name,last_name,company_name)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
-    db.from("invoices").select("id, invoice_number, status, total_cents, jobs(job_number)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
+    db.from("invoices").select("id, invoice_number, number_label, status, total_cents, jobs(job_number)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
     db.from("booking_requests").select("id, source, status, contact_name, phone, description, created_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
     db.from("contracts").select("id, status, kind, jobs(job_number)").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(200),
   ]);
@@ -76,7 +77,7 @@ async function records(organizationId: string, query: string) {
     })).filter(keep),
     invoice: rows(invoices.data).map((row) => ({
       id: text(row.id),
-      title: `INV-${text(row.invoice_number)}`,
+      title: `INV-${invoiceLabel(row)}`,
       detail: [formatCents(Number(row.total_cents ?? 0)), text(row.status), one(row.jobs)?.job_number ? `job #${text(one(row.jobs)?.job_number)}` : ""].filter(Boolean).join(" · "),
     })).filter(keep),
     booking: rows(bookings.data).map((row) => ({

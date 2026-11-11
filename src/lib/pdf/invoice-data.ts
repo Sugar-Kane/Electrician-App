@@ -7,6 +7,7 @@ import { InvoiceDocument, invoiceFileName } from "@/lib/pdf/invoice-document";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import { formatCents } from "@/lib/job-lines";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Everything an invoice PDF needs, gathered from the records it bills.
@@ -66,7 +67,7 @@ export async function generateInvoicePdf(input: {
   const { data } = await input.database
     .from("invoices")
     .select(
-      `id, invoice_number, status, subtotal_cents, diagnostic_credit_cents, tax_cents,
+      `id, invoice_number, number_label, status, subtotal_cents, diagnostic_credit_cents, tax_cents,
        total_cents, balance_due_cents, due_at, created_at,
        jobs (
          id, job_number, scheduled_start, technician_notes, customer_description,
@@ -132,7 +133,7 @@ export async function generateInvoicePdf(input: {
   // however it arrived.
   const paidCents = Math.max(0, totalCents - balanceCents);
 
-  const invoiceNumber = String(invoice.invoice_number ?? "");
+  const invoiceNumber = invoiceLabel(invoice);
 
   return storeGeneratedPdf({
     database: input.database,

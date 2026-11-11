@@ -30,6 +30,7 @@ type InvoiceByLink = {
   business_phone: string | null;
   customer_name: string | null;
   invoice_number: number;
+  number_label?: string;
   status: string;
   subtotal_cents: number | null;
   diagnostic_credit_cents: number | null;
@@ -67,8 +68,14 @@ export default async function InvoiceByLinkPage({
 
   let invoice: InvoiceByLink | null = null;
   if (UUID.test(token)) {
-    const { data } = await createPublicClient().rpc("get_invoice_by_link", { p_token: token });
+    const client = createPublicClient();
+    const [{ data }, { data: label }] = await Promise.all([
+      client.rpc("get_invoice_by_link", { p_token: token }),
+      // The number after the job (INV-24); absent until that migration runs.
+      client.rpc("get_invoice_label_by_link", { p_token: token }),
+    ]);
     invoice = Array.isArray(data) && data.length > 0 ? (data[0] as InvoiceByLink) : null;
+    if (invoice && typeof label === "string" && label.trim()) invoice = { ...invoice, number_label: label.trim() };
   }
 
   if (!invoice) {
@@ -115,7 +122,7 @@ export default async function InvoiceByLinkPage({
         </span>
 
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
-          {preview ? "Invoice preview" : `Invoice INV-${invoice.invoice_number}`}
+          {preview ? "Invoice preview" : `Invoice INV-${invoice.number_label || invoice.invoice_number}`}
         </p>
         <h1 className="mt-1 text-2xl font-semibold">
           {paid ? "Paid, thank you" : preview ? `Estimated total ${money(total)}` : `${money(owed)} due${dueLabel ? ` ${dueLabel}` : ""}`}

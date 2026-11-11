@@ -5,6 +5,7 @@ import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { jobCategoryLabel } from "@/lib/new-job-input";
 import { addDays, zonedWallClockToIso } from "@/lib/schedule-labels";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * The records behind each report, as rows for a spreadsheet.
@@ -107,7 +108,7 @@ export async function buildReportExport(input: {
     const [invoicePayments, deposits] = await Promise.all([
       all((from, to) =>
         db.from("invoice_payments")
-          .select("recorded_at, method, amount_cents, note, invoices(invoice_number), jobs(job_number, customers(first_name,last_name,company_name))")
+          .select("recorded_at, method, amount_cents, note, invoices(invoice_number, number_label), jobs(job_number, customers(first_name,last_name,company_name))")
           .eq("organization_id", org).gte("recorded_at", start).lt("recorded_at", end)
           .order("recorded_at", { ascending: true }).range(from, to)),
       all((from, to) =>
@@ -122,7 +123,7 @@ export async function buildReportExport(input: {
         return {
           at: text(row.recorded_at),
           cells: [when(row.recorded_at, timeZone), "Invoice payment", text(row.method), dollars(row.amount_cents),
-            one(row.invoices).invoice_number ? `INV-${text(one(row.invoices).invoice_number)}` : "",
+            invoiceLabel(one(row.invoices)) ? `INV-${invoiceLabel(one(row.invoices))}` : "",
             job.job_number ? `#${text(job.job_number)}` : "", person(one(job.customers)), text(row.note)],
         };
       }),
@@ -144,7 +145,7 @@ export async function buildReportExport(input: {
   if (report === "invoices") {
     const found = await all((from, to) =>
       db.from("invoices")
-        .select("invoice_number, created_at, status, subtotal_cents, diagnostic_credit_cents, tax_cents, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, jobs(job_number, customers(first_name,last_name,company_name))")
+        .select("invoice_number, number_label, created_at, status, subtotal_cents, diagnostic_credit_cents, tax_cents, total_cents, balance_due_cents, due_at, last_sent_at, paid_at, jobs(job_number, customers(first_name,last_name,company_name))")
         .eq("organization_id", org).gte("created_at", start).lt("created_at", end)
         .order("invoice_number", { ascending: true }).range(from, to));
     const now = new Date();
@@ -161,7 +162,7 @@ export async function buildReportExport(input: {
         const overdue = state === "overdue" && text(row.due_at)
           ? Math.floor((now.getTime() - new Date(text(row.due_at)).getTime()) / 86_400_000)
           : "";
-        return [`INV-${text(row.invoice_number)}`, day(row.created_at, timeZone), INVOICE_STATE_LABELS[state],
+        return [`INV-${invoiceLabel(row)}`, day(row.created_at, timeZone), INVOICE_STATE_LABELS[state],
           person(one(job.customers)), job.job_number ? `#${text(job.job_number)}` : "",
           dollars(row.subtotal_cents), dollars(row.diagnostic_credit_cents), dollars(row.tax_cents), dollars(row.total_cents),
           dollars(row.balance_due_cents), day(row.due_at, timeZone), day(row.last_sent_at, timeZone), day(row.paid_at, timeZone), overdue];

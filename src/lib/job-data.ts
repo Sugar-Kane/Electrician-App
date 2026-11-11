@@ -36,6 +36,7 @@ import {
   type PilotInvoice,
   type PilotJob,
 } from "@/lib/pilot-data";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Live job and invoice data from Supabase, returned in the same shapes the
@@ -292,7 +293,7 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   const { data, error } = await context.database
     .from("invoices")
     .select(`
-      id, invoice_number, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at,
+      id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at, last_sent_at, paid_at,
       jobs ( job_number, customers ( first_name, last_name, company_name, phone, email ) )
     `)
     .eq("organization_id", context.organizationId)
@@ -322,7 +323,7 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
       lastSentAt: (row.last_sent_at as string | null) ?? null,
     });
     return {
-      id: `INV-${row.invoice_number}`,
+      id: `INV-${invoiceLabel(row)}`,
       customer: name,
       // Cents in the database; the UI renders dollars.
       amount: Number(row.total_cents ?? 0) / 100,

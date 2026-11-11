@@ -5,6 +5,7 @@ import { deliverInvoice } from "@/lib/invoice-delivery";
 import { describeDelivery, invoiceViewUrl, paidInvoiceCanBeSent, type InvoiceFacts } from "@/lib/invoice-messages";
 import { checkPaidInHand, paymentMethodLabel } from "@/lib/invoice-payment";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { invoiceLabel } from "@/lib/invoice-label";
 
 /**
  * Invoices the customer already paid in hand (cash on the spot, a check, a
@@ -58,14 +59,14 @@ export async function markInvoicePaidInHand(
 ): Promise<PaidInHandOutcome> {
   const { data } = await db
     .from("invoices")
-    .select("id, invoice_number, status, total_cents, balance_due_cents, stripe_invoice_id, jobs ( id, job_number )")
+    .select("id, invoice_number, number_label, status, total_cents, balance_due_cents, stripe_invoice_id, jobs ( id, job_number )")
     .eq("organization_id", input.organizationId)
     .eq("id", input.invoiceId)
     .maybeSingle();
   const row = data as Row | null;
   if (!row) return { ok: false, message: "That invoice could not be found." };
   const job = one(row.jobs);
-  const invoiceNumber = `INV-${text(row.invoice_number)}`;
+  const invoiceNumber = `INV-${invoiceLabel(row)}`;
 
   const check = checkPaidInHand({
     invoice: {
@@ -124,7 +125,7 @@ export async function sendPaidInvoice(
   const { data } = await db
     .from("invoices")
     .select(
-      `id, invoice_number, status, total_cents, paid_at, preview_token,
+      `id, invoice_number, number_label, status, total_cents, paid_at, preview_token,
        jobs ( id, job_number, customer_id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
     )
@@ -156,7 +157,7 @@ export async function sendPaidInvoice(
     businessName: text(organization?.name) || "Your electrician",
     businessPhone: text(organization?.phone) || "our office",
     contactName: customerName(customer),
-    invoiceNumber: `INV-${text(row.invoice_number)}`,
+    invoiceNumber: `INV-${invoiceLabel(row)}`,
     amountDue: Number(row.total_cents ?? 0) / 100,
     dueLabel: "",
     workSummary: text(job?.customer_description) || undefined,
