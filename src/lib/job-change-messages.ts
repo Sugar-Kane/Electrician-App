@@ -168,5 +168,17 @@ export function changeNeedsCustomerNotice(input: {
   nextEnd: string;
 }): boolean {
   if (input.canceled) return true;
-  return input.previousStart !== input.nextStart || input.previousEnd !== input.nextEnd;
+  // Compared as moments, to the minute: the database writes a time as
+  // "2026-11-10 20:30:00+00" and the form sends "2026-11-10T20:30:00.000Z",
+  // and comparing the strings told a customer their 8:30 visit had moved to
+  // 8:30 every time a job was saved with its time untouched.
+  return !sameMinute(input.previousStart, input.nextStart) || !sameMinute(input.previousEnd, input.nextEnd);
+}
+
+function sameMinute(a: string, b: string): boolean {
+  if (!a && !b) return true;
+  const left = Date.parse(a);
+  const right = Date.parse(b);
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return a === b;
+  return Math.floor(left / 60_000) === Math.floor(right / 60_000);
 }

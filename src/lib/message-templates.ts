@@ -30,6 +30,8 @@ export type TemplateVariables = {
   technician_name?: string;
   reschedule_hours?: string;
   diagnostic_fee?: string;
+  /** The job's invoice page, for "Work complete". */
+  invoice_link?: string;
 };
 
 export const TEMPLATE_VARIABLE_NAMES = [

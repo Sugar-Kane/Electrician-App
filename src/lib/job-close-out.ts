@@ -80,6 +80,9 @@ export async function closeOutPaidJob(
   } else {
     await db.from("job_technician_progress").insert({ organization_id: input.organizationId, job_id: text(job.id), completed_at: now });
   }
+  // The business's "Work complete" message, if it sends one.
+  const { sendJobEventMessage } = await import("@/lib/automatic-messages");
+  await sendJobEventMessage({ jobId: text(job.id), trigger: "job_completed" });
   await recordActivity(db, {
     organizationId: input.organizationId,
     eventType: "job.completed",
