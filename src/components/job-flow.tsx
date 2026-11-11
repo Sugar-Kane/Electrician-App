@@ -21,9 +21,12 @@ const STATE_WORDS = { done: "done", current: "now", todo: "to do" } as const;
 export function JobStageCard({
   stage,
   jobNumber,
+  canEndVisit = false,
 }: {
   stage: FlowStage;
   jobNumber: string;
+  /** On site with the job open: the visit can end with a return booked. */
+  canEndVisit?: boolean;
 }) {
   const { primary } = stage;
   const current = stage.steps.find((step) => step.state === "current");
@@ -93,6 +96,15 @@ export function JobStageCard({
       )}
 
       {stage.hint ? <p className="mt-2 text-sm leading-6 text-ink-muted">{stage.hint}</p> : null}
+      {canEndVisit ? (
+        <a
+          href="#visits"
+          onClick={(event) => goTo("#visits", event)}
+          className="tap-target mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted underline underline-offset-4"
+        >
+          Need to come back another day?
+        </a>
+      ) : null}
     </section>
   );
 }
@@ -109,19 +121,19 @@ export function DiagnosticDecision({ jobNumber, creditLabel }: { jobNumber: stri
   const book = `/jobs/new?from=${jobNumber}`;
   const options = [
     {
-      href: book,
+      href: `${book}&plan=now`,
       icon: Hammer,
       title: "Repair now",
-      note: "Book the repair as a linked work order and do it on this visit, once the customer approves the price.",
+      note: "A linked work order booked for right now, to do on this visit once the customer approves the price.",
     },
     {
-      href: book,
+      href: `${book}&plan=estimate`,
       icon: FileText,
       title: "Create repair estimate",
       note: "A linked work order to price and send for approval. No time set yet.",
     },
     {
-      href: book,
+      href: `${book}&plan=return`,
       icon: CalendarPlus,
       title: "Schedule return visit",
       note: "A linked work order with its own arrival window, for when parts or time are needed.",
