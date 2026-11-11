@@ -14,7 +14,7 @@ import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
-import { JobProgress } from "@/components/job-progress";
+import { DiagnosticDecision, JobStageCard } from "@/components/job-flow";
 import { JobWorkflow } from "@/components/job-workflow";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
@@ -35,6 +35,7 @@ import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges, unbilledCents } from "@/lib/job-billing";
 import { isProgressKey, jobProgress } from "@/lib/job-progress";
+import { jobFlow, visitActionLabel } from "@/lib/job-flow";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
@@ -197,15 +198,56 @@ export default async function JobDetailPage({
   });
   // The step a job card was tapped on, opened here with what finishes it.
   const initialStep = isProgressKey(askedStep) ? askedStep : null;
-  // Every step points at a section that is on the page: hours and parts show
-  // whenever pricing, parts or billing is the step in front of the job.
-  const linesStepOpen = progress.steps.some(
-    (step) =>
-      (step.state === "todo" || step.state === "current") &&
-      (step.href === "#work-materials" || step.href === "#billing") &&
-      (step.key !== "invoice" || step === progress.next || step.key === initialStep),
+
+  // The materials list as it stands, for whether a work order still needs
+  // quotes: items with no store price matched yet.
+  const listItems = (materialChat?.saved.list.sections ?? []).flatMap((section) =>
+    section.blocks.flatMap((block) => (block.type === "items" ? block.items : [])),
   );
+  const unpricedItems = listItems.filter(
+    (item) => !item.prices || !Object.keys(item.prices).some((key) => key !== "use"),
+  ).length;
+
+  const stage = jobFlow({
+    kindOfWork: job.kindOfWork,
+    workflowState: state,
+    scheduled: Boolean(job.startsAt),
+    scheduleHref: `/jobs/${job.id}/edit#window`,
+    progress: progress.steps,
+    lineCount: lines.length,
+    partCount: lines.filter((line) => line.kind === "material").length,
+    materialListCount: listItems.length,
+    unpricedMaterialCount: unpricedItems,
+    materialsReady: Boolean(controls?.materialsReadyAt),
+    agreement: currentAgreement
+      ? {
+          signed: Boolean(currentAgreement.signedAt),
+          sent: currentAgreement.status === "sent" || Boolean(currentAgreement.sentLabel),
+        }
+      : null,
+    followUpCount: followUps.booked.length,
+    canceled,
+  });
+  const primaryHref = stage.primary.kind === "go" ? stage.primary.href : "";
+  // Hours, parts and billing are on screen whenever they are the next step.
+  const linesStepOpen =
+    primaryHref === "#work-materials" ||
+    primaryHref === "#billing" ||
+    stage.needsDecision ||
+    initialStep === "estimate" ||
+    initialStep === "materials" ||
+    initialStep === "invoice" ||
+    initialStep === "paid";
   const workspaceOpen = showsWorkspace(state) && !canceled;
+
+  const agreementState = currentAgreement
+    ? currentAgreement.signedAt
+      ? "Signed"
+      : currentAgreement.status === "sent" || currentAgreement.sentLabel
+        ? "Sent, waiting to sign"
+        : "Drafted, not sent"
+    : "Pending";
+  const approvalSummary = currentAgreement ? `Customer authorization: ${agreementState.toLowerCase()}` : "No estimate sent yet";
   // Hours, parts and the invoice: with the workspace, and on a work order from
   // the moment it is booked, without starting it or texting anybody.
   const workAndMaterialsOpen =
@@ -221,6 +263,42 @@ export default async function JobDetailPage({
    */
   const diagnostic = Boolean(controls) && job.kindOfWork === "Diagnostic" && !canceled;
   const showFollowUps = diagnostic && (workspaceOpen || followUps.booked.length > 0);
+
+  // The facts a job is priced and agreed on. A diagnostic is its fee; a work
+  // order is its scope, its quotes and the customer's say-so.
+  const serviceDetails: { label: string; value: string }[] =
+    job.kindOfWork === "Diagnostic"
+      ? [
+          { label: "Service type", value: "Diagnostic service call" },
+          {
+            label: "Diagnostic fee",
+            value: controls?.diagnostic.feeCents
+              ? `${formatCents(controls.diagnostic.feeCents)}${controls.diagnostic.paid ? " · paid" : ""}`
+              : "No fee",
+          },
+          {
+            label: "Repair estimate",
+            value:
+              followUps.booked.length > 0
+                ? `Work order #${followUps.booked[0].jobNumber}`
+                : "After diagnosis",
+          },
+        ]
+      : [
+          { label: "Service type", value: job.workType.replace(/_/g, " ") || "Work order" },
+          {
+            label: "Material quotes",
+            value:
+              lines.length > 0
+                ? `Priced · ${formatCents(totals.subtotalCents)}`
+                : listItems.length > 0
+                  ? unpricedItems > 0
+                    ? `${unpricedItems} of ${listItems.length} still to price`
+                    : "Priced, not on the job yet"
+                  : "Required before visit",
+          },
+          { label: "Customer authorization", value: agreementState },
+        ];
 
   /**
    * Who, what and where — the first thing read and the least of it.
@@ -302,13 +380,12 @@ export default async function JobDetailPage({
         </section>
       ) : null}
 
-      {controls && !canceled ? (
-        <JobProgress
-          steps={progress.steps}
-          next={progress.next}
+      {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} /> : null}
+
+      {controls && !canceled && stage.needsDecision ? (
+        <DiagnosticDecision
           jobNumber={controls.jobNumber}
-          initialStep={initialStep}
-          canUndoMaterials={Boolean(controls.materialsReadyAt) && !showsWorkspace(state)}
+          creditLabel={followUps.creditCents > 0 ? formatCents(followUps.creditCents) : ""}
         />
       ) : null}
 
@@ -332,6 +409,8 @@ export default async function JobDetailPage({
           phone={job.phone}
           unscheduled={!job.startsAt}
           reservedParts={reservedParts}
+          actionLabel={visitActionLabel(stage.flow, state)}
+          holdPrimary={stage.primary.kind !== "visit" && state === "scheduled"}
         >
           {identity}
         </JobWorkflow>
@@ -427,25 +506,83 @@ export default async function JobDetailPage({
         </section>
       ) : null}
 
-      {/*
-        The workspace: what was done, what it took, what it looked like, and
-        what to remember. One card with three sections rather than three cards,
-        because they are one activity and the gaps between panels were most of
-        the scrolling.
+      {/* What kind of job this is and what it is priced on, at a glance. */}
+      {controls && !canceled ? (
+        <section aria-labelledby="service-heading" className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <h2 id="service-heading" className="text-sm font-semibold">
+            Service details
+          </h2>
+          <dl className="mt-2 divide-y divide-line text-sm">
+            {serviceDetails.map((row) => (
+              <div key={row.label} className="flex items-start justify-between gap-4 py-2.5">
+                <dt className="text-ink-muted">{row.label}</dt>
+                <dd className="min-w-0 text-right font-semibold">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+            Source <JobSource channel={job.channel} />
+          </p>
+        </section>
+      ) : null}
 
-        It appears on arrival. Before that none of it can be filled in from a
-        van, and four empty forms between the address and the next step is
-        exactly the pile this redesign is against. The exception is a work
-        order's hours and parts, which are known before the visit or typed in
-        after it: those are there from the start, on their own until arrival.
+      {/*
+        Everything else, one row each, closed until it is wanted: a row opens
+        by itself when it holds the next step, and the progress card's button
+        opens it on the way there. `<details>` so it works before any
+        JavaScript arrives.
       */}
-      {controls && workAndMaterialsOpen ? (
-        <section
-          id="work-materials"
-          className="mt-3 scroll-mt-24 divide-y divide-line rounded-panel border border-line bg-surface px-4 sm:px-5"
+      {controls && workspaceOpen ? (
+        <SectionRow
+          title={stage.flow === "diagnostic" ? "Diagnostic findings" : "Work & checklists"}
+          summary="Photos and notes from the visit"
+          open={state === "working" || state === "review"}
         >
-          {/* Where the list of materials starts: a chat that writes it the way
-              ChatGPT does, on the business's own key when one is connected. */}
+          <div className="divide-y divide-line">
+            <div className="pb-4">
+              <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
+            </div>
+            <div className="pt-4">
+              <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
+            </div>
+          </div>
+        </SectionRow>
+      ) : null}
+
+      {showFollowUps && controls ? (
+        <SectionRow
+          title="Repair work orders"
+          summary={
+            followUps.booked.length === 0
+              ? "None booked yet"
+              : `${followUps.booked.length} booked`
+          }
+          open={followUps.booked.length > 0}
+        >
+          <div className="[&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
+            <JobFollowUps
+              jobNumber={controls.jobNumber}
+              booked={followUps.booked}
+              creditCents={followUps.creditCents}
+            />
+          </div>
+        </SectionRow>
+      ) : null}
+
+      {controls && workAndMaterialsOpen ? (
+        <SectionRow
+          id="work-materials"
+          title={stage.flow === "diagnostic" ? "Materials & labor" : "Materials & supplier quotes"}
+          summary={
+            lines.length > 0
+              ? `${lines.length} ${lines.length === 1 ? "line" : "lines"} · ${formatCents(totals.subtotalCents)}`
+              : listItems.length > 0
+                ? `${listItems.length} on the list${unpricedItems > 0 ? `, ${unpricedItems} unpriced` : ""}`
+                : "Nothing listed yet"
+          }
+          open={linesStepOpen || workspaceOpen}
+        >
+          <div className="divide-y divide-line">
           {materialChat ? (
             <div className="py-4">
               <JobMaterialChat
@@ -474,27 +611,8 @@ export default async function JobDetailPage({
               }}
             />
           </div>
-          {workspaceOpen ? (
-            <>
-              <div className="py-4">
-                <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
-              </div>
-              <div className="py-4">
-                <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
-              </div>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      {controls ? <JobTasks jobNumber={String(controls.jobNumber)} /> : null}
-
-      {showFollowUps && controls ? (
-        <JobFollowUps
-          jobNumber={controls.jobNumber}
-          booked={followUps.booked}
-          creditCents={followUps.creditCents}
-        />
+          </div>
+        </SectionRow>
       ) : null}
 
       {!controls ? (
@@ -528,17 +646,70 @@ export default async function JobDetailPage({
         </section>
       ) : null}
 
-      {/* Job details are collapsed on arrival and expand on demand. */}
-      <details className="group mt-3 rounded-panel border border-line bg-surface">
-        <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-5 [&::-webkit-details-marker]:hidden">
-          <span className="text-sm font-semibold">Job details</span>
-          <ChevronDown
-            className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180"
-            aria-hidden
+      {controls && stage.flow === "work_order" ? (
+        <SectionRow
+          title="Estimate & approval"
+          summary={approvalSummary}
+          open={primaryHref === "#contract" || initialStep === "approval"}
+        >
+          <JobContract
+            jobNumber={controls.jobNumber}
+            contracts={contracts}
+            customerName={job.contactName || job.customer}
+            customerPhone={job.phone}
+            changes={agreement}
           />
-        </summary>
+        </SectionRow>
+      ) : null}
 
-        <div className="divide-y divide-line border-t border-line px-4 sm:px-5">
+      {controls && stage.flow === "work_order" && !canceled ? (
+        <SectionRow title="Scheduled visits" summary={job.startsAt ? `${job.dateLabel} · ${job.time}` : "Not scheduled yet"}>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2.5">
+              <span>
+                <span className="block font-semibold">{job.startsAt ? `${job.dateLabel}` : "No time set"}</span>
+                {job.startsAt ? (
+                  <span className="block text-ink-muted">
+                    {job.time}–{job.endTime}
+                  </span>
+                ) : null}
+              </span>
+              <Link
+                href={`/jobs/${job.id}/edit#window`}
+                className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand"
+              >
+                {job.startsAt ? "Change time" : "Schedule"}
+              </Link>
+            </li>
+          </ul>
+        </SectionRow>
+      ) : null}
+
+      {controls ? (
+        <SectionRow title={stage.flow === "diagnostic" ? "Tasks & checklist" : "Tasks"} summary="To-dos for this job">
+          <div className="[&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
+            <JobTasks jobNumber={String(controls.jobNumber)} />
+          </div>
+        </SectionRow>
+      ) : null}
+
+      <SectionRow
+        title={stage.flow === "diagnostic" ? "Documents & contract" : "Documents & job details"}
+        summary="Assignment, files and contact"
+        open={stage.flow === "diagnostic" && (primaryHref === "#contract" || initialStep === "approval")}
+      >
+        {controls && stage.flow === "diagnostic" ? (
+          <div className="mb-2 border-b border-line pb-4">
+            <JobContract
+              jobNumber={controls.jobNumber}
+              contracts={contracts}
+              customerName={job.contactName || job.customer}
+              customerPhone={job.phone}
+              changes={agreement}
+            />
+          </div>
+        ) : null}
+        <div className="divide-y divide-line ">
           <div className="flex items-center justify-between gap-3 py-4">
             <p className="text-sm text-ink-muted">Assigned to</p>
             {controls ? (
@@ -568,32 +739,13 @@ export default async function JobDetailPage({
           ) : null}
 
         </div>
-      </details>
+      </SectionRow>
 
-      {controls ? (
-        <div id="contract" className="mt-3 scroll-mt-24 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <JobContract
-            jobNumber={controls.jobNumber}
-            contracts={contracts}
-            customerName={job.contactName || job.customer}
-            customerPhone={job.phone}
-            changes={agreement}
-          />
-        </div>
-      ) : null}
-
-      {/*
-        The texts that belong to this job, read straight from the conversation
-        rather than through the inbox. Clearing a thread out of Messages is one
-        person tidying a list; what was agreed with the customer about this job
-        is the job's record, and it stays here either way.
-      */}
-      {conversations.length > 0 ? (
-        <details className="group mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-            <span className="text-sm font-semibold">Conversation</span>
-            <ChevronDown className="h-4 w-4 text-ink-muted transition group-open:rotate-180" aria-hidden />
-          </summary>
+      {conversations.length > 0 || history.rows.length > 0 ? (
+        <SectionRow title="Activity & history" summary="Texts and everything that happened on this job">
+          {conversations.length > 0 ? (
+            <div>
+              <h3 className="text-sm font-semibold">Conversation</h3>
           <div className="flex items-center justify-between gap-3">
             <Link
               href={`/messages/${conversations[0]?.id}`}
@@ -633,20 +785,11 @@ export default async function JobDetailPage({
               ) : null}
             </div>
           ))}
-        </details>
-      ) : null}
-
-      {/*
-        What has happened on this job, recorded as it happened. Below the
-        details, because the details are what somebody standing at the door
-        needs and this is what somebody asked "when did we tell them" needs.
-      */}
-      {history.rows.length > 0 ? (
-        <details className="group mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-            <span className="text-sm font-semibold">History</span>
-            <ChevronDown className="h-4 w-4 text-ink-muted transition group-open:rotate-180" aria-hidden />
-          </summary>
+            </div>
+          ) : null}
+          {history.rows.length > 0 ? (
+            <div className={conversations.length > 0 ? "mt-4 border-t border-line pt-4" : ""}>
+              <h3 className="text-sm font-semibold">History</h3>
           <div className="mt-3">
             <ActivityTimeline
               rows={history.rows}
@@ -654,7 +797,9 @@ export default async function JobDetailPage({
               today={todayInZone(history.timeZone)}
             />
           </div>
-        </details>
+            </div>
+          ) : null}
+        </SectionRow>
       ) : null}
 
       {/*
@@ -663,5 +808,36 @@ export default async function JobDetailPage({
       */}
       {workflow && !canceled ? <div className="h-20 lg:hidden" aria-hidden /> : null}
     </FieldPageShell>
+  );
+}
+
+/**
+ * One collapsible row of the job page: a title, a line saying what is in it,
+ * and the section itself when opened. Closed unless it holds the next step.
+ */
+function SectionRow({
+  id,
+  title,
+  summary,
+  open = false,
+  children,
+}: {
+  id?: string;
+  title: string;
+  summary?: string;
+  open?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details id={id} open={open} className="group mt-3 scroll-mt-24 rounded-panel border border-line bg-surface">
+      <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">{title}</span>
+          {summary ? <span className="mt-0.5 block truncate text-xs text-ink-muted">{summary}</span> : null}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="border-t border-line px-4 py-4 sm:px-5">{children}</div>
+    </details>
   );
 }

@@ -33,7 +33,7 @@ function StepIcon({ state }: { state: ProgressStep["state"] }) {
  * Go to a section of this page, opening it on the way if it is folded away.
  * A link to another page is left to the browser.
  */
-function goTo(href: string, event: React.MouseEvent<HTMLAnchorElement>) {
+export function goTo(href: string, event: React.MouseEvent<HTMLAnchorElement>) {
   if (!href.startsWith("#")) return;
   const target = document.getElementById(href.slice(1));
   if (!target) return;
@@ -66,7 +66,7 @@ function ReadyButton({ ready }: { ready: boolean }) {
   );
 }
 
-function MaterialsForm({ jobNumber, ready }: { jobNumber: string; ready: boolean }) {
+export function MaterialsForm({ jobNumber, ready }: { jobNumber: string; ready: boolean }) {
   const [state, action] = useActionState<StepActionState, FormData>(setMaterialsReady, { error: "" });
   return (
     <form action={action}>
