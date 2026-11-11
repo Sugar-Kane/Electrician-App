@@ -394,15 +394,6 @@ export default async function JobDetailPage({
 
       {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} canEndVisit={state === "arrived" || state === "working" || state === "review"} /> : null}
 
-      {controls && !canceled && stage.needsDecision ? (
-        <DiagnosticDecision
-          jobNumber={controls.jobNumber}
-          completed={state === "completed"}
-          feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
-          feeDue={diagnosticFeeDue}
-        />
-      ) : null}
-
       <div id="work" className="scroll-mt-24">
       {workflow && !canceled ? (
         <JobWorkflow
@@ -550,11 +541,24 @@ export default async function JobDetailPage({
         <SectionRow
           id="findings"
           title={stage.flow === "diagnostic" ? "Diagnostic findings" : "Work & checklists"}
-          summary="Photos and notes from the visit"
-          open={state === "working" || state === "review"}
+          summary={stage.needsDecision ? "Photos, notes and what happens next" : "Photos and notes from the visit"}
+          open={state === "working" || state === "review" || (stage.needsDecision && !canceled)}
         >
           <div className="divide-y divide-line">
-            <div className="pb-4">
+            {/* What the visit found decides how it ends, so the choice sits
+                with the photos and notes that show it. */}
+            {stage.needsDecision && !canceled ? (
+              <div className="pb-4">
+                <DiagnosticDecision
+                  embedded
+                  jobNumber={controls.jobNumber}
+                  completed={state === "completed"}
+                  feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
+                  feeDue={diagnosticFeeDue}
+                />
+              </div>
+            ) : null}
+            <div className={stage.needsDecision && !canceled ? "py-4" : "pb-4"}>
               <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
             </div>
             <div className="pt-4">

@@ -182,8 +182,11 @@ export function DiagnosticDecision({
   completed,
   feeLabel,
   feeDue,
+  embedded = false,
 }: {
   jobNumber: string;
+  /** Drawn inside another section (Diagnostic findings) rather than as its own card. */
+  embedded?: boolean;
   /** The visit is already finished. */
   completed: boolean;
   /** "$180.00", or empty when the job has no fee. */
@@ -251,7 +254,11 @@ export function DiagnosticDecision({
     <section
       id="next-action"
       aria-labelledby="next-action-heading"
-      className="mb-3 scroll-mt-24 rounded-panel border border-brand/40 bg-surface p-4 sm:p-5"
+      className={
+        embedded
+          ? "scroll-mt-24 rounded-control border border-brand/40 bg-brand/[0.04] p-3"
+          : "mb-3 scroll-mt-24 rounded-panel border border-brand/40 bg-surface p-4 sm:p-5"
+      }
     >
       <h2 id="next-action-heading" className="flex items-center gap-2 text-sm font-semibold">
         <ClipboardCheck className="h-4 w-4 text-brand" aria-hidden />
