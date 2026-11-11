@@ -226,7 +226,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "store_cart",
     title: "Get a job's Home Depot or Lowe's cart",
     description:
-      "When the electrician wants a job's materials put in their Home Depot or Lowe's cart: read the job's saved, priced materials list as that store's products (link, item number, how many), with the steps for filling the cart and the Volteira page that holds them. Items the store has no match for, and items with no quantity, come back marked for you to recommend a product and a quantity. Neither store has an ordering connection, so the cart is filled in a web browser signed in to the electrician's own store account (ChatGPT agent mode). Nothing is bought.",
+      "When the electrician wants a job's materials put in their Home Depot or Lowe's cart: read the job's saved, priced materials list as that store's products (link, item number, how many), with the steps for filling the cart and the Volteira page that holds them. Items the store has no match for, and items with no quantity, come back marked for you to recommend a product and a quantity. Neither store has an ordering connection, so the cart is filled in a web browser signed in to the electrician's own store account: your own browser if you have one (Muse, ChatGPT agent mode or similar). Nothing is bought.",
     inputSchema: {
       type: "object",
       properties: {
@@ -864,7 +864,7 @@ export async function runBusinessMcpTool(input: {
           ...(facts.length ? facts : ["The job record says nothing about the work; ask the electrician before guessing quantities."]),
           "",
           "HOW TO FILL THE CART",
-          `This needs a web browser signed in to the electrician's ${label} account: ChatGPT agent mode. If this conversation is not in agent mode, tell the electrician to switch to agent mode and say: "Fill my ${label} cart for job #${number} from Volteira."`,
+          `This needs a web browser signed in to the electrician's ${label} account. If you have one (Muse's browser, ChatGPT agent mode or similar), use it and follow these steps now. If you have no browser here, tell the electrician to ask again where you do, e.g. in ChatGPT agent mode: "Fill my ${label} cart for job #${number} from Volteira."`,
           ...cartAgentSteps(store).map((step, index) => `${index + 1}. ${step}`),
           "",
           "ADD TO CART",
