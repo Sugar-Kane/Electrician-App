@@ -8,7 +8,6 @@ import { SpanishBadge } from "@/components/language-badge";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobFollowUps } from "@/components/job-follow-ups";
-import { JobTasks } from "@/components/tasks/job-tasks";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
@@ -715,14 +714,6 @@ export default async function JobDetailPage({
               <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
             </div>
           ) : null}
-        </SectionRow>
-      ) : null}
-
-      {controls ? (
-        <SectionRow title={stage.flow === "diagnostic" ? "Tasks & checklist" : "Tasks"} summary="To-dos for this job">
-          <div className="[&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
-            <JobTasks jobNumber={String(controls.jobNumber)} />
-          </div>
         </SectionRow>
       ) : null}
 

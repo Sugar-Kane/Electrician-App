@@ -65,8 +65,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
   const loose = followUps({ jobs, unbilled, now, timeZone: snapshot.timezone });
   const { money } = snapshot;
 
-  // "Needs your action": the same function the Tasks page and ChatGPT's daily
-  // list use (needs-action.ts), here fed what this page has already loaded.
+  // "Needs your action": the same function ChatGPT's today_plan uses
+  // (needs-action.ts), here fed what this page has already loaded.
   const attention = needsActionFromInputs({
     jobs,
     agreements,

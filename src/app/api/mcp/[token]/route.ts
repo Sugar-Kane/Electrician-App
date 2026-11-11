@@ -4,14 +4,8 @@ import { after, NextResponse } from "next/server";
 import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
 import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
-import { TASK_MCP_TOOLS, isTaskTool, runTaskTool } from "@/lib/mcp-task-tools";
 import { PAID_INVOICE_MCP_TOOLS, isPaidInvoiceTool, runPaidInvoiceTool } from "@/lib/mcp-paid-invoice-tools";
 import { CUSTOMER_MCP_TOOLS, isCustomerTool, runCustomerTool } from "@/lib/mcp-customer-tools";
-import { describeNeedsAction, loadNeedsAction } from "@/lib/needs-action";
-import { TASK_ASSISTANT_MCP_TOOLS, isTaskAssistantTool, runTaskAssistantTool } from "@/lib/mcp-task-assistant-tools";
-import { assistantDeps, startQueuedWorkSoon } from "@/lib/task-assistant-server";
-import type { Actor } from "@/lib/tasks-service";
-import { isTimeZone } from "@/lib/task-rules";
 import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type HistoryDatabase } from "@/lib/mcp-text-history";
 import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
 import { organizationTimeZone } from "@/lib/job-billing-server";
@@ -22,7 +16,7 @@ import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session"
 import { connectionHolderAllowed } from "@/lib/mcp-session-token";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.14.0";
+const SERVER_VERSION = "1.15.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -43,27 +37,19 @@ function rpcError(status: number, code: number, message: string) {
 }
 
 /**
- * Who task tools act as: the person who created this connection, but only
- * while they are still a member of the business. Never anything the request
- * says. A connection made before links recorded their creator gets none, and
- * the tools ask for a new link.
+ * Who a tool that records a person acts as: the owner who created this
+ * connection, but only while they are still a member of the business. Never
+ * anything the request says.
  */
-async function taskActor(database: ReturnType<typeof getSupabaseAdmin>, organizationId: string, userId: string): Promise<Actor | null> {
+async function connectionUserId(database: ReturnType<typeof getSupabaseAdmin>, organizationId: string, userId: string): Promise<string | null> {
   if (!userId) return null;
-  const [{ data: member }, { data: profile }, timeZone] = await Promise.all([
-    database.from("organization_members").select("role").eq("organization_id", organizationId).eq("user_id", userId).maybeSingle(),
-    database.from("user_profiles").select("timezone").eq("user_id", userId).maybeSingle(),
-    organizationTimeZone(asFlexibleClient(database), organizationId),
-  ]);
-  if (!member) return null;
-  const own = typeof profile?.timezone === "string" && isTimeZone(profile.timezone) ? profile.timezone : "";
-  return {
-    userId,
-    organizationId,
-    role: typeof member.role === "string" ? member.role : "",
-    timeZone: own || timeZone,
-    via: "chatgpt",
-  };
+  const { data: member } = await database
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return member ? userId : null;
 }
 
 function describeRequest(body: unknown): { method: string; toolName?: string } {
@@ -132,7 +118,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TASK_MCP_TOOLS, ...TASK_ASSISTANT_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -147,37 +133,16 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         ? await runWorkdayMcpTool({ database, session, name, args })
         : business && businessNames.has(name)
         ? await runBusinessMcpTool({ database, session, name, args })
-        : business && isTaskTool(name)
-        ? await runTaskTool({
-            database: asFlexibleClient(database),
-            actor: await taskActor(database, session.organizationId, connectedBy),
-            name,
-            args,
-            needsAction: async () => {
-              const timeZone = await organizationTimeZone(asFlexibleClient(database), session.organizationId);
-              const needs = await loadNeedsAction(asFlexibleClient(database), session.organizationId, timeZone);
-              return { lines: describeNeedsAction(needs), items: needs.items };
-            },
-          })
         : business && isCustomerTool(name)
         ? await runCustomerTool({ database: asFlexibleClient(database), organizationId: session.organizationId, name, args })
         : business && isPaidInvoiceTool(name)
         ? await runPaidInvoiceTool({
             database: asFlexibleClient(database),
             organizationId: session.organizationId,
-            actorUserId: (await taskActor(database, session.organizationId, connectedBy))?.userId ?? null,
+            actorUserId: await connectionUserId(database, session.organizationId, connectedBy),
             timeZone: await organizationTimeZone(asFlexibleClient(database), session.organizationId),
             name,
             args,
-          })
-        : business && isTaskAssistantTool(name)
-        ? await runTaskAssistantTool({
-            database: asFlexibleClient(database),
-            actor: await taskActor(database, session.organizationId, connectedBy),
-            deps: assistantDeps(),
-            name,
-            args,
-            onQueued: startQueuedWorkSoon,
           })
         : business && isTextHistoryTool(name)
         ? await runTextHistoryTool({
