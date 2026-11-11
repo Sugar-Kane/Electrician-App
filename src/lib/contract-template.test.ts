@@ -254,3 +254,23 @@ test("a diagnostic with no fee has nothing to fill either line with", () => {
     source: "none",
   });
 });
+
+test("the service address falls back to the customer's address when the job has none", async () => {
+  const { serviceAddress } = await import("./contract-template.ts");
+  const customer = { address_line_1: "335 Kestrel Way", city: "Nipomo", state: "CA", postal_code: "93444" };
+  assert.equal(serviceAddress(null, customer), "335 Kestrel Way, Nipomo, CA, 93444");
+  assert.equal(
+    serviceAddress({ address_line_1: "1 Job St", city: "Arroyo Grande", state: "CA", postal_code: "93420" }, customer),
+    "1 Job St, Arroyo Grande, CA, 93420",
+  );
+  assert.equal(serviceAddress(null, null), "");
+});
+
+test("a plain scope is built from the job when the AI cannot write one", async () => {
+  const { plainScope } = await import("./contract-template.ts");
+  const scope = plainScope({ workType: "work order", description: "Install recessed lights in the kitchen.", workItems: ["Install 6 recessed lights", "Install 6 recessed lights", "Dimmer switch"] });
+  assert.match(scope, /recessed lights in the kitchen/);
+  assert.match(scope, /The work includes: Install 6 recessed lights; Dimmer switch\./);
+  assert.match(plainScope({ workType: "diagnostic", description: "Breaker trips", workItems: [], visitOnly: true }), /diagnostic visit/);
+  assert.equal(plainScope({ workType: "work order", description: "", workItems: [] }), "");
+});

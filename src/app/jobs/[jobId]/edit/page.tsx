@@ -48,6 +48,7 @@ export default async function JobSettingsPage({ params }: { params: Promise<{ jo
           customerPhone={controls.customerPhone}
           customerEmail={controls.customerEmail}
           place={controls.place}
+          diagnostic={controls.diagnostic}
         />
       ) : (
         <section className="rounded-panel border border-line bg-surface p-5 sm:p-6">

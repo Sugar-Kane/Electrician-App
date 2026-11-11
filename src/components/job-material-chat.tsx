@@ -603,6 +603,8 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
   // the person using it.
   const [startsOpen] = useState(() => !hasContent(saved.list) || !hasLines);
   const [fromChatGpt, setFromChatGpt] = useState(false);
+  // Typing the list by hand, item by item, with no AI at all.
+  const [typing, setTyping] = useState(false);
   const abort = useRef<AbortController | null>(null);
   // The list as it is on screen now, for prices that arrive a minute later.
   const listNow = useRef(list);
@@ -1082,6 +1084,41 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
             onUse={takeFromChatGpt}
             onClose={() => setFromChatGpt(false)}
           />
+        ) : null}
+
+        {!listed && !writing && !choosing && typing ? (
+          <div className="mt-3 rounded-control border border-line bg-white/[0.015] p-3 sm:p-4">
+            <p className="mb-2 text-sm font-semibold">First item</p>
+            <ItemEditor
+              item={{ id: `n${Date.now().toString(36)}`, qty: "", name: "", note: "" }}
+              onSave={(item) => {
+                // A list of one section to start; "Add item" under it takes the rest.
+                persist({
+                  intro: "",
+                  title: "",
+                  sections: [{ id: `s${Date.now().toString(36)}`, heading: "Materials", blocks: [{ type: "items", items: [item] }] }],
+                  closing: "",
+                });
+                setTyping(false);
+              }}
+              onCancel={() => setTyping(false)}
+            />
+          </div>
+        ) : null}
+
+        {!listed && !writing && !choosing && !typing && !fromChatGpt ? (
+          <button
+            type="button"
+            disabled={clearing}
+            onClick={() => {
+              setError("");
+              setTyping(true);
+            }}
+            className="tap-target mt-1 mr-4 inline-flex min-h-10 items-center gap-1.5 text-xs font-semibold text-brand disabled:opacity-50"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+            Type the list yourself
+          </button>
         ) : null}
 
         {!choosing && !fromChatGpt ? (

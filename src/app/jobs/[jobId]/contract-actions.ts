@@ -12,6 +12,8 @@ import {
   placeholdersUsed,
   contractMoney,
   fillTemplate,
+  plainScope,
+  serviceAddress,
   STARTER_TEMPLATE,
   type ContractFacts,
 } from "@/lib/contract-template";
@@ -208,11 +210,11 @@ export async function generateContract(
     .select(
       `id, job_number, category, customer_description, scheduled_start, diagnostic_fee_cents,
        diagnostic_paid, follow_up_of,
-       customers ( first_name, last_name, company_name, bill_to ),
+       customers ( first_name, last_name, company_name, bill_to, address_line_1, city, state, postal_code ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
        invoices ( id, status, total_cents, diagnostic_credit_cents ),
-       job_line_items ( kind, quantity, unit_price_cents, invoice_id )`,
+       job_line_items ( kind, description, quantity, unit_price_cents, invoice_id )`,
     )
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
@@ -255,14 +257,8 @@ export async function generateContract(
   // The party the contract is made with: the business or the person, as the customer is set.
   const customerName = billingParty(customer, null).name;
 
-  const address = [
-    text(property?.address_line_1),
-    text(property?.city),
-    text(property?.state),
-    text(property?.postal_code),
-  ]
-    .filter(Boolean)
-    .join(", ");
+  // The job's address, or the customer's when the job was saved without one.
+  const address = serviceAddress(property, customer);
 
   /*
    * Whose diagnostic the deposit line is about.
@@ -344,13 +340,24 @@ export async function generateContract(
   // Best effort. A model outage, or a business past this month's built-in AI,
   // leaves {{scope}} standing in the draft, which is visible and fixable; a
   // paragraph invented to fill the gap is neither.
-  const scope = (await takeAiUse(organizationId, "contract_scope")).ok
+  const aiScope = (await takeAiUse(organizationId, "contract_scope")).ok
     ? await draftScope({
         description,
         workType,
         visitOnly: money.source === "diagnostic",
       })
     : null;
+  // Without the AI, a plain paragraph from what the job itself says: the
+  // request and the work written on it. Still a draft, read before sending.
+  const scope =
+    aiScope ||
+    plainScope({
+      workType,
+      description,
+      workItems: lines.map((line) => text(line.description)),
+      visitOnly: money.source === "diagnostic",
+    }) ||
+    null;
 
   const facts: Partial<ContractFacts> = {
     business_name: text(organization?.name),
@@ -468,7 +475,7 @@ export async function generateChangeOrder(
     .from("jobs")
     .select(
       `id, job_number,
-       customers ( first_name, last_name, company_name, bill_to ),
+       customers ( first_name, last_name, company_name, bill_to, address_line_1, city, state, postal_code ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
        contracts ( id, kind, status, created_at, signed_at ),
@@ -532,14 +539,7 @@ export async function generateChangeOrder(
       business_name: text(organization?.name),
       business_phone: text(organization?.phone),
       customer_name: billingParty(customer, null).name,
-      service_address: [
-        text(property?.address_line_1),
-        text(property?.city),
-        text(property?.state),
-        text(property?.postal_code),
-      ]
-        .filter(Boolean)
-        .join(", "),
+      service_address: serviceAddress(property, customer),
       job_number: String(row.job_number ?? jobNumber),
       today: formatDate(new Date().toISOString(), true),
     },
