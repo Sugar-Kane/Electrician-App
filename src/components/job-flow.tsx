@@ -95,7 +95,7 @@ export function JobStageCard({
             <button
               type="button"
               onClick={() => goToFirst(STEP_TARGETS[step.key])}
-              className="group/step block min-h-11 w-full rounded-chip pb-1 pt-0.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+              className="group/step flex h-full min-h-11 w-full flex-col justify-start rounded-chip pb-1 pt-0.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
             >
               <span
                 className={`block h-1.5 rounded-full transition group-hover/step:opacity-80 ${
