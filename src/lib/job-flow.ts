@@ -78,6 +78,8 @@ export type StageInput = {
   progress: ProgressStep[];
   /** Lines of any kind (labor, material, fee) on the job. */
   lineCount: number;
+  /** A diagnostic's own fee is still owed: it has one, it was not paid at booking, and it is not a follow-up. */
+  diagnosticFeeDue?: boolean;
   partCount: number;
   /** Items on the materials list, priced or not. */
   materialListCount: number;
@@ -206,7 +208,9 @@ export function jobFlow(input: StageInput): FlowStage {
   // site has one thing to do, and it is the visit card's button.
   if (UNDER_WAY.has(state)) {
     const visit = VISIT_LABELS[flow][state];
-    const decide = flow === "diagnostic" && ON_SITE.has(state) && input.followUpCount === 0;
+    // Decided once anything is on the job to bill here (the fee, or a repair
+    // done on site) or the bigger job is booked as a work order.
+    const decide = flow === "diagnostic" && ON_SITE.has(state) && input.followUpCount === 0 && input.lineCount === 0;
     return {
       flow,
       steps: steps(flow, flow === "work_order" ? "work" : state === "en_route" ? "travel" : "diagnose", false),
@@ -218,7 +222,9 @@ export function jobFlow(input: StageInput): FlowStage {
         state === "en_route"
           ? "Arrival is marked automatically when you get there."
           : flow === "diagnostic" && state === "working"
-            ? "Write down what you found, with photos, then choose what happens next."
+            ? decide
+              ? "Write down what you found, then choose below: diagnostic only, fix it now, or schedule the bigger job."
+              : "Write down what you found, with photos."
             : flow === "diagnostic" && state === "arrived"
               ? "Confirm the problem with the customer before you start."
               : "",
@@ -229,24 +235,47 @@ export function jobFlow(input: StageInput): FlowStage {
   if (flow === "diagnostic") {
     if (state === "completed") {
       const money = billing(input.progress);
-      // What was found still has to be decided on, unless the customer has
-      // already paid or a repair was booked.
-      if (input.followUpCount === 0 && !money.paid && !input.progress.some((s) => s.key === "invoice" && s.state === "done")) {
+      // Something to bill on this job: the fee, a repair done on site, or both.
+      if (input.lineCount > 0 || money.paid || input.progress.some((s) => s.key === "invoice" && s.state === "done")) {
+        return {
+          flow,
+          steps: steps(flow, money.key, money.paid),
+          status: money.status,
+          primary: money.primary,
+          hint: money.hint,
+          needsDecision: false,
+        };
+      }
+      // The bigger job is booked as a work order, and the fee was paid when
+      // they booked (or there is none): nothing is billed on this visit.
+      if (input.followUpCount > 0 && !input.diagnosticFeeDue) {
+        return {
+          flow,
+          steps: steps(flow, "paid", true),
+          status: "Work order booked",
+          primary: { kind: "none", label: "Diagnostic closed" },
+          hint: "The repair is its own work order. Nothing more to bill on this visit.",
+          needsDecision: false,
+        };
+      }
+      // Still to decide, while the fee is owed: diagnostic only, fix it now, or
+      // the bigger job as a work order.
+      if (input.diagnosticFeeDue) {
         return {
           flow,
           steps: steps(flow, "decide", false),
           status: "Diagnosed",
           primary: go("Select next action", "#next-action"),
-          hint: "Repair now, send an estimate, book a return visit, or bill the diagnostic only.",
+          hint: "Diagnostic only, fix it now, or schedule the bigger job as a work order.",
           needsDecision: true,
         };
       }
       return {
         flow,
-        steps: steps(flow, money.key, money.paid),
-        status: money.status,
-        primary: money.primary,
-        hint: money.hint,
+        steps: steps(flow, "paid", true),
+        status: "Paid",
+        primary: { kind: "none", label: "Diagnostic closed" },
+        hint: "The diagnostic was paid when they booked. Nothing more to bill.",
         needsDecision: false,
       };
     }

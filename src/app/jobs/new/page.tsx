@@ -56,7 +56,7 @@ export default async function NewJobPage({
 
   return (
     <FieldPageShell
-      title={followUp ? (plan === "estimate" ? "Repair estimate" : plan === "now" ? "Repair now" : plan === "return" ? "Return visit" : "Book work order") : "New job"}
+      title={followUp ? (plan === "estimate" ? "Repair estimate" : plan === "now" ? "Repair now" : plan === "return" ? "Schedule the bigger job" : "Book work order") : "New job"}
       eyebrow={followUp ? `From diagnostic #${followUp.jobNumber}` : "Add work"}
       description={
         followUp

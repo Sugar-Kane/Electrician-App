@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, CalendarPlus, Check, ClipboardCheck, FileText, Hammer, LoaderCircle, Receipt } from "lucide-react";
+import { ArrowRight, CalendarPlus, Check, ClipboardCheck, Hammer, LoaderCircle, Receipt } from "lucide-react";
 
 import { MaterialsForm, goTo } from "@/components/job-progress";
+import { chooseDiagnosticOutcome } from "@/app/jobs/[jobId]/line-actions";
+import type { DiagnosticOutcome } from "@/lib/diagnostic-outcome";
 import type { FlowStage, StageKey } from "@/lib/job-flow";
 
 /**
@@ -164,39 +166,84 @@ export function JobStageCard({
 }
 
 /**
- * What to do about what a diagnostic found.
+ * How a diagnostic visit ends, and the way to finish each.
  *
- * Four answers, each a real path. Every repair is its own work order, linked
- * back to this visit so the history and the diagnostic credit carry over; this
- * job is never turned into the repair. Billing the diagnostic alone is the
- * fourth, and goes to this job's invoice.
+ * - Diagnostic only: no repair. The fee is put on the job if it is owed, and
+ *   the visit is finished (or, already finished, the invoice is next).
+ * - Fix it now: the repair is done on this visit, a store run included. The
+ *   fee goes on the job and the labor and parts are added on top of it.
+ * - Bigger job: booked as a linked work order for later; its invoice takes
+ *   off the diagnostic fee the customer paid.
+ *
+ * The fee line is added on the server (chooseDiagnosticOutcome), once.
  */
-export function DiagnosticDecision({ jobNumber, creditLabel }: { jobNumber: string; creditLabel: string }) {
-  const book = `/jobs/new?from=${jobNumber}`;
-  const options = [
+export function DiagnosticDecision({
+  jobNumber,
+  completed,
+  feeLabel,
+  feeDue,
+}: {
+  jobNumber: string;
+  /** The visit is already finished. */
+  completed: boolean;
+  /** "$180.00", or empty when the job has no fee. */
+  feeLabel: string;
+  /** The fee is still owed (not paid at booking). */
+  feeDue: boolean;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<DiagnosticOutcome | null>(null);
+  const [error, setError] = useState("");
+
+  async function choose(outcome: DiagnosticOutcome) {
+    setBusy(outcome);
+    setError("");
+    const result = await chooseDiagnosticOutcome(jobNumber, outcome);
+    if (result.error) {
+      setError(result.error);
+      setBusy(null);
+      return;
+    }
+    if (outcome === "schedule_later") {
+      router.push(`/jobs/new?from=${jobNumber}&plan=return`);
+      return;
+    }
+    router.refresh();
+    setBusy(null);
+    if (outcome === "fix_now") {
+      // The labor and parts are added here; the visit is finished from the
+      // yellow button once the repair is done.
+      window.setTimeout(() => goTo("#work-materials"), 300);
+    } else if (completed) {
+      window.setTimeout(() => goTo("#billing"), 300);
+    } else {
+      // Finish the visit: the visit card asks about parts used, as always.
+      window.dispatchEvent(new Event("volteira:visit-advance"));
+      goTo("#work");
+    }
+  }
+
+  const fee = feeLabel || "the diagnostic fee";
+  const options: { outcome: DiagnosticOutcome; icon: typeof Hammer; title: string; note: string }[] = [
     {
-      href: `${book}&plan=now`,
-      icon: Hammer,
-      title: "Repair now",
-      note: "A linked work order booked for right now, to do on this visit once the customer approves the price.",
-    },
-    {
-      href: `${book}&plan=estimate`,
-      icon: FileText,
-      title: "Create repair estimate",
-      note: "A linked work order to price and send for approval. No time set yet.",
-    },
-    {
-      href: `${book}&plan=return`,
-      icon: CalendarPlus,
-      title: "Schedule return visit",
-      note: "A linked work order with its own arrival window, for when parts or time are needed.",
-    },
-    {
-      href: "#billing",
+      outcome: "diagnostic_only",
       icon: Receipt,
-      title: "Finish diagnostic only",
-      note: "No repair. Bill the diagnostic fee and close the job.",
+      title: "Diagnostic only",
+      note: feeDue
+        ? `No repair. Bill ${fee} for the diagnostic and close the job. No extra charge.`
+        : "No repair, no extra charge. The diagnostic was paid when they booked.",
+    },
+    {
+      outcome: "fix_now",
+      icon: Hammer,
+      title: "Fix it now",
+      note: `Found the fix and doing it on this visit, even with a quick store run. Add the labor and parts; they are billed on top of ${fee}.`,
+    },
+    {
+      outcome: "schedule_later",
+      icon: CalendarPlus,
+      title: "Bigger job: schedule it",
+      note: `More than this visit. Book it as a work order for later${feeDue ? "" : `; the ${fee} they paid comes off its invoice`}.`,
     },
   ];
 
@@ -208,43 +255,35 @@ export function DiagnosticDecision({ jobNumber, creditLabel }: { jobNumber: stri
     >
       <h2 id="next-action-heading" className="flex items-center gap-2 text-sm font-semibold">
         <ClipboardCheck className="h-4 w-4 text-brand" aria-hidden />
-        What happens next?
+        What did you find?
       </h2>
-      {creditLabel ? (
-        <p className="mt-1 text-sm leading-6 text-ink-muted">
-          The {creditLabel} paid for this diagnostic comes off a repair&apos;s invoice.
-        </p>
-      ) : null}
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-3 grid gap-2 sm:grid-cols-3">
         {options.map((option) => (
-          <li key={option.title}>
-            {option.href.startsWith("#") ? (
-              <a
-                href={option.href}
-                onClick={(event) => goTo(option.href, event)}
-                className="tap-row flex min-h-16 items-start gap-3 rounded-control border border-line px-3 py-3"
-              >
+          <li key={option.outcome}>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => choose(option.outcome)}
+              className="tap-row flex min-h-16 w-full items-start gap-3 rounded-control border border-line px-3 py-3 text-left disabled:opacity-60"
+            >
+              {busy === option.outcome ? (
+                <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-brand" aria-hidden />
+              ) : (
                 <option.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
-                <span>
-                  <span className="block text-sm font-semibold">{option.title}</span>
-                  <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{option.note}</span>
-                </span>
-              </a>
-            ) : (
-              <Link
-                href={option.href}
-                className="tap-row flex min-h-16 items-start gap-3 rounded-control border border-line px-3 py-3"
-              >
-                <option.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
-                <span>
-                  <span className="block text-sm font-semibold">{option.title}</span>
-                  <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{option.note}</span>
-                </span>
-              </Link>
-            )}
+              )}
+              <span>
+                <span className="block text-sm font-semibold">{option.title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{option.note}</span>
+              </span>
+            </button>
           </li>
         ))}
       </ul>
+      {error ? (
+        <p className="mt-2 text-sm text-critical" role="alert">
+          {error}
+        </p>
+      ) : null}
     </section>
   );
 }
