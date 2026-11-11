@@ -12,7 +12,7 @@
  * tool read a list the same way.
  */
 
-import { estimateItems, type MaterialList } from "./material-list.ts";
+import { RESIDENTIAL_OR_COMMERCIAL, estimateItems, type MaterialList } from "./material-list.ts";
 import { STORES, storeProductUrl, type StoreName } from "./store-price-rules.ts";
 
 /** How a store is named in a link and to ChatGPT. */
@@ -99,8 +99,9 @@ export function cartAgentSteps(store: StoreName): string[] {
     `Choose in this order of priority: available in store first, then name brand, then the store's own or a generic brand, then on the shelf today, and only then an alternate product. Prefer what is on the shelf at that store today: an item shown in stock there, with an aisle and bay where ${label} shows one. An item that is online only, special order, or only available to ship to the store counts as unavailable.`,
     `Set the quantity so it covers what the list needs. The list counts in its own units: when ${label} sells it in a pack or roll, add enough packs to cover it (40 ft of a 250 ft roll is 1 roll).`,
     `Where a line says it has no quantity, recommend one from the job and the rest of the list (a box count from the number of devices, a wire length from the runs, one spare for small parts), add that many, and say how you got the number.`,
-    `For each item not matched at ${label}, search ${host} and recommend the closest product that meets what the list says: the same size, rating, amperage, gauge, length and type, rated for the job (UL listed, indoor or outdoor, wet location where it says so). Choose among items in stock on the shelf at the electrician's store first; only if none meets the spec, say so rather than picking an online-only item. Among those, choose in this order: a name brand (Leviton, Eaton, Square D, Southwire, Carlon and the like, preferring one already in the cart), then the store's own or a generic brand. Every pick must still meet the spec and be UL listed. Add your recommendation to the cart, with the quantity worked out the same way. If nothing meets the spec, add nothing and say what you would look for instead.`,
+    `For each item not matched at ${label}, search ${host} and recommend the closest product that meets what the list says: the same size, rating, amperage, gauge, length and type, rated for the job (UL listed, indoor or outdoor, wet location where it says so), and right for a residential or commercial job as the next step says. Choose among items in stock on the shelf at the electrician's store first; only if none meets the spec, say so rather than picking an online-only item. Among those, choose in this order: a name brand (Leviton, Eaton, Square D, Southwire, Carlon and the like, preferring one already in the cart), then the store's own or a generic brand. Every pick must still meet the spec and be UL listed. Add your recommendation to the cart, with the quantity worked out the same way. If nothing meets the spec, add nothing and say what you would look for instead.`,
     "If a matched product cannot be had in store (not in stock for pickup at that store), recommend the closest substitute that can, the same way (in store, name brand before generic, on the shelf), and add that instead. Substitutes come last: use one only when the matched product cannot be had in store. If a page asks for an option the line does not say, pick the one that fits the job and say which.",
+    RESIDENTIAL_OR_COMMERCIAL,
     "Do not check out, place the order, apply payment or change anything in the account. Stop at the cart.",
     `Finish with three lists: added as matched; recommended by you (each with the product, quantity, price, aisle and bay where shown, and why it fits, so the electrician can check it before paying); and skipped, with why. Then the cart total ${label} shows and the store the cart is set to.`,
   ];

@@ -126,7 +126,7 @@ export async function loadJobMaterialChat(jobId: string): Promise<{
       : Promise.resolve({ data: null }),
     supabase
       .from("jobs")
-      .select("category, customer_description, technician_notes, properties ( city, state )")
+      .select("category, customer_description, technician_notes, properties ( city, state ), customers ( customer_type )")
       .eq("id", jobId)
       .maybeSingle(),
   ]);
@@ -140,6 +140,7 @@ export async function loadJobMaterialChat(jobId: string): Promise<{
     forChatGpt: {
       businessName: typeof business.name === "string" ? business.name : "",
       facts: materialJobFacts({
+        customerType: (Array.isArray(row.customers) ? (row.customers as Record<string, unknown>[])[0] : (row.customers as Record<string, unknown> | null | undefined))?.customer_type,
         category: row.category,
         customerDescription: row.customer_description,
         technicianNotes: row.technician_notes,

@@ -36,7 +36,7 @@ export default async function StoreCartPage({ params }: { params: Promise<{ jobI
     readMaterialList(supabase, jobId),
     supabase
       .from("jobs")
-      .select("category, customer_description, technician_notes, properties ( city, state )")
+      .select("category, customer_description, technician_notes, properties ( city, state ), customers ( customer_type )")
       .eq("id", jobId)
       .maybeSingle(),
   ]);
@@ -46,6 +46,7 @@ export default async function StoreCartPage({ params }: { params: Promise<{ jobI
   const row = (job.data as Record<string, unknown> | null) ?? {};
   const place = ((Array.isArray(row.properties) ? row.properties[0] : row.properties) ?? {}) as Record<string, unknown>;
   const facts = materialJobFacts({
+        customerType: (Array.isArray(row.customers) ? (row.customers as Record<string, unknown>[])[0] : (row.customers as Record<string, unknown> | null | undefined))?.customer_type,
     category: row.category,
     customerDescription: row.customer_description,
     technicianNotes: row.technician_notes,

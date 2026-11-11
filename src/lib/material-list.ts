@@ -462,14 +462,24 @@ export function materialListInstructions(businessName: string): string {
     "- After the material sections, add \"## I'd Buy Before the Job\" with the definite purchases, then a line \"Keep on the truck in case the routing changes:\" and the contingency items as bullets.",
     "- Then add \"## Before Installation Day\" with bullets of what to verify: equipment nameplate MCA and MOCP, breaker compatibility with the panel, open breaker spaces, the route, permits.",
     "- Follow the NEC. Never present a conductor or breaker size as final when it depends on equipment the electrician has not confirmed: say to verify it against the nameplate.",
+    `- ${RESIDENTIAL_OR_COMMERCIAL}`,
     "- Use \" for inches and the × sign for counts. No tables, no bold, no emoji, no prices.",
     "- Do not end with offers like \"If you want, I can…\".",
     "- When asked for changes, write the whole list again with the changes made, keeping everything else exactly as it was, including any item the electrician edited by hand.",
   ].join("\n");
 }
 
+/**
+ * Residential work gets residential parts. Said once, so the list, the store
+ * picks and the cart all choose the same way.
+ */
+export const RESIDENTIAL_OR_COMMERCIAL =
+  "Match every part to the kind of job. Decide from the job whether it is residential or commercial (a house, condo, garage or ADU is residential; a store, office, shop or multi-tenant building is commercial). For residential work wired in NM-B (Romex), choose residential parts: boxes made for NM cable with built-in clamps, such as Steel City or Raco steel boxes or Carlon and Allied nonmetallic boxes, new-work or old-work as the install needs; residential-grade devices; NM cable connectors and staples. Do not pick commercial parts meant for MC cable, EMT or rigid conduit (boxes with only knockouts, such as Orbit commercial boxes, MC connectors, EMT fittings) unless the job is commercial or the electrician says the run is in MC or conduit. For commercial work, choose the commercial part.";
+
 /** What the job record says about the work, so the first request can be short. */
 export function materialJobFacts(job: {
+  /** "residential" or "commercial", from the customer record. */
+  customerType?: unknown;
   category?: unknown;
   customerDescription?: unknown;
   technicianNotes?: unknown;
@@ -478,6 +488,7 @@ export function materialJobFacts(job: {
 }): string[] {
   const say = (value: unknown) => (typeof value === "string" ? value.trim() : "");
   return [
+    say(job.customerType) ? `Residential or commercial: ${say(job.customerType)}` : "",
     say(job.category) ? `Kind of job: ${say(job.category).replace(/_/g, " ")}` : "",
     say(job.customerDescription) ? `What the customer asked for: ${say(job.customerDescription).slice(0, 1500)}` : "",
     say(job.technicianNotes) ? `The electrician's notes: ${say(job.technicianNotes).slice(0, 1500)}` : "",

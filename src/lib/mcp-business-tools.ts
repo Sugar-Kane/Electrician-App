@@ -326,7 +326,7 @@ async function materialsJob(
   if (!Number.isInteger(number) || number <= 0) return null;
   const { data } = await database
     .from("jobs")
-    .select("id, job_number, category, customer_description, technician_notes, properties ( city, state )")
+    .select("id, job_number, category, customer_description, technician_notes, properties ( city, state ), customers ( customer_type )")
     .eq("organization_id", organizationId)
     .eq("job_number", number)
     .maybeSingle();
@@ -937,6 +937,7 @@ export async function runBusinessMcpTool(input: {
       const { data: organization } = await database.from("organizations").select("name").eq("id", organizationId).maybeSingle();
       const place = record(Array.isArray(job.properties) ? job.properties[0] : job.properties);
       const facts = materialJobFacts({
+        customerType: (Array.isArray(job.customers) ? (job.customers as Record<string, unknown>[])[0] : (job.customers as Record<string, unknown> | null | undefined))?.customer_type,
         category: job.category,
         customerDescription: job.customer_description,
         technicianNotes: job.technician_notes,
@@ -1038,6 +1039,7 @@ export async function runBusinessMcpTool(input: {
       const number = String(job.job_number);
       const jobPlace = record(Array.isArray(job.properties) ? job.properties[0] : job.properties);
       const facts = materialJobFacts({
+        customerType: (Array.isArray(job.customers) ? (job.customers as Record<string, unknown>[])[0] : (job.customers as Record<string, unknown> | null | undefined))?.customer_type,
         category: job.category,
         customerDescription: job.customer_description,
         technicianNotes: job.technician_notes,
