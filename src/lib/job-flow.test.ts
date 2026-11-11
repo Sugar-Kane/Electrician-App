@@ -124,18 +124,32 @@ test("H: billing runs invoice, payment, then closed; a canceled job offers nothi
   assert.equal(jobFlow(input({ canceled: true })).primary.kind, "none");
 });
 
-test("an invoice sent before the work goes to collecting it, not back to the estimate", () => {
+test("an invoice sent before signing waits for the signature, and says the invoice is out", () => {
   const sentSteps = progress({
     pricedCents: 159014,
     invoices: [{ status: "sent", lastSentAt: "2026-11-10T00:00:00Z", paidAt: null }],
   });
-  const owed = jobFlow(input({ lineCount: 16, partCount: 15, progress: sentSteps }));
-  assert.equal(owed.primary.kind === "go" && owed.primary.label, "Record payment");
+  const unsigned = jobFlow(input({ lineCount: 16, partCount: 15, progress: sentSteps }));
+  assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "Send estimate");
+  assert.match(unsigned.status, /Invoiced/);
+  assert.equal(unsigned.steps.find((step) => step.key === "invoice")?.state, "done");
+  assert.equal(unsigned.steps.find((step) => step.key === "work")?.state, "todo");
 
+  const waiting = jobFlow(input({ lineCount: 16, partCount: 15, agreement: { sent: true, signed: false }, progress: sentSteps }));
+  assert.equal(waiting.primary.kind === "go" && waiting.primary.label, "View approval");
+
+  const signed = jobFlow(input({ lineCount: 16, partCount: 15, agreement: { sent: true, signed: true }, progress: sentSteps }));
+  assert.equal(signed.primary.kind === "go" && signed.primary.label, "Record payment");
+});
+
+test("paid before signing still waits for the signature; signed and paid goes to the visit", () => {
   const paidSteps = progress({
     pricedCents: 159014,
     invoices: [{ status: "paid", lastSentAt: "2026-11-10T00:00:00Z", paidAt: "2026-11-11T00:00:00Z" }],
   });
-  const paid = jobFlow(input({ lineCount: 16, partCount: 15, materialsReady: true, progress: paidSteps }));
-  assert.deepEqual(paid.primary, { kind: "visit", label: "Start trip", href: "#work" });
+  const unsigned = jobFlow(input({ lineCount: 16, partCount: 15, materialsReady: true, agreement: { sent: true, signed: false }, progress: paidSteps }));
+  assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "View approval");
+  assert.equal(unsigned.steps.find((step) => step.key === "paid")?.state, "done");
+  const signed = jobFlow(input({ lineCount: 16, partCount: 15, materialsReady: true, agreement: { sent: true, signed: true }, progress: paidSteps }));
+  assert.deepEqual(signed.primary, { kind: "visit", label: "Start trip", href: "#work" });
 });

@@ -284,15 +284,20 @@ export function jobFlow(input: StageInput): FlowStage {
   }
 
   /*
-   * Billed before the work: an invoice already went out, so the estimate and
-   * approval are behind it. Collecting is next; once it is paid, the visit
-   * is, without asking for an estimate nobody needs any more.
+   * An invoice can go out before the work, and before the customer has
+   * signed. Approval still comes first: nothing moves past it until the
+   * customer signs. Once signed, collecting is next if it is unpaid, then the
+   * visit. Either way the Invoice and Paid steps show what has really
+   * happened, so Nick can see where the job stands.
    */
   const invoiceStep = input.progress.find((step) => step.key === "invoice");
   const paidStep = input.progress.find((step) => step.key === "paid");
   const invoiced = invoiceStep?.state === "done" || (paidStep !== undefined && paidStep.state !== "todo");
   const paidUp = paidStep?.state === "done";
-  if (invoiced && !paidUp) {
+  const signed = Boolean(input.agreement?.signed);
+  const sent = Boolean(input.agreement?.sent);
+
+  if (invoiced && signed && !paidUp) {
     const money = billing(input.progress);
     // The billing steps are done; the visit's are as they really are.
     const still = (key: StageKey) =>
@@ -309,81 +314,101 @@ export function jobFlow(input: StageInput): FlowStage {
     };
   }
 
-  const signed = Boolean(input.agreement?.signed) || paidUp;
-  const sent = Boolean(input.agreement?.sent);
+  const next = ((): FlowStage => {
 
-  // Scope: nothing on the job, and no list to start from.
-  if (input.lineCount === 0 && input.materialListCount === 0) {
+    // Scope: nothing on the job, and no list to start from.
+    if (input.lineCount === 0 && input.materialListCount === 0) {
+      return {
+        flow,
+        steps: steps(flow, "scope", false),
+        status: "Materials list",
+        primary: go("Build material list", "#work-materials"),
+        hint: "List the parts and labor, or type them in yourself.",
+        needsDecision: false,
+      };
+    }
+    // A list with items nobody has priced yet.
+    if (input.lineCount === 0 && input.unpricedMaterialCount > 0) {
+      return {
+        flow,
+        steps: steps(flow, "quotes", false),
+        status: "Quotes needed",
+        primary: go("Get supplier quotes", "#work-materials"),
+        hint: `${input.unpricedMaterialCount} ${input.unpricedMaterialCount === 1 ? "item has" : "items have"} no price yet.`,
+        needsDecision: false,
+      };
+    }
+    if (input.lineCount === 0) {
+      return {
+        flow,
+        steps: steps(flow, "estimate", false),
+        status: "Estimate",
+        primary: go("Add work & materials", "#work-materials"),
+        hint: "Put the priced list on the job to make the estimate.",
+        needsDecision: false,
+      };
+    }
+    if (!signed) {
+      // Invoiced or not, nothing moves past approval until the customer signs.
+      // An invoice already out is said, so Nick knows where the job stands.
+      const owed = paidUp ? "The invoice is paid" : `The invoice is out (${(paidStep?.note ?? "waiting for payment").toLowerCase()})`;
+      return {
+        flow,
+        steps: steps(flow, sent ? "approval" : "estimate", false),
+        status: invoiced
+          ? sent
+            ? "Invoiced · awaiting approval"
+            : "Invoiced · estimate not sent"
+          : sent
+            ? "Awaiting approval"
+            : "Estimate",
+        primary: sent ? go("View approval", "#contract") : go("Send estimate", "#contract"),
+        hint: invoiced
+          ? `${owed}, but the customer has not signed yet. Get the estimate signed before the work goes ahead.`
+          : sent
+            ? "Waiting for the customer to sign. Resend it, or have them sign in person."
+            : "The customer approves the price before the work is booked.",
+        needsDecision: false,
+      };
+    }
+    if (input.partCount > 0 && !input.materialsReady) {
+      return {
+        flow,
+        steps: steps(flow, "materials", false),
+        status: "Pick up parts",
+        primary: { kind: "materials_ready", label: "Mark materials ready" },
+        hint: input.scheduled
+          ? "Have the parts in hand before you drive out. You can still start the trip if they are on the truck."
+          : "Have the parts in hand, then book the visit.",
+        needsDecision: false,
+      };
+    }
+    if (!input.scheduled) {
+      return {
+        flow,
+        steps: steps(flow, "schedule", false),
+        status: "Ready to schedule",
+        primary: go("Confirm appointment", input.scheduleHref),
+        hint: "Approved and ready. Set the arrival window.",
+        needsDecision: false,
+      };
+    }
     return {
       flow,
-      steps: steps(flow, "scope", false),
-      status: "Materials list",
-      primary: go("Build material list", "#work-materials"),
-      hint: "List the parts and labor, or type them in yourself.",
+      steps: steps(flow, "work", false),
+      status: "Scheduled",
+      primary: { kind: "visit", label: "Start trip", href: "#work" },
+      hint: "Approved, and the materials are ready.",
       needsDecision: false,
     };
-  }
-  // A list with items nobody has priced yet.
-  if (input.lineCount === 0 && input.unpricedMaterialCount > 0) {
-    return {
-      flow,
-      steps: steps(flow, "quotes", false),
-      status: "Quotes needed",
-      primary: go("Get supplier quotes", "#work-materials"),
-      hint: `${input.unpricedMaterialCount} ${input.unpricedMaterialCount === 1 ? "item has" : "items have"} no price yet.`,
-      needsDecision: false,
-    };
-  }
-  if (input.lineCount === 0) {
-    return {
-      flow,
-      steps: steps(flow, "estimate", false),
-      status: "Estimate",
-      primary: go("Add work & materials", "#work-materials"),
-      hint: "Put the priced list on the job to make the estimate.",
-      needsDecision: false,
-    };
-  }
-  if (!signed) {
-    return {
-      flow,
-      steps: steps(flow, sent ? "approval" : "estimate", false),
-      status: sent ? "Awaiting approval" : "Estimate",
-      primary: sent ? go("View approval", "#contract") : go("Send estimate", "#contract"),
-      hint: sent
-        ? "Waiting for the customer to sign. Resend it, or have them sign in person."
-        : "The customer approves the price before the work is booked.",
-      needsDecision: false,
-    };
-  }
-  if (input.partCount > 0 && !input.materialsReady) {
-    return {
-      flow,
-      steps: steps(flow, "materials", false),
-      status: "Pick up parts",
-      primary: { kind: "materials_ready", label: "Mark materials ready" },
-      hint: input.scheduled
-        ? "Have the parts in hand before you drive out. You can still start the trip if they are on the truck."
-        : "Have the parts in hand, then book the visit.",
-      needsDecision: false,
-    };
-  }
-  if (!input.scheduled) {
-    return {
-      flow,
-      steps: steps(flow, "schedule", false),
-      status: "Ready to schedule",
-      primary: go("Confirm appointment", input.scheduleHref),
-      hint: "Approved and ready. Set the arrival window.",
-      needsDecision: false,
-    };
-  }
+  })();
+
+  // What billing has really done, shown on its own steps.
+  if (!invoiced) return next;
   return {
-    flow,
-    steps: steps(flow, "work", false),
-    status: "Scheduled",
-    primary: { kind: "visit", label: "Start trip", href: "#work" },
-    hint: "Approved, and the materials are ready.",
-    needsDecision: false,
+    ...next,
+    steps: next.steps.map((step) =>
+      step.key === "invoice" || (step.key === "paid" && paidUp) ? { ...step, state: "done" as const } : step,
+    ),
   };
 }
