@@ -97,7 +97,10 @@ export function JobStageCard({
         <button
           type="button"
           disabled={visitPending}
-          onClick={() => window.dispatchEvent(new Event("volteira:visit-advance"))}
+          onClick={() => {
+            window.dispatchEvent(new Event("volteira:visit-advance"));
+            goTo(primary.href);
+          }}
           className="tap-target mt-4 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-base font-bold text-on-brand disabled:opacity-60"
         >
           {visitPending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}
