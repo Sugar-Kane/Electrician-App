@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 import type { ReactElement } from "react";
 
-import { BRANDING_BUCKET } from "@/lib/branding-storage";
+import { BRANDING_BUCKET, logoUrl } from "@/lib/branding-storage";
 import { DOCUMENTS_BUCKET, documentStoragePath, ensureDocumentsBucket } from "@/lib/document-storage";
 import type { BusinessLetterhead, LetterheadLogo } from "@/lib/pdf/letterhead";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -85,6 +85,7 @@ export async function businessLetterhead(
     postalCode: str(row.base_postal_code),
     licenseNumber: str(row.license_number),
     logo: await letterheadLogo(str(row.logo_path)),
+    logoUrl: /\.(png|jpe?g)$/i.test(str(row.logo_path)) ? logoUrl(str(row.logo_path)) : "",
   };
 }
 

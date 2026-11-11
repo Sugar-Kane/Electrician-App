@@ -28,6 +28,8 @@ export type BusinessLetterhead = {
   licenseNumber: string;
   /** The business's logo, when it has saved one the PDF can draw. */
   logo?: LetterheadLogo | null;
+  /** The same logo as a URL, for the on-screen copy of a document. */
+  logoUrl?: string;
 };
 
 export type LetterheadLogo = { data: Buffer; format: "png" | "jpg" };
@@ -133,16 +135,15 @@ export function Letterhead({
     <View>
       <View style={[sheet.row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
         <View style={{ maxWidth: 300 }}>
-          {/* The logo, then the licence under it. Sized by height so a wide
-              wordmark and a square mark sit the same. */}
-          {business.logo ? (
-            // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf's Image takes no alt; the name is printed as text below it.
-            <Image src={business.logo} style={{ height: 48, maxWidth: 240, objectFit: "contain", marginBottom: 6 }} />
-          ) : null}
-          {/* The name only when there is no logo: a logo that carries the
-              name, with the name typed again under it, reads twice. The name
-              stays in text in the footer. */}
-          {business.logo ? null : <Text style={sheet.businessName}>{business.name}</Text>}
+          {/* The logo with the business's name beside it, once. Sized by
+              height so a wide mark and a square one sit the same. */}
+          <View style={[sheet.row, { alignItems: "center", marginBottom: 4 }]}>
+            {business.logo ? (
+              // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf's Image takes no alt; the name is printed as text beside it.
+              <Image src={business.logo} style={{ height: 44, maxWidth: 120, objectFit: "contain", marginRight: 10 }} />
+            ) : null}
+            <Text style={[sheet.businessName, { marginBottom: 0, maxWidth: business.logo ? 170 : 300 }]}>{business.name}</Text>
+          </View>
           {/* The licence straight under the name: what makes this a
               contractor's paperwork. Omitted rather than faked when not set. */}
           {business.licenseNumber ? <Text style={[sheet.muted, { marginBottom: 2 }]}>{licenseLine(business.licenseNumber)}</Text> : null}

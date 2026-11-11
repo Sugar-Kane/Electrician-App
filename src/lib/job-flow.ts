@@ -51,7 +51,7 @@ export type StageStep = {
  * - `none`: nothing is left to do.
  */
 export type PrimaryAction =
-  | { kind: "visit"; label: string }
+  | { kind: "visit"; label: string; href: string }
   | { kind: "go"; label: string; href: string }
   | { kind: "materials_ready"; label: string }
   | { kind: "none"; label: string };
@@ -211,7 +211,9 @@ export function jobFlow(input: StageInput): FlowStage {
       flow,
       steps: steps(flow, flow === "work_order" ? "work" : state === "en_route" ? "travel" : "diagnose", false),
       status: visit.status,
-      primary: { kind: "visit", label: visit.label },
+      // Where the step's result shows: the findings and work once work starts,
+      // the visit card for everything else.
+      primary: { kind: "visit", label: visit.label, href: state === "arrived" ? "#findings" : "#work" },
       hint:
         state === "en_route"
           ? "Arrival is marked automatically when you get there."
@@ -262,7 +264,7 @@ export function jobFlow(input: StageInput): FlowStage {
       flow,
       steps: steps(flow, "travel", false),
       status: "Scheduled",
-      primary: { kind: "visit", label: "Start trip" },
+      primary: { kind: "visit", label: "Start trip", href: "#work" },
       hint: "The customer is texted that you are on the way.",
       needsDecision: false,
     };
@@ -354,7 +356,7 @@ export function jobFlow(input: StageInput): FlowStage {
     flow,
     steps: steps(flow, "work", false),
     status: "Scheduled",
-    primary: { kind: "visit", label: "Start trip" },
+    primary: { kind: "visit", label: "Start trip", href: "#work" },
     hint: "Approved, and the materials are ready.",
     needsDecision: false,
   };

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarPlus, Check, ClipboardCheck, FileText, Hammer, Receipt } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, CalendarPlus, Check, ClipboardCheck, FileText, Hammer, LoaderCircle, Receipt } from "lucide-react";
 
 import { MaterialsForm, goTo } from "@/components/job-progress";
 import type { FlowStage } from "@/lib/job-flow";
@@ -31,8 +32,17 @@ export function JobStageCard({
   const { primary } = stage;
   const current = stage.steps.find((step) => step.state === "current");
 
+  // A visit step is carried out by the visit card (job-workflow.tsx), so the
+  // button asks it to, and shows its progress while it saves.
+  const [visitPending, setVisitPending] = useState(false);
+  useEffect(() => {
+    const handle = (event: Event) => setVisitPending(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener("volteira:visit-pending", handle);
+    return () => window.removeEventListener("volteira:visit-pending", handle);
+  }, []);
+
   return (
-    <section aria-labelledby="stage-heading" className="mb-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+    <section id="job-stage" aria-labelledby="stage-heading" className="mb-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id="stage-heading" className="text-sm font-semibold text-ink-muted">
           Job progress
@@ -84,10 +94,19 @@ export function JobStageCard({
           <MaterialsForm jobNumber={jobNumber} ready={false} />
         </div>
       ) : primary.kind === "visit" ? (
-        <p className="mt-3 text-sm">
-          <span className="text-ink-muted">Next: </span>
-          <span className="font-semibold">{primary.label}</span>
-        </p>
+        <button
+          type="button"
+          disabled={visitPending}
+          onClick={() => {
+            window.dispatchEvent(new Event("volteira:visit-advance"));
+            goTo(primary.href);
+          }}
+          className="tap-target mt-4 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-base font-bold text-on-brand disabled:opacity-60"
+        >
+          {visitPending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}
+          {primary.label}
+          {visitPending ? null : <ArrowRight className="h-5 w-5" aria-hidden />}
+        </button>
       ) : (
         <p className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-positive">
           <Check className="h-4 w-4" aria-hidden />

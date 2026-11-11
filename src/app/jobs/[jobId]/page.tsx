@@ -536,6 +536,7 @@ export default async function JobDetailPage({
       */}
       {controls && workspaceOpen ? (
         <SectionRow
+          id="findings"
           title={stage.flow === "diagnostic" ? "Diagnostic findings" : "Work & checklists"}
           summary="Photos and notes from the visit"
           open={state === "working" || state === "review"}

@@ -141,6 +141,12 @@ function SignatureCells({
   );
 }
 
+/** "1162180" → "Lic. 1162180"; "CSLB #1162180" stays as written (as letterhead.tsx prints it). */
+function licenseText(license: string): string {
+  const value = license.trim();
+  return /[a-z]/i.test(value) ? value : `Lic. ${value}`;
+}
+
 export function ContractPaper({ data }: { data: ContractDocumentData }) {
   const { business } = data;
   const cityLine = [business.city, business.state].filter(Boolean).join(", ");
@@ -166,9 +172,18 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
           proportions between them. */}
       <header className="flex items-start justify-between gap-4 text-[13px] leading-[18px] text-[#64748b] sm:text-[15px] sm:leading-[21px]">
         <div className="min-w-0 max-w-[450px] flex-1 break-words">
-          <p className="mb-[0.15em] text-[clamp(18px,5.65vw,22px)] font-bold leading-[1.25] tracking-[0.015em] text-[#0f172a] sm:text-[30px]">
-            {business.name}
-          </p>
+          {/* The logo with the name beside it, then the licence: the same
+              letterhead as the PDF, line for line. */}
+          <div className="mb-[0.3em] flex items-center gap-3">
+            {business.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- a stored logo of any size, drawn as the PDF draws it.
+              <img src={business.logoUrl} alt="" className="h-[44px] max-w-[96px] shrink-0 object-contain sm:h-[58px] sm:max-w-[150px]" />
+            ) : null}
+            <p className="min-w-0 text-[clamp(18px,5.65vw,22px)] font-bold leading-[1.25] tracking-[0.015em] text-[#0f172a] sm:text-[30px]">
+              {business.name}
+            </p>
+          </div>
+          {business.licenseNumber ? <p>{licenseText(business.licenseNumber)}</p> : null}
           {business.addressLine1 ? <p>{business.addressLine1}</p> : null}
           {cityLine || business.postalCode ? (
             <p>{[cityLine, business.postalCode].filter(Boolean).join(" ")}</p>
@@ -181,7 +196,6 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
               <Wrappable text={business.email} />
             </p>
           ) : null}
-          {business.licenseNumber ? <p className="mt-[0.4em]">Lic. {business.licenseNumber}</p> : null}
         </div>
         <div className="shrink-0 text-right">
           <p className="mb-[0.1em] text-[clamp(18px,5.65vw,22px)] font-bold leading-[1.25] text-[#0f172a] sm:text-[30px]">
@@ -266,7 +280,7 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
       ) : null}
 
       <footer className="mt-[39px] whitespace-pre-wrap break-words border-t border-[#cbd5e1] pt-3 text-[12px] leading-[1.4] text-[#64748b]">
-        {[business.name, business.phone, business.licenseNumber ? `Lic. ${business.licenseNumber}` : ""]
+        {[business.name, business.phone, business.licenseNumber ? licenseText(business.licenseNumber) : ""]
           .filter(Boolean)
           .join("  ·  ")}
       </footer>

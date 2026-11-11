@@ -47,7 +47,7 @@ function input(overrides: Partial<StageInput> = {}): StageInput {
 test("A: a scheduled diagnostic starts the trip", () => {
   const stage = jobFlow(input({ kindOfWork: "Diagnostic" }));
   assert.equal(stage.flow, "diagnostic");
-  assert.deepEqual(stage.primary, { kind: "visit", label: "Start trip" });
+  assert.deepEqual(stage.primary, { kind: "visit", label: "Start trip", href: "#work" });
   assert.deepEqual(stage.steps.map((step) => step.label), ["Intake", "Schedule", "Travel", "Diagnose", "Next step", "Invoice", "Paid"]);
 });
 
@@ -98,7 +98,7 @@ test("G: approved work gathers materials, then books, then starts the trip", () 
   const book = jobFlow(input({ lineCount: 3, partCount: 2, agreement: signed, materialsReady: true, scheduled: false }));
   assert.equal(book.primary.kind === "go" && book.primary.label, "Confirm appointment");
   const go = jobFlow(input({ lineCount: 3, partCount: 2, agreement: signed, materialsReady: true }));
-  assert.deepEqual(go.primary, { kind: "visit", label: "Start trip" });
+  assert.deepEqual(go.primary, { kind: "visit", label: "Start trip", href: "#work" });
 });
 
 test("H: billing runs invoice, payment, then closed; a canceled job offers nothing", () => {

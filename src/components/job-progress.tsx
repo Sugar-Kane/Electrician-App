@@ -33,18 +33,27 @@ function StepIcon({ state }: { state: ProgressStep["state"] }) {
  * Go to a section of this page, opening it on the way if it is folded away.
  * A link to another page is left to the browser.
  */
-export function goTo(href: string, event: React.MouseEvent<HTMLAnchorElement>) {
+export function goTo(href: string, event?: React.MouseEvent<HTMLAnchorElement>) {
   if (!href.startsWith("#")) return;
   const target = document.getElementById(href.slice(1));
   if (!target) return;
-  event.preventDefault();
-  let folded = target.closest("details");
+  event?.preventDefault();
+  // Open every fold on the way to it...
+  let folded = target.parentElement?.closest("details") ?? null;
   while (folded) {
     folded.open = true;
     folded = folded.parentElement?.closest("details") ?? null;
   }
+  // ...the target itself, and the fold directly inside it (a contract's
+  // drafts), so the button lands on what it is about rather than a heading.
   if (target instanceof HTMLDetailsElement) target.open = true;
+  for (const inner of target.querySelectorAll(":scope > details")) {
+    if (inner instanceof HTMLDetailsElement) inner.open = true;
+  }
   target.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Keyboard and screen-reader users land there too.
+  const focusable = target instanceof HTMLDetailsElement ? target.querySelector("summary") : null;
+  focusable?.focus({ preventScroll: true });
   history.replaceState(null, "", href);
 }
 
