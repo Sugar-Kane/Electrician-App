@@ -67,7 +67,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
 
   const { data: jobRow } = await supabase
     .from("jobs")
-    .select("id, category, customer_description, technician_notes, properties ( city, state )")
+    .select("id, category, customer_description, technician_notes, properties ( city, state ), customers ( customer_type )")
     .eq("organization_id", organizationId)
     .eq("job_number", number)
     .maybeSingle();
@@ -82,6 +82,7 @@ export async function POST(request: Request, context: { params: Promise<{ jobNum
     | { city?: unknown; state?: unknown }
     | null;
   const facts = materialJobFacts({
+        customerType: (Array.isArray(job?.customers) ? (job?.customers as Record<string, unknown>[])[0] : (job?.customers as Record<string, unknown> | null | undefined))?.customer_type,
     category: job?.category,
     customerDescription: job?.customer_description,
     technicianNotes: job?.technician_notes,
