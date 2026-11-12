@@ -35,7 +35,7 @@ import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges, unbilledCents } from "@/lib/job-billing";
 import { isProgressKey, jobProgress } from "@/lib/job-progress";
 import { jobFlow, visitActionLabel } from "@/lib/job-flow";
-import { DIAGNOSTIC_FEE_LINE, type DiagnosticOutcome } from "@/lib/diagnostic-outcome";
+import { DIAGNOSTIC_FEE_LINE, feeInvoiceStanding, type DiagnosticOutcome } from "@/lib/diagnostic-outcome";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
@@ -229,9 +229,25 @@ export default async function JobDetailPage({
     (item) => !item.prices || !Object.keys(item.prices).some((key) => key !== "use"),
   ).length;
 
-  // The diagnostic's own fee, still owed: not paid at booking, not a follow-up.
+  // The diagnostic's own fee: on which invoice, and whether that is paid.
+  const feeLine = lines.find((line) => line.description === DIAGNOSTIC_FEE_LINE);
+  const feeInvoiceRow = feeLine?.invoiceId ? invoices.find((invoice) => invoice.id === feeLine.invoiceId) : undefined;
+  const feeInvoice = controls
+    ? feeInvoiceStanding({
+        feeCents: controls.diagnostic.feeCents,
+        paidAtBooking: controls.diagnostic.paid,
+        followUpOf: controls.diagnostic.followUp ? "yes" : null,
+        feeInvoiceStatus: feeInvoiceRow?.status ?? null,
+      })
+    : "none";
+  // Still owed: not paid at booking, not a follow-up, and not already out on
+  // an invoice of its own.
   const diagnosticFeeDue = Boolean(
-    controls && controls.diagnostic.feeCents > 0 && !controls.diagnostic.paid && !controls.diagnostic.followUp,
+    controls &&
+      controls.diagnostic.feeCents > 0 &&
+      !controls.diagnostic.paid &&
+      !controls.diagnostic.followUp &&
+      (feeInvoice === "to_bill" || feeInvoice === "none"),
   );
   const stage = jobFlow({
     kindOfWork: job.kindOfWork,
@@ -252,6 +268,9 @@ export default async function JobDetailPage({
       : null,
     followUpCount: followUps.booked.length,
     diagnosticFeeDue,
+    feeInvoice: job.kindOfWork === "Diagnostic" ? feeInvoice : "none",
+    feeLabel: controls?.diagnostic.feeCents ? formatCents(controls.diagnostic.feeCents) : "",
+    repairLineCount: lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length,
     canceled,
   });
   const primaryHref = stage.primary.kind === "go" ? stage.primary.href : "";
@@ -317,7 +336,9 @@ export default async function JobDetailPage({
           {
             label: "Diagnostic fee",
             value: controls?.diagnostic.feeCents
-              ? `${formatCents(controls.diagnostic.feeCents)}${controls.diagnostic.paid ? " · paid" : ""}`
+              ? `${formatCents(controls.diagnostic.feeCents)}${
+                  controls.diagnostic.paid || feeInvoice === "paid" ? " · paid" : feeInvoice === "billed_unpaid" ? " · invoiced" : ""
+                }`
               : "No fee",
           },
           {

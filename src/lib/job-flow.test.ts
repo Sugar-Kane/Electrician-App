@@ -162,3 +162,23 @@ test("paid before signing still waits for the signature; signed and paid goes to
   const signed = jobFlow(input({ lineCount: 16, partCount: 15, materialsReady: true, agreement: { sent: true, signed: true }, progress: paidSteps }));
   assert.deepEqual(signed.primary, { kind: "visit", label: "Start trip", href: "#work" });
 });
+
+test("a diagnostic added by hand sends its fee invoice first, then schedules; a repair is still decided on site", () => {
+  const first = jobFlow(input({ kindOfWork: "Diagnostic", scheduled: false, feeInvoice: "to_bill", feeLabel: "$180.00" }));
+  assert.equal(first.primary.kind, "fee_invoice");
+  assert.equal(first.primary.label, "Send diagnostic fee invoice ($180.00)");
+
+  const sent = jobFlow(input({ kindOfWork: "Diagnostic", scheduled: false, feeInvoice: "billed_unpaid", lineCount: 1 }));
+  assert.equal(sent.primary.kind === "go" && sent.primary.label, "Schedule visit");
+  assert.match(sent.status, /fee unpaid/);
+
+  // The fee line is on the job already; the repair choice still comes up.
+  const onSite = jobFlow(
+    input({ kindOfWork: "Diagnostic", workflowState: "working", feeInvoice: "paid", lineCount: 1, repairLineCount: 0 }),
+  );
+  assert.equal(onSite.needsDecision, true);
+
+  // Paid at booking: no fee invoice step.
+  const prepaid = jobFlow(input({ kindOfWork: "Diagnostic", scheduled: false, feeInvoice: "none" }));
+  assert.equal(prepaid.primary.kind === "go" && prepaid.primary.label, "Schedule visit");
+});

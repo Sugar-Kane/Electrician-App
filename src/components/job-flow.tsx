@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, CalendarPlus, Check, ClipboardCheck, Hammer, LoaderCircle, Receipt } from "lucide-react";
 
 import { MaterialsForm, goTo } from "@/components/job-progress";
-import { chooseDiagnosticOutcome } from "@/app/jobs/[jobId]/line-actions";
+import { chooseDiagnosticOutcome, sendDiagnosticFeeInvoice } from "@/app/jobs/[jobId]/line-actions";
 import type { DiagnosticOutcome } from "@/lib/diagnostic-outcome";
 import type { FlowStage, StageKey } from "@/lib/job-flow";
 
@@ -130,6 +130,8 @@ export function JobStageCard({
         <div className="mt-4 [&_button]:min-h-14 [&_button]:w-full [&_button]:text-base">
           <MaterialsForm jobNumber={jobNumber} ready={false} />
         </div>
+      ) : primary.kind === "fee_invoice" ? (
+        <FeeInvoiceButton jobNumber={jobNumber} label={primary.label} />
       ) : primary.kind === "visit" ? (
         <button
           type="button"
@@ -182,6 +184,42 @@ const CHANGE_NOTES: Record<DiagnosticOutcome, string> = {
   fix_now: "Picking something else keeps the repair lines; remove any that should not be billed in Materials & labor.",
   schedule_later: "Picking something else keeps the booked work order; cancel it from its own page if it is not happening.",
 };
+
+/** One tap: the diagnostic fee is put on an invoice and sent to the customer. */
+function FeeInvoiceButton({ jobNumber, label }: { jobNumber: string; label: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ error: string; notice?: string } | null>(null);
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setResult(null);
+          const outcome = await sendDiagnosticFeeInvoice(jobNumber);
+          setResult(outcome);
+          setBusy(false);
+          router.refresh();
+        }}
+        className="tap-target inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-base font-bold text-on-brand disabled:opacity-60"
+      >
+        {busy ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : <Receipt className="h-5 w-5" aria-hidden />}
+        {busy ? "Sending…" : label}
+      </button>
+      {result?.error ? (
+        <p className="mt-2 text-sm text-critical" role="alert">
+          {result.error}
+        </p>
+      ) : result?.notice ? (
+        <p className="mt-2 text-sm text-positive" role="status">
+          {result.notice}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * How a diagnostic visit ends, and the way to finish each.

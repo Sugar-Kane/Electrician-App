@@ -35,3 +35,31 @@ export function diagnosticFeeLineNeeded(
   if (outcome === "fix_now") return true;
   return !job.paid;
 }
+
+export type FeeInvoiceStanding = "to_bill" | "billed_unpaid" | "paid" | "none";
+
+/**
+ * Where a diagnostic's own fee stands, before the visit and after.
+ *
+ * - `none`: nothing to collect here. No fee, it was paid when they booked, or
+ *   the job is a follow-up (its fee was the visit before).
+ * - `to_bill`: owed and not sent yet (on no invoice, a void one, or a draft
+ *   that never went out), so the first thing to do once the job is made is
+ *   send the fee invoice.
+ * - `billed_unpaid`: on an invoice that has not been paid yet.
+ * - `paid`: paid on its invoice.
+ *
+ * A fee line on a void invoice is not billed.
+ */
+export function feeInvoiceStanding(job: {
+  feeCents: number;
+  paidAtBooking: boolean;
+  followUpOf: string | null;
+  /** The status of the live invoice holding the fee line, or null when it is on none. */
+  feeInvoiceStatus: string | null;
+}): FeeInvoiceStanding {
+  if (!(job.feeCents > 0) || job.paidAtBooking || job.followUpOf) return "none";
+  const status = job.feeInvoiceStatus;
+  if (!status || status === "void" || status === "draft") return "to_bill";
+  return status === "paid" ? "paid" : "billed_unpaid";
+}

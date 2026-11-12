@@ -470,3 +470,97 @@ export async function chooseDiagnosticOutcome(jobNumber: string, outcome: string
   revalidatePath(`/jobs/${jobNumber}`);
   return { error: "", notice: needed ? `${DIAGNOSTIC_FEE_LINE} added to the job.` : "" };
 }
+
+/**
+ * Bill a diagnostic's own fee and send it, as the first step on a job added
+ * by hand (whose customer has not paid for the visit yet).
+ *
+ * Puts the fee on the job as its line (once), raises the invoice for it, or
+ * reuses a draft that already holds it, and sends it by text and email with
+ * the link to pay. Texting follows the same consent rules as every invoice
+ * (invoice-delivery.ts). Refused when the fee was paid at booking, the job is
+ * a follow-up, there is no fee, or it is already out.
+ */
+export async function sendDiagnosticFeeInvoice(jobNumber: string): Promise<LineActionState> {
+  const { DIAGNOSTIC_FEE_LINE, feeInvoiceStanding } = await import("@/lib/diagnostic-outcome");
+  const { billingRefusal } = await import("@/lib/billing-permission-server");
+  const blocked = await billingRefusal();
+  if (blocked) return { error: blocked };
+
+  const context = await findJob(jobNumber);
+  if (!context) return { error: "That job could not be found." };
+  if (context.status === "canceled") return { error: "This job is canceled." };
+  const { supabase, organizationId, jobId, billedJob } = context;
+
+  const { data: feeLines } = await supabase
+    .from("job_line_items")
+    .select("id, invoice_id, invoices ( id, status )")
+    .eq("organization_id", organizationId)
+    .eq("job_id", jobId)
+    .eq("description", DIAGNOSTIC_FEE_LINE)
+    .limit(1);
+  const feeLine = (Array.isArray(feeLines) ? feeLines[0] : null) as Record<string, unknown> | null;
+  const holding = (Array.isArray(feeLine?.invoices) ? feeLine?.invoices[0] : feeLine?.invoices) as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const holdingStatus = typeof holding?.status === "string" ? holding.status : null;
+
+  const standing = feeInvoiceStanding({
+    feeCents: billedJob.diagnosticFeeCents,
+    paidAtBooking: billedJob.diagnosticPaid,
+    followUpOf: billedJob.followUpOf,
+    feeInvoiceStatus: holdingStatus,
+  });
+  if (standing === "none") return { error: "This job has no diagnostic fee to collect." };
+  if (standing === "paid") return { error: "The diagnostic fee is already paid." };
+  if (standing === "billed_unpaid") return { error: "The diagnostic fee invoice was already sent." };
+
+  if (!feeLine) {
+    const { error } = await supabase.from("job_line_items").insert({
+      organization_id: organizationId,
+      job_id: jobId,
+      kind: "labor",
+      description: DIAGNOSTIC_FEE_LINE,
+      quantity: 1,
+      unit: "visit",
+      unit_price_cents: billedJob.diagnosticFeeCents,
+    });
+    if (error) return { error: "The diagnostic fee could not be added to the job. Try again." };
+  }
+
+  // A draft that already holds the fee is sent as it is; otherwise one is raised.
+  let invoiceId = holdingStatus === "draft" && typeof holding?.id === "string" ? holding.id : "";
+  if (!invoiceId) {
+    const { raiseInvoice } = await import("./invoice-actions");
+    const form = new FormData();
+    form.set("jobNumber", jobNumber);
+    const raised = await raiseInvoice({ error: "" }, form);
+    if (raised.error || !raised.invoiceId) return { error: raised.error || "The fee invoice could not be created." };
+    invoiceId = raised.invoiceId;
+  }
+
+  const { data: customerRow } = await supabase
+    .from("jobs")
+    .select("customers ( phone, email )")
+    .eq("id", jobId)
+    .maybeSingle();
+  const customer = ((customerRow as Record<string, unknown> | null)?.customers ?? null) as Record<string, unknown> | null;
+  const phone = typeof customer?.phone === "string" ? customer.phone : "";
+  const email = typeof customer?.email === "string" ? customer.email : "";
+  if (!phone && !email) {
+    revalidatePath(`/jobs/${jobNumber}`);
+    return { error: "The fee invoice is made, but the customer has no phone or email to send it to. Add one, then send it from Billing." };
+  }
+
+  const { sendInvoice } = await import("@/app/invoices/actions");
+  const send = new FormData();
+  send.set("invoiceId", invoiceId);
+  if (phone) send.set("sendSms", "on");
+  if (email) send.set("sendEmail", "on");
+  const sent = await sendInvoice({ error: "" }, send);
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath("/invoices");
+  return sent.error ? { error: sent.error } : { error: "", notice: sent.notice || "Fee invoice sent." };
+}

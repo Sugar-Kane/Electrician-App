@@ -5,6 +5,7 @@ import { getJobInvoices, getJobLines } from "@/lib/job-line-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { unbilledCents } from "@/lib/job-billing";
 import { jobProgress } from "@/lib/job-progress";
+import { DIAGNOSTIC_FEE_LINE, feeInvoiceStanding } from "@/lib/diagnostic-outcome";
 import { jobFlow, type FlowStage } from "@/lib/job-flow";
 import { formatCents } from "@/lib/job-lines";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
@@ -69,6 +70,15 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
     formatMoney: formatCents,
   });
 
+  const feeLine = lines.find((line) => line.description === DIAGNOSTIC_FEE_LINE);
+  const feeInvoiceRow = feeLine?.invoiceId ? invoices.find((invoice) => invoice.id === feeLine.invoiceId) : undefined;
+  const feeInvoice = feeInvoiceStanding({
+    feeCents: controls.diagnostic.feeCents,
+    paidAtBooking: controls.diagnostic.paid,
+    followUpOf: controls.diagnostic.followUp ? "yes" : null,
+    feeInvoiceStatus: feeInvoiceRow?.status ?? null,
+  });
+
   return jobFlow({
     kindOfWork: job.kindOfWork,
     workflowState: state,
@@ -82,7 +92,14 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
     materialsReady: Boolean(controls.materialsReadyAt),
     agreement,
     followUpCount: followUps.booked.length,
-    diagnosticFeeDue: controls.diagnostic.feeCents > 0 && !controls.diagnostic.paid && !controls.diagnostic.followUp,
+    diagnosticFeeDue:
+      controls.diagnostic.feeCents > 0 &&
+      !controls.diagnostic.paid &&
+      !controls.diagnostic.followUp &&
+      (feeInvoice === "to_bill" || feeInvoice === "none"),
+    feeInvoice: job.kindOfWork === "Diagnostic" ? feeInvoice : "none",
+    feeLabel: controls.diagnostic.feeCents ? formatCents(controls.diagnostic.feeCents) : "",
+    repairLineCount: lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length,
     canceled: controls.canceled,
   });
 }
