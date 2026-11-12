@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Ban, ChevronDown, ChevronRight, Link2, MapPin, ShieldAlert } from "lucide-react";
+import { Ban, ChevronDown, ChevronRight, Link2, MapPin, Pencil, ShieldAlert } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
@@ -77,6 +77,20 @@ export const maxDuration = 120;
 
 export function generateStaticParams() {
   return pilotJobs.map((job) => ({ jobId: job.id }));
+}
+
+/** A small "Edit" beside a card's heading, opening where it is changed. */
+function EditLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="tap-target -my-2 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-control border border-line px-3 text-sm font-semibold"
+    >
+      <Pencil className="h-4 w-4" aria-hidden />
+      Edit
+    </Link>
+  );
 }
 
 export default async function JobDetailPage({
@@ -334,10 +348,15 @@ export default async function JobDetailPage({
    */
   const identity = (
     <div>
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm capitalize text-ink-muted">
-        {job.workType.replace(/_/g, " ")}
-        <JobSource channel={job.channel} className="normal-case" />
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm capitalize text-ink-muted">
+          {job.workType.replace(/_/g, " ")}
+          <JobSource channel={job.channel} className="normal-case" />
+        </p>
+        {/* The time, the address and its access notes are all changed on Job
+            settings, which opens on the time. */}
+        {controls && !canceled ? <EditLink href={`/jobs/${job.id}/edit#window`} label="Edit time and address" /> : null}
+      </div>
       {/* The visit that found this work, one tap back. */}
       {followUps.followsUp ? (
         <Link
@@ -362,15 +381,6 @@ export default async function JobDetailPage({
             {job.city ? <span className="block text-ink-muted">{job.city}</span> : null}
           </span>
         </p>
-      ) : null}
-      {/* The gate code gets learned at the gate, so it is one tap from here. */}
-      {controls && hasAddress && !canceled ? (
-        <Link
-          href={`/jobs/${job.id}/edit#place`}
-          className="tap-target mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand"
-        >
-          {job.unit || job.accessNotes ? "Edit apt & access notes" : "Add apt & access notes"}
-        </Link>
       ) : null}
     </div>
   );
@@ -528,9 +538,16 @@ export default async function JobDetailPage({
       {/* What kind of job this is and what it is priced on, at a glance. */}
       {controls && !canceled ? (
         <section aria-labelledby="service-heading" className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <h2 id="service-heading" className="text-sm font-semibold">
-            Service details
-          </h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 id="service-heading" className="text-sm font-semibold">
+              Service details
+            </h2>
+            {/* A diagnostic's fee is set on Job settings; a work order's
+                figures come from its materials and estimate below. */}
+            {job.kindOfWork === "Diagnostic" ? (
+              <EditLink href={`/jobs/${job.id}/edit#diagnostic`} label="Edit diagnostic fee" />
+            ) : null}
+          </div>
           <dl className="mt-2 divide-y divide-line text-sm">
             {serviceDetails.map((row) => (
               <div key={row.label} className="flex items-start justify-between gap-4 py-2.5">
