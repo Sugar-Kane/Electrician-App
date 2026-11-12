@@ -101,11 +101,12 @@ export default async function JobDetailPage({
   searchParams: Promise<{ step?: string }>;
 }) {
   const [{ jobId }, { step: askedStep }] = await Promise.all([params, searchParams]);
-  const { job } = await getJob(jobId);
-  if (!job) notFound();
-
+  // Everything that needs only the job number, asked at once: the job, its
+  // controls, lines, invoices and the rest used to wait for the job first.
   // Null for the signed-out demo view, where there is nothing real to advance.
   const [
+    { job },
+    pastVisitsRead,
     controls,
     workflow,
     contracts,
@@ -117,6 +118,8 @@ export default async function JobDetailPage({
     messaging,
     history,
   ] = await Promise.all([
+    getJob(jobId),
+    getJobVisitsByNumber(jobId).catch(() => []),
     getJobControls(jobId),
     getJobWorkflow(jobId),
     getJobContracts(jobId),
@@ -128,10 +131,7 @@ export default async function JobDetailPage({
     getMessagingContext(),
     getJobHistory(jobId),
   ]);
-
-  const [conversations, callRecord] = messaging
-    ? await Promise.all([getJobConversation(messaging, jobId), getJobIntake(messaging, jobId)])
-    : [[], null];
+  if (!job) notFound();
 
   const fullAddress = `${job.address}, ${job.city}`;
   const hasAddress = fullAddress.trim() !== ",";
@@ -166,11 +166,15 @@ export default async function JobDetailPage({
 
   // What each stock part holds back or has taken, for the lines list and for
   // "Confirm parts used" when the job is finished.
-  const [stockLines, materialChat, pastVisits] = await Promise.all([
+  // The second and last round: what needed the first one's answers.
+  const [stockLines, materialChat, [conversations, callRecord]] = await Promise.all([
     lineJobId && controls ? getJobStock(lineJobId, !canceled && state !== "completed") : Promise.resolve([]),
     lineJobId && controls ? loadJobMaterialChat(lineJobId) : Promise.resolve(null),
-    controls ? getJobVisitsByNumber(jobId) : Promise.resolve([]),
+    messaging
+      ? Promise.all([getJobConversation(messaging, jobId), getJobIntake(messaging, jobId)])
+      : Promise.resolve([[], null] as const),
   ]);
+  const pastVisits = controls ? pastVisitsRead : [];
   const lineStock = Object.fromEntries(
     stockLines.map((line) => [line.lineId, { reserved: line.reserved, taken: line.taken, itemUnit: line.itemUnit }]),
   );
