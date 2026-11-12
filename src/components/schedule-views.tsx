@@ -140,7 +140,7 @@ export function MonthView({
   return (
     <div className="rounded-panel border border-line bg-surface p-3 sm:p-4">
       <div className="grid grid-cols-7 gap-1 pb-2">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
           <div key={label} className="text-center text-[10px] font-semibold text-ink-faint">
             {label}
           </div>

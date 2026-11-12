@@ -133,7 +133,8 @@ export function workWeekLabel(days: CalendarDay[]): string {
 }
 
 /**
- * The Monday of the week containing a date, weekends included.
+ * The Sunday of the week containing a date: weeks run Sunday to Saturday,
+ * as on a US wall calendar.
  *
  * Different from `workWeekStart`, which rolls a weekend forward into the week
  * ahead. That is right for a five-day strip you are picking a working day from,
@@ -141,17 +142,15 @@ export function workWeekLabel(days: CalendarDay[]): string {
  * week that Saturday is in, not the next one.
  */
 export function calendarWeekStart(date: string): string {
-  const weekday = atNoon(date).getUTCDay();
-  // getUTCDay is 0 for Sunday, which belongs to the week that began six days
-  // earlier rather than the one starting tomorrow.
-  return shiftDays(date, weekday === 0 ? -6 : 1 - weekday);
+  // getUTCDay is 0 for Sunday, so it is also how many days back Sunday is.
+  return shiftDays(date, -atNoon(date).getUTCDay());
 }
 
-/** Monday through Sunday of the week containing `date`. */
+/** Sunday through Saturday of the week containing `date`. */
 export function fullWeekOf(date: string, today: string): CalendarDay[] {
-  const monday = calendarWeekStart(date);
+  const sunday = calendarWeekStart(date);
   return Array.from({ length: 7 }, (_unused, index) => {
-    const iso = shiftDays(monday, index);
+    const iso = shiftDays(sunday, index);
     const instant = atNoon(iso);
     return {
       date: iso,
@@ -173,7 +172,7 @@ export function monthStart(date: string): string {
 }
 
 /**
- * A month as a grid of whole weeks, Monday first.
+ * A month as a grid of whole weeks, Sunday first.
  *
  * Always six rows. A month that fits in five would otherwise make the page
  * change height as you page through the year, which moves the buttons under
