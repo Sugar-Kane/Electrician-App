@@ -8,6 +8,8 @@ import { getDashboardSnapshot } from "@/lib/dashboard";
 import { getBuyList } from "@/lib/buy-list-data";
 import { getBookingRequests } from "@/lib/booking-requests";
 import { followUps, lateJobs } from "@/lib/follow-ups";
+import { nextJob } from "@/lib/dashboard-focus";
+import { getJobFlowStage } from "@/lib/job-flow-server";
 import { needsActionFromInputs } from "@/lib/needs-action";
 import { getAgreementStates, getInventory, getJobs, getUnbilledWork } from "@/lib/job-data";
 import { currentContext, currentUser } from "@/lib/request-context";
@@ -62,6 +64,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
   // what is late.
   const now = new Date();
 
+  // Where the next job stands (estimate out, waiting to sign, invoiced...),
+  // read the way its own page reads it.
+  const nextUp = nextJob(jobs, today);
+  const nextStage = nextUp && snapshot.source === "supabase" ? await getJobFlowStage(nextUp).catch(() => null) : null;
+
   const loose = followUps({ jobs, unbilled, now, timeZone: snapshot.timezone });
   const { money } = snapshot;
 
@@ -103,6 +110,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ v
         attention={attention}
         followUps={loose}
         late={lateJobs(jobs, now)}
+        nextStage={
+          nextStage
+            ? {
+                status: nextStage.status,
+                hint: nextStage.hint ?? "",
+              }
+            : null
+        }
         suggestChatGpt={suggestChatGpt}
       />
     </>

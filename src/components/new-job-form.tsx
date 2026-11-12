@@ -8,7 +8,7 @@ import { ChevronDown, FileText, Link2, LoaderCircle, Plus, X } from "lucide-reac
 import { createJob, type NewJobIntent, type NewJobState } from "@/app/jobs/new/actions";
 import { CustomerPicker } from "@/components/customer-picker";
 import { AddressFields } from "@/components/ui/address-fields";
-import { DateTimeField } from "@/components/ui/date-time-field";
+import { DateTimeField, arrivalWindowEnd } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
 import { WorkOrderLines } from "@/components/work-order-lines";
 import type { StockOption } from "@/lib/job-line-data";
@@ -428,7 +428,8 @@ export function NewJobForm({
                     name="arrivalEndLocal"
                     label="Arrival window ends"
                     timeZone={timeZone}
-                    defaultValue={kept?.arrivalEndLocal ?? ""}
+                    defaultValue={kept?.arrivalEndLocal || arrivalWindowEnd(start)}
+                    windowFrom={start}
                   />
                 </Field>
               ) : null}

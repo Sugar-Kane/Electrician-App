@@ -114,7 +114,8 @@ function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDeta
 }
 
 const STATUS_OPTIONS = [
-  { value: "confirmed", label: "Confirmed" },
+  { value: "draft", label: "Not scheduled" },
+  { value: "confirmed", label: "Scheduled" },
   { value: "assigned", label: "Assigned" },
   { value: "en_route", label: "On the way" },
   { value: "arrived", label: "Arrived" },
@@ -155,6 +156,22 @@ export function JobControls({
   const [editState, editAction] = useActionState(updateJob, initialState);
   const [cancelState, cancelAction] = useActionState(cancelJob, initialState);
   const [confirming, setConfirming] = useState(false);
+  // The window's start as picked, so its end can follow two hours behind.
+  const [windowStart, setWindowStart] = useState(startLocal);
+  const [statusValue, setStatusValue] = useState(status);
+  // Saved somewhere else (the visit card, a save here): start from that.
+  const [savedStatus, setSavedStatus] = useState(status);
+  if (status !== savedStatus) {
+    setSavedStatus(status);
+    setStatusValue(status);
+  }
+
+  // Setting a time schedules a job that was not: the status follows, here
+  // and on the server (changeJob), so the two never disagree.
+  function pickStart(value: string) {
+    setWindowStart(value);
+    if (value && statusValue === "draft") setStatusValue("confirmed");
+  }
 
   const reachable = [customerPhone ? "text" : "", customerEmail ? "email" : ""].filter(Boolean);
 
@@ -218,6 +235,7 @@ export function JobControls({
                 defaultValue={startLocal}
                 label="Arrival window starts"
                 timeZone={timeZone}
+                onValueChange={pickStart}
               />
             </Field>
             <Field label="Arrival window ends" group>
@@ -226,13 +244,14 @@ export function JobControls({
                 defaultValue={endLocal}
                 label="Arrival window ends"
                 timeZone={timeZone}
+                windowFrom={windowStart}
               />
             </Field>
           </div>
 
           <div className="mt-4">
             <Field label="Status">
-              <SelectField name="status" defaultValue={status} label="Status" choices={STATUS_OPTIONS} />
+              <SelectField name="status" value={statusValue} onChange={setStatusValue} label="Status" choices={STATUS_OPTIONS} />
             </Field>
           </div>
 
