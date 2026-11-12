@@ -158,10 +158,34 @@ export function MobileAppChrome({
   useEffect(() => {
     const root = document.documentElement;
     let showing: number | undefined;
+    /*
+     * Keep the box being typed in where it can be seen: above the keyboard
+     * and below the top bar. The browser's own nudge often leaves it under
+     * the keyboard, or hidden behind the fixed header, on a long form.
+     * Checked once the keyboard has finished opening (the visual viewport
+     * shrinks), and again whenever it resizes while the box has focus.
+     */
+    let revealing: number | undefined;
+    function reveal() {
+      const field = document.activeElement;
+      if (!isTypingTarget(field) || !(field instanceof HTMLElement)) return;
+      const view = window.visualViewport;
+      const visibleBottom = view ? view.offsetTop + view.height : window.innerHeight;
+      const visibleTop = (view?.offsetTop ?? 0) + 72;
+      const box = field.getBoundingClientRect();
+      if (box.bottom > visibleBottom - 16 || box.top < visibleTop) {
+        field.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }
+    function scheduleReveal() {
+      window.clearTimeout(revealing);
+      revealing = window.setTimeout(reveal, 320);
+    }
     function onFocusIn(event: FocusEvent) {
       if (!isTypingTarget(event.target)) return;
       window.clearTimeout(showing);
       root.dataset.typing = "true";
+      scheduleReveal();
     }
     /*
      * The bars come back a moment after the box loses focus, not at once.
@@ -179,8 +203,11 @@ export function MobileAppChrome({
     }
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
+    window.visualViewport?.addEventListener("resize", scheduleReveal);
     return () => {
       window.clearTimeout(showing);
+      window.clearTimeout(revealing);
+      window.visualViewport?.removeEventListener("resize", scheduleReveal);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
       delete root.dataset.typing;
