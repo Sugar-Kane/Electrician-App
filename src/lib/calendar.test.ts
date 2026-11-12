@@ -120,32 +120,29 @@ test("the selected day has a heading even when no jobs are booked", () => {
 });
 
 test("a week view keeps a weekend in its own week", () => {
-  // workWeekStart deliberately rolls a weekend forward, which is right for a
-  // five-day picker and wrong here: somebody looking at Saturday's callout
-  // wants the week Saturday is in, not the next one.
-  assert.equal(calendarWeekStart("2026-08-08"), "2026-08-03"); // Saturday
-  assert.equal(calendarWeekStart("2026-08-09"), "2026-08-03"); // Sunday
-  assert.equal(calendarWeekStart("2026-08-03"), "2026-08-03"); // Monday itself
-  assert.equal(calendarWeekStart("2026-08-05"), "2026-08-03");
+  // Weeks run Sunday to Saturday: Saturday's callout is in the week that
+  // began the Sunday before, and a Sunday starts its own week.
+  assert.equal(calendarWeekStart("2026-08-08"), "2026-08-02"); // Saturday
+  assert.equal(calendarWeekStart("2026-08-09"), "2026-08-09"); // Sunday itself
+  assert.equal(calendarWeekStart("2026-08-03"), "2026-08-02"); // Monday
+  assert.equal(calendarWeekStart("2026-08-05"), "2026-08-02");
 });
 
-test("a Sunday belongs to the week that began six days earlier", () => {
-  // getUTCDay is 0 for Sunday. Treating that as "1 - 0 = tomorrow" would show
-  // the wrong week for one day in seven.
+test("a Sunday starts its own week", () => {
   const week = fullWeekOf("2026-08-09", "2026-08-09");
 
   assert.equal(week.length, 7);
-  assert.equal(week[0]!.date, "2026-08-03");
-  assert.equal(week[6]!.date, "2026-08-09");
-  assert.equal(week[6]!.isToday, true);
+  assert.equal(week[0]!.date, "2026-08-09");
+  assert.equal(week[6]!.date, "2026-08-15");
+  assert.equal(week[0]!.isToday, true);
 });
 
-test("a week runs Monday to Sunday and marks today once", () => {
+test("a week runs Sunday to Saturday and marks today once", () => {
   const week = fullWeekOf("2026-08-05", "2026-08-05");
 
   assert.deepEqual(
     week.map((day) => day.weekday),
-    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   );
   assert.equal(week.filter((day) => day.isToday).length, 1);
 });
@@ -158,13 +155,13 @@ test("a month is always six whole weeks", () => {
   }
 });
 
-test("a month grid starts on a Monday and flags the padding days", () => {
+test("a month grid starts on a Sunday and flags the padding days", () => {
   const grid = monthGridOf("2026-08-15", "2026-08-11");
 
-  assert.equal(grid[0]!.weekday, "Mon");
+  assert.equal(grid[0]!.weekday, "Sun");
   // August 2026 starts on a Saturday, so the grid opens in July.
   assert.equal(grid[0]!.inMonth, false);
-  assert.equal(grid[0]!.date, "2026-07-27");
+  assert.equal(grid[0]!.date, "2026-07-26");
 
   const august = grid.filter((cell) => cell.inMonth);
   assert.equal(august.length, 31);
