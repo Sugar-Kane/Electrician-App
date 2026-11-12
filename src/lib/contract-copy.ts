@@ -148,7 +148,7 @@ export async function sendSignedContractCopy(input: {
 }
 
 /** The text, in the customer's conversation, so the business sees it was sent. */
-async function recordText(
+export async function recordText(
   database: ReturnType<typeof getSupabaseAdmin>,
   organizationId: string,
   customerId: string,
