@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { TopActions } from "@/components/top-actions";
 import type { DashboardSnapshot } from "@/lib/dashboard";
-import { MoneySummary, NeedsYourAction, NextJobCard, StartHere, TodaysJobs } from "@/components/dashboard-today";
+import { MoneySummary, NeedsYourAction, NextJobCard, StartHere, TodaysJobs, type JobStageSummary } from "@/components/dashboard-today";
 import { todayInZone } from "@/lib/calendar";
 import {
   canceledToday,
@@ -267,6 +267,7 @@ export function DashboardShell({
   followUps = [],
   late = {},
   suggestChatGpt = false,
+  nextStage = null,
 }: {
   snapshot: DashboardSnapshot;
   /** Real jobs. The snapshot's own `schedule` is never populated for a live
@@ -281,6 +282,8 @@ export function DashboardShell({
   late?: Record<string, Lateness>;
   /** The owner has not connected ChatGPT yet: say once, at the bottom, that they can. */
   suggestChatGpt?: boolean;
+  /** Where the next job stands, from its own progress (job-flow-server.ts). */
+  nextStage?: JobStageSummary | null;
 }) {
   const today = todayInZone(snapshot.timezone);
   const nextUp = nextJob(jobs, today);
@@ -316,7 +319,7 @@ export function DashboardShell({
           <div id="visits" className="scroll-mt-24">
             {nextUp ? (
               <div className="mt-5">
-                <NextJobCard job={nextUp} isToday={nextIsToday} late={late[nextUp.id]} />
+                <NextJobCard job={nextUp} isToday={nextIsToday} late={late[nextUp.id]} stage={nextStage} />
               </div>
             ) : null}
           </div>

@@ -76,15 +76,21 @@ export function StartHere() {
   );
 }
 
+/** Where a job stands in its own flow, and the step it is waiting on. */
+export type JobStageSummary = { status: string; hint: string };
+
 export function NextJobCard({
   job,
   isToday,
   late,
+  stage,
 }: {
   job: PilotJob;
   isToday: boolean;
   /** Set when its time has gone by without it being started or finished. */
   late?: Lateness;
+  /** The job page's own reading of where it stands ("Estimate sent · awaiting approval"). */
+  stage?: JobStageSummary | null;
 }) {
   const address = [job.address, job.city].filter(Boolean).join(", ");
   const status = late ? lateLabel(late) : job.status;
@@ -114,6 +120,18 @@ export function NextJobCard({
 
       {job.summary ? (
         <p className="mt-1 text-sm leading-6 text-ink-muted">{job.summary}</p>
+      ) : null}
+
+      {/* Where it stands, as the job's progress bar says it: a booked visit
+          can still be waiting on the customer to sign. */}
+      {stage ? (
+        <div className="mt-3 rounded-control border border-line bg-surface/60 px-3 py-2">
+          <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Stage</span>
+            <span className="font-semibold">{stage.status}</span>
+          </p>
+          {stage.hint ? <p className="mt-0.5 text-sm leading-6 text-ink-muted">{stage.hint}</p> : null}
+        </div>
       ) : null}
 
       {address ? (
