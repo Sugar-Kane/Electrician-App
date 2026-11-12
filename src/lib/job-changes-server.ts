@@ -109,6 +109,7 @@ export function describeAttempts(attempts: { channel: string; ok: boolean; detai
 }
 
 const EDIT_STATUSES = new Set([
+  "draft",
   "confirmed",
   "assigned",
   "en_route",
@@ -155,6 +156,9 @@ export async function changeJob(
     patch.scheduled_end = end;
   }
   if (status) patch.status = status;
+  // A job given a time is scheduled, the same as a new job saved with one
+  // (app/jobs/new/actions.ts): "Not scheduled" with a time set is never kept.
+  if (start && (patch.status ?? job.status) === "draft") patch.status = "confirmed";
 
   if (Object.keys(patch).length === 0) return { error: "Nothing was changed." };
 
