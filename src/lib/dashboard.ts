@@ -272,7 +272,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const dayStart = new Date(zonedWallClockToIso(`${today}T00:00`, zone));
     const dayEnd = new Date(zonedWallClockToIso(`${shiftDays(today, 1)}T00:00`, zone));
 
-    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business] =
+    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business, refunds] =
       await Promise.all([
         supabase
           .from("jobs")
@@ -319,7 +319,24 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
         // Its own read now that the membership join is gone, and in the same
         // batch as everything else — so it costs a column rather than a wait.
         supabase.from("organizations").select("name,slug").eq("id", organizationId).maybeSingle(),
+        // Money given back comes off the day it was given back.
+        asFlexibleClient(supabase)
+          .from("invoice_refunds")
+          .select("amount_cents,settled_at")
+          .eq("organization_id", organizationId)
+          .eq("status", "succeeded")
+          .gte("settled_at", new Date(dayStart.getTime() - 2 * 86_400_000).toISOString()),
       ]);
+    const refundRows = ((refunds.data ?? []) as { amount_cents: number | null; settled_at: string | null }[]).filter(
+      (row) => row.settled_at,
+    );
+    const refundedBetween = (from: Date, to: Date) =>
+      refundRows
+        .filter((row) => {
+          const at = new Date(row.settled_at!).getTime();
+          return at >= from.getTime() && at < to.getTime();
+        })
+        .reduce((total, row) => total + Number(row.amount_cents ?? 0), 0);
 
     // "Today's revenue" summed every paid invoice the business had ever
     // issued, so the label was wrong as well as the line under it. Today means
@@ -343,8 +360,8 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           invoice.status === "paid" &&
           paidInPeriod(invoice.paid_at ? isoDateInZone(new Date(invoice.paid_at), zone) : "", "today", today),
       )
-      .reduce((total, invoice) => total + invoice.total_cents, 0);
-    const paidYesterday = paidBetween(yesterdayStart, dayStart);
+      .reduce((total, invoice) => total + invoice.total_cents, 0) - refundedBetween(dayStart, dayEnd);
+    const paidYesterday = paidBetween(yesterdayStart, dayStart) - refundedBetween(yesterdayStart, dayStart);
 
     // One rule with the Invoices list: owed means sent and not settled, and a
     // draft nobody has sent is neither owed nor overdue.

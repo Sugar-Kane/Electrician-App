@@ -12,6 +12,8 @@ import {
   type DeliveryChannel,
 } from "@/lib/invoice-messages";
 import { checkPayment } from "@/lib/invoice-payment";
+import { checkRefund } from "@/lib/invoice-refund";
+import { getInvoicePayments, refundInvoicePayment } from "@/lib/invoice-refund-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -553,4 +555,46 @@ export async function closeOutJobAction(_previous: InvoiceActionState, formData:
   const out = await closeOutPaidJob(supabase, { organizationId: context.organizationId, jobId, via: "app" });
   if (out.ok) refreshInvoice(invoiceId, out.jobNumber);
   return out.ok ? { error: "", notice: out.message } : { error: out.message };
+}
+
+/**
+ * Refund one payment on an invoice, in full or in part (invoice-refund-server.ts).
+ * Owner or admin only; the database checks that again, and that the payment
+ * still holds the amount.
+ */
+export async function refundPaymentAction(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const paymentId = String(formData.get("paymentId") ?? "").trim();
+  if (!invoiceId || !paymentId) return { error: "That payment could not be found." };
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+
+  const supabase = asFlexibleClient(await createClient());
+  const payments = await getInvoicePayments(supabase, invoiceId);
+  const payment = payments.find((item) => item.id === paymentId);
+  if (!payment) return { error: "That payment could not be found." };
+
+  const check = checkRefund({
+    canRefund: context.role === "owner" || context.role === "admin",
+    paymentCents: payment.amountCents,
+    refunds: payment.refunds,
+    amountText: String(formData.get("amount") ?? ""),
+  });
+  if (!check.ok) return { error: check.reason };
+
+  const { data: invoice } = await supabase.from("invoices").select("jobs ( id, job_number )").eq("id", invoiceId).maybeSingle();
+  const job = ((invoice as Record<string, unknown> | null)?.jobs ?? null) as Record<string, unknown> | null;
+
+  const outcome = await refundInvoicePayment(supabase, {
+    paymentId,
+    amountCents: check.amountCents,
+    reason: String(formData.get("reason") ?? "").trim().slice(0, 300),
+    jobId: text(job?.id) || null,
+  });
+
+  revalidatePath(`/invoices/${invoiceId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/");
+  if (text(job?.job_number)) revalidatePath(`/jobs/${text(job?.job_number)}`);
+  return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };
 }
