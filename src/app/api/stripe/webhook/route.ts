@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 
 import { handleInvoiceCheckoutEvent } from "@/lib/invoice-online-pay";
+import { handleRefundEvent } from "@/lib/invoice-refund-server";
 import { fulfillPaidBooking, releaseExpiredBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
 import { syncPaymentAccount } from "@/lib/stripe-connect";
@@ -80,6 +81,24 @@ export async function POST(request: Request) {
       console.error("invoice payment webhook failed", { type: event.type, message: String(error).slice(0, 300) });
       return Response.json({ error: "Invoice payment update failed." }, { status: 500 });
     }
+  }
+
+  // A refund on a business's account, given in Volteira or in Stripe's own
+  // dashboard (invoice-refund-server.ts).
+  if (
+    event.type === "refund.created" ||
+    event.type === "refund.updated" ||
+    event.type === "refund.failed" ||
+    event.type === "charge.refunded" ||
+    event.type === "charge.refund.updated"
+  ) {
+    try {
+      await handleRefundEvent(event, connectedAccount);
+    } catch (error) {
+      console.error("refund webhook failed", { type: event.type, message: String(error).slice(0, 300) });
+      return Response.json({ error: "Refund update failed." }, { status: 500 });
+    }
+    return Response.json({ received: true });
   }
 
   if (

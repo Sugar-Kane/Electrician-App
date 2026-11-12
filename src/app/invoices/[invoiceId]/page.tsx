@@ -5,6 +5,8 @@ import { ArrowUpRight, FileWarning } from "lucide-react";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
 import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
+import { InvoicePayments } from "@/components/invoice-refunds";
+import { getInvoicePayments } from "@/lib/invoice-refund-server";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { currentDocument } from "@/lib/pdf/store";
 import { currentContext } from "@/lib/request-context";
@@ -75,6 +77,8 @@ export default async function InvoicePage({
     str(customer?.company_name) ||
     [str(customer?.first_name), str(customer?.last_name)].filter(Boolean).join(" ") ||
     "Customer";
+
+  const payments = await getInvoicePayments(database, invoiceId);
 
   const document = await currentDocument({
     database,
@@ -149,6 +153,12 @@ export default async function InvoicePage({
           />
         );
       })()}
+
+      <InvoicePayments
+        invoiceId={invoiceId}
+        payments={payments}
+        canRefund={context.role === "owner" || context.role === "admin"}
+      />
 
       {document ? (
         <InvoiceDocumentPanel
