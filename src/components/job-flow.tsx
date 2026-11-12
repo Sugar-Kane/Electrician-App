@@ -165,6 +165,24 @@ export function JobStageCard({
   );
 }
 
+/** Said under the choice once it is made. */
+const CHOSEN_NOTES: Record<DiagnosticOutcome, string> = {
+  diagnostic_only: "No repair. The diagnostic fee is the whole bill.",
+  fix_now: "Repaired on this visit. The labor and parts are in Materials & labor.",
+  schedule_later: "The repair is booked as its own work order, in Repair work orders.",
+};
+
+/**
+ * What picking something else leaves behind. Nothing is removed by a change of
+ * mind: a repair line or a booked work order is real work, so it is taken off
+ * where it was put on, by hand.
+ */
+const CHANGE_NOTES: Record<DiagnosticOutcome, string> = {
+  diagnostic_only: "",
+  fix_now: "Picking something else keeps the repair lines; remove any that should not be billed in Materials & labor.",
+  schedule_later: "Picking something else keeps the booked work order; cancel it from its own page if it is not happening.",
+};
+
 /**
  * How a diagnostic visit ends, and the way to finish each.
  *
@@ -183,6 +201,7 @@ export function DiagnosticDecision({
   feeLabel,
   feeDue,
   embedded = false,
+  chosen = null,
 }: {
   jobNumber: string;
   /** Drawn inside another section (Diagnostic findings) rather than as its own card. */
@@ -193,10 +212,17 @@ export function DiagnosticDecision({
   feeLabel: string;
   /** The fee is still owed (not paid at booking). */
   feeDue: boolean;
+  /**
+   * What the job already shows was chosen (a repair on it, a work order
+   * booked, or closed as diagnostic only). Shown as the answer, with a way to
+   * change it, rather than the three choices again.
+   */
+  chosen?: DiagnosticOutcome | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<DiagnosticOutcome | null>(null);
   const [error, setError] = useState("");
+  const [changing, setChanging] = useState(false);
 
   async function choose(outcome: DiagnosticOutcome) {
     setBusy(outcome);
@@ -213,16 +239,16 @@ export function DiagnosticDecision({
     }
     router.refresh();
     setBusy(null);
+    setChanging(false);
     if (outcome === "fix_now") {
-      // The labor and parts are added here; the visit is finished from the
+      // The labor and parts go in just below; the visit is finished from the
       // yellow button once the repair is done.
       window.setTimeout(() => goTo("#work-materials"), 300);
-    } else if (completed) {
-      window.setTimeout(() => goTo("#billing"), 300);
-    } else {
-      // Finish the visit: the visit card asks about parts used, as always.
+    } else if (!completed) {
+      // Diagnostic only: finish the visit. No scrolling: the visit card brings
+      // its own question (parts used) into view if it has one, and otherwise
+      // the page stays where Nick is.
       window.dispatchEvent(new Event("volteira:visit-advance"));
-      goTo("#work");
     }
   }
 
@@ -250,6 +276,8 @@ export function DiagnosticDecision({
     },
   ];
 
+  const picked = chosen ? options.find((option) => option.outcome === chosen) ?? null : null;
+
   return (
     <section
       id="next-action"
@@ -264,6 +292,30 @@ export function DiagnosticDecision({
         <ClipboardCheck className="h-4 w-4 text-brand" aria-hidden />
         What did you find?
       </h2>
+      {picked && !changing ? (
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <p className="flex min-w-0 items-start gap-3">
+            <picked.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
+            <span>
+              <span className="block text-sm font-semibold">{picked.title}</span>
+              <span className="mt-0.5 block text-xs leading-5 text-ink-muted">{CHOSEN_NOTES[picked.outcome]}</span>
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setChanging(true)}
+            className="tap-target inline-flex min-h-11 items-center rounded-control border border-line px-4 text-sm font-semibold"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+      <>
+      {picked ? (
+        <p className="mt-2 text-xs leading-5 text-ink-muted">
+          Picked: {picked.title}. {CHANGE_NOTES[picked.outcome]}
+        </p>
+      ) : null}
       <ul className="mt-3 grid gap-2 sm:grid-cols-3">
         {options.map((option) => (
           <li key={option.outcome}>
@@ -286,6 +338,17 @@ export function DiagnosticDecision({
           </li>
         ))}
       </ul>
+      {picked ? (
+        <button
+          type="button"
+          onClick={() => setChanging(false)}
+          className="tap-target mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted underline underline-offset-4"
+        >
+          Keep {picked.title.toLowerCase()}
+        </button>
+      ) : null}
+      </>
+      )}
       {error ? (
         <p className="mt-2 text-sm text-critical" role="alert">
           {error}
