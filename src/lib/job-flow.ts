@@ -48,10 +48,12 @@ export type StageStep = {
  *   the button agree; nothing else is drawn as primary.
  * - `go`: a section of this page, or another page, that finishes the step.
  * - `materials_ready`: one tap, done in place.
+ * - `fee_invoice`: one tap: the diagnostic fee is invoiced and sent.
  * - `none`: nothing is left to do.
  */
 export type PrimaryAction =
   | { kind: "visit"; label: string; href: string }
+  | { kind: "fee_invoice"; label: string }
   | { kind: "go"; label: string; href: string }
   | { kind: "materials_ready"; label: string }
   | { kind: "none"; label: string };
@@ -80,6 +82,12 @@ export type StageInput = {
   lineCount: number;
   /** A diagnostic's own fee is still owed: it has one, it was not paid at booking, and it is not a follow-up. */
   diagnosticFeeDue?: boolean;
+  /** Where the diagnostic's own fee invoice stands (diagnostic-outcome.ts `feeInvoiceStanding`). */
+  feeInvoice?: "to_bill" | "billed_unpaid" | "paid" | "none";
+  /** "$180.00": the fee, for the button that bills it. */
+  feeLabel?: string;
+  /** Lines other than the diagnostic fee: a repair done on site. Defaults to `lineCount`. */
+  repairLineCount?: number;
   partCount: number;
   /** Items on the materials list, priced or not. */
   materialListCount: number;
@@ -210,7 +218,8 @@ export function jobFlow(input: StageInput): FlowStage {
     const visit = VISIT_LABELS[flow][state];
     // Decided once anything is on the job to bill here (the fee, or a repair
     // done on site) or the bigger job is booked as a work order.
-    const decide = flow === "diagnostic" && ON_SITE.has(state) && input.followUpCount === 0 && input.lineCount === 0;
+    const decide =
+      flow === "diagnostic" && ON_SITE.has(state) && input.followUpCount === 0 && (input.repairLineCount ?? input.lineCount) === 0;
     return {
       flow,
       steps: steps(flow, flow === "work_order" ? "work" : state === "en_route" ? "travel" : "diagnose", false),
@@ -279,22 +288,39 @@ export function jobFlow(input: StageInput): FlowStage {
         needsDecision: false,
       };
     }
+    // The fee first: a diagnostic added by hand has not been paid for yet,
+    // and it is collected before anybody drives out.
+    if (input.feeInvoice === "to_bill") {
+      return {
+        flow,
+        steps: steps(flow, "intake", false),
+        status: "Fee not sent",
+        primary: { kind: "fee_invoice", label: `Send diagnostic fee invoice${input.feeLabel ? ` (${input.feeLabel})` : ""}` },
+        hint: "Texted and emailed to the customer with a link to pay. Then schedule the visit.",
+        needsDecision: false,
+      };
+    }
+    const feeOut = input.feeInvoice === "billed_unpaid";
     if (!input.scheduled) {
       return {
         flow,
         steps: steps(flow, "schedule", false),
-        status: "Needs a time",
+        status: feeOut ? "Needs a time · fee unpaid" : "Needs a time",
         primary: go("Schedule visit", input.scheduleHref),
-        hint: "Set the arrival window, then the customer is told.",
+        hint: feeOut
+          ? "The fee invoice is out, not paid yet. Set the arrival window, then the customer is told."
+          : "Set the arrival window, then the customer is told.",
         needsDecision: false,
       };
     }
     return {
       flow,
       steps: steps(flow, "travel", false),
-      status: "Scheduled",
+      status: feeOut ? "Scheduled · fee unpaid" : "Scheduled",
       primary: { kind: "visit", label: "Start trip", href: "#work" },
-      hint: "The customer is texted that you are on the way.",
+      hint: feeOut
+        ? "The fee invoice is not paid yet. The customer is texted that you are on the way."
+        : "The customer is texted that you are on the way.",
       needsDecision: false,
     };
   }
