@@ -74,7 +74,11 @@ function RefundForm({ invoiceId, payment }: { invoiceId: string; payment: Paymen
           placeholder={(left / 100).toFixed(2)}
           className={`${inputClass} mt-1`}
         />
-        <input name="reason" placeholder="Reason (optional)" aria-label="Reason" maxLength={300} className={`${inputClass} mt-2`} />
+        <input name="reason" placeholder="Reason, for your records (optional)" aria-label="Reason" maxLength={300} className={`${inputClass} mt-2`} />
+        <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" name="notifyCustomer" defaultChecked className="h-4 w-4" />
+          Tell the customer (email, and text if they agreed to texts)
+        </label>
         <RefundButton label={payment.online ? "Refund to card" : "Record refund"} />
         {state.error ? (
           <p className="mt-2 text-sm text-critical" role="alert">

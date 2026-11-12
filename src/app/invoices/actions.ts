@@ -590,6 +590,7 @@ export async function refundPaymentAction(_previous: InvoiceActionState, formDat
     amountCents: check.amountCents,
     reason: String(formData.get("reason") ?? "").trim().slice(0, 300),
     jobId: text(job?.id) || null,
+    notifyCustomer: formData.get("notifyCustomer") === "on",
   });
 
   revalidatePath(`/invoices/${invoiceId}`);

@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 
 import { recordActivity } from "@/lib/activity";
 import { refundStatusFromStripe, type RefundStatus } from "@/lib/invoice-refund";
+import { sendRefundNotice, skipRefundNotice } from "@/lib/refund-notice";
 import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor } from "@/lib/stripe-connect";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -85,7 +86,7 @@ function dollars(cents: number): string {
  */
 export async function refundInvoicePayment(
   db: FlexibleSupabaseClient,
-  input: { paymentId: string; amountCents: number; reason: string; jobId?: string | null },
+  input: { paymentId: string; amountCents: number; reason: string; jobId?: string | null; notifyCustomer?: boolean },
 ): Promise<RefundOutcome> {
   const { data, error } = await db.rpc("begin_invoice_refund", {
     p_payment_id: input.paymentId,
@@ -103,6 +104,10 @@ export async function refundInvoicePayment(
   const organizationId = text(started?.organization_id);
   const intent = text(started?.payment_intent_id);
   if (!refundId) return { ok: false, message: "The refund could not be started. Try again." };
+  // Decided before Stripe is asked, so its webhook cannot announce a refund
+  // the customer was not to be told about.
+  const notify = input.notifyCustomer !== false;
+  if (!notify) await skipRefundNotice(refundId);
 
   const amount = dollars(input.amountCents);
   let status: RefundStatus = text(started?.status) === "succeeded" ? "succeeded" : "pending";
@@ -154,6 +159,12 @@ export async function refundInvoicePayment(
     if (status === "failed" || status === "canceled") return { ok: false, message };
   }
 
+  if (notify) {
+    const told = await sendRefundNotice(refundId);
+    const by = [told.email === "sent" ? "email" : "", told.sms === "sent" ? "text" : ""].filter(Boolean);
+    message += by.length > 0 ? ` The customer was told by ${by.join(" and ")}.` : " The customer could not be told (no email on file, and no texting consent).";
+  }
+
   await recordActivity(db, {
     organizationId,
     eventType: "invoice.refunded",
@@ -181,6 +192,10 @@ export async function handleRefundEvent(event: Stripe.Event, stripeAccount: stri
       p_failure_reason: refund.failure_reason ?? null,
     });
     if (error) throw new Error(error.message);
+    // A refund made in Stripe's dashboard is announced here; one given in
+    // Volteira was already announced (or skipped), and the claim stops a repeat.
+    const { data: row } = await admin.from("invoice_refunds").select("id").eq("stripe_refund_id", refund.id).maybeSingle();
+    if (row?.id) await sendRefundNotice(String(row.id));
   };
 
   if (event.type === "refund.created" || event.type === "refund.updated" || event.type === "refund.failed") {
