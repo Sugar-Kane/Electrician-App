@@ -35,7 +35,7 @@ import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges, unbilledCents } from "@/lib/job-billing";
 import { isProgressKey, jobProgress } from "@/lib/job-progress";
 import { jobFlow, visitActionLabel } from "@/lib/job-flow";
-import { DIAGNOSTIC_FEE_LINE } from "@/lib/diagnostic-outcome";
+import { DIAGNOSTIC_FEE_LINE, type DiagnosticOutcome } from "@/lib/diagnostic-outcome";
 import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
@@ -242,6 +242,20 @@ export default async function JobDetailPage({
   // decided yet) buys no materials, so they stay folded until a repair is.
   const repairLineCount = lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length;
   const materialsFolded = stage.flow === "diagnostic" && repairLineCount === 0;
+  // What the diagnostic visit was decided as, read from what is on the job,
+  // so the choice shows as made (with a way to change it) once it is.
+  const hasFeeLine = lines.some((line) => line.description === DIAGNOSTIC_FEE_LINE);
+  const diagnosticChosen: DiagnosticOutcome | null =
+    stage.flow !== "diagnostic" || canceled
+      ? null
+      : followUps.booked.length > 0
+        ? "schedule_later"
+        : repairLineCount > 0
+          ? "fix_now"
+          : state === "completed" || hasFeeLine
+            ? "diagnostic_only"
+            : null;
+  const showsDecision = !canceled && (stage.needsDecision || diagnosticChosen !== null);
   const linesStepOpen =
     primaryHref === "#work-materials" ||
     primaryHref === "#billing" ||
@@ -547,7 +561,7 @@ export default async function JobDetailPage({
           <div className="divide-y divide-line">
             {/* What the visit found decides how it ends, so the choice sits
                 with the photos and notes that show it. */}
-            {stage.needsDecision && !canceled ? (
+            {showsDecision ? (
               <div className="pb-4">
                 <DiagnosticDecision
                   embedded
@@ -555,10 +569,11 @@ export default async function JobDetailPage({
                   completed={state === "completed"}
                   feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
                   feeDue={diagnosticFeeDue}
+                  chosen={stage.needsDecision ? null : diagnosticChosen}
                 />
               </div>
             ) : null}
-            <div className={stage.needsDecision && !canceled ? "py-4" : "pb-4"}>
+            <div className={showsDecision ? "py-4" : "pb-4"}>
               <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
             </div>
             <div className="pt-4">
