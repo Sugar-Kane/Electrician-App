@@ -155,6 +155,8 @@ export function JobControls({
   const [editState, editAction] = useActionState(updateJob, initialState);
   const [cancelState, cancelAction] = useActionState(cancelJob, initialState);
   const [confirming, setConfirming] = useState(false);
+  // The window's start as picked, so its end can follow two hours behind.
+  const [windowStart, setWindowStart] = useState(startLocal);
 
   const reachable = [customerPhone ? "text" : "", customerEmail ? "email" : ""].filter(Boolean);
 
@@ -218,6 +220,7 @@ export function JobControls({
                 defaultValue={startLocal}
                 label="Arrival window starts"
                 timeZone={timeZone}
+                onValueChange={setWindowStart}
               />
             </Field>
             <Field label="Arrival window ends" group>
@@ -226,6 +229,7 @@ export function JobControls({
                 defaultValue={endLocal}
                 label="Arrival window ends"
                 timeZone={timeZone}
+                windowFrom={windowStart}
               />
             </Field>
           </div>

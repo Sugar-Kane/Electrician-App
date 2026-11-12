@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { CalendarClock, LoaderCircle } from "lucide-react";
 
 import { endVisitForReturnAction, type JobActionState } from "@/app/jobs/[jobId]/actions";
-import { DateTimeField } from "@/components/ui/date-time-field";
+import { DateTimeField, arrivalWindowEnd } from "@/components/ui/date-time-field";
 import { Field, FormMessage, inputClass } from "@/components/ui/field";
 
 function SaveButton() {
@@ -63,7 +63,7 @@ export function EndVisitForReturn({
       </Field>
       {start ? (
         <Field label="Arrival window ends" group>
-          <DateTimeField name="end" label="Arrival window ends" timeZone={timeZone} />
+          <DateTimeField name="end" label="Arrival window ends" timeZone={timeZone} defaultValue={arrivalWindowEnd(start)} windowFrom={start} />
         </Field>
       ) : null}
       {start && canText ? (
