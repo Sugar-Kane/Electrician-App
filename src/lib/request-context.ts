@@ -31,11 +31,34 @@ export type SessionContext = {
 
 export const DEFAULT_TIME_ZONE = "America/Los_Angeles";
 
-/** The verified user, or null when signed out. One call per request. */
-export const currentUser = cache(async () => {
+export type CurrentUser = {
+  id: string;
+  email: string;
+  user_metadata: Record<string, unknown>;
+};
+
+/**
+ * The verified user, or null when signed out. One call per request.
+ *
+ * `getClaims()` checks the session token's signature against the project's
+ * published signing keys, locally, instead of asking the auth server on every
+ * page the way `getUser()` does (it still asks the server when the project
+ * signs with a shared secret, so it is never less safe). The proxy refreshes
+ * the session with the same call before the page runs. Anything that needs
+ * the user's live record from the auth server (changing a password, say)
+ * calls `auth.getUser()` itself.
+ */
+export const currentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  return data.user ?? null;
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims as Record<string, unknown> | undefined;
+  const id = typeof claims?.sub === "string" ? claims.sub : "";
+  if (!id) return null;
+  return {
+    id,
+    email: typeof claims?.email === "string" ? claims.email : "",
+    user_metadata: (claims?.user_metadata ?? {}) as Record<string, unknown>,
+  };
 });
 
 /**
@@ -54,18 +77,21 @@ export const currentContext = cache(async (): Promise<SessionContext | null> => 
   // A platform admin who has opened somebody else's business acts for that
   // business, not their own. The session is the authority — it carries its own
   // expiry, so a forgotten tab stops acting rather than acting forever.
-  const impersonating = await currentImpersonation();
-
-  const query = supabase
-    .from("organization_members")
-    .select("organization_id, role, organizations ( timezone )")
-    .eq("user_id", user.id);
-
-  const { data } = impersonating
-    ? await query.eq("organization_id", impersonating.organizationId).maybeSingle()
-    : await query.limit(1).maybeSingle();
-
-  const row = (data ?? null) as Record<string, unknown> | null;
+  // Both asked at once rather than one after the other: the memberships are
+  // read in full and the impersonated one picked out, so neither waits.
+  const [impersonating, { data: memberships }] = await Promise.all([
+    currentImpersonation(),
+    supabase
+      .from("organization_members")
+      .select("organization_id, role, organizations ( timezone )")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(50),
+  ]);
+  const rows = (memberships ?? []) as Record<string, unknown>[];
+  const row = (impersonating
+    ? rows.find((membership) => membership.organization_id === impersonating.organizationId)
+    : rows[0]) ?? null;
   const organizationId = typeof row?.organization_id === "string" ? row.organization_id : "";
   if (!organizationId) return null;
 
