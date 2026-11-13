@@ -282,14 +282,14 @@ function ContractSigning({
     },
     initialState,
   );
-  // Once the pad opens, scroll so the whole panel ends just above the bottom
-  // bar: the pad, the name, the agreement and Sign contract all in view, with
-  // the margin below clearing the tab bar and the browser's own.
+  // Once the pad opens, bring the panel's top just under the header. It is
+  // compact enough that the pad, the name, the agreement, Sign contract and
+  // Cancel all fit on one phone screen above the tab bar.
   const padPanel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!inPerson) return;
     const frame = requestAnimationFrame(() => {
-      padPanel.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      padPanel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     return () => cancelAnimationFrame(frame);
   }, [inPerson]);
@@ -334,21 +334,26 @@ function ContractSigning({
           and the page refreshes once they have signed so the signed copy is
           the one on screen.
         */
-        <div ref={padPanel} className="scroll-mb-[13rem] scroll-mt-24 rounded-control border border-line p-3">
-          <p className="mb-3 text-sm text-ink-muted">Hand the phone to the customer to sign.</p>
+        <div ref={padPanel} className="scroll-mt-16 rounded-control border border-line p-3">
+          {/* Cancel on the same line as the instruction, so the whole sheet,
+              Sign contract included, fits on one phone screen. */}
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">Hand the phone to the customer to sign.</p>
+            <button
+              type="button"
+              onClick={() => setInPerson(false)}
+              className="tap-target -mr-2 inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-semibold text-ink-muted"
+            >
+              Cancel
+            </button>
+          </div>
           <SignaturePad
             token={contract.publicToken}
             defaultName={customerName}
             onSigned={() => router.refresh()}
             kind={contract.kind}
+            compact
           />
-          <button
-            type="button"
-            onClick={() => setInPerson(false)}
-            className="tap-target mt-2 inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-ink-muted"
-          >
-            Cancel
-          </button>
         </div>
       ) : previewing ? (
         <ApprovalPreview

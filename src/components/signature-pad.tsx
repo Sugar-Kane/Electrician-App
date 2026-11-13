@@ -36,6 +36,7 @@ export function SignaturePad({
   defaultName,
   onSigned,
   kind = "agreement",
+  compact = false,
 }: {
   /**
    * The contract's public token, which is the whole of the signing authority.
@@ -50,6 +51,8 @@ export function SignaturePad({
   onSigned?: () => void;
   /** What is being signed, so a change order is never called the contract. */
   kind?: "agreement" | "change_order";
+  /** Tighter, so the whole sheet fits one phone screen when signed in person. */
+  compact?: boolean;
 }) {
   const what = kind === "change_order" ? "change order" : "contract";
   const [state, formAction] = useActionState(signContract.bind(null, token), { error: "" });
@@ -66,8 +69,8 @@ export function SignaturePad({
   const ready = consent && Boolean(printed) && (signature.method === "typed" || Boolean(signature.image));
 
   return (
-    <form action={formAction} className="space-y-4">
-      <SignatureInput printedName={printed} onChange={onSignatureChange} />
+    <form action={formAction} className={compact ? "space-y-3" : "space-y-4"}>
+      <SignatureInput printedName={printed} onChange={onSignatureChange} compact={compact} />
 
       <label className="block">
         <span className="text-sm font-semibold">Your full name</span>
@@ -81,7 +84,7 @@ export function SignaturePad({
         />
       </label>
 
-      <label className="flex min-h-11 items-start gap-3 text-sm leading-6">
+      <label className={`flex min-h-11 items-start gap-3 text-sm ${compact ? "leading-5" : "leading-6"}`}>
         <input
           type="checkbox"
           name="consent"

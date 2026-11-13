@@ -55,10 +55,16 @@ function exportInk(canvas: HTMLCanvasElement, bounds: Bounds, ratio: number): st
 export function SignatureInput({
   printedName,
   onChange,
+  compact = false,
 }: {
   /** Shown as the signature in Type mode, as it will be printed. */
   printedName: string;
   onChange: (value: SignatureValue) => void;
+  /**
+   * A shorter pad with Clear inside its corner, so the whole signing panel
+   * fits on one phone screen when it is handed across in person.
+   */
+  compact?: boolean;
 }) {
   const [method, setMethod] = useState<"drawn" | "typed">("drawn");
   const [image, setImage] = useState("");
@@ -150,7 +156,7 @@ export function SignatureInput({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={compact ? "space-y-3" : "space-y-4"}>
       <input type="hidden" name="method" value={method} />
       <input type="hidden" name="image" value={method === "drawn" ? image : ""} />
 
@@ -192,7 +198,7 @@ export function SignatureInput({
             <canvas
               ref={canvasRef}
               aria-label="Signature drawing area. If you cannot draw here, choose Type instead."
-              className="block h-44 w-full touch-none rounded-control border border-line bg-white"
+              className={`block w-full touch-none rounded-control border border-line bg-white ${compact ? "h-36" : "h-44"}`}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -204,16 +210,28 @@ export function SignatureInput({
                 Sign here with your finger
               </p>
             ) : null}
+            {compact && image ? (
+              <button
+                type="button"
+                onClick={clear}
+                className="tap-target absolute right-1 top-1 inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-xs font-semibold text-slate-500"
+              >
+                <Eraser className="h-4 w-4" aria-hidden />
+                Clear
+              </button>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={clear}
-            disabled={!image}
-            className="tap-target mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-ink-muted disabled:opacity-40"
-          >
-            <Eraser className="h-4 w-4" aria-hidden />
-            Clear and start again
-          </button>
+          {compact ? null : (
+            <button
+              type="button"
+              onClick={clear}
+              disabled={!image}
+              className="tap-target mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-ink-muted disabled:opacity-40"
+            >
+              <Eraser className="h-4 w-4" aria-hidden />
+              Clear and start again
+            </button>
+          )}
         </div>
       ) : (
         <div className="rounded-control border border-line bg-white px-4 py-5">
