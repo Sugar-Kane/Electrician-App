@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { CalendarClock, CheckCircle2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, Pencil } from "lucide-react";
 
 import { updateJob, type JobActionState } from "@/app/jobs/[jobId]/actions";
 import { SubmitButton } from "@/components/ui/button";
@@ -64,14 +64,16 @@ export function JobSchedule({
   const saved = state.notice && !state.error;
 
   return (
-    <div className="mt-1">
+    <div className="mt-2">
       <details id="schedule" ref={fold} open={!label} className="group scroll-mt-24">
-        <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-          <span className="flex min-w-0 items-center gap-2 text-sm text-ink-muted">
-            <CalendarClock className="h-4 w-4 shrink-0" aria-hidden />
-            <span className={label ? "" : "font-semibold text-ink"}>{label || "No time set"}</span>
+        {/* Drawn as a button: the whole row is what you tap to change the time. */}
+        <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-control border border-line bg-raised px-4 py-2 transition hover:border-brand/50 active:bg-surface group-open:border-brand/50 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 items-center gap-2.5 text-sm text-ink">
+            <CalendarClock className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+            <span className="font-semibold">{label || "No time set"}</span>
           </span>
-          <span className="shrink-0 text-sm font-semibold text-brand">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 py-1.5 text-sm font-semibold text-brand">
+            <Pencil className="h-3.5 w-3.5 group-open:hidden" aria-hidden />
             <span className="group-open:hidden">{label ? "Change" : "Set time"}</span>
             <span className="hidden group-open:inline">Close</span>
           </span>
