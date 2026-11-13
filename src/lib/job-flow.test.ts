@@ -94,7 +94,7 @@ test("E: unpriced list items need supplier quotes, never a made-up price", () =>
 
 test("F: priced but unapproved work is not dispatched", () => {
   const unsent = jobFlow(input({ lineCount: 3, partCount: 2 }));
-  assert.equal(unsent.primary.kind === "go" && unsent.primary.label, "Send contract");
+  assert.equal(unsent.primary.kind === "go" && unsent.primary.label, "Prepare contract");
   const sent = jobFlow(input({ lineCount: 3, partCount: 2, agreement: { sent: true, signed: false } }));
   assert.equal(sent.primary.kind === "go" && sent.primary.label, "View contract");
   assert.notEqual(sent.primary.kind, "visit");
@@ -140,7 +140,7 @@ test("an invoice sent before signing waits for the signature, and says the invoi
     invoices: [{ status: "sent", lastSentAt: "2026-11-10T00:00:00Z", paidAt: null }],
   });
   const unsigned = jobFlow(input({ lineCount: 16, partCount: 15, progress: sentSteps }));
-  assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "Send contract");
+  assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "Prepare contract");
   assert.match(unsigned.status, /Invoiced/);
   // Sent, not paid: the Invoice step is half filled.
   assert.equal(unsigned.steps.find((step) => step.key === "invoice")?.fill, 0.5);
