@@ -1,6 +1,7 @@
 import "server-only";
 
 import { brandedEmail, senderName } from "@/lib/email-layout";
+import { emailLogoUrl } from "@/lib/email-logo";
 
 /**
  * Sending one transactional email.
@@ -39,6 +40,8 @@ export async function sendEmail(input: {
   from?: string;
   /** Files to attach, such as the invoice PDF. Content is base64. */
   attachments?: { filename: string; content: string }[];
+  /** The business sending it, so its logo heads the email. */
+  organizationId?: string;
 }): Promise<EmailResult> {
   const auth = credentials();
   if (!auth) {
@@ -48,6 +51,8 @@ export async function sendEmail(input: {
       errorDetail: "RESEND_API_KEY and BOOKING_EMAIL_FROM are not set on this deployment.",
     };
   }
+
+  const logo = await emailLogoUrl(input.organizationId);
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -66,6 +71,7 @@ export async function sendEmail(input: {
           html: input.html,
           businessName: senderName(input.from || auth.from) || "Volteira",
           preheader: input.text,
+          logoUrl: logo,
         }),
         // So a customer replying to a confirmation reaches the business rather
         // than a no-reply mailbox nobody watches.

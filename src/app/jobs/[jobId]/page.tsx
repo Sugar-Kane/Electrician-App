@@ -139,7 +139,8 @@ export default async function JobDetailPage({
   if (!job) notFound();
 
   const fullAddress = `${job.address}, ${job.city}`;
-  const hasAddress = fullAddress.trim() !== ",";
+  // A street to go to. A town alone, or nothing (", "), is not somewhere to navigate.
+  const hasAddress = Boolean(job.address?.trim());
   const needsStop = jobNeedsMaterialStop(job);
   // Destination only, so the maps app starts from wherever the phone is. The
   // route-builder URL names the shop as the origin, which is right for planning
@@ -467,7 +468,9 @@ export default async function JobDetailPage({
           customerEnRouteMessages={workflow.customerEnRouteMessages}
           customerArrivalMessages={workflow.customerArrivalMessages}
           customerReachable={workflow.customerReachable}
-          navigateUrl={googleMapsUrl}
+          // Empty without an address: Navigate then says so instead of
+          // opening Google Maps on a lone comma.
+          navigateUrl={hasAddress ? googleMapsUrl : ""}
           phone={job.phone}
           unscheduled={!job.startsAt}
           reservedParts={reservedParts}
@@ -489,7 +492,7 @@ export default async function JobDetailPage({
         <section className="rounded-panel border border-line bg-surface p-4 sm:p-5">
           <div className="mb-4">{identity}</div>
           <StatusBadge status={job.status} />
-          {!canceled ? (
+          {!canceled && hasAddress ? (
             <a
               href={googleMapsUrl}
               target="_blank"

@@ -192,6 +192,52 @@ export type JobWorkflowProps = {
 
 type Nearby = { distanceMeters: number | null; secondsRemaining: number; settling: boolean };
 
+/**
+ * Navigate, or — when the job has no service address — a notice saying so.
+ *
+ * A job without one used to open Google Maps on ",": somewhere to go that is
+ * nowhere. Now the tap says the address is missing and opens the place to add
+ * it (the Schedule step's address), so nobody sets off to an empty pin.
+ */
+function NavigateLink({ url, className, iconClassName, floating = false }: { url: string; className: string; iconClassName: string; floating?: boolean }) {
+  const [missing, setMissing] = useState(false);
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" className={className}>
+        <Navigation className={iconClassName} aria-hidden />
+        Navigate
+      </a>
+    );
+  }
+  const openAddress = () => {
+    setMissing(true);
+    const fold = document.getElementById("service-address");
+    if (fold instanceof HTMLDetailsElement) {
+      fold.open = true;
+      fold.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+  return (
+    <>
+      <button type="button" onClick={openAddress} className={className}>
+        <Navigation className={iconClassName} aria-hidden />
+        Navigate
+      </button>
+      {missing ? (
+        <p
+          role="alert"
+          className={`flex items-start gap-2 rounded-control border border-caution/40 bg-caution-bg px-3 py-2 text-sm leading-5 text-caution ${
+            floating ? "absolute inset-x-0 bottom-full mb-2" : "basis-full"
+          }`}
+        >
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>No service address on this job yet, so there is nowhere to navigate to. Add it in the Schedule step, then tap Navigate again.</span>
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 const PRIMARY =
   "tap-target inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-brand px-5 text-base font-bold text-on-brand disabled:opacity-60";
 const SECONDARY =
@@ -558,15 +604,11 @@ export function JobWorkflow({
                   entirely once arrived — directions to where you are standing.
                 */}
                 {state === "scheduled" || travelling ? (
-                  <a
-                    href={navigateUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                  <NavigateLink
+                    url={navigateUrl}
                     className="tap-target inline-flex min-h-12 flex-[1_1_6.5rem] items-center justify-center gap-2 rounded-control border border-brand/40 bg-brand/[0.08] text-sm font-semibold text-brand"
-                  >
-                    <Navigation className="h-4 w-4" aria-hidden />
-                    Navigate
-                  </a>
+                    iconClassName="h-4 w-4"
+                  />
                 ) : null}
 
                 {dialable ? (
@@ -1035,16 +1077,8 @@ function ActionBar({
       }
     >
       {travelling ? (
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <a
-            href={navigateUrl}
-            target="_blank"
-            rel="noreferrer"
-            className={PRIMARY}
-          >
-            <Navigation className="h-5 w-5" aria-hidden />
-            Navigate
-          </a>
+        <div className="relative grid grid-cols-[1fr_auto] gap-2">
+          <NavigateLink url={navigateUrl} className={PRIMARY} iconClassName="h-5 w-5" floating />
           <button
             type="button"
             onClick={onAdvance}

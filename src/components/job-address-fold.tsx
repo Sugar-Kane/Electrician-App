@@ -25,7 +25,7 @@ export function JobAddressFold({
   }, []);
 
   return (
-    <details ref={fold} className="group/address mt-3" open={!label}>
+    <details ref={fold} id="service-address" className="group/address mt-3 scroll-mt-24" open={!label}>
       <summary className="tap-target flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control border border-line bg-raised px-4 py-2 [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 items-center gap-2.5 text-sm">
           <MapPin className="h-5 w-5 shrink-0 text-brand" aria-hidden />
