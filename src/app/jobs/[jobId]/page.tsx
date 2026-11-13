@@ -272,6 +272,7 @@ export default async function JobDetailPage({
     feeInvoice: job.kindOfWork === "Diagnostic" ? feeInvoice : "none",
     feeLabel: controls?.diagnostic.feeCents ? formatCents(controls.diagnostic.feeCents) : "",
     repairLineCount: lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length,
+    estimateLabel: totals.subtotalCents > 0 ? formatCents(totals.subtotalCents) : "",
     canceled,
   });
   const primaryHref = stage.primary.kind === "go" ? stage.primary.href : "";
@@ -747,8 +748,8 @@ export default async function JobDetailPage({
 
       {controls && stage.flow === "work_order" ? (
         <SectionRow
-          title="Estimate & approval"
-          summary={approvalSummary}
+          title="Contract"
+          summary={`${totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)} · ` : ""}${approvalSummary}`}
           open={primaryHref === "#contract" || initialStep === "approval"}
         >
           <JobContract

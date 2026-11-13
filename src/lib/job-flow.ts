@@ -38,6 +38,8 @@ export type StageStep = {
   key: StageKey;
   label: string;
   state: "done" | "current" | "todo";
+  /** Half done: the contract sent but not signed, the invoice sent but not paid. */
+  fill?: "half";
 };
 
 /**
@@ -88,6 +90,8 @@ export type StageInput = {
   feeLabel?: string;
   /** Lines other than the diagnostic fee: a repair done on site. Defaults to `lineCount`. */
   repairLineCount?: number;
+  /** "$1,590.14": what the priced work comes to, said as the estimate. */
+  estimateLabel?: string;
   partCount: number;
   /** Items on the materials list, priced or not. */
   materialListCount: number;
@@ -169,11 +173,18 @@ function billing(progress: ProgressStep[]): { primary: PrimaryAction; status: st
   };
 }
 
+/*
+ * The steps on the bar. Paying is the second half of the Invoice step (sent,
+ * then paid) and signing the second half of the Contract step (sent, then
+ * signed), so neither has a segment of its own; `paid` as the current stage
+ * means the Invoice step.
+ */
 function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[] {
   const order: StageKey[] =
     flow === "diagnostic"
-      ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice", "paid"]
-      : ["scope", "quotes", "estimate", "approval", "materials", "schedule", "work", "invoice", "paid"];
+      ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice"]
+      : ["scope", "quotes", "estimate", "approval", "materials", "schedule", "work", "invoice"];
+  if (current === "paid") current = "invoice";
   const labels: Record<StageKey, string> = {
     intake: "Intake",
     schedule: "Schedule",
@@ -183,7 +194,7 @@ function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[]
     scope: "Materials list",
     quotes: "Supplier quotes",
     estimate: "Estimate",
-    approval: "Approval",
+    approval: "Contract",
     materials: "Pick up parts",
     work: "Work",
     invoice: "Invoice",
@@ -198,6 +209,33 @@ function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[]
 }
 
 export function jobFlow(input: StageInput): FlowStage {
+  const stage = flowOf(input);
+  const invoiceStep = input.progress.find((step) => step.key === "invoice");
+  const paidStep = input.progress.find((step) => step.key === "paid");
+  const invoiceSent = invoiceStep?.state === "done" || (paidStep !== undefined && paidStep.state !== "todo");
+  const invoicePaid = paidStep?.state === "done";
+  const contractSent = Boolean(input.agreement?.sent) || Boolean(input.agreement?.signed);
+  const contractSigned = Boolean(input.agreement?.signed);
+  return {
+    ...stage,
+    steps: stage.steps.map((step) => {
+      // Sent fills half the bar; paid or signed fills the rest.
+      if (step.key === "invoice") {
+        if (invoicePaid) return { ...step, state: "done" as const, fill: undefined };
+        // Half filled, and current only if the flow is on it: an invoice sent
+        // ahead of the contract is not the step being worked.
+        if (invoiceSent) return { ...step, state: step.state === "current" ? ("current" as const) : ("todo" as const), fill: "half" as const };
+      }
+      if (step.key === "approval") {
+        if (contractSigned) return { ...step, state: "done" as const, fill: undefined };
+        if (contractSent) return { ...step, fill: "half" as const };
+      }
+      return step;
+    }),
+  };
+}
+
+function flowOf(input: StageInput): FlowStage {
   const flow: JobFlow = input.kindOfWork === "Diagnostic" ? "diagnostic" : "work_order";
   const state = input.workflowState;
 
@@ -399,7 +437,7 @@ export function jobFlow(input: StageInput): FlowStage {
         steps: steps(flow, "estimate", false),
         status: "Estimate",
         primary: go("Add work & materials", "#work-materials"),
-        hint: "Put the priced list on the job to make the estimate.",
+        hint: "Put the priced list on the job: its total is the estimate.",
         needsDecision: false,
       };
     }
@@ -409,20 +447,22 @@ export function jobFlow(input: StageInput): FlowStage {
       const owed = paidUp ? "The invoice is paid" : `The invoice is out (${(paidStep?.note ?? "waiting for payment").toLowerCase()})`;
       return {
         flow,
-        steps: steps(flow, sent ? "approval" : "estimate", false),
+        steps: steps(flow, "approval", false),
         status: invoiced
           ? sent
-            ? "Invoiced · awaiting approval"
-            : "Invoiced · estimate not sent"
+            ? "Invoiced · contract not signed"
+            : "Invoiced · contract not sent"
           : sent
-            ? "Awaiting approval"
-            : "Estimate",
-        primary: sent ? go("View approval", "#contract") : go("Send estimate", "#contract"),
+            ? "Contract sent · awaiting signature"
+            : "Send contract",
+        primary: sent ? go("View contract", "#contract") : go("Send contract", "#contract"),
         hint: invoiced
-          ? `${owed}, but the customer has not signed yet. Get the estimate signed before the work goes ahead.`
+          ? `${owed}, but the customer has not signed the contract yet. Get it signed before the work goes ahead.`
           : sent
             ? "Waiting for the customer to sign. Resend it, or have them sign in person."
-            : "The customer approves the price before the work is booked.",
+            : input.estimateLabel
+              ? `Estimate: ${input.estimateLabel}. The customer signs the contract for it before the work is booked.`
+              : "The customer signs the contract for the price before the work is booked.",
         needsDecision: false,
       };
     }

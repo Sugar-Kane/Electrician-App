@@ -97,12 +97,24 @@ export function JobStageCard({
               onClick={() => goToFirst(STEP_TARGETS[step.key])}
               className="group/step flex h-full min-h-11 w-full flex-col justify-start rounded-chip pb-1 pt-0.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
             >
-              <span
-                className={`block h-1.5 rounded-full transition group-hover/step:opacity-80 ${
-                  step.state === "done" ? "bg-positive" : step.state === "current" ? "bg-brand" : "bg-line"
-                }`}
-                aria-hidden
-              />
+              {step.fill === "half" ? (
+                // Sent, not yet signed or paid: half the segment filled.
+                <span
+                  className={`flex h-1.5 overflow-hidden rounded-full transition group-hover/step:opacity-80 ${
+                    step.state === "current" ? "bg-brand/35" : "bg-line"
+                  }`}
+                  aria-hidden
+                >
+                  <span className="h-full w-1/2 bg-positive" />
+                </span>
+              ) : (
+                <span
+                  className={`block h-1.5 rounded-full transition group-hover/step:opacity-80 ${
+                    step.state === "done" ? "bg-positive" : step.state === "current" ? "bg-brand" : "bg-line"
+                  }`}
+                  aria-hidden
+                />
+              )}
               <span
                 className={`mt-1.5 flex items-start gap-0.5 text-[11px] font-semibold group-hover/step:underline sm:text-xs ${
                   step.state === "todo" ? "text-ink-muted" : ""
@@ -111,7 +123,10 @@ export function JobStageCard({
                 {step.state === "done" ? <Check className="hidden h-3 w-3 shrink-0 text-positive sm:inline" aria-hidden /> : null}
                 <span className="leading-tight [overflow-wrap:anywhere]">{step.label}</span>
               </span>
-              <span className="sr-only">, {STATE_WORDS[step.state]}. Go to it.</span>
+              <span className="sr-only">
+                , {step.fill === "half" ? (step.key === "invoice" ? "sent, not paid yet" : "sent, not signed yet") : STATE_WORDS[step.state]}. Go
+                to it.
+              </span>
             </button>
           </li>
         ))}

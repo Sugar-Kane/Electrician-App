@@ -100,6 +100,7 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
     feeInvoice: job.kindOfWork === "Diagnostic" ? feeInvoice : "none",
     feeLabel: controls.diagnostic.feeCents ? formatCents(controls.diagnostic.feeCents) : "",
     repairLineCount: lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length,
+    estimateLabel: totals.subtotalCents > 0 ? formatCents(totals.subtotalCents) : "",
     canceled: controls.canceled,
   });
 }
