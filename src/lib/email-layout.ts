@@ -54,12 +54,12 @@ export function dialable(phone: string | null | undefined): string {
 export function contactButtons(phone: string): string {
   const number = dialable(phone);
   if (!number) return "";
-  // The brand's two colours: Call in yellow like every main button, Text in
-  // navy with a yellow edge and yellow letters.
+  // The brand's colours: Call in yellow like every main button, Text outlined
+  // in yellow on the card (navy letters; yellow ones in dark mode).
   const button = (href: string, label: string, primary: boolean) =>
     primary
       ? `<a href="${escape(href)}" class="btn" style="display:block;background:${YELLOW};color:${NAVY};border:1px solid ${YELLOW};font-weight:700;padding:12px 10px;border-radius:12px;text-decoration:none;font-size:15px;text-align:center">${escape(label)}</a>`
-      : `<a href="${escape(href)}" class="btn-navy" style="display:block;background:${NAVY};color:${YELLOW};border:1px solid ${YELLOW};font-weight:700;padding:12px 10px;border-radius:12px;text-decoration:none;font-size:15px;text-align:center">${escape(label)}</a>`;
+      : `<a href="${escape(href)}" class="btn-outline" style="display:block;background:#ffffff;color:${NAVY};border:2px solid ${YELLOW};font-weight:700;padding:11px 10px;border-radius:12px;text-decoration:none;font-size:15px;text-align:center">${escape(label)}</a>`;
   return `<table role="presentation" class="contact" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;border-top:1px solid ${RULE};">
     <tr><td colspan="3" style="padding:16px 0 8px;font-size:13px;color:${MUTED};">Questions? Reach us directly.</td></tr>
     <tr>
@@ -120,7 +120,7 @@ export function brandedEmail(input: {
     .card p, .card td, .card div, .card span, .card li, .card strong { color: #e2e8f0 !important; }
     .card a { color: ${YELLOW} !important; }
     .card .btn, .card a[style*="background"] { color: ${NAVY} !important; }
-    .card a.btn-navy { color: ${YELLOW} !important; }
+    .card a.btn-outline { background: transparent !important; color: ${YELLOW} !important; }
     .foot, .foot span { color: #8aa0b0 !important; }
     .contact { border-top-color: #22313d !important; }
   }
