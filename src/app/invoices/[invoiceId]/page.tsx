@@ -5,6 +5,7 @@ import { ArrowUpRight, FileWarning } from "lucide-react";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
 import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
+import { InvoiceSendPanel } from "@/components/invoice-send";
 import { InvoicePayments } from "@/components/invoice-refunds";
 import { getInvoicePayments } from "@/lib/invoice-refund-server";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
@@ -142,8 +143,18 @@ export default async function InvoicePage({
             </section>
           );
         }
-        if (status === "void" || owed <= 0 || str(invoice.stripe_invoice_id)) return null;
+        if (status === "void" || owed <= 0) return null;
         return (
+          <>
+            {/* Sent from here, by text or email, with the link to pay. */}
+            <InvoiceSendPanel
+              invoiceId={invoiceId}
+              label={invoiceLabel(invoice)}
+              phone={str(customer?.phone)}
+              email={str(customer?.email)}
+              alreadySent={Boolean(str(invoice.last_sent_at))}
+            />
+            {str(invoice.stripe_invoice_id) ? null : (
           <PaidInHandForm
             invoiceId={invoiceId}
             label={`invoice ${invoiceLabel(invoice)}`}
@@ -151,6 +162,8 @@ export default async function InvoicePage({
             hasPhone={hasPhone}
             hasEmail={hasEmail}
           />
+            )}
+          </>
         );
       })()}
 
