@@ -93,7 +93,10 @@ export function PdfViewer({
 
         // The width the page is drawn at. Capped so a wide desktop does not
         // render a letter page at 1800px and make the text absurd.
-        const available = Math.min(target.clientWidth || 640, 900);
+        // Measured on the wrapper, which is on screen even while this box is
+        // hidden for loading (a hidden box measures 0 wide), less its padding.
+        const measured = (target.parentElement?.clientWidth ?? 0) - 16;
+        const available = Math.min(measured > 0 ? measured : 640, 900);
 
         for (let number = 1; number <= document_.numPages; number += 1) {
           if (cancelled) return;
@@ -110,8 +113,11 @@ export function PdfViewer({
           const ratio = Math.min(window.devicePixelRatio || 1, 2);
           canvas.width = Math.floor(viewport.width * ratio);
           canvas.height = Math.floor(viewport.height * ratio);
-          canvas.style.width = "100%";
-          canvas.style.height = "auto";
+          // Shown at its zoomed size, not squeezed back to the box: that is what
+          // makes Zoom in actually bigger. The box scrolls both ways.
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
+          canvas.style.maxWidth = "none";
           canvas.className = "block rounded-control border border-line bg-white shadow-lg";
           canvas.setAttribute("role", "img");
           canvas.setAttribute("aria-label", `Page ${number} of ${document_.numPages}`);

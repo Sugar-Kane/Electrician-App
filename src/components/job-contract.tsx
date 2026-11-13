@@ -419,6 +419,7 @@ function ContractRow({
   current,
   open,
   onToggle,
+  standalone = false,
 }: {
   contract: JobContractRecord;
   jobNumber: string;
@@ -428,16 +429,34 @@ function ContractRow({
   current: boolean;
   open: boolean;
   onToggle: () => void;
+  /** On the contract's own page: the document first, then sending and signing. */
+  standalone?: boolean;
 }) {
   const [state, rebuild, rebuilding] = useActionState(rebuildContractPdf, initialState);
   const [showText, setShowText] = useState(false);
+  const signingBlock = (
+    <>
+      {current ? (
+        <div className="border-t border-line px-3 pb-3">
+          <ContractSigning
+            contract={contract}
+            jobNumber={jobNumber}
+            customerName={customerName}
+            customerPhone={customerPhone}
+          />
+          {!contract.signedLabel && !contract.unsignable ? (
+            <p className="mt-2 text-xs text-ink-muted">Shows you the text before it goes.</p>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
 
   return (
     <li className="rounded-control border border-line">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
+      <Link
+        href={`/jobs/${jobNumber}/contract/${contract.id}`}
+        onClick={standalone ? (event) => { event.preventDefault(); onToggle(); } : undefined}
         className="tap-target flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
         <span className="min-w-0">
@@ -461,22 +480,10 @@ function ContractRow({
             </span>
           )}
         </span>
-        <span className="shrink-0 text-xs font-semibold text-brand">{open ? "Hide preview" : "Preview"}</span>
-      </button>
+        {standalone ? null : <span className="shrink-0 text-xs font-semibold text-brand">Open</span>}
+      </Link>
 
-      {current ? (
-        <div className="border-t border-line px-3 pb-3">
-          <ContractSigning
-            contract={contract}
-            jobNumber={jobNumber}
-            customerName={customerName}
-            customerPhone={customerPhone}
-          />
-          {!contract.signedLabel && !contract.unsignable ? (
-            <p className="mt-2 text-xs text-ink-muted">Shows you the text before it goes.</p>
-          ) : null}
-        </div>
-      ) : null}
+      {standalone ? null : signingBlock}
 
       {open ? (
         <div className="border-t border-line p-3">
@@ -547,7 +554,42 @@ function ContractRow({
           ) : null}
         </div>
       ) : null}
+      {standalone ? signingBlock : null}
     </li>
+  );
+}
+
+/**
+ * One contract on its own page, like an invoice: the document with zoom and
+ * Download, then sending it for signing or signing in person.
+ */
+export function ContractPage({
+  contract,
+  jobNumber,
+  customerName,
+  customerPhone,
+  current,
+}: {
+  contract: JobContractRecord;
+  jobNumber: string;
+  customerName: string;
+  customerPhone: string;
+  current: boolean;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <ul className="rounded-panel border border-line bg-surface p-2 sm:p-3">
+      <ContractRow
+        contract={contract}
+        jobNumber={jobNumber}
+        customerName={customerName}
+        customerPhone={customerPhone}
+        current={current}
+        open={open}
+        onToggle={() => setOpen((value) => !value)}
+        standalone
+      />
+    </ul>
   );
 }
 
