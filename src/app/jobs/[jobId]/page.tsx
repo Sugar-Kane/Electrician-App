@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Ban, ChevronDown, ChevronRight, Link2, MapPin, Pencil, ShieldAlert } from "lucide-react";
+import { Ban, Check, ChevronDown, ChevronRight, Link2, MapPin, Pencil, ShieldAlert } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { FieldPageShell } from "@/components/field-page-shell";
@@ -375,7 +375,23 @@ export default async function JobDetailPage({
    * Rendered into the workflow card rather than beside it, so the facts and the
    * button that acts on them are one object.
    */
-  const identity = (
+  const scheduleEditor =
+    controls && !canceled ? (
+      <JobSchedule
+        jobNumber={controls.jobNumber}
+        startLocal={controls.startLocal}
+        endLocal={controls.endLocal}
+        timeZone={controls.timeZone}
+        label={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : ""}
+        reachable={[controls.customerPhone ? "text" : "", controls.customerEmail ? "email" : ""].filter(Boolean)}
+      />
+    ) : job.startsAt ? (
+      <p className="mt-0.5 text-sm text-ink-muted">
+        {job.dateLabel} · {job.time}–{job.endTime}
+      </p>
+    ) : null;
+
+  const identityBlock = (withSchedule: boolean) => (
     <div>
       <div className="flex items-start justify-between gap-3">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm capitalize text-ink-muted">
@@ -396,21 +412,9 @@ export default async function JobDetailPage({
           Follow-up to {followUps.followsUp.kindOfWork.toLowerCase()} #{followUps.followsUp.jobNumber}
         </Link>
       ) : null}
-      {/* The time, set and changed here, folded once saved. */}
-      {controls && !canceled ? (
-        <JobSchedule
-          jobNumber={controls.jobNumber}
-          startLocal={controls.startLocal}
-          endLocal={controls.endLocal}
-          timeZone={controls.timeZone}
-          label={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : ""}
-          reachable={[controls.customerPhone ? "text" : "", controls.customerEmail ? "email" : ""].filter(Boolean)}
-        />
-      ) : job.startsAt ? (
-        <p className="mt-0.5 text-sm text-ink-muted">
-          {job.dateLabel} · {job.time}–{job.endTime}
-        </p>
-      ) : null}
+      {/* The time, set and changed here, folded once saved. A diagnostic
+          shows it in its own Schedule step instead. */}
+      {withSchedule ? scheduleEditor : null}
       {hasAddress ? (
         <p className="mt-2 flex items-start gap-2 text-base font-medium leading-6">
           <MapPin className="mt-1 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
@@ -422,41 +426,15 @@ export default async function JobDetailPage({
       ) : null}
     </div>
   );
+  // On a diagnostic the time is its own step, so the visit card leaves it out.
+  const stepLayout = stage.flow === "diagnostic" && Boolean(controls) && !canceled;
+  const identity = identityBlock(!stepLayout);
 
-  return (
-    <FieldPageShell
-      compact
-      title={job.contactName || job.customer}
-      titleBadge={<SpanishBadge language={job.customerLanguage} />}
-      eyebrow={`Job #${job.id}`}
-      backHref="/jobs"
-      action={
-        controls ? (
-          <JobMenu
-            jobNumber={controls.jobNumber}
-            hasContract={contracts.length > 0}
-            canBookWorkOrder={diagnostic}
-          />
-        ) : null
-      }
-    >
-      {canceled ? (
-        <section className="mb-3 rounded-panel border border-critical/30 bg-critical-bg p-4 sm:p-5">
-          <div className="flex items-start gap-3">
-            <Ban className="mt-0.5 h-5 w-5 shrink-0 text-critical" aria-hidden />
-            <div>
-              <h2 className="font-semibold">This job is canceled</h2>
-              <p className="mt-1 text-sm leading-6 text-ink-muted">
-                {controls?.cancellationReason || "No reason was recorded."}
-              </p>
-            </div>
-          </div>
-        </section>
-      ) : null}
 
-      {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} canEndVisit={state === "arrived" || state === "working" || state === "review"} /> : null}
-
-      <div id="work" className="scroll-mt-24">
+  /* The page's pieces, placed below: in step order on a diagnostic, as cards
+     and rows on a work order. */
+  const visitCard = (
+    <div id="work" className="scroll-mt-24">
       {workflow && !canceled ? (
         <JobWorkflow
           jobNumber={workflow.jobNumber}
@@ -501,7 +479,9 @@ export default async function JobDetailPage({
         </section>
       )}
       </div>
-
+  );
+  const requestCard = (
+    <>
       {job.summary || job.serviceNotes || job.accessNotes ? (
         /*
          * The summary, and the intake behind it one tap away.
@@ -577,7 +557,10 @@ export default async function JobDetailPage({
           ) : null}
         </section>
       ) : null}
-
+    </>
+  );
+  const serviceCard = (
+    <>
       {/* What kind of job this is and what it is priced on, at a glance. */}
       {controls && !canceled ? (
         <section aria-labelledby="service-heading" className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
@@ -604,13 +587,10 @@ export default async function JobDetailPage({
           </p>
         </section>
       ) : null}
-
-      {/*
-        Everything else, one row each, closed until it is wanted: a row opens
-        by itself when it holds the next step, and the progress card's button
-        opens it on the way there. `<details>` so it works before any
-        JavaScript arrives.
-      */}
+    </>
+  );
+  const findingsRow = (
+    <>
       {controls && workspaceOpen ? (
         <SectionRow
           id="findings"
@@ -642,7 +622,10 @@ export default async function JobDetailPage({
           </div>
         </SectionRow>
       ) : null}
-
+    </>
+  );
+  const repairsRow = (
+    <>
       {showFollowUps && controls ? (
         <SectionRow
           id="repairs"
@@ -663,7 +646,10 @@ export default async function JobDetailPage({
           </div>
         </SectionRow>
       ) : null}
-
+    </>
+  );
+  const materialsRow = (
+    <>
       {controls && workAndMaterialsOpen ? (
         <SectionRow
           id="work-materials"
@@ -724,54 +710,10 @@ export default async function JobDetailPage({
           </div>
         </SectionRow>
       ) : null}
-
-      {!controls ? (
-        // The signed-out demo view has no job to add lines to, and a form that
-        // silently fails is worse than a sentence saying why it is not there.
-        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">Materials</h2>
-            <Link
-              href={`/materials?job=${job.id}`}
-              className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
-            >
-              {needsStop ? "Buy what is short" : "Check stock"}
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-          {job.materials.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-muted">Nothing listed for this job yet.</p>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {job.materials.map((material) => (
-                <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate">{material.name}</span>
-                  <span className="shrink-0 text-ink-muted">
-                    {material.quantity} {material.unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ) : null}
-
-      {controls && stage.flow === "work_order" ? (
-        <SectionRow
-          title="Contract"
-          summary={`${totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)} · ` : ""}${approvalSummary}`}
-          open={primaryHref === "#contract" || initialStep === "approval"}
-        >
-          <JobContract
-            jobNumber={controls.jobNumber}
-            contracts={contracts}
-            customerName={job.contactName || job.customer}
-            customerPhone={job.phone}
-            changes={agreement}
-          />
-        </SectionRow>
-      ) : null}
-
+    </>
+  );
+  const visitsRow = (
+    <>
       {controls && !canceled ? (
         <SectionRow
           id="visits"
@@ -824,6 +766,302 @@ export default async function JobDetailPage({
           ) : null}
         </SectionRow>
       ) : null}
+    </>
+  );
+
+
+  // Where each step of a diagnostic stands, for its card: open while it is
+  // being worked, folded with a tick once done.
+  const stepState = (key: string): StepCardState => {
+    const step = stage.steps.find((entry) => entry.key === key);
+    if (!step) return "todo";
+    return step.state;
+  };
+  const beforeArrival = state === "scheduled" || state === "en_route";
+  const feeRow = serviceDetails.find((row) => row.label === "Diagnostic fee");
+  const intakeSummary = feeRow ? `Diagnostic fee ${feeRow.value}` : "What the customer asked for";
+  const travelSummary =
+    state === "en_route"
+      ? "On the way"
+      : beforeArrival
+        ? hasAddress
+          ? streetWithUnit(job.address, job.unit ?? "")
+          : "Navigate, call or text the customer"
+        : workflow?.arrivedLabel
+          ? `Arrived ${workflow.arrivedLabel}`
+          : "Arrived";
+  const nextStepSummary =
+    diagnosticChosen === "diagnostic_only"
+      ? "Diagnostic only"
+      : diagnosticChosen === "fix_now"
+        ? "Fixing it now"
+        : diagnosticChosen === "schedule_later"
+          ? `Work order #${followUps.booked[0]?.jobNumber ?? ""} booked`
+          : "Chosen after diagnosing";
+  const billingNote =
+    progress.steps.find((step) => step.key === "paid" && step.state !== "todo")?.note ||
+    progress.steps.find((step) => step.key === "invoice")?.note ||
+    "";
+  const invoiceSummary = billingNote || (lines.length > 0 ? `${lines.length} ${lines.length === 1 ? "line" : "lines"} · ${formatCents(totals.subtotalCents)}` : "Nothing billed yet");
+
+  return (
+    <FieldPageShell
+      compact
+      title={job.contactName || job.customer}
+      titleBadge={<SpanishBadge language={job.customerLanguage} />}
+      eyebrow={`Job #${job.id}`}
+      backHref="/jobs"
+      action={
+        controls ? (
+          <JobMenu
+            jobNumber={controls.jobNumber}
+            hasContract={contracts.length > 0}
+            canBookWorkOrder={diagnostic}
+          />
+        ) : null
+      }
+    >
+      {canceled ? (
+        <section className="mb-3 rounded-panel border border-critical/30 bg-critical-bg p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <Ban className="mt-0.5 h-5 w-5 shrink-0 text-critical" aria-hidden />
+            <div>
+              <h2 className="font-semibold">This job is canceled</h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
+                {controls?.cancellationReason || "No reason was recorded."}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} canEndVisit={state === "arrived" || state === "working" || state === "review"} /> : null}
+
+      {stepLayout && controls ? (
+        /*
+         * A diagnostic, one card per step of the bar above, in its order:
+         * Intake, Schedule, Travel, Diagnose, Next step, Invoice. The step
+         * being worked is open; finished ones fold to a line with a tick.
+         */
+        <>
+          <StepCard id="request" number={1} title="Intake" state={stepState("intake")} summary={intakeSummary}>
+            {job.summary ? <p className="text-sm leading-6 text-ink">{job.summary}</p> : null}
+            {callRecord?.reference ? (
+              <p className="mt-2 text-xs text-ink-muted">
+                Website ref <span className="font-mono font-semibold text-ink">{callRecord.reference}</span>
+              </p>
+            ) : null}
+            {job.serviceNotes ? (
+              <p className="mt-3 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">{job.serviceNotes}</p>
+            ) : null}
+            {job.accessNotes ? (
+              <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
+                <span className="min-w-0 whitespace-pre-line">{job.accessNotes}</span>
+              </p>
+            ) : null}
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <h3 className="text-sm font-semibold">Service details</h3>
+              <EditLink href={`/jobs/${job.id}/edit#diagnostic`} label="Edit diagnostic fee" />
+            </div>
+            <dl className="mt-1 divide-y divide-line text-sm">
+              {serviceDetails.map((row) => (
+                <div key={row.label} className="flex items-start justify-between gap-4 py-2.5">
+                  <dt className="text-ink-muted">{row.label}</dt>
+                  <dd className="min-w-0 text-right font-semibold">{row.value}</dd>
+                </div>
+              ))}
+              {job.phone || job.email ? (
+                <div className="flex items-start justify-between gap-4 py-2.5">
+                  <dt className="text-ink-muted">Contact</dt>
+                  <dd className="min-w-0 text-right font-semibold">
+                    {job.phone ? <span className="block">{job.phone}</span> : null}
+                    {job.email ? <span className="block break-all">{job.email}</span> : null}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+              Source <JobSource channel={job.channel} />
+            </p>
+            {callRecord ? (
+              <div className="mt-4">
+                <JobCallRecord record={callRecord} timeZone={messaging?.timezone ?? "UTC"} />
+              </div>
+            ) : null}
+          </StepCard>
+
+          <StepCard id="visits" number={2} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>
+            {scheduleEditor}
+            {pastVisits.length > 0 ? (
+              <ol className="mt-4 space-y-2 text-sm">
+                {pastVisits.map((visit, index) => (
+                  <li key={visit.id} className="rounded-control border border-line px-3 py-2.5">
+                    <span className="block font-semibold">
+                      Visit {index + 1} · {visitDay(visit.arrivedAt || visit.windowStart || visit.endedAt, history.timeZone)}
+                    </span>
+                    <span className="block text-ink-muted">
+                      {visit.arrivedAt ? `Arrived ${visitTime(visit.arrivedAt, history.timeZone)} · ` : ""}
+                      Ended {visitTime(visit.endedAt, history.timeZone)}
+                    </span>
+                    {visit.note ? <span className="mt-1 block whitespace-pre-line leading-6">{visit.note}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </StepCard>
+
+          <StepCard number={3} title="Travel" state={stepState("travel")} summary={travelSummary}>
+            {beforeArrival ? (
+              <div className="[&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
+            ) : (
+              identityBlock(false)
+            )}
+          </StepCard>
+
+          <StepCard id="findings" number={4} title="Diagnose" state={stepState("diagnose")} summary={beforeArrival ? "Photos and notes, once you arrive" : "Photos and notes from the visit"}>
+            {beforeArrival ? (
+              <p className="text-sm text-ink-muted">Opens once you arrive: photos and notes of what you find.</p>
+            ) : (
+              <div className="divide-y divide-line">
+                <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
+                <div className="py-4">
+                  <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
+                </div>
+                <div className="py-4">
+                  <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
+                </div>
+                {state === "arrived" || state === "working" || state === "review" ? (
+                  <div className="pt-4">
+                    <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </StepCard>
+
+          <StepCard number={5} title="Next step" state={stepState("decide")} summary={nextStepSummary}>
+            {showsDecision ? (
+              <DiagnosticDecision
+                embedded
+                jobNumber={controls.jobNumber}
+                completed={state === "completed"}
+                feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
+                feeDue={diagnosticFeeDue}
+                chosen={stage.needsDecision ? null : diagnosticChosen}
+              />
+            ) : (
+              <p className="text-sm text-ink-muted">After diagnosing: diagnostic only, fix it now, or book the bigger job as a work order.</p>
+            )}
+            {showFollowUps ? (
+              <div id="repairs" className="mt-4 scroll-mt-24 border-t border-line pt-4 [&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
+                <JobFollowUps jobNumber={controls.jobNumber} booked={followUps.booked} creditCents={followUps.creditCents} />
+              </div>
+            ) : null}
+          </StepCard>
+
+          <StepCard id="work-materials" number={6} title="Invoice" state={stepState("invoice")} summary={invoiceSummary}>
+            <div className="divide-y divide-line">
+              {materialChat && !materialsFolded ? (
+                <div className="pb-4">
+                  <JobMaterialChat
+                    jobNumber={controls.jobNumber}
+                    saved={materialChat.saved}
+                    markupPercent={materialChat.markupPercent}
+                    forChatGpt={materialChat.forChatGpt}
+                    jobDescription={job.summary}
+                    hasLines={lines.length > 0}
+                    startFolded={materialsFolded}
+                  />
+                </div>
+              ) : null}
+              <div className={materialChat && !materialsFolded ? "pt-4" : ""}>
+                <JobLinesPanel
+                  jobNumber={controls.jobNumber}
+                  lines={lines}
+                  totals={totals}
+                  invoices={invoices}
+                  stock={stock}
+                  lineStock={lineStock}
+                  billing={{
+                    jobCompleted: state === "completed",
+                    agreementSigned: Boolean(currentAgreement?.signedAt),
+                    hasPhone: Boolean(job.phone),
+                    hasEmail: Boolean(job.email),
+                  }}
+                />
+              </div>
+            </div>
+          </StepCard>
+        </>
+      ) : null}
+
+      {stepLayout ? null : visitCard}
+
+      {stepLayout ? null : requestCard}
+
+      {stepLayout ? null : serviceCard}
+
+      {/*
+        Everything else, one row each, closed until it is wanted: a row opens
+        by itself when it holds the next step, and the progress card's button
+        opens it on the way there. `<details>` so it works before any
+        JavaScript arrives.
+      */}
+      {stepLayout ? null : findingsRow}
+
+      {stepLayout ? null : repairsRow}
+
+      {stepLayout ? null : materialsRow}
+
+      {!controls ? (
+        // The signed-out demo view has no job to add lines to, and a form that
+        // silently fails is worse than a sentence saying why it is not there.
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">Materials</h2>
+            <Link
+              href={`/materials?job=${job.id}`}
+              className="tap-target inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand"
+            >
+              {needsStop ? "Buy what is short" : "Check stock"}
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          {job.materials.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">Nothing listed for this job yet.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {job.materials.map((material) => (
+                <li key={material.name} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate">{material.name}</span>
+                  <span className="shrink-0 text-ink-muted">
+                    {material.quantity} {material.unit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      {controls && stage.flow === "work_order" ? (
+        <SectionRow
+          title="Contract"
+          summary={`${totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)} · ` : ""}${approvalSummary}`}
+          open={primaryHref === "#contract" || initialStep === "approval"}
+        >
+          <JobContract
+            jobNumber={controls.jobNumber}
+            contracts={contracts}
+            customerName={job.contactName || job.customer}
+            customerPhone={job.phone}
+            changes={agreement}
+          />
+        </SectionRow>
+      ) : null}
+
+      {stepLayout ? null : visitsRow}
 
       <SectionRow
         title={stage.flow === "diagnostic" ? "Documents & contract" : "Documents & job details"}
@@ -940,6 +1178,60 @@ export default async function JobDetailPage({
       */}
       {workflow && !canceled ? <div className="h-20 lg:hidden" aria-hidden /> : null}
     </FieldPageShell>
+  );
+}
+
+type StepCardState = "done" | "current" | "todo";
+
+/**
+ * One step of a diagnostic, under the bar it matches: its number (a tick once
+ * done), its name and a line saying where it stands. Open while it is the
+ * step being worked; folded otherwise, and still opens with a tap.
+ */
+function StepCard({
+  id,
+  number,
+  title,
+  summary,
+  state,
+  children,
+}: {
+  id?: string;
+  number: number;
+  title: string;
+  summary: string;
+  state: StepCardState;
+  children: React.ReactNode;
+}) {
+  const done = state === "done";
+  return (
+    <details
+      id={id}
+      open={state === "current"}
+      className={`group mt-3 scroll-mt-24 rounded-panel border bg-surface ${state === "current" ? "border-brand/50" : "border-line"}`}
+    >
+      <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
+              done ? "bg-positive text-canvas" : state === "current" ? "bg-brand text-on-brand" : "border border-line text-ink-muted"
+            }`}
+            aria-hidden
+          >
+            {done ? <Check className="h-4 w-4" /> : number}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold">
+              {title}
+              <span className="sr-only">{done ? ", done" : state === "current" ? ", now" : ", to do"}</span>
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-ink-muted">{summary}</span>
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted transition group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="border-t border-line px-4 py-4 sm:px-5">{children}</div>
+    </details>
   );
 }
 
