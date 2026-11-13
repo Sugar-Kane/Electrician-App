@@ -779,6 +779,12 @@ export default async function JobDetailPage({
     if (!step) return "todo";
     return step.state;
   };
+  // How much of a step is done when it is part way (an invoice sent but not
+  // paid is half; materials go in thirds), for its card's circle.
+  const stepFill = (key: string): number | undefined => {
+    const step = stage.steps.find((entry) => entry.key === key);
+    return step && step.state !== "done" && step.fill ? step.fill : undefined;
+  };
   const beforeArrival = state === "scheduled" || state === "en_route";
   // Diagnosing and choosing what happens next share one card: open while
   // either is being worked, done once both are.
@@ -987,7 +993,7 @@ export default async function JobDetailPage({
             )}
           </StepCard>
 
-          <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} summary={invoiceSummary}>
+          <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} fill={stepFill("invoice")} summary={invoiceSummary}>
             <div className="divide-y divide-line">
               {materialChat && !materialsFolded ? (
                 <div className="pb-4">
@@ -1030,7 +1036,7 @@ export default async function JobDetailPage({
          * being worked is open; finished ones fold to a line with a tick.
          */
         <>
-          <StepCard id="work-materials" number={1} title="Materials" state={stepState("scope")} summary={materialsSummary}>
+          <StepCard id="work-materials" number={1} title="Materials" state={stepState("scope")} fill={stepFill("scope")} summary={materialsSummary}>
             <div className="divide-y divide-line">
               {job.summary || job.serviceNotes || job.accessNotes ? (
                 <div className="pb-4">
@@ -1108,7 +1114,7 @@ export default async function JobDetailPage({
             ) : null}
           </StepCard>
 
-          <StepCard number={4} title="Contract" state={stepState("approval")} summary={contractSummary}>
+          <StepCard number={4} title="Contract" state={stepState("approval")} fill={stepFill("approval")} summary={contractSummary}>
             <JobContract
               jobNumber={controls.jobNumber}
               contracts={contracts}
@@ -1141,7 +1147,7 @@ export default async function JobDetailPage({
             </div>
           </StepCard>
 
-          <StepCard number={6} title="Invoice" state={stepState("invoice")} summary={invoiceSummary}>
+          <StepCard number={6} title="Invoice" state={stepState("invoice")} fill={stepFill("invoice")} summary={invoiceSummary}>
             <JobBilling
               jobNumber={controls.jobNumber}
               lines={lines}
@@ -1355,6 +1361,7 @@ function StepCard({
   title,
   summary,
   state,
+  fill,
   children,
 }: {
   id?: string;
@@ -1362,9 +1369,13 @@ function StepCard({
   title: string;
   summary: string;
   state: StepCardState;
+  /** The share done of a step that is part way, e.g. 0.5 for an invoice sent, not paid. */
+  fill?: number;
   children: React.ReactNode;
 }) {
   const done = state === "done";
+  const partial = !done && fill !== undefined && fill > 0 && fill < 1;
+  const share = partial ? Math.round((fill ?? 0) * 100) : 0;
   return (
     <details
       id={id}
@@ -1375,8 +1386,20 @@ function StepCard({
         <span className="flex min-w-0 items-center gap-3">
           <span
             className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
-              done ? "bg-positive text-canvas" : state === "current" ? "bg-brand text-on-brand" : "border border-line text-ink-muted"
+              done
+                ? "bg-positive text-canvas"
+                : partial
+                  ? "text-canvas"
+                  : state === "current"
+                    ? "bg-brand text-on-brand"
+                    : "border border-line text-ink-muted"
             }`}
+            // Part way: green for the share done, yellow for the rest.
+            style={
+              partial
+                ? { background: `linear-gradient(90deg, var(--color-positive) ${share}%, var(--color-brand) ${share}%)` }
+                : undefined
+            }
             aria-hidden
           >
             {done ? <Check className="h-4 w-4" /> : number}
@@ -1384,7 +1407,7 @@ function StepCard({
           <span className="min-w-0">
             <span className="block text-sm font-semibold">
               {title}
-              <span className="sr-only">{done ? ", done" : state === "current" ? ", now" : ", to do"}</span>
+              <span className="sr-only">{done ? ", done" : partial ? `, ${share}% done` : state === "current" ? ", now" : ", to do"}</span>
             </span>
             <span className="mt-0.5 block truncate text-xs text-ink-muted">{summary}</span>
           </span>
