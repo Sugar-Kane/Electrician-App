@@ -286,7 +286,15 @@ export function plainScope(input: {
 }): string {
   const clean = (value: string) => value.replace(/\s+/g, " ").trim();
   const description = clean(input.description).replace(/[.\s]+$/, "");
-  const items = [...new Set(input.workItems.map(clean).filter(Boolean))].slice(0, 12);
+  // A long material list would bury the scope (and run past the paragraph's
+  // length, cut mid-item). The first eight are named, the rest counted: every
+  // line is itemised on the estimate and invoice anyway.
+  const allItems = [...new Set(input.workItems.map(clean).filter(Boolean))].map((item) =>
+    item.length > 80 ? `${item.slice(0, 79).trimEnd()}…` : item,
+  );
+  const shown = allItems.slice(0, 8);
+  const more = allItems.length - shown.length;
+  const items = more > 0 ? [...shown, `and ${more} more ${more === 1 ? "item" : "items"} listed on the estimate`] : shown;
   if (!description && items.length === 0) return "";
   const kind = clean(input.workType) || "electrical work";
   if (input.visitOnly) {
