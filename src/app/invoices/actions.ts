@@ -185,6 +185,7 @@ export async function sendInvoice(
   }
 
   revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
   if (text(job?.job_number)) revalidatePath(`/jobs/${text(job?.job_number)}`);
 
   return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };

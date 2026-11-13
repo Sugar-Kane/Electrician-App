@@ -154,3 +154,85 @@ export function InvoiceSend({ invoice }: { invoice: PilotInvoice }) {
     </div>
   );
 }
+
+/**
+ * Sending an invoice from its own page: the customer's number and email, a
+ * box for each, and one button. Opened on the page rather than behind a tap,
+ * because sending is what this page is for once the bill looks right.
+ */
+export function InvoiceSendPanel({
+  invoiceId,
+  label,
+  phone,
+  email,
+  alreadySent,
+}: {
+  invoiceId: string;
+  /** e.g. "INV-27". */
+  label: string;
+  phone: string;
+  email: string;
+  /** Sent before, so the button reads "Send again". */
+  alreadySent: boolean;
+}) {
+  const [state, action] = useActionState(sendInvoice, initialState);
+  const hasPhone = Boolean(phone);
+  const hasEmail = Boolean(email);
+  const [sms, setSms] = useState(hasPhone);
+  const [mail, setMail] = useState(hasEmail);
+
+  return (
+    <form action={action} className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
+      <input type="hidden" name="invoiceId" value={invoiceId} />
+      <h2 className="flex items-center gap-2 text-sm font-semibold">
+        <Send className="h-4 w-4 text-brand" aria-hidden />
+        {alreadySent ? `Send ${label} again` : `Send ${label} to the customer`}
+      </h2>
+      <p className="mt-1 text-xs leading-5 text-ink-muted">With a link to view and pay it online.</p>
+
+      <label className="mt-3 flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line px-3">
+        <input
+          type="checkbox"
+          name="sendSms"
+          checked={sms}
+          disabled={!hasPhone}
+          onChange={(event) => setSms(event.target.checked)}
+          className="h-5 w-5 shrink-0 accent-[var(--color-brand)]"
+        />
+        <MessageSquare className={`h-4 w-4 shrink-0 ${hasPhone ? "text-ink" : "text-ink-faint"}`} aria-hidden />
+        <span className={`min-w-0 text-sm ${hasPhone ? "" : "text-ink-faint"}`}>
+          {hasPhone ? `Text ${phone}` : "No mobile number on this customer"}
+        </span>
+      </label>
+
+      <label className="mt-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line px-3">
+        <input
+          type="checkbox"
+          name="sendEmail"
+          checked={mail}
+          disabled={!hasEmail}
+          onChange={(event) => setMail(event.target.checked)}
+          className="h-5 w-5 shrink-0 accent-[var(--color-brand)]"
+        />
+        <Mail className={`h-4 w-4 shrink-0 ${hasEmail ? "text-ink" : "text-ink-faint"}`} aria-hidden />
+        <span className={`min-w-0 break-all text-sm ${hasEmail ? "" : "text-ink-faint"}`}>
+          {hasEmail ? `Email ${email}` : "No email address on this customer"}
+        </span>
+      </label>
+
+      {state.error ? (
+        <p className="mt-3 text-sm text-critical" role="alert">
+          {state.error}
+        </p>
+      ) : state.notice ? (
+        <p className="mt-3 text-sm text-positive" role="status">
+          {state.notice}
+        </p>
+      ) : null}
+
+      <div className="mt-4 [&>button]:min-h-12 [&>button]:w-full [&>button]:text-base">
+        <SubmitButton disabled={!sms && !mail} />
+      </div>
+    </form>
+  );
+}
