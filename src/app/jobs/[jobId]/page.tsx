@@ -17,6 +17,7 @@ import { DiagnosticDecision, JobStageCard } from "@/components/job-flow";
 import { JobWorkflow } from "@/components/job-workflow";
 import { JobSchedule } from "@/components/job-schedule";
 import { JobAddressFold } from "@/components/job-address-fold";
+import { StepScroller } from "@/components/step-scroller";
 import { AddMaterialsToEstimate } from "@/components/add-materials-to-estimate";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
@@ -460,6 +461,12 @@ export default async function JobDetailPage({
           reservedParts={reservedParts}
           actionLabel={visitActionLabel(stage.flow, state)}
           holdPrimary={stage.primary.kind !== "visit" && state === "scheduled"}
+          finishNotice={{
+            canText: Boolean(job.phone),
+            canEmail: Boolean(job.email),
+            photoCount: photos.length,
+            hasNotes: Boolean(controls?.technicianNotes?.trim()),
+          }}
         >
           {identity}
         </JobWorkflow>
@@ -788,6 +795,10 @@ export default async function JobDetailPage({
     return step && step.state !== "done" && step.fill ? step.fill : undefined;
   };
   const beforeArrival = state === "scheduled" || state === "en_route";
+  // The step being worked, as one card sees it (diagnosing and choosing what
+  // happens next share a card), for scrolling to it once it changes.
+  const currentStepRaw = stage.steps.find((step) => step.state === "current")?.key ?? "";
+  const currentStepKey = currentStepRaw === "decide" ? "diagnose" : currentStepRaw;
   // Diagnosing and choosing what happens next share one card: open while
   // either is being worked, done once both are.
   const diagnoseState: StepCardState =
@@ -881,6 +892,7 @@ export default async function JobDetailPage({
          * being worked is open; finished ones fold to a line with a tick.
          */
         <>
+          <StepScroller jobNumber={controls.jobNumber} current={currentStepKey} />
           <StepCard id="request" number={1} title="Intake" state={stepState("intake")} summary={intakeSummary}>
             {job.summary ? <p className="text-sm leading-6 text-ink">{job.summary}</p> : null}
             {callRecord?.reference ? (
@@ -1002,6 +1014,10 @@ export default async function JobDetailPage({
           </StepCard>
 
           <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} fill={stepFill("invoice")} summary={invoiceSummary}>
+            {/* A repair done on the spot: the list's items go onto the bill priced, as on a work order's estimate. */}
+            {materialChat && !materialsFolded && listItems.length > 0 && state !== "completed" ? (
+              <AddMaterialsToEstimate count={listItems.length} label="Add materials to the bill" />
+            ) : null}
             <div className="divide-y divide-line">
               {materialChat && !materialsFolded ? (
                 <div className="pb-4">
@@ -1044,6 +1060,7 @@ export default async function JobDetailPage({
          * being worked is open; finished ones fold to a line with a tick.
          */
         <>
+          <StepScroller jobNumber={controls.jobNumber} current={currentStepKey} />
           <StepCard id="work-materials" number={1} title="Materials" state={stepState("scope")} fill={stepFill("scope")} summary={materialsSummary}>
             <div className="divide-y divide-line">
               {job.summary || job.serviceNotes || job.accessNotes ? (
@@ -1394,6 +1411,8 @@ function StepCard({
   return (
     <details
       id={id}
+      data-step-card
+      data-step-current={state === "current" ? "true" : undefined}
       open={state === "current"}
       className={`group mt-3 scroll-mt-24 rounded-panel border bg-surface ${state === "current" ? "border-brand/50" : "border-line"}`}
     >

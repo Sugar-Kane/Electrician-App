@@ -37,7 +37,18 @@ export type PaymentWithRefunds = {
   note: string;
   /** Paid online by card or bank, so a refund goes back through Stripe. */
   online: boolean;
-  refunds: { id: string; amountCents: number; status: RefundStatus; reason: string; createdAt: string; failure: string }[];
+  refunds: {
+    id: string;
+    amountCents: number;
+    status: RefundStatus;
+    reason: string;
+    createdAt: string;
+    failure: string;
+    /** Stripe's id for a refund that went back to a card. */
+    stripeRefundId: string;
+    /** The card network's tracking number for it (ARN), once Stripe has it. */
+    reference: string;
+  }[];
 };
 
 /** An invoice's payments, oldest first, each with its refunds. */
@@ -50,7 +61,7 @@ export async function getInvoicePayments(db: FlexibleSupabaseClient, invoiceId: 
       .order("recorded_at", { ascending: true }),
     db
       .from("invoice_refunds")
-      .select("id, invoice_payment_id, amount_cents, status, reason, created_at, failure_reason")
+      .select("id, invoice_payment_id, amount_cents, status, reason, created_at, failure_reason, stripe_refund_id")
       .eq("invoice_id", invoiceId)
       .order("created_at", { ascending: true }),
   ]);
@@ -62,6 +73,8 @@ export async function getInvoicePayments(db: FlexibleSupabaseClient, invoiceId: 
     reason: text(row.reason),
     createdAt: text(row.created_at),
     failure: text(row.failure_reason),
+    stripeRefundId: text(row.stripe_refund_id),
+    reference: "",
   }));
   return ((payments ?? []) as Row[]).map((row) => ({
     id: text(row.id),
@@ -71,6 +84,39 @@ export async function getInvoicePayments(db: FlexibleSupabaseClient, invoiceId: 
     note: text(row.note),
     online: Boolean(text(row.stripe_checkout_session_id)),
     refunds: refundRows.filter((refund) => refund.paymentId === text(row.id)),
+  }));
+}
+
+/**
+ * The card refund tracking numbers (ARN), read from Stripe for the refunds
+ * that went back to a card, so the invoice page can show them. Read live:
+ * Stripe fills the number in a few days after the refund, and a page that
+ * cannot reach Stripe simply shows none.
+ */
+export async function withCardReferences(organizationId: string, payments: PaymentWithRefunds[]): Promise<PaymentWithRefunds[]> {
+  const wanted = payments.flatMap((payment) =>
+    payment.online ? payment.refunds.filter((refund) => refund.stripeRefundId && refund.status === "succeeded") : [],
+  );
+  if (wanted.length === 0) return payments;
+  const stripe = getStripe();
+  const account = stripe ? await paymentAccountFor(organizationId) : null;
+  if (!stripe || !account) return payments;
+  const found = new Map<string, string>();
+  await Promise.all(
+    wanted.slice(0, 10).map(async (refund) => {
+      try {
+        const live = await stripe.refunds.retrieve(refund.stripeRefundId, {}, { stripeAccount: account.accountId });
+        const card = (live.destination_details as { card?: { reference?: string | null } } | null | undefined)?.card;
+        if (card?.reference) found.set(refund.id, card.reference);
+      } catch {
+        // No number this time; the refund itself is unchanged.
+      }
+    }),
+  );
+  if (found.size === 0) return payments;
+  return payments.map((payment) => ({
+    ...payment,
+    refunds: payment.refunds.map((refund) => (found.has(refund.id) ? { ...refund, reference: found.get(refund.id)! } : refund)),
   }));
 }
 

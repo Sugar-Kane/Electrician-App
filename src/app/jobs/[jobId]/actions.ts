@@ -94,6 +94,7 @@ export async function updateJobPlace(
       .eq("id", job.id)
       .eq("organization_id", job.organizationId);
     if (linkError) return { error: "That address could not be saved." };
+    await placeOnMap(propertyId);
     const filled = await fillDraftServiceAddress(job.supabase, job.organizationId, job.id, address.value);
     revalidatePath(`/jobs/${jobNumber}`);
     revalidatePath(`/jobs/${jobNumber}/edit`);
@@ -137,6 +138,7 @@ export async function updateJobPlace(
     return { error: "Those details could not be saved." };
   }
 
+  if (moved) await placeOnMap(job.propertyId);
   const filled = await fillDraftServiceAddress(job.supabase, job.organizationId, job.id, address.value);
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath(`/jobs/${jobNumber}/edit`);
@@ -145,6 +147,13 @@ export async function updateJobPlace(
     error: "",
     notice: filled ? "Saved, and added to the draft contract." : "Saved. Every job at this address shows these.",
   };
+}
+
+/** Place a saved address on the map now, so arrival is picked up on the way there. Never fails the save. */
+async function placeOnMap(propertyId: string) {
+  const { placeProperty } = await import("@/lib/geocoding");
+  const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+  await placeProperty({ database: getSupabaseAdmin(), propertyId }).catch(() => null);
 }
 
 /**

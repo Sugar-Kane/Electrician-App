@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { checkRefund, refundStatusFromStripe, refundSummary, refundableCents } from "./invoice-refund.ts";
+import { checkRefund, refundReceiptAllowed, refundStatusFromStripe, refundSummary, refundableCents } from "./invoice-refund.ts";
 
 test("only the owner or an admin can refund", () => {
   const refused = checkRefund({ canRefund: false, paymentCents: 18_000, refunds: [], amountText: "" });
@@ -62,4 +62,16 @@ test("the invoice's money: paid, refunded, and what the business keeps", () => {
   assert.deepEqual(summary, { paidCents: 20_000, refundedCents: 2_000, pendingCents: 1_000, keptCents: 17_000, refundedInFull: false });
   assert.equal(refundSummary([{ amountCents: 2_000 }], [{ amountCents: 2_000, status: "succeeded" }]).refundedInFull, true);
   assert.equal(refundSummary([], []).refundedInFull, false);
+});
+
+test("a refund receipt goes only for money that really went back", () => {
+  // Card refunds: only when Stripe, asked now, says it succeeded.
+  assert.equal(refundReceiptAllowed({ online: true, status: "succeeded", stripeRefundId: "re_1", stripeStatus: "succeeded" }).ok, true);
+  assert.equal(refundReceiptAllowed({ online: true, status: "succeeded", stripeRefundId: "", stripeStatus: null }).ok, false);
+  assert.equal(refundReceiptAllowed({ online: true, status: "succeeded", stripeRefundId: "re_1", stripeStatus: null }).ok, false);
+  assert.equal(refundReceiptAllowed({ online: true, status: "pending", stripeRefundId: "re_1", stripeStatus: "pending" }).ok, false);
+  assert.equal(refundReceiptAllowed({ online: true, status: "succeeded", stripeRefundId: "re_1", stripeStatus: "failed" }).ok, false);
+  // Handed back in person: once it is recorded as done.
+  assert.equal(refundReceiptAllowed({ online: false, status: "succeeded", stripeRefundId: "", stripeStatus: null }).ok, true);
+  assert.equal(refundReceiptAllowed({ online: false, status: "pending", stripeRefundId: "", stripeStatus: null }).ok, false);
 });

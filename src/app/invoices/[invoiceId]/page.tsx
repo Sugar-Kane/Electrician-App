@@ -7,7 +7,7 @@ import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
 import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
 import { InvoiceSendPanel } from "@/components/invoice-send";
 import { InvoicePayments } from "@/components/invoice-refunds";
-import { getInvoicePayments } from "@/lib/invoice-refund-server";
+import { getInvoicePayments, withCardReferences } from "@/lib/invoice-refund-server";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { currentDocument } from "@/lib/pdf/store";
 import { currentContext } from "@/lib/request-context";
@@ -79,7 +79,8 @@ export default async function InvoicePage({
     [str(customer?.first_name), str(customer?.last_name)].filter(Boolean).join(" ") ||
     "Customer";
 
-  const payments = await getInvoicePayments(database, invoiceId);
+  // Card refunds carry their tracking number from Stripe, when it has one.
+  const payments = await withCardReferences(context.organizationId, await getInvoicePayments(database, invoiceId));
 
   const document = await currentDocument({
     database,

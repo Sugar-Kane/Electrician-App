@@ -1,5 +1,7 @@
 import "server-only";
 
+import { brandedEmail, senderName } from "@/lib/email-layout";
+
 /**
  * Sending one transactional email.
  *
@@ -59,7 +61,12 @@ export async function sendEmail(input: {
         to: [input.to],
         subject: input.subject,
         text: input.text,
-        html: input.html,
+        // Every email in the same Volteira frame, named for the business sending it.
+        html: brandedEmail({
+          html: input.html,
+          businessName: senderName(input.from || auth.from) || "Volteira",
+          preheader: input.text,
+        }),
         // So a customer replying to a confirmation reaches the business rather
         // than a no-reply mailbox nobody watches.
         ...(input.replyTo ? { reply_to: input.replyTo } : {}),

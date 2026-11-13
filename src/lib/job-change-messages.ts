@@ -59,7 +59,7 @@ export function cancellationSms(facts: JobChangeFacts): string {
   const opening = name ? `${name}, your` : "Your";
 
   const message = [
-    `${opening} ${facts.businessName} appointment on ${facts.slotLabel} has been canceled.`,
+    `${opening} ${facts.businessName} appointment${facts.slotLabel ? ` on ${facts.slotLabel}` : ""} has been canceled.`,
     reason,
     ` Call ${facts.businessPhone} to rebook.`,
   ].join("");
@@ -72,9 +72,12 @@ export function rescheduleSms(facts: JobChangeFacts): string {
   const name = firstName(facts.contactName);
   const opening = name ? `${name}, your` : "Your";
 
-  const message =
-    `${opening} ${facts.businessName} appointment has moved from ${facts.slotLabel} ` +
-    `to ${facts.newSlotLabel ?? "a new time"}. Call ${facts.businessPhone} if that does not work.`;
+  // No old time: the job is being booked, not moved.
+  const message = facts.slotLabel
+    ? `${opening} ${facts.businessName} appointment has moved from ${facts.slotLabel} ` +
+      `to ${facts.newSlotLabel ?? "a new time"}. Call ${facts.businessPhone} if that does not work.`
+    : `${opening} ${facts.businessName} appointment is scheduled for ${facts.newSlotLabel ?? "a time we will confirm"}. ` +
+      `Call ${facts.businessPhone} if that does not work.`;
 
   return clamp(message, SMS_LIMIT);
 }
@@ -94,12 +97,13 @@ export function cancellationEmail(facts: JobChangeFacts): Mail {
   const greeting = name ? `Hi ${name},` : "Hello,";
   const reason = facts.reason?.trim() ?? "";
 
-  const subject = `Canceled: your ${facts.businessName} appointment on ${facts.slotLabel}`;
+  const on = facts.slotLabel ? ` on ${facts.slotLabel}` : "";
+  const subject = `Canceled: your ${facts.businessName} appointment${on}`;
 
   const text = [
     greeting,
     "",
-    `Your appointment with ${facts.businessName} on ${facts.slotLabel} has been canceled.`,
+    `Your appointment with ${facts.businessName}${on} has been canceled.`,
     ...(reason ? ["", reason] : []),
     "",
     `Nothing further is needed from you. To rebook, call ${facts.businessPhone}.`,
@@ -109,7 +113,7 @@ export function cancellationEmail(facts: JobChangeFacts): Mail {
 
   const html = wrap([
     `<p>${escapeHtml(greeting)}</p>`,
-    `<p>Your appointment with <strong>${escapeHtml(facts.businessName)}</strong> on <strong>${escapeHtml(facts.slotLabel)}</strong> has been canceled.</p>`,
+    `<p>Your appointment with <strong>${escapeHtml(facts.businessName)}</strong>${facts.slotLabel ? ` on <strong>${escapeHtml(facts.slotLabel)}</strong>` : ""} has been canceled.</p>`,
     ...(reason ? [`<p>${escapeHtml(reason)}</p>`] : []),
     `<p>Nothing further is needed from you. To rebook, call <a href="tel:${escapeHtml(facts.businessPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
@@ -124,29 +128,33 @@ export function rescheduleEmail(facts: JobChangeFacts): Mail {
   const next = facts.newSlotLabel ?? "a new time";
   const reason = facts.reason?.trim() ?? "";
 
-  const subject = `Moved: your ${facts.businessName} appointment is now ${next}`;
+  // No old time: the job is being booked, not moved.
+  const booking = !facts.slotLabel;
+  const subject = booking
+    ? `Scheduled: your ${facts.businessName} appointment is ${next}`
+    : `Moved: your ${facts.businessName} appointment is now ${next}`;
 
   const text = [
     greeting,
     "",
-    `Your appointment with ${facts.businessName} has moved.`,
+    booking ? `Your appointment with ${facts.businessName} is scheduled.` : `Your appointment with ${facts.businessName} has moved.`,
     "",
-    `Was: ${facts.slotLabel}`,
-    `Now: ${next}`,
+    ...(booking ? [] : [`Was: ${facts.slotLabel}`]),
+    `${booking ? "When" : "Now"}: ${next}`,
     ...(reason ? ["", reason] : []),
     "",
-    `If the new time does not work, call ${facts.businessPhone}.`,
+    `If that time does not work, call ${facts.businessPhone}.`,
     "",
     facts.businessName,
   ].join("\n");
 
   const html = wrap([
     `<p>${escapeHtml(greeting)}</p>`,
-    `<p>Your appointment with <strong>${escapeHtml(facts.businessName)}</strong> has moved.</p>`,
-    `<p style="color:#475569">Was: ${escapeHtml(facts.slotLabel)}</p>`,
-    `<p><strong>Now: ${escapeHtml(next)}</strong></p>`,
+    `<p>Your appointment with <strong>${escapeHtml(facts.businessName)}</strong> ${booking ? "is scheduled" : "has moved"}.</p>`,
+    ...(booking ? [] : [`<p style="color:#475569">Was: ${escapeHtml(facts.slotLabel)}</p>`]),
+    `<p style="font-size:18px"><strong>${booking ? "When" : "Now"}: ${escapeHtml(next)}</strong></p>`,
     ...(reason ? [`<p>${escapeHtml(reason)}</p>`] : []),
-    `<p>If the new time does not work, call <a href="tel:${escapeHtml(facts.businessPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
+    `<p>If that time does not work, call <a href="tel:${escapeHtml(facts.businessPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
   ]);
 

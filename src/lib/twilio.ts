@@ -248,6 +248,8 @@ export async function sendSms(input: {
   body: string;
   messagingServiceSid: string;
   statusCallbackUrl?: string;
+  /** Pictures sent with the text (MMS), at most ten public URLs. */
+  mediaUrls?: string[];
 }): Promise<TwilioSendResult> {
   const auth = credentials();
   if (!auth) {
@@ -265,6 +267,7 @@ export async function sendSms(input: {
   });
   if (input.statusCallbackUrl)
     form.set("StatusCallback", input.statusCallbackUrl);
+  for (const url of (input.mediaUrls ?? []).slice(0, 10)) form.append("MediaUrl", url);
 
   try {
     const response = await fetch(

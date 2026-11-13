@@ -124,7 +124,14 @@ export async function advanceJob(
     confirmed.set(key.slice("used:".length), typed && Number.isFinite(amount) ? amount : 0);
   }
 
-  const result = await advanceVisit(job, { requested, source, confirmed });
+  // Finish work's "tell the customer": how, and by which channels.
+  const noticeMode = text(formData, "noticeMode");
+  const completionNotice =
+    requested === "completed" && (noticeMode === "none" || noticeMode === "notice" || noticeMode === "details")
+      ? { mode: noticeMode as "none" | "notice" | "details", sms: text(formData, "noticeSms") === "on", email: text(formData, "noticeEmail") === "on" }
+      : undefined;
+
+  const result = await advanceVisit(job, { requested, source, confirmed, completionNotice });
   if (result.error || !result.state) return { error: result.error, state: result.state };
 
   revalidatePath(`/jobs/${jobNumber}`);

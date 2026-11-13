@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarClock, LoaderCircle } from "lucide-react";
+import { CalendarClock, ChevronDown, LoaderCircle } from "lucide-react";
 
 import { endVisitForReturnAction, type JobActionState } from "@/app/jobs/[jobId]/actions";
 import { DateTimeField, arrivalWindowEnd } from "@/components/ui/date-time-field";
@@ -14,10 +14,10 @@ function SaveButton() {
     <button
       type="submit"
       disabled={pending}
-      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand text-sm font-semibold text-brand disabled:opacity-60"
+      className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand text-sm font-semibold text-on-brand disabled:opacity-60"
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <CalendarClock className="h-4 w-4" aria-hidden />}
-      End visit and book the return
+      {pending ? "Submitting…" : "Submit return visit"}
     </button>
   );
 }
@@ -48,12 +48,21 @@ export function EndVisitForReturn({
     );
   }
 
+  // Folded behind one line: most visits finish with Finish work, and the
+  // return form is only for the ones that need another day.
   return (
-    <form action={action} className="space-y-3">
+    <details id="return-visit" className="group/return scroll-mt-24">
+      <summary className="tap-target flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control border border-line bg-raised px-4 py-2 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2.5 text-sm">
+          <CalendarClock className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+          <span className="font-semibold">Need to come back for more work? Tap to set up the next visit</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted transition group-open/return:rotate-180" aria-hidden />
+      </summary>
+    <form action={action} className="mt-3 space-y-3">
       <input type="hidden" name="jobNumber" value={jobNumber} />
       <p className="text-sm leading-6 text-ink-muted">
-        Need to come back (a part, or more time)? This visit is saved to the job&apos;s history and the job is booked
-        again. Nothing is invoiced or closed.
+        This visit is saved to the job&apos;s history and the job is booked again. Nothing is invoiced or closed.
       </p>
       <Field label="What was done, and what the next visit is for">
         <textarea name="note" rows={3} maxLength={2000} className={inputClass} />
@@ -75,5 +84,6 @@ export function EndVisitForReturn({
       <FormMessage error={state.error} />
       <SaveButton />
     </form>
+    </details>
   );
 }

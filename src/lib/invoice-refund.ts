@@ -100,3 +100,37 @@ export function refundSummary(payments: { amountCents: number }[], refunds: Refu
   const keptCents = Math.max(0, paidCents - refundedCents - pendingCents);
   return { paidCents, refundedCents, pendingCents, keptCents, refundedInFull: paidCents > 0 && keptCents === 0 };
 }
+
+/**
+ * Whether a refund receipt may go to the customer: only for money that really
+ * went back. A card refund counts only once Stripe itself, asked just now,
+ * says it succeeded; a refund handed back in person counts once it is
+ * recorded as done. Anything pending, failed, canceled, or that Stripe has no
+ * record of gets no receipt.
+ */
+export function refundReceiptAllowed(input: {
+  /** Paid online, so the refund went back through Stripe. */
+  online: boolean;
+  /** Our record of the refund. */
+  status: string;
+  /** Stripe's id for it, when it went through Stripe. */
+  stripeRefundId: string;
+  /** What Stripe says now, for an online refund; null when it could not be asked or has no such refund. */
+  stripeStatus: string | null;
+}): { ok: true } | { ok: false; reason: string } {
+  if (!input.online) {
+    return input.status === "succeeded" ? { ok: true } : { ok: false, reason: "This refund is not recorded as done." };
+  }
+  if (!input.stripeRefundId) return { ok: false, reason: "Stripe has no refund for this payment, so there is nothing to send a receipt for." };
+  if (input.stripeStatus === null) return { ok: false, reason: "Stripe could not confirm this refund right now. Try again in a minute." };
+  if (input.stripeStatus !== "succeeded") {
+    return {
+      ok: false,
+      reason:
+        input.stripeStatus === "pending"
+          ? "Stripe has not finished this refund yet. Send the receipt once it has gone through."
+          : "Stripe did not complete this refund, so no receipt was sent.",
+    };
+  }
+  return { ok: true };
+}
