@@ -29,6 +29,16 @@ function text(value: unknown) {
 export async function sendJobEventMessage(input: {
   jobId: string;
   trigger: TemplateTrigger;
+  /**
+   * Somebody chose to send this one (Finish work's "tell the customer"), so it
+   * goes even when the business's template is missing or switched off, in the
+   * standard words. Consent, STOP and quiet hours still decide.
+   */
+  chosen?: boolean;
+  /** Added under the message: the work done, for a completion text. */
+  append?: string;
+  /** Pictures sent with it (MMS). */
+  mediaUrls?: string[];
 }): Promise<AutomaticSendResult> {
   try {
     const database = getSupabaseAdmin();
@@ -163,11 +173,22 @@ export async function sendJobEventMessage(input: {
       }
     }
 
+    // Chosen by hand: the standard words when the business has none switched on.
+    if (input.chosen && input.trigger === "job_completed" && (!templateRow || templateRow.is_active !== true || !body)) {
+      body = invoiceLink
+        ? language === "es"
+          ? "El trabajo #{{job_number}} está terminado. Su factura: {{invoice_link}} Gracias por elegir a {{business_name}}."
+          : "Work is complete on job #{{job_number}}. Your invoice: {{invoice_link}} Thank you for choosing {{business_name}}."
+        : language === "es"
+          ? "El trabajo #{{job_number}} está terminado. Gracias por elegir a {{business_name}}."
+          : "Work is complete on job #{{job_number}}. Thank you for choosing {{business_name}}.";
+    }
+    const chosenTemplate = input.chosen && input.trigger === "job_completed" ? { body, isActive: true } : null;
     const decision = decideAutomaticSend({
       trigger: input.trigger,
-      template: templateRow
+      template: chosenTemplate ?? (templateRow
         ? { body, isActive: templateRow.is_active === true }
-        : null,
+        : null),
       currentlyQuiet: quietHours.currentlyQuiet,
       variables: {
         customer_first_name: text(customerRow?.first_name),
@@ -193,6 +214,8 @@ export async function sendJobEventMessage(input: {
     });
 
     if (!decision.send) return { sent: false, reason: decision.reason };
+    const append = (input.append ?? "").trim();
+    const outgoing = append ? `${decision.body}\n\n${append}`.slice(0, 1600) : decision.body;
 
     // Reuse an open thread so automatic messages and anything staff typed sit
     // in one conversation, the way the customer experiences it.
@@ -232,7 +255,7 @@ export async function sendJobEventMessage(input: {
         organization_id: organizationId,
         conversation_id: conversationId,
         direction: "outbound",
-        body: decision.body,
+        body: outgoing,
         status: "sending",
       })
       .select("id")
@@ -242,12 +265,13 @@ export async function sendJobEventMessage(input: {
     const messageId = String(inserted.id);
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
-    const result = await sendSms({
-      to: phone,
-      body: decision.body,
-      messagingServiceSid,
-      statusCallbackUrl: origin ? `${origin}/api/twilio/status?message=${messageId}` : undefined,
-    });
+    const statusCallbackUrl = origin ? `${origin}/api/twilio/status?message=${messageId}` : undefined;
+    let result = await sendSms({ to: phone, body: outgoing, messagingServiceSid, mediaUrls: input.mediaUrls, statusCallbackUrl });
+    // A number that cannot send pictures still sends the words. Never after a
+    // STOP: that refusal is the customer's, not the pictures'.
+    if (!result.ok && (input.mediaUrls?.length ?? 0) > 0 && result.errorCode !== "21610") {
+      result = await sendSms({ to: phone, body: outgoing, messagingServiceSid, statusCallbackUrl });
+    }
 
     if (!result.ok) {
       await database

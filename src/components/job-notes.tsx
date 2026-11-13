@@ -93,7 +93,7 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
               ? "Saved"
               : saveState === "failed"
                 ? ""
-                : "Not shown to the customer"}
+                : "Only sent to the customer if you choose to"}
         </p>
       </div>
 

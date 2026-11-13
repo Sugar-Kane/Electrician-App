@@ -461,6 +461,12 @@ export default async function JobDetailPage({
           reservedParts={reservedParts}
           actionLabel={visitActionLabel(stage.flow, state)}
           holdPrimary={stage.primary.kind !== "visit" && state === "scheduled"}
+          finishNotice={{
+            canText: Boolean(job.phone),
+            canEmail: Boolean(job.email),
+            photoCount: photos.length,
+            hasNotes: Boolean(controls?.technicianNotes?.trim()),
+          }}
         >
           {identity}
         </JobWorkflow>

@@ -177,6 +177,8 @@ export type JobWorkflowProps = {
    * card for going anyway.
    */
   holdPrimary?: boolean;
+  /** For Finish work's "tell the customer": who can be reached, and what there is to send. */
+  finishNotice?: { canText: boolean; canEmail: boolean; photoCount: number; hasNotes: boolean };
   /**
    * Who, what and where, rendered above the status.
    *
@@ -225,9 +227,14 @@ export function JobWorkflow({
   reservedParts = [],
   actionLabel = null,
   holdPrimary = false,
+  finishNotice,
   children,
 }: JobWorkflowProps) {
   const [result, submit, pending] = useActionState(advanceJob, initialState);
+  // Finish work asks how to tell the customer first; the answer rides along
+  // with the parts check when there is one.
+  const [telling, setTelling] = useState(false);
+  const [noticeExtra, setNoticeExtra] = useState<Record<string, string>>({});
   const [asking, setAsking] = useState(false);
   const [confirmingWork, setConfirmingWork] = useState(false);
   const [confirmingParts, setConfirmingParts] = useState(false);
@@ -366,6 +373,7 @@ export function JobWorkflow({
   function onAdvance() {
     if (!step || closed) return;
     if (state === "scheduled") startTrip();
+    else if (step.to === "completed" && finishNotice) setTelling(true);
     else if (step.to === "completed" && reservedParts.length > 0) setConfirmingParts(true);
     else advance(step.to, "manual");
   }
@@ -384,8 +392,8 @@ export function JobWorkflow({
   // A question the yellow button raised is answered here, so bring it into view.
   const section = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (asking || confirmingParts) section.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [asking, confirmingParts]);
+    if (asking || confirmingParts || telling) section.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [asking, confirmingParts, telling]);
 
   // The bar under the thumb only once the progress card's button is off screen,
   // so there is one yellow button in view at a time.
@@ -449,17 +457,31 @@ export function JobWorkflow({
 
         {asking ? (
           <PermissionExplainer onAnswer={answer} pending={pending} />
+        ) : telling && finishNotice ? (
+          <TellCustomerDone
+            {...finishNotice}
+            pending={pending}
+            onConfirm={(extra) => {
+              setTelling(false);
+              if (reservedParts.length > 0) {
+                setNoticeExtra(extra);
+                setConfirmingParts(true);
+              } else {
+                advance("completed", "manual", extra);
+              }
+            }}
+            onCancel={() => setTelling(false)}
+          />
         ) : confirmingParts ? (
           <ConfirmPartsUsed
             parts={reservedParts}
             pending={pending}
             onConfirm={(used) => {
               setConfirmingParts(false);
-              advance(
-                "completed",
-                "manual",
-                Object.fromEntries(Object.entries(used).map(([lineId, amount]) => [`used:${lineId}`, amount])),
-              );
+              advance("completed", "manual", {
+                ...noticeExtra,
+                ...Object.fromEntries(Object.entries(used).map(([lineId, amount]) => [`used:${lineId}`, amount])),
+              });
             }}
             onCancel={() => setConfirmingParts(false)}
           />
@@ -598,7 +620,7 @@ export function JobWorkflow({
         )}
       </section>
 
-      {step && actionable && !stageInView && !asking && !confirmingParts && !(holdPrimary && state === "scheduled") ? (
+      {step && actionable && !stageInView && !asking && !confirmingParts && !telling && !(holdPrimary && state === "scheduled") ? (
         <ActionBar
           state={state}
           step={step}
@@ -712,6 +734,94 @@ function PermissionExplainer({
  * was bought at the counter instead (0). The bill is not changed here; the
  * lines are what the customer is charged for.
  */
+/**
+ * Before the job is marked finished: how the customer hears the work is done.
+ * Just a "work is complete" message, that with the notes and photos from the
+ * visit, or nothing, by text and/or email. Texts still follow consent, STOP
+ * and quiet hours.
+ */
+function TellCustomerDone({
+  canText,
+  canEmail,
+  photoCount,
+  hasNotes,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  canText: boolean;
+  canEmail: boolean;
+  photoCount: number;
+  hasNotes: boolean;
+  pending: boolean;
+  onConfirm: (extra: Record<string, string>) => void;
+  onCancel: () => void;
+}) {
+  const reachable = canText || canEmail;
+  const [mode, setMode] = useState<"notice" | "details" | "none">(reachable ? "notice" : "none");
+  const [sms, setSms] = useState(canText);
+  const [email, setEmail] = useState(canEmail);
+  const what = [photoCount > 0 ? `${photoCount} ${photoCount === 1 ? "photo" : "photos"}` : "", hasNotes ? "your job notes" : ""].filter(Boolean).join(" and ");
+  const choice = (value: typeof mode, title: string, detail: string, disabled = false) => (
+    <label className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-control border px-3 py-2.5 ${mode === value ? "border-brand bg-brand/[0.06]" : "border-line"} ${disabled ? "opacity-50" : ""}`}>
+      <input type="radio" name="tell" checked={mode === value} disabled={disabled} onChange={() => setMode(value)} className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--color-brand)]" />
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="block text-xs leading-5 text-ink-muted">{detail}</span>
+      </span>
+    </label>
+  );
+  return (
+    <form
+      className="mt-4 rounded-control border border-line bg-raised p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onConfirm({
+          noticeMode: mode,
+          ...(mode !== "none" && sms ? { noticeSms: "on" } : {}),
+          ...(mode !== "none" && email ? { noticeEmail: "on" } : {}),
+        });
+      }}
+    >
+      <h3 className="text-sm font-semibold">Tell the customer the work is done</h3>
+      <div className="mt-3 space-y-2">
+        {choice("notice", "Just let them know", "A short message that the work is complete, with the invoice link if there is one.", !reachable)}
+        {choice(
+          "details",
+          "Send the work details and photos",
+          what ? `The same message with ${what}.` : "Nothing written or photographed yet: add notes or photos above first.",
+          !reachable || !what,
+        )}
+        {choice("none", "Don't send anything", "Mark the job finished without telling them.")}
+      </div>
+      {mode !== "none" ? (
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+          <label className={`flex min-h-11 items-center gap-2 text-sm ${canText ? "" : "text-ink-faint"}`}>
+            <input type="checkbox" checked={sms} disabled={!canText} onChange={(event) => setSms(event.target.checked)} className="h-5 w-5" />
+            {canText ? "Text" : "Text (no mobile number)"}
+          </label>
+          <label className={`flex min-h-11 items-center gap-2 text-sm ${canEmail ? "" : "text-ink-faint"}`}>
+            <input type="checkbox" checked={email} disabled={!canEmail} onChange={(event) => setEmail(event.target.checked)} className="h-5 w-5" />
+            {canEmail ? "Email" : "Email (none on file)"}
+          </label>
+        </div>
+      ) : null}
+      {mode !== "none" && sms ? (
+        <p className="mt-1 text-xs leading-5 text-ink-muted">Texts only go to customers who agreed to texts, and wait for quiet hours to end.</p>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <button type="submit" disabled={pending || (mode !== "none" && !sms && !email)} className={PRIMARY}>
+          {pending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : <Check className="h-5 w-5" aria-hidden />}
+          {mode === "none" ? "Finish work" : "Finish work and send"}
+        </button>
+        <button type="button" onClick={onCancel} className={SECONDARY}>
+          Not yet
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function ConfirmPartsUsed({
   parts,
   onConfirm,

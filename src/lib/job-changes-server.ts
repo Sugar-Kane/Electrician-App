@@ -359,7 +359,13 @@ export type VisitStepResult = {
  */
 export async function advanceVisit(
   job: VisitJob,
-  input: { requested: string; source: "manual" | "geofence"; confirmed?: Map<string, number | null> },
+  input: {
+    requested: string;
+    source: "manual" | "geofence";
+    confirmed?: Map<string, number | null>;
+    /** How the customer is told the work is done, as chosen on Finish work. Absent: the automatic text. */
+    completionNotice?: import("@/lib/work-complete-notice").CompletionNotice;
+  },
 ): Promise<VisitStepResult> {
   const requested = input.requested;
   if (!isWorkflowState(requested)) return { error: "That is not a step a job can take." };
@@ -505,13 +511,20 @@ export async function advanceVisit(
   if (requested === "completed") {
     // The business's "Work complete" message, if it sends one; consent, the
     // STOP ledger and quiet hours are decided where every automatic text is.
-    await sendJobEventMessage({ jobId: job.id, trigger: "job_completed" });
+    let told = "";
+    if (input.completionNotice) {
+      const { sendWorkCompleteNotice } = await import("@/lib/work-complete-notice");
+      told = await sendWorkCompleteNotice(job.id, input.completionNotice);
+    } else {
+      await sendJobEventMessage({ jobId: job.id, trigger: "job_completed" });
+    }
+    const said = [...partsUsed, told].filter(Boolean).join(" ");
     return {
       error: "",
       state: requested,
       finished: true,
       partsUsed,
-      notice: partsUsed.length > 0 ? partsUsed.join(" ") : undefined,
+      notice: said || undefined,
     };
   }
 
