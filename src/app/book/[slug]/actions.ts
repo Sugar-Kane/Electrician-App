@@ -8,6 +8,7 @@ import {
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
 import { originFromHeaders, startBookingCheckout } from "@/lib/booking-checkout";
+import { HOLD_MINUTES } from "@/lib/booking-hold";
 import {
   getPublicBookingPage,
   prepareBookingCheckout,
@@ -226,12 +227,12 @@ export async function startPublicBooking(
     return { error: "Secure checkout could not be started. Please try again." };
   }
 
-  // Stripe accepts a custom expiry only when it is at least 30 minutes from
-  // the moment the session is created. The intake was inserted a moment ago,
-  // so its original 30-minute database deadline is already a few milliseconds
-  // too short. Reset both clocks with one minute of allowance before creating
-  // the session; customers are still told the simple, conservative 30 minutes.
-  const heldUntil = new Date(Date.now() + 31 * 60_000).toISOString();
+  // The same day's hold a phone or text booking gets, with a minute of
+  // allowance while the session is created. The intake was inserted a moment
+  // ago with the database's own shorter deadline; this resets it to match the
+  // Checkout session, whose expiry Stripe's limits are applied to where the
+  // session is made (booking-checkout.ts).
+  const heldUntil = new Date(Date.now() + (HOLD_MINUTES + 1) * 60_000).toISOString();
   if (!(await prepareBookingCheckout(intake.booking_token, heldUntil))) {
     return { error: "That arrival window could not be held. Choose another available time." };
   }
