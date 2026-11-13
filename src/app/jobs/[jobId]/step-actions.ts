@@ -38,7 +38,7 @@ export async function setMaterialsReady(
 
   const { data: job } = await supabase
     .from("jobs")
-    .update({ materials_ready_at: ready ? new Date().toISOString() : null })
+    .update(ready ? { materials_ready_at: new Date().toISOString() } : { materials_ready_at: null })
     .eq("organization_id", organizationId)
     .eq("job_number", jobNumber)
     .select("id, organization_id")
@@ -56,4 +56,44 @@ export async function setMaterialsReady(
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath("/jobs");
   return { error: "", notice: ready ? "Materials marked ready." : "Materials marked not ready." };
+}
+
+/** The job's parts bought, or not yet: the middle third of its Materials step. */
+export async function setMaterialsBought(
+  _previous: StepActionState,
+  formData: FormData,
+): Promise<StepActionState> {
+  const jobNumber = Number(String(formData.get("jobNumber") ?? "").trim());
+  if (!Number.isFinite(jobNumber)) return { error: "That job could not be found." };
+  const bought = String(formData.get("bought") ?? "true") !== "false";
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .limit(1)
+    .maybeSingle();
+  const organizationId = String(membership?.organization_id ?? "");
+  if (!organizationId) return { error: "You are not a member of a business." };
+
+  const { data: job } = await supabase
+    .from("jobs")
+    // Not bought means not picked up either.
+    .update(bought ? { materials_bought_at: new Date().toISOString() } : { materials_bought_at: null, materials_ready_at: null })
+    .eq("organization_id", organizationId)
+    .eq("job_number", jobNumber)
+    .select("id, organization_id")
+    .maybeSingle();
+  if (!job) return { error: "That job could not be found." };
+
+  await recordActivity(supabase, {
+    organizationId: String(job.organization_id),
+    eventType: bought ? "job.materials_bought" : "job.materials_not_bought",
+    label: bought ? "Parts marked bought" : "Parts marked not bought",
+    jobId: String(job.id),
+  });
+
+  revalidatePath(`/jobs/${jobNumber}`);
+  revalidatePath("/jobs");
+  return { error: "", notice: bought ? "Parts marked bought." : "Parts marked not bought." };
 }

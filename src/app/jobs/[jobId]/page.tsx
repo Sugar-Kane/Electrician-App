@@ -40,6 +40,7 @@ import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
 import { JobMaterialChat } from "@/components/job-material-chat";
+import { MaterialsSteps } from "@/components/job-progress";
 import { EndVisitForReturn } from "@/components/job-visits";
 import { getJobVisitsByNumber } from "@/lib/job-visits-server";
 
@@ -260,6 +261,7 @@ export default async function JobDetailPage({
     materialListCount: listItems.length,
     unpricedMaterialCount: unpricedItems,
     materialsReady: Boolean(controls?.materialsReadyAt),
+    materialsBought: Boolean(controls?.materialsBoughtAt || controls?.materialsReadyAt),
     agreement: currentAgreement
       ? {
           signed: Boolean(currentAgreement.signedAt),
@@ -271,6 +273,7 @@ export default async function JobDetailPage({
     feeInvoice: job.kindOfWork === "Diagnostic" ? feeInvoice : "none",
     feeLabel: controls?.diagnostic.feeCents ? formatCents(controls.diagnostic.feeCents) : "",
     repairLineCount: lines.filter((line) => line.description !== DIAGNOSTIC_FEE_LINE).length,
+    estimateLabel: totals.subtotalCents > 0 ? formatCents(totals.subtotalCents) : "",
     canceled,
   });
   const primaryHref = stage.primary.kind === "go" ? stage.primary.href : "";
@@ -660,6 +663,20 @@ export default async function JobDetailPage({
           open={linesStepOpen || (workspaceOpen && !materialsFolded)}
         >
           <div className="divide-y divide-line">
+          {/*
+            Parts in hand, marked here at any point. The Pick up parts step
+            opens on this, so the job can be done out of order: parts bought
+            before the estimate is signed, or picked up on the way.
+          */}
+          {stage.flow === "work_order" && lines.some((line) => line.kind === "material") && state !== "completed" ? (
+            <div id="parts-ready" className="scroll-mt-24 pb-4">
+              <MaterialsSteps
+                jobNumber={controls.jobNumber}
+                bought={Boolean(controls.materialsBoughtAt)}
+                pickedUp={Boolean(controls.materialsReadyAt)}
+              />
+            </div>
+          ) : null}
           {materialChat ? (
             <div className="py-4">
               <JobMaterialChat
@@ -726,8 +743,8 @@ export default async function JobDetailPage({
 
       {controls && stage.flow === "work_order" ? (
         <SectionRow
-          title="Estimate & approval"
-          summary={approvalSummary}
+          title="Contract"
+          summary={`${totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)} · ` : ""}${approvalSummary}`}
           open={primaryHref === "#contract" || initialStep === "approval"}
         >
           <JobContract

@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowDown, Check, Circle, CircleDot, LoaderCircle, Minus, PackageCheck } from "lucide-react";
 
-import { setMaterialsReady, type StepActionState } from "@/app/jobs/[jobId]/step-actions";
+import { setMaterialsBought, setMaterialsReady, type StepActionState } from "@/app/jobs/[jobId]/step-actions";
 import type { ProgressKey, ProgressStep } from "@/lib/job-progress";
 
 /**
@@ -70,7 +70,7 @@ function ReadyButton({ ready }: { ready: boolean }) {
       }
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : ready ? null : <PackageCheck className="h-4 w-4" aria-hidden />}
-      {ready ? "Mark not ready" : "Mark materials ready"}
+      {ready ? "Not picked up" : "Mark picked up"}
     </button>
   );
 }
@@ -84,6 +84,60 @@ export function MaterialsForm({ jobNumber, ready }: { jobNumber: string; ready: 
       <ReadyButton ready={ready} />
       {state.error ? <p className="mt-1 text-xs text-critical">{state.error}</p> : null}
     </form>
+  );
+}
+
+function BoughtButton({ bought }: { bought: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={
+        bought
+          ? "tap-target inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted disabled:opacity-60"
+          : "tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-brand/50 px-4 text-sm font-semibold text-brand disabled:opacity-60 sm:w-auto"
+      }
+    >
+      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+      {bought ? "Not bought" : "Mark bought"}
+    </button>
+  );
+}
+
+/**
+ * The parts, after they are listed: bought, then picked up. Either can be
+ * marked at any point in the job, and undone; picked up counts as bought.
+ */
+export function MaterialsSteps({ jobNumber, bought, pickedUp }: { jobNumber: string; bought: boolean; pickedUp: boolean }) {
+  const [boughtState, boughtAction] = useActionState<StepActionState, FormData>(setMaterialsBought, { error: "" });
+  const isBought = bought || pickedUp;
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      <div className="rounded-control border border-line bg-white/[0.02] p-3">
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          {isBought ? <PackageCheck className="h-4 w-4 text-positive" aria-hidden /> : null}
+          Bought
+        </p>
+        <p className="mb-2 text-xs text-ink-muted">{isBought ? "The parts are paid for." : "Ordered or paid for at the supply house."}</p>
+        {pickedUp ? null : (
+          <form action={boughtAction}>
+            <input type="hidden" name="jobNumber" value={jobNumber} />
+            <input type="hidden" name="bought" value={bought ? "false" : "true"} />
+            <BoughtButton bought={bought} />
+            {boughtState.error ? <p className="mt-1 text-xs text-critical">{boughtState.error}</p> : null}
+          </form>
+        )}
+      </div>
+      <div className="rounded-control border border-line bg-white/[0.02] p-3">
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          {pickedUp ? <PackageCheck className="h-4 w-4 text-positive" aria-hidden /> : null}
+          Picked up
+        </p>
+        <p className="mb-2 text-xs text-ink-muted">{pickedUp ? "The parts are on the truck." : "Collected and on the truck."}</p>
+        <MaterialsForm jobNumber={jobNumber} ready={pickedUp} />
+      </div>
+    </div>
   );
 }
 

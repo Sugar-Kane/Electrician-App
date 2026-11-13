@@ -38,6 +38,12 @@ export type StageStep = {
   key: StageKey;
   label: string;
   state: "done" | "current" | "todo";
+  /**
+   * Part done, as a share of the bar: the contract sent but not signed and the
+   * invoice sent but not paid are a half; Materials goes in thirds (listed,
+   * priced, picked up).
+   */
+  fill?: number;
 };
 
 /**
@@ -88,12 +94,16 @@ export type StageInput = {
   feeLabel?: string;
   /** Lines other than the diagnostic fee: a repair done on site. Defaults to `lineCount`. */
   repairLineCount?: number;
+  /** "$1,590.14": what the priced work comes to, said as the estimate. */
+  estimateLabel?: string;
   partCount: number;
   /** Items on the materials list, priced or not. */
   materialListCount: number;
   /** Items on the materials list with no store price matched yet. */
   unpricedMaterialCount: number;
   materialsReady: boolean;
+  /** The parts were bought (picked up counts as bought). */
+  materialsBought?: boolean;
   agreement: { sent: boolean; signed: boolean } | null;
   /** Work orders booked from this diagnostic. */
   followUpCount: number;
@@ -169,21 +179,37 @@ function billing(progress: ProgressStep[]): { primary: PrimaryAction; status: st
   };
 }
 
+/*
+ * The steps on the bar. Paying is the second half of the Invoice step (sent,
+ * then paid) and signing the second half of the Contract step (sent, then
+ * signed), so neither has a segment of its own; `paid` as the current stage
+ * means the Invoice step.
+ */
 function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[] {
   const order: StageKey[] =
     flow === "diagnostic"
-      ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice", "paid"]
-      : ["scope", "quotes", "estimate", "approval", "materials", "schedule", "work", "invoice", "paid"];
+      ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice"]
+      : ["scope", "estimate", "approval", "schedule", "work", "invoice"];
+  if (current === "paid") current = "invoice";
+  // The list, its quotes and picking the parts up are one Materials step.
+  if (current === "quotes") current = "scope";
+  if (current === "materials") {
+    // Picking up comes after the contract: everything before Schedule is
+    // done except Materials, which is the step being worked.
+    return steps(flow, "schedule", finished).map((step) =>
+      step.key === "scope" ? { ...step, state: "current" as const } : step.key === "schedule" ? { ...step, state: "todo" as const } : step,
+    );
+  }
   const labels: Record<StageKey, string> = {
     intake: "Intake",
     schedule: "Schedule",
     travel: "Travel",
     diagnose: "Diagnose",
     decide: "Next step",
-    scope: "Materials list",
+    scope: "Materials",
     quotes: "Supplier quotes",
     estimate: "Estimate",
-    approval: "Approval",
+    approval: "Contract",
     materials: "Pick up parts",
     work: "Work",
     invoice: "Invoice",
@@ -198,6 +224,50 @@ function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[]
 }
 
 export function jobFlow(input: StageInput): FlowStage {
+  const stage = flowOf(input);
+  const invoiceStep = input.progress.find((step) => step.key === "invoice");
+  const paidStep = input.progress.find((step) => step.key === "paid");
+  const invoiceSent = invoiceStep?.state === "done" || (paidStep !== undefined && paidStep.state !== "todo");
+  const invoicePaid = paidStep?.state === "done";
+  const contractSent = Boolean(input.agreement?.sent) || Boolean(input.agreement?.signed);
+  const contractSigned = Boolean(input.agreement?.signed);
+  // Materials in thirds: listed (and priced, which happen together), bought,
+  // picked up. Labor only has nothing to buy, so listed is the whole step.
+  const listed = input.materialListCount > 0 || input.lineCount > 0;
+  const nothingToBuy = input.lineCount > 0 && input.partCount === 0;
+  const pickedUp = input.materialsReady || nothingToBuy;
+  const bought = Boolean(input.materialsBought) || pickedUp;
+  const materialsShare = listed && pickedUp ? 1 : listed && bought ? 2 / 3 : listed ? 1 / 3 : 0;
+  const partly = (step: StageStep, share: number): StageStep => ({
+    ...step,
+    // Part filled, and current only if the flow is on it: an invoice sent
+    // ahead of the contract is not the step being worked.
+    state: step.state === "current" ? "current" : "todo",
+    fill: share,
+  });
+  return {
+    ...stage,
+    steps: stage.steps.map((step) => {
+      // Sent fills half the bar; paid or signed fills the rest.
+      if (step.key === "invoice") {
+        if (invoicePaid) return { ...step, state: "done" as const, fill: undefined };
+        if (invoiceSent) return partly(step, 1 / 2);
+      }
+      if (step.key === "approval") {
+        if (contractSigned) return { ...step, state: "done" as const, fill: undefined };
+        if (contractSent) return partly(step, 1 / 2);
+      }
+      if (step.key === "scope" && stage.flow === "work_order") {
+        if (materialsShare === 1) return { ...step, state: "done" as const, fill: undefined };
+        if (materialsShare > 0) return partly(step, materialsShare);
+        return step;
+      }
+      return step;
+    }),
+  };
+}
+
+function flowOf(input: StageInput): FlowStage {
   const flow: JobFlow = input.kindOfWork === "Diagnostic" ? "diagnostic" : "work_order";
   const state = input.workflowState;
 
@@ -399,7 +469,7 @@ export function jobFlow(input: StageInput): FlowStage {
         steps: steps(flow, "estimate", false),
         status: "Estimate",
         primary: go("Add work & materials", "#work-materials"),
-        hint: "Put the priced list on the job to make the estimate.",
+        hint: "Put the priced list on the job: its total is the estimate.",
         needsDecision: false,
       };
     }
@@ -409,20 +479,22 @@ export function jobFlow(input: StageInput): FlowStage {
       const owed = paidUp ? "The invoice is paid" : `The invoice is out (${(paidStep?.note ?? "waiting for payment").toLowerCase()})`;
       return {
         flow,
-        steps: steps(flow, sent ? "approval" : "estimate", false),
+        steps: steps(flow, "approval", false),
         status: invoiced
           ? sent
-            ? "Invoiced · awaiting approval"
-            : "Invoiced · estimate not sent"
+            ? "Invoiced · contract not signed"
+            : "Invoiced · contract not sent"
           : sent
-            ? "Awaiting approval"
-            : "Estimate",
-        primary: sent ? go("View approval", "#contract") : go("Send estimate", "#contract"),
+            ? "Contract sent · awaiting signature"
+            : "Send contract",
+        primary: sent ? go("View contract", "#contract") : go("Send contract", "#contract"),
         hint: invoiced
-          ? `${owed}, but the customer has not signed yet. Get the estimate signed before the work goes ahead.`
+          ? `${owed}, but the customer has not signed the contract yet. Get it signed before the work goes ahead.`
           : sent
             ? "Waiting for the customer to sign. Resend it, or have them sign in person."
-            : "The customer approves the price before the work is booked.",
+            : input.estimateLabel
+              ? `Estimate: ${input.estimateLabel}. The customer signs the contract for it before the work is booked.`
+              : "The customer signs the contract for the price before the work is booked.",
         needsDecision: false,
       };
     }
@@ -431,7 +503,7 @@ export function jobFlow(input: StageInput): FlowStage {
         flow,
         steps: steps(flow, "materials", false),
         status: "Pick up parts",
-        primary: { kind: "materials_ready", label: "Mark materials ready" },
+        primary: { kind: "materials_ready", label: "Mark picked up" },
         hint: input.scheduled
           ? "Have the parts in hand before you drive out. You can still start the trip if they are on the truck."
           : "Have the parts in hand, then book the visit.",
@@ -458,12 +530,16 @@ export function jobFlow(input: StageInput): FlowStage {
     };
   })();
 
-  // What billing has really done, shown on its own steps.
-  if (!invoiced) return next;
+  // Steps done out of order show as done: parts already picked up, a visit
+  // already booked, an invoice already out or paid. The current step and the
+  // one action stay where the flow puts them.
+  const doneEarly = (key: StageKey) =>
+    (key === "materials" && input.materialsReady && input.partCount > 0) ||
+    (key === "schedule" && input.scheduled) ||
+    (invoiced && key === "invoice") ||
+    (paidUp && key === "paid");
   return {
     ...next,
-    steps: next.steps.map((step) =>
-      step.key === "invoice" || (step.key === "paid" && paidUp) ? { ...step, state: "done" as const } : step,
-    ),
+    steps: next.steps.map((step) => (step.state === "todo" && doneEarly(step.key) ? { ...step, state: "done" as const } : step)),
   };
 }
