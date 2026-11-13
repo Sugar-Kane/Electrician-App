@@ -21,6 +21,13 @@ import { Field, FormMessage } from "@/components/ui/field";
 
 const initialState: JobActionState = { error: "" };
 
+/** Drop "#schedule" from the address, so a refresh does not ask to open it again. */
+function forgetHash() {
+  if (window.location.hash === "#schedule") {
+    history.replaceState(history.state, "", window.location.pathname + window.location.search);
+  }
+}
+
 export function JobSchedule({
   jobNumber,
   startLocal,
@@ -45,18 +52,27 @@ export function JobSchedule({
 
   // Folded once a save goes through.
   useEffect(() => {
-    if (state.notice && !state.error && fold.current) fold.current.open = false;
+    if (state.notice && !state.error && fold.current) {
+      fold.current.open = false;
+      forgetHash();
+    }
   }, [state]);
 
-  // Opened by a link to it, from this page or another.
+  /*
+   * Opened by tapping a link to it on this page (Reschedule, Change time).
+   * Not on a page load: a refresh keeps "#schedule" in the address, and a job
+   * that already has its time stays folded. One with no time is open anyway.
+   * The hash is dropped once read, so the next refresh starts clean.
+   */
   useEffect(() => {
+    forgetHash();
     const openIfAsked = () => {
       if (window.location.hash === "#schedule" && fold.current) {
         fold.current.open = true;
         fold.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        forgetHash();
       }
     };
-    openIfAsked();
     window.addEventListener("hashchange", openIfAsked);
     return () => window.removeEventListener("hashchange", openIfAsked);
   }, []);
