@@ -500,8 +500,8 @@ function flowOf(input: StageInput): FlowStage {
             : "Invoiced · contract not sent"
           : sent
             ? "Contract sent · awaiting signature"
-            : "Send contract",
-        primary: sent ? go("View contract", "#contract") : go("Send contract", "#contract"),
+            : "Prepare contract",
+        primary: sent ? go("View contract", "#contract") : go("Prepare contract", "#contract"),
         hint: invoiced
           ? `${owed}, but the customer has not signed the contract yet. Get it signed before the work goes ahead.`
           : sent
