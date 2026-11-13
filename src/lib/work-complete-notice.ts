@@ -139,6 +139,7 @@ export async function sendWorkCompleteNotice(jobId: string, notice: CompletionNo
           .join("");
         const sent = await sendEmail({
         organizationId: organizationId,
+        contactButtons: true,
           to,
           subject: `${heading} · ${businessName}`,
           text: lines.join("\n"),

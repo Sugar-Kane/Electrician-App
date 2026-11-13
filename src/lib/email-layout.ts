@@ -44,6 +44,27 @@ export function isWholeDocument(html: string): boolean {
   return /<html[\s>]/i.test(html);
 }
 
+/** A phone number as dialled: digits and a leading +, or "" when it is not one. */
+export function dialable(phone: string | null | undefined): string {
+  const cleaned = (phone ?? "").replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+  return cleaned.replace(/\D/g, "").length >= 7 ? cleaned : "";
+}
+
+/** Call and Text, side by side, for a customer to reach the business in one tap. */
+export function contactButtons(phone: string): string {
+  const number = dialable(phone);
+  if (!number) return "";
+  const button = (href: string, label: string) =>
+    `<a href="${escape(href)}" style="display:block;background:#f1f5f9;color:${NAVY};border:1px solid #cbd5e1;font-weight:700;padding:12px 10px;border-radius:12px;text-decoration:none;font-size:15px;text-align:center">${escape(label)}</a>`;
+  return `<table role="presentation" class="contact" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;border-top:1px solid ${RULE};">
+    <tr><td colspan="3" style="padding:16px 0 8px;font-size:13px;color:${MUTED};">Questions? Reach us directly.</td></tr>
+    <tr>
+      <td width="50%" style="padding:0 6px 0 0;">${button(`tel:${number}`, "Call")}</td>
+      <td width="50%" style="padding:0 0 0 6px;">${button(`sms:${number}`, "Text")}</td>
+    </tr>
+  </table>`;
+}
+
 export function brandedEmail(input: {
   /** The message itself: paragraphs, tables, links. */
   html: string;
@@ -57,6 +78,8 @@ export function brandedEmail(input: {
    * the name.
    */
   logoUrl?: string;
+  /** The number a customer should call or text; adds Call and Text buttons under the message. */
+  contactPhone?: string;
 }): string {
   if (isWholeDocument(input.html)) return input.html;
   const name = escape(input.businessName.trim() || "Volteira");
@@ -94,6 +117,7 @@ export function brandedEmail(input: {
     .card a { color: ${YELLOW} !important; }
     .card .btn, .card a[style*="background"] { color: ${NAVY} !important; }
     .foot, .foot span { color: #8aa0b0 !important; }
+    .contact { border-top-color: #22313d !important; }
   }
 </style>
 </head>
@@ -117,6 +141,7 @@ export function brandedEmail(input: {
         <tr>
           <td class="card" style="background:#ffffff;border-radius:0 0 18px 18px;border:1px solid ${RULE};border-top:0;padding:28px 28px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${INK};">
             ${input.html}
+            ${contactButtons(input.contactPhone ?? "")}
           </td>
         </tr>
         <tr>
