@@ -185,3 +185,34 @@ export async function ensurePropertiesGeocoded(input: {
     waiting: stoppedBy ? Math.max(waitingTotal - placed - unplaced.length, 0) : 0,
   };
 }
+
+/**
+ * Place one property now and remember it: for an address just saved, or a
+ * job opened whose address was never placed. Null when it cannot be placed
+ * (no key, Google said no, or the address is not one Google can find).
+ */
+export async function placeProperty(input: {
+  database: { from: (table: string) => never } | ReturnType<typeof import("@/lib/supabase/admin").getSupabaseAdmin>;
+  propertyId: string;
+}): Promise<Coordinates | null> {
+  if (!input.propertyId || !isGeocodingConfigured()) return null;
+  const database = input.database as ReturnType<typeof import("@/lib/supabase/admin").getSupabaseAdmin>;
+  const { data } = await database
+    .from("properties")
+    .select("id, address_line_1, city, state, postal_code")
+    .eq("id", input.propertyId)
+    .maybeSingle();
+  const row = data as Record<string, unknown> | null;
+  if (!row) return null;
+  const answer = await geocodeAddress(addressOf(row), typeof row.state === "string" ? row.state : null);
+  if (answer.kind !== "placed") {
+    console.error("could not place an address", { propertyId: input.propertyId, kind: answer.kind });
+    return null;
+  }
+  const { error } = await database
+    .from("properties")
+    .update({ latitude: answer.coordinates.lat, longitude: answer.coordinates.lng })
+    .eq("id", input.propertyId);
+  if (error) console.error("could not save a placed address", { propertyId: input.propertyId, error: error.message });
+  return answer.coordinates;
+}

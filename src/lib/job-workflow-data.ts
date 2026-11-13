@@ -74,6 +74,7 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
     .from("jobs")
     .select(
       `id, job_number, status, cancellation_reason,
+       property_id,
        properties ( latitude, longitude ),
        customers ( phone )`,
     )
@@ -137,7 +138,15 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
   const longitude = property?.longitude === null || property?.longitude === undefined
     ? null
     : Number(property.longitude);
-  const point = { lat: latitude, lng: longitude };
+  let point = { lat: latitude, lng: longitude };
+  // An address never placed (saved on the job page, say, rather than seen on
+  // the route map first) is placed now, so arrival can be picked up.
+  if (!hasCoordinates(point) && str(row.property_id)) {
+    const { placeProperty } = await import("@/lib/geocoding");
+    const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+    const placed = await placeProperty({ database: getSupabaseAdmin(), propertyId: str(row.property_id) }).catch(() => null);
+    if (placed) point = { lat: placed.lat, lng: placed.lng };
+  }
 
   const source = str(progressRow?.arrival_source);
 
