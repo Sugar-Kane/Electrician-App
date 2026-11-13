@@ -35,7 +35,7 @@ export async function getJobIntake(
   const { data } = await context.database
     .from("booking_requests")
     .select(
-      "communication_channel, created_by, created_at, description, intake_answers, urgency, arrival_window_start, arrival_window_end, deposit_cents",
+      "communication_channel, created_by, created_at, description, intake_answers, urgency, arrival_window_start, arrival_window_end, deposit_cents, origin, external_ref",
     )
     .eq("organization_id", context.organizationId)
     .eq("created_job_id", jobId)

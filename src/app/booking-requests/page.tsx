@@ -118,6 +118,11 @@ function RequestCard({ request }: { request: BookingRequest }) {
           {request.arrivalWindow ? (
             <p className="mt-1 text-xs text-brand">Window: {request.arrivalWindow}</p>
           ) : null}
+          {request.reference ? (
+            <p className="mt-1 text-xs text-ink-muted">
+              Website ref <span className="font-mono font-semibold text-ink">{request.reference}</span>
+            </p>
+          ) : null}
           {request.preferredTimes ? (
             <p className="mt-1 text-xs text-ink-muted">Good times: {request.preferredTimes}</p>
           ) : null}

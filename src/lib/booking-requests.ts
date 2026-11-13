@@ -26,6 +26,8 @@ export type BookingRequest = {
   preferredTimes?: string;
   /** How the customer asked to be contacted on the website form. */
   contactPreference?: "phone" | "email" | "text" | "";
+  /** The reference number the business's website gave the customer for this request. */
+  reference?: string;
   /** Whether they ticked the box agreeing to texts. */
   smsConsent?: boolean;
   /** How Maya's call back went, for a website request that asked for a call. */
@@ -114,7 +116,7 @@ export type BookingRequestQueue = {
 };
 
 const COLUMNS =
-  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, preferred_times, contact_preference, sms_consent, callback_outcome, customers ( preferred_language )";
+  "id, organization_id, source, status, intent, phone, email, contact_name, description, address_line_1, city, postal_code, urgency, safety_flags, arrival_window_start, arrival_window_end, created_at, conversation_id, created_job_id, deposit_paid_at, stripe_payment_intent_id, classification, archived_at, duplicate_of, duplicate_reviewed_at, origin, external_ref, preferred_times, contact_preference, sms_consent, callback_outcome, customers ( preferred_language )";
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -181,6 +183,7 @@ function toRequest(row: Record<string, unknown>, timezone: string, payments: Map
     duplicateReviewedAt: text(row.duplicate_reviewed_at),
     origin: text(row.origin) === "website" ? "website" : "",
     preferredTimes: text(row.preferred_times),
+    reference: text(row.origin) === "website" ? text(row.external_ref) : "",
     contactPreference: (["phone", "email", "text"].includes(text(row.contact_preference)) ? text(row.contact_preference) : "") as BookingRequest["contactPreference"],
     smsConsent: row.sms_consent === true,
     callbackOutcome: text(row.callback_outcome),

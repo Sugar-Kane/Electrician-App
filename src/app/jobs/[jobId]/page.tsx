@@ -513,6 +513,11 @@ export default async function JobDetailPage({
               <summary className="tap-target flex cursor-pointer list-none items-start justify-between gap-3 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold">Customer request</span>
+                  {callRecord.reference ? (
+                    <span className="mt-1 block text-xs text-ink-muted">
+                      Website ref <span className="font-mono font-semibold text-ink">{callRecord.reference}</span>
+                    </span>
+                  ) : null}
                   {job.summary ? (
                     <span className="mt-2 block text-sm leading-6 text-ink-muted">
                       {job.summary}
