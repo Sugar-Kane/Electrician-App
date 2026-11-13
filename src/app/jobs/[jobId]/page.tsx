@@ -396,6 +396,18 @@ export default async function JobDetailPage({
       </p>
     ) : null;
 
+  /** Who is going: in the Schedule step, next to when, on the step layout. */
+  const assignRow = (
+    <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+      <p className="text-sm text-ink-muted">Assigned to</p>
+      {controls ? (
+        <AssignTechnician jobNumber={controls.jobNumber} technician={job.technician} />
+      ) : (
+        <span className="text-sm">{job.technician}</span>
+      )}
+    </div>
+  );
+
   const identityBlock = (withSchedule: boolean) => (
     <div>
       <div className="flex items-start justify-between gap-3">
@@ -942,6 +954,8 @@ export default async function JobDetailPage({
 
           <StepCard id="visits" number={2} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>
             {scheduleEditor}
+            {/* Who is going, beside when. */}
+            {assignRow}
             {/* Where it is, set or changed here; saving fills it into a draft contract made without it. */}
             <JobAddressFold
               jobNumber={controls.jobNumber}
@@ -1122,6 +1136,8 @@ export default async function JobDetailPage({
 
           <StepCard id="visits" number={3} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>
             {scheduleEditor}
+            {/* Who is going, beside when. */}
+            {assignRow}
             {/* Where it is, set or changed here; saving fills it into a draft contract made without it. */}
             <JobAddressFold
               jobNumber={controls.jobNumber}
@@ -1264,7 +1280,7 @@ export default async function JobDetailPage({
 
       <SectionRow
         title={stage.flow === "diagnostic" ? "Documents & contract" : "Documents & job details"}
-        summary="Assignment, files and contact"
+        summary={stepLayout ? "Files and contact" : "Assignment, files and contact"}
         open={stage.flow === "diagnostic" && (primaryHref === "#contract" || initialStep === "approval")}
       >
         {controls && stage.flow === "diagnostic" ? (
@@ -1279,14 +1295,17 @@ export default async function JobDetailPage({
           </div>
         ) : null}
         <div className="divide-y divide-line ">
-          <div className="flex items-center justify-between gap-3 py-4">
-            <p className="text-sm text-ink-muted">Assigned to</p>
-            {controls ? (
-              <AssignTechnician jobNumber={controls.jobNumber} technician={job.technician} />
-            ) : (
-              <span className="text-sm">{job.technician}</span>
-            )}
-          </div>
+          {/* On the step layout the assignment sits in the Schedule step. */}
+          {stepLayout ? null : (
+            <div className="flex items-center justify-between gap-3 py-4">
+              <p className="text-sm text-ink-muted">Assigned to</p>
+              {controls ? (
+                <AssignTechnician jobNumber={controls.jobNumber} technician={job.technician} />
+              ) : (
+                <span className="text-sm">{job.technician}</span>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-3 py-4">
             <p className="text-sm text-ink-muted">Attachments</p>

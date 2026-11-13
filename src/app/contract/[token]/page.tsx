@@ -37,6 +37,8 @@ import { createPublicClient } from "@/lib/supabase/public";
 
 /** Where the button at the top of the page goes: the Sign section. */
 const SIGN_ANCHOR = "sign";
+/** The contract itself, where the whole scope is written out. */
+const WORK_ANCHOR = "contract";
 
 export const metadata: Metadata = {
   title: "Your contract",
@@ -118,7 +120,7 @@ async function contractDocument(
 /** The figures and scope the contract saved when it was drawn up, for the summary above it. */
 async function contractTerms(
   contract: PublicContract,
-): Promise<{ summary: ApprovalSummary | null; scope: string }> {
+): Promise<{ summary: ApprovalSummary | null; scope: string; askPhone: string }> {
   try {
     const { data } = await asFlexibleClient(getSupabaseAdmin())
       .from("contracts")
@@ -127,7 +129,17 @@ async function contractTerms(
       .eq("id", contract.contract_id)
       .maybeSingle();
     const row = (data ?? {}) as Record<string, unknown>;
+    // Questions go to a person: the owner's own phone, the one set for alerts
+    // in Settings → Notifications. The business line answers with the
+    // assistant, which is not who a customer about to sign wants to ask.
+    const { data: organization } = await asFlexibleClient(getSupabaseAdmin())
+      .from("organizations")
+      .select("owner_notification_phone")
+      .eq("id", contract.organization_id)
+      .maybeSingle();
+    const askPhone = typeof organization?.owner_notification_phone === "string" ? organization.owner_notification_phone : "";
     return {
+      askPhone,
       summary: approvalSummary({
         totalCents: typeof row.total_cents === "number" ? row.total_cents : null,
         depositCents: typeof row.deposit_cents === "number" ? row.deposit_cents : null,
@@ -137,7 +149,7 @@ async function contractTerms(
     };
   } catch (error) {
     console.error("contract page: could not load the figures", error);
-    return { summary: null, scope: "" };
+    return { summary: null, scope: "", askPhone: "" };
   }
 }
 
@@ -187,6 +199,14 @@ function Summary({
         <div className="mt-3">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-faint">The work</p>
           <p className="mt-1 line-clamp-6 whitespace-pre-line text-sm leading-6 text-ink">{scope}</p>
+          {/* A long scope (a big material list) is cut to six lines here; all
+              of it is in the contract below, word for word. */}
+          {scope.length > 320 ? (
+            <a href={`#${WORK_ANCHOR}`} className="mt-1 inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-brand">
+              Read all of the work in the contract
+              <ArrowDown className="h-4 w-4" aria-hidden />
+            </a>
+          ) : null}
         </div>
       ) : null}
       {summary ? (
@@ -306,7 +326,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
             scope={terms.scope}
             timing={copy?.document.job.scheduledLabel ?? ""}
             businessName={contract.business_name}
-            businessPhone={contract.business_phone ?? ""}
+            businessPhone={terms.askPhone || contract.business_phone || ""}
             jobNumber={contract.job_number}
           />
         ) : null}
@@ -341,7 +361,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           </section>
         ) : null}
 
-        <section className="mt-6" aria-label="The contract">
+        <section id={WORK_ANCHOR} className="mt-6 scroll-mt-4" aria-label="The contract">
           {copy ? (
             <ContractPaper data={copy.document} />
           ) : (

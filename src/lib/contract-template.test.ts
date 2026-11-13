@@ -270,7 +270,8 @@ test("a plain scope is built from the job when the AI cannot write one", async (
   const { plainScope } = await import("./contract-template.ts");
   const scope = plainScope({ workType: "work order", description: "Install recessed lights in the kitchen.", workItems: ["Install 6 recessed lights", "Install 6 recessed lights", "Dimmer switch"] });
   assert.match(scope, /recessed lights in the kitchen/);
-  assert.match(scope, /The work includes: Install 6 recessed lights; Dimmer switch\./);
+  // The materials are not listed to the customer.
+  assert.doesNotMatch(scope, /The work includes|Dimmer switch/);
   assert.match(plainScope({ workType: "diagnostic", description: "Breaker trips", workItems: [], visitOnly: true }), /diagnostic visit/);
   assert.equal(plainScope({ workType: "work order", description: "", workItems: [] }), "");
 });
