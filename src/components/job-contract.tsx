@@ -5,7 +5,6 @@ import { useFormStatus } from "react-dom";
 import {
   CheckCircle2,
   ChevronDown,
-  Download,
   FileText,
   LoaderCircle,
   MessageSquare,
@@ -510,11 +509,12 @@ function ContractRow({
                 */}
                 <a
                   href={contract.document.url}
-                  download={contract.document.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
                 >
-                  <Download className="h-4 w-4" aria-hidden />
-                  Download
+                  <FileText className="h-4 w-4" aria-hidden />
+                  View PDF
                 </a>
 
                 <button
@@ -571,7 +571,7 @@ function ContractRow({
 
 /**
  * One contract on its own page, like an invoice: the document with zoom and
- * Download, then sending it for signing or signing in person.
+ * View PDF, then sending it for signing or signing in person.
  */
 export function ContractPage({
   contract,
