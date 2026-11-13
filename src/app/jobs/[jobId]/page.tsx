@@ -40,6 +40,7 @@ import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
 import { JobMaterialChat } from "@/components/job-material-chat";
+import { MaterialsForm } from "@/components/job-progress";
 import { EndVisitForReturn } from "@/components/job-visits";
 import { getJobVisitsByNumber } from "@/lib/job-visits-server";
 
@@ -660,6 +661,26 @@ export default async function JobDetailPage({
           open={linesStepOpen || (workspaceOpen && !materialsFolded)}
         >
           <div className="divide-y divide-line">
+          {/*
+            Parts in hand, marked here at any point. The Pick up parts step
+            opens on this, so the job can be done out of order: parts bought
+            before the estimate is signed, or picked up on the way.
+          */}
+          {stage.flow === "work_order" && lines.some((line) => line.kind === "material") && state !== "completed" ? (
+            <div id="parts-ready" className="scroll-mt-24 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-line bg-white/[0.02] p-3">
+                <p className="text-sm">
+                  <span className="block font-semibold">Pick up parts</span>
+                  <span className="block text-xs text-ink-muted">
+                    {controls.materialsReadyAt
+                      ? "Marked ready: the parts are in hand."
+                      : "Mark them ready once the parts are on the truck."}
+                  </span>
+                </p>
+                <MaterialsForm jobNumber={controls.jobNumber} ready={Boolean(controls.materialsReadyAt)} />
+              </div>
+            </div>
+          ) : null}
           {materialChat ? (
             <div className="py-4">
               <JobMaterialChat

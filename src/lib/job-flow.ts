@@ -458,12 +458,16 @@ export function jobFlow(input: StageInput): FlowStage {
     };
   })();
 
-  // What billing has really done, shown on its own steps.
-  if (!invoiced) return next;
+  // Steps done out of order show as done: parts already picked up, a visit
+  // already booked, an invoice already out or paid. The current step and the
+  // one action stay where the flow puts them.
+  const doneEarly = (key: StageKey) =>
+    (key === "materials" && input.materialsReady && input.partCount > 0) ||
+    (key === "schedule" && input.scheduled) ||
+    (invoiced && key === "invoice") ||
+    (paidUp && key === "paid");
   return {
     ...next,
-    steps: next.steps.map((step) =>
-      step.key === "invoice" || (step.key === "paid" && paidUp) ? { ...step, state: "done" as const } : step,
-    ),
+    steps: next.steps.map((step) => (step.state === "todo" && doneEarly(step.key) ? { ...step, state: "done" as const } : step)),
   };
 }

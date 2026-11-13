@@ -36,7 +36,7 @@ const STEP_TARGETS: Record<StageKey, string[]> = {
   quotes: ["#work-materials", "#work"],
   estimate: ["#contract", "#work-materials", "#work"],
   approval: ["#contract", "#work"],
-  materials: ["#work-materials", "#work"],
+  materials: ["#parts-ready", "#work-materials", "#work"],
   work: ["#findings", "#work"],
   invoice: ["#billing", "#work-materials", "#work"],
   paid: ["#billing", "#work-materials", "#work"],
