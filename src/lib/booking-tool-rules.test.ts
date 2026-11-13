@@ -124,7 +124,7 @@ test("a complete conversation passes the gate", () => {
   assert.equal(deliveryPreference(COMPLETE), "both");
 });
 
-test("the booking result tells her to say the deposit and what happens next", () => {
+test("the booking result tells her the deposit, what happens next, and to say goodbye", () => {
   const decision = buildDecision("book_visit", COMPLETE)!;
   const action = decideIntakeAction({
     decision,
@@ -139,13 +139,17 @@ test("the booking result tells her to say the deposit and what happens next", ()
     deliveryPreference: "both",
   });
 
-  // The fee, what it covers, and that it goes toward any bigger work.
+  // What it costs to confirm. What the fee covers was said before they
+  // agreed to book, so it is not repeated here.
   assert.match(result.text, /\$95 diagnostic visit/);
-  assert.match(result.text, /\$95 goes toward that work/);
-  assert.match(result.text, /never promise that a particular repair is included/i);
-  assert.match(result.text, /call you later today/i);
+  assert.match(result.text, /do not explain again what the fee covers/i);
+  assert.doesNotMatch(result.text, /\$95 goes toward that work/);
+  // No promise of a call nobody has arranged.
+  assert.doesNotMatch(result.text, /call you later today/i);
   assert.match(result.text, /by text and email/);
   assert.match(result.text, /do not take card details/i);
+  // A goodbye before the call ends, never a hang-up on "no".
+  assert.match(result.text, /never end the call without a goodbye/i);
 });
 
 test("every intake answer is a flat string, never a nested object", () => {

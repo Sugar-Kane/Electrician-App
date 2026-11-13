@@ -816,13 +816,18 @@ export function describeOutcome(input: {
           input.held
             ? `2. "I'm holding that time. It's confirmed once the ${context.diagnosticFee} diagnostic fee is paid."`
             : `2. "The ${context.diagnosticFee} diagnostic visit is all set."`,
-          `3. What the fee covers, if you have not already said it on this call: ${diagnosticFeeCovers(context.diagnosticFee)}`,
-          `4. "An electrician will call you later today to go over a few more details."`,
+          // What the fee covers was said at the start of the call, before they
+          // agreed to book (feeUpFront). Saying it again here was twenty
+          // seconds of repetition on a test call: the model read out every
+          // line it was given, conditions and all.
           input.alreadyExisted
-            ? `5. This booking was already made earlier, and its link went out then. Ask whether they received it; if they did not, use resend_booking_link and tell them only what its result says.`
-            : `5. "Your booking${input.held ? " and payment" : ""} link is on its way ${delivery}." Say "on its way", never that it has arrived.`,
-          "Then ask if there is anything else, and close with a proper goodbye before ending the call.",
-          "Do not promise a repair price, and do not take card details on this call.",
+            ? `3. This booking was already made earlier, and its link went out then. Ask whether they received it; if they did not, use resend_booking_link and tell them only what its result says.`
+            : `3. "Your booking${input.held ? " and payment" : ""} link is on its way ${delivery}." Say "on its way", never that it has arrived.`,
+          "Do not explain again what the fee covers: you did that before they agreed to book. Do not promise a repair price, and do not take card details on this call.",
+          // The goodbye is spelled out here because a rule in the instructions
+          // was not enough: on a test call she hung up on "Nope" with no
+          // goodbye at all. Tool results are what she follows most closely.
+          `Then ask once: "Is there anything else I can help you with?" and wait for their answer. When they say no, nope, that's it, or anything like it, that is your cue to say goodbye, not to hang up: "You're all set. Thanks for calling ${context.businessName}, and have a great day!" Only after saying goodbye may the call end. Never end the call without a goodbye.`,
         ].join(" "),
       };
     }
