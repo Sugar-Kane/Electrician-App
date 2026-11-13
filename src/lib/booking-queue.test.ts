@@ -29,7 +29,10 @@ test("waiting on payment and escalated for safety are waiting on a person", () =
   assert.equal(isOpenRequest("new"), true);
   assert.equal(isOpenRequest("needs_review"), true);
 
-  for (const done of ["scheduled", "confirmed", "dismissed", "canceled", "expired"]) {
+  // A hold that ran out unpaid is somebody to ring, not something finished.
+  assert.equal(isOpenRequest("expired"), true);
+
+  for (const done of ["scheduled", "confirmed", "dismissed", "canceled"]) {
     assert.equal(isOpenRequest(done), false, done);
   }
 });

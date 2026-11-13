@@ -144,8 +144,12 @@ export function openBookingRequests(requests: { status: string }[]): number {
   //
   // `awaiting_payment` is deliberately not here: that is the customer's move,
   // not the business's, and a card being typed in is not a task.
+  //
+  // `expired` is here: the hold ran out unpaid, so it is the business's move
+  // again. Somebody rings the customer, then books or dismisses the request.
   return requests.filter(
-    (request) => request?.status === "new" || request?.status === "needs_review",
+    (request) =>
+      request?.status === "new" || request?.status === "needs_review" || request?.status === "expired",
   ).length;
 }
 
