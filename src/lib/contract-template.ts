@@ -275,8 +275,8 @@ export function serviceAddress(
  * A scope paragraph built only from what the job says, for when the AI that
  * usually writes it is not available (an outage, or the month's allowance
  * used). Plain facts, nothing promised that the job does not state: what the
- * customer asked for and the work items written on the job. Empty when the
- * job says nothing about the work, which leaves {{scope}} to be filled.
+ * customer asked for. The job's materials are not listed. Empty when the job
+ * says nothing about the work, which leaves {{scope}} to be filled.
  */
 export function plainScope(input: {
   workType: string;
@@ -286,15 +286,9 @@ export function plainScope(input: {
 }): string {
   const clean = (value: string) => value.replace(/\s+/g, " ").trim();
   const description = clean(input.description).replace(/[.\s]+$/, "");
-  // A long material list would bury the scope (and run past the paragraph's
-  // length, cut mid-item). The first eight are named, the rest counted: every
-  // line is itemised on the estimate and invoice anyway.
-  const allItems = [...new Set(input.workItems.map(clean).filter(Boolean))].map((item) =>
-    item.length > 80 ? `${item.slice(0, 79).trimEnd()}…` : item,
-  );
-  const shown = allItems.slice(0, 8);
-  const more = allItems.length - shown.length;
-  const items = more > 0 ? [...shown, `and ${more} more ${more === 1 ? "item" : "items"} listed on the estimate`] : shown;
+  // The materials are never named to the customer: the scope says what the
+  // work is, not what it is built from. They only show that there is work.
+  const items = input.workItems.map(clean).filter(Boolean);
   if (!description && items.length === 0) return "";
   const kind = clean(input.workType) || "electrical work";
   if (input.visitOnly) {
@@ -304,7 +298,6 @@ export function plainScope(input: {
   }
   const parts = [
     description ? `The contractor will perform ${kind} as requested: ${description}.` : `The contractor will perform ${kind}.`,
-    items.length ? `The work includes: ${items.join("; ")}.` : "",
     "Any work beyond this scope will be agreed in writing before it is done.",
   ];
   return clean(parts.filter(Boolean).join(" ")).slice(0, 1200);
