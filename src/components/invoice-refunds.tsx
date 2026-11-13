@@ -2,9 +2,9 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircle, RotateCcw } from "lucide-react";
+import { LoaderCircle, Receipt, RotateCcw } from "lucide-react";
 
-import { refundPaymentAction, type InvoiceActionState } from "@/app/invoices/actions";
+import { refundPaymentAction, sendRefundReceiptAction, type InvoiceActionState } from "@/app/invoices/actions";
 import { inputClass } from "@/components/ui/field";
 import { refundableCents, refundSummary } from "@/lib/invoice-refund";
 import { formatCents } from "@/lib/job-lines";
@@ -43,6 +43,41 @@ function RefundButton({ label }: { label: string }) {
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
       {pending ? "Refunding…" : label}
+    </button>
+  );
+}
+
+/** Send the customer the refund notice again, as a receipt with what was paid, refunded and kept. */
+function RefundReceipt({ invoiceId, refundId }: { invoiceId: string; refundId: string }) {
+  const [state, action] = useActionState(sendRefundReceiptAction, initial);
+  return (
+    <form action={action} className="mt-1">
+      <input type="hidden" name="invoiceId" value={invoiceId} />
+      <input type="hidden" name="refundId" value={refundId} />
+      <ReceiptButton />
+      {state.error ? (
+        <p className="mt-1 text-xs text-critical" role="alert">
+          {state.error}
+        </p>
+      ) : state.notice ? (
+        <p className="mt-1 text-xs text-positive" role="status">
+          {state.notice}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function ReceiptButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="tap-target inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-brand disabled:opacity-60"
+    >
+      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Receipt className="h-4 w-4" aria-hidden />}
+      {pending ? "Sending…" : "Send refund receipt"}
     </button>
   );
 }
@@ -147,6 +182,13 @@ export function InvoicePayments({
                         {refund.failure ? ` · ${refund.failure}` : ""}
                       </span>
                       <span className="text-ink-muted">−{formatCents(refund.amountCents)}</span>
+                    </li>
+                  ))}
+                  {payment.refunds
+                    .filter((refund) => refund.status === "succeeded" || refund.status === "pending")
+                    .map((refund) => (
+                    <li key={`receipt-${refund.id}`}>
+                      <RefundReceipt invoiceId={invoiceId} refundId={refund.id} />
                     </li>
                   ))}
                 </ul>

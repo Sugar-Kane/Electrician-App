@@ -600,3 +600,34 @@ export async function refundPaymentAction(_previous: InvoiceActionState, formDat
   if (text(job?.job_number)) revalidatePath(`/jobs/${text(job?.job_number)}`);
   return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };
 }
+
+/**
+ * Send the customer a refund receipt: the refund notice with what was paid,
+ * refunded and kept on the invoice. The refund is read through the caller's
+ * own session first, so only a refund on this business's invoice is sent.
+ */
+export async function sendRefundReceiptAction(_previous: InvoiceActionState, formData: FormData): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const refundId = String(formData.get("refundId") ?? "").trim();
+  if (!invoiceId || !refundId) return { error: "That refund could not be found." };
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: refund } = await supabase
+    .from("invoice_refunds")
+    .select("id, status")
+    .eq("id", refundId)
+    .eq("invoice_id", invoiceId)
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+  if (!refund) return { error: "That refund could not be found." };
+  if (refund.status !== "succeeded" && refund.status !== "pending") return { error: "Only a refund that went through has a receipt." };
+
+  const { sendRefundReceipt } = await import("@/lib/refund-notice");
+  const told = await sendRefundReceipt(refundId);
+  const by = [told.email === "sent" ? "email" : "", told.sms === "sent" ? "text" : ""].filter(Boolean);
+  return by.length > 0
+    ? { error: "", notice: `Refund receipt sent by ${by.join(" and ")}.` }
+    : { error: `Not sent: ${told.email === "no email on file" ? "no email on file" : told.email}; text: ${told.sms}.` };
+}
