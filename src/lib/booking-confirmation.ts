@@ -433,6 +433,8 @@ export type WebsiteRequestFacts = {
   description: string;
   town: string;
   preferredTimes: string;
+  /** The reference number the website gave the customer. */
+  reference?: string;
   /** What happens next on the customer's side, which decides what the owner does. */
   texting: "calling" | "texting" | "no_consent" | "opted_out" | "not_set_up";
   /** The booking-requests list, for the owner's email. */
@@ -466,7 +468,7 @@ export function ownerWebsiteRequestSms(facts: WebsiteRequestFacts): string {
   const what = [squash(facts.serviceName), squash(facts.town)].filter(Boolean).join(", ");
   return clip(
     [
-      `Website request: ${who}, ${facts.customerPhone}${what ? ` — ${what}` : ""}.`,
+      `Website request${facts.reference ? ` ${squash(facts.reference)}` : ""}: ${who}, ${facts.customerPhone}${what ? ` — ${what}` : ""}.`,
       facts.description ? squash(facts.description) : "",
       websiteNextStep(facts.texting),
     ]
@@ -530,6 +532,7 @@ export function ownerWebsiteRequestEmail(facts: WebsiteRequestFacts): EmailBody 
   const next = websiteNextStep(facts.texting);
   const details: [string, string][] = (
     [
+      ["Reference", squash(facts.reference ?? "")],
       ["Service", squash(facts.serviceName)],
       ["Town", squash(facts.town)],
       ["What's happening", squash(facts.description)],

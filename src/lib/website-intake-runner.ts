@@ -44,6 +44,8 @@ export async function followUpWebsiteRequest(input: {
     description: string;
     town: string;
     preferredTimes: string;
+    /** The reference number the website gave the customer. */
+    reference?: string;
   };
 }): Promise<WebsiteFollowUp> {
   try {
@@ -104,6 +106,7 @@ export async function followUpWebsiteRequest(input: {
         description: input.facts.description,
         town: input.facts.town,
         preferredTimes: input.facts.preferredTimes,
+        reference: input.facts.reference,
         texting: called
           ? "calling"
           : decision.send

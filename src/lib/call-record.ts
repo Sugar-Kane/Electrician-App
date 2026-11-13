@@ -35,6 +35,8 @@ export type CallRecord = {
   feeCents: number;
   /** Whether the receptionist took it, or somebody in the office typed it in. */
   byReceptionist: boolean;
+  /** The reference number the business's website gave the customer, when it came from there. */
+  reference: string;
 };
 
 const CHANNELS = new Set(["phone", "sms", "web", "manual"]);
@@ -58,7 +60,8 @@ export function readCallRecord(row: unknown): CallRecord | null {
 
   const answers = readAnswers(record.intake_answers);
   const said = text(record.description);
-  if (answers.length === 0 && !said) return null;
+  const reference = text(record.origin) === "website" ? text(record.external_ref) : "";
+  if (answers.length === 0 && !said && !reference) return null;
 
   const channelRaw = text(record.communication_channel);
   const channel = (CHANNELS.has(channelRaw) ? channelRaw : "manual") as CallRecord["channel"];
@@ -77,6 +80,7 @@ export function readCallRecord(row: unknown): CallRecord | null {
     // `created_by` is who put it there, which is not the same as which channel
     // it came in on: an owner can type up a phone call they took themselves.
     byReceptionist: text(record.created_by) === "ai",
+    reference,
   };
 }
 

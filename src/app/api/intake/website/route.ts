@@ -126,6 +126,7 @@ export async function POST(request: Request) {
           description: input.description,
           town: input.city || input.postalCode,
           preferredTimes: input.preferredTimes,
+          reference: input.reference,
         },
       }),
     );
