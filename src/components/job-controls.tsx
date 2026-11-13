@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { CalendarClock, Ban, MapPin, Receipt, X } from "lucide-react";
 
 import {
@@ -50,10 +50,22 @@ export type JobPlaceDetails = {
  * The same four boxes as New job, suggestions and all, so a correction is
  * checked the way the address was when it was first typed.
  */
-export function JobPlace({ jobNumber, place: given }: { jobNumber: string; place: JobPlaceDetails | null }) {
+export function JobPlace({
+  jobNumber,
+  place: given,
+  onSaved,
+}: {
+  jobNumber: string;
+  place: JobPlaceDetails | null;
+  /** Told once a save goes through, so a fold around the form can close. */
+  onSaved?: () => void;
+}) {
   // No address yet: the same boxes, empty, and saving creates it.
   const place: JobPlaceDetails = given ?? { street: "", unit: "", town: "", city: "", state: "", postalCode: "", accessNotes: "" };
   const [state, action] = useActionState(updateJobPlace, initialState);
+  useEffect(() => {
+    if (state.notice && !state.error) onSaved?.();
+  }, [state, onSaved]);
 
   return (
     <form action={action}>

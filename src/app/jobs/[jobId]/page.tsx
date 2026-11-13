@@ -16,7 +16,7 @@ import { JobPhotos } from "@/components/job-photos";
 import { DiagnosticDecision, JobStageCard } from "@/components/job-flow";
 import { JobWorkflow } from "@/components/job-workflow";
 import { JobSchedule } from "@/components/job-schedule";
-import { JobPlace } from "@/components/job-controls";
+import { JobAddressFold } from "@/components/job-address-fold";
 import { AddMaterialsToEstimate } from "@/components/add-materials-to-estimate";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
@@ -931,23 +931,11 @@ export default async function JobDetailPage({
           <StepCard id="visits" number={2} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>
             {scheduleEditor}
             {/* Where it is, set or changed here; saving fills it into a draft contract made without it. */}
-            <details className="group/address mt-3" open={!hasAddress}>
-              <summary className="tap-target flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control border border-line bg-raised px-4 py-2 [&::-webkit-details-marker]:hidden">
-                <span className="flex min-w-0 items-center gap-2.5 text-sm">
-                  <MapPin className="h-5 w-5 shrink-0 text-brand" aria-hidden />
-                  <span className="truncate font-semibold">
-                    {hasAddress ? streetWithUnit(job.address, job.unit ?? "") : "No service address yet"}
-                  </span>
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 py-1.5 text-sm font-semibold text-brand">
-                  <span className="group-open/address:hidden">{hasAddress ? "Change" : "Add"}</span>
-                  <span className="hidden group-open/address:inline">Close</span>
-                </span>
-              </summary>
-              <div className="mt-3 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">
-                <JobPlace jobNumber={controls.jobNumber} place={controls.place} />
-              </div>
-            </details>
+            <JobAddressFold
+              jobNumber={controls.jobNumber}
+              place={controls.place}
+              label={controls.place?.street ? [streetWithUnit(controls.place.street, controls.place.unit), controls.place.town].filter(Boolean).join(", ") : ""}
+            />
             {pastVisits.length > 0 ? (
               <ol className="mt-4 space-y-2 text-sm">
                 {pastVisits.map((visit, index) => (
@@ -1118,23 +1106,11 @@ export default async function JobDetailPage({
           <StepCard id="visits" number={3} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>
             {scheduleEditor}
             {/* Where it is, set or changed here; saving fills it into a draft contract made without it. */}
-            <details className="group/address mt-3" open={!hasAddress}>
-              <summary className="tap-target flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-control border border-line bg-raised px-4 py-2 [&::-webkit-details-marker]:hidden">
-                <span className="flex min-w-0 items-center gap-2.5 text-sm">
-                  <MapPin className="h-5 w-5 shrink-0 text-brand" aria-hidden />
-                  <span className="truncate font-semibold">
-                    {hasAddress ? streetWithUnit(job.address, job.unit ?? "") : "No service address yet"}
-                  </span>
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/15 px-3 py-1.5 text-sm font-semibold text-brand">
-                  <span className="group-open/address:hidden">{hasAddress ? "Change" : "Add"}</span>
-                  <span className="hidden group-open/address:inline">Close</span>
-                </span>
-              </summary>
-              <div className="mt-3 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">
-                <JobPlace jobNumber={controls.jobNumber} place={controls.place} />
-              </div>
-            </details>
+            <JobAddressFold
+              jobNumber={controls.jobNumber}
+              place={controls.place}
+              label={controls.place?.street ? [streetWithUnit(controls.place.street, controls.place.unit), controls.place.town].filter(Boolean).join(", ") : ""}
+            />
             {pastVisits.length > 0 ? (
               <ol className="mt-4 space-y-2 text-sm">
                 {pastVisits.map((visit, index) => (
