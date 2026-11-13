@@ -84,7 +84,7 @@ test("C2: a fee paid at booking with the repair booked as a work order bills not
 test("D: a work order with no scope builds the material list first", () => {
   const stage = jobFlow(input());
   assert.equal(stage.primary.kind === "go" && stage.primary.label, "Build material list");
-  assert.deepEqual(stage.steps.map((step) => step.label), ["Materials list", "Supplier quotes", "Estimate", "Contract", "Pick up parts", "Schedule", "Work", "Invoice"]);
+  assert.deepEqual(stage.steps.map((step) => step.label), ["Materials", "Estimate", "Contract", "Schedule", "Work", "Invoice"]);
 });
 
 test("E: unpriced list items need supplier quotes, never a made-up price", () => {
@@ -142,7 +142,7 @@ test("an invoice sent before signing waits for the signature, and says the invoi
   assert.equal(unsigned.primary.kind === "go" && unsigned.primary.label, "Send contract");
   assert.match(unsigned.status, /Invoiced/);
   // Sent, not paid: the Invoice step is half filled.
-  assert.equal(unsigned.steps.find((step) => step.key === "invoice")?.fill, "half");
+  assert.equal(unsigned.steps.find((step) => step.key === "invoice")?.fill, 0.5);
   assert.equal(unsigned.steps.find((step) => step.key === "work")?.state, "todo");
 
   const waiting = jobFlow(input({ lineCount: 16, partCount: 15, agreement: { sent: true, signed: false }, progress: sentSteps }));
@@ -186,7 +186,7 @@ test("a diagnostic added by hand sends its fee invoice first, then schedules; a 
 
 test("the contract and the invoice each fill half when sent and the rest when signed or paid", () => {
   const sentContract = jobFlow(input({ lineCount: 3, partCount: 2, agreement: { sent: true, signed: false } }));
-  assert.equal(sentContract.steps.find((step) => step.key === "approval")?.fill, "half");
+  assert.equal(sentContract.steps.find((step) => step.key === "approval")?.fill, 0.5);
   const signedContract = jobFlow(input({ lineCount: 3, partCount: 2, agreement: { sent: true, signed: true } }));
   const contract = signedContract.steps.find((step) => step.key === "approval");
   assert.equal(contract?.state, "done");
@@ -200,6 +200,16 @@ test("the contract and the invoice each fill half when sent and the rest when si
   });
   const owed = jobFlow(input({ workflowState: "completed", lineCount: 2, agreement: { sent: true, signed: true }, progress: sentSteps }));
   const invoice = owed.steps.find((step) => step.key === "invoice");
-  assert.equal(invoice?.fill, "half");
+  assert.equal(invoice?.fill, 0.5);
   assert.equal(invoice?.state, "current");
+});
+
+test("Materials fills in thirds: listed, priced, picked up", () => {
+  const scope = (overrides: Partial<StageInput>) => jobFlow(input(overrides)).steps.find((step) => step.key === "scope");
+  assert.equal(scope({})?.fill, undefined);
+  assert.equal(scope({ materialListCount: 4, unpricedMaterialCount: 2 })?.fill, 1 / 3);
+  assert.equal(scope({ lineCount: 3, partCount: 2 })?.fill, 2 / 3);
+  assert.equal(scope({ lineCount: 3, partCount: 2, materialsReady: true })?.state, "done");
+  // Labor only: nothing to pick up, so priced is the whole step.
+  assert.equal(scope({ lineCount: 1, partCount: 0 })?.state, "done");
 });

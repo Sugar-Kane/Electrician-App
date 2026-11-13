@@ -32,7 +32,7 @@ const STEP_TARGETS: Record<StageKey, string[]> = {
   travel: ["#work"],
   diagnose: ["#findings", "#work"],
   decide: ["#next-action", "#repairs", "#work"],
-  scope: ["#work-materials", "#work"],
+  scope: ["#parts-ready", "#work-materials", "#work"],
   quotes: ["#work-materials", "#work"],
   estimate: ["#contract", "#work-materials", "#work"],
   approval: ["#contract", "#work"],
@@ -97,15 +97,16 @@ export function JobStageCard({
               onClick={() => goToFirst(STEP_TARGETS[step.key])}
               className="group/step flex h-full min-h-11 w-full flex-col justify-start rounded-chip pb-1 pt-0.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
             >
-              {step.fill === "half" ? (
-                // Sent, not yet signed or paid: half the segment filled.
+              {step.fill !== undefined && step.fill > 0 && step.fill < 1 ? (
+                // Part done: sent but not signed or paid, or materials listed
+                // and priced but not picked up. That share of the bar filled.
                 <span
                   className={`flex h-1.5 overflow-hidden rounded-full transition group-hover/step:opacity-80 ${
                     step.state === "current" ? "bg-brand/35" : "bg-line"
                   }`}
                   aria-hidden
                 >
-                  <span className="h-full w-1/2 bg-positive" />
+                  <span className="h-full bg-positive" style={{ width: `${Math.round(step.fill * 100)}%` }} />
                 </span>
               ) : (
                 <span
@@ -124,8 +125,17 @@ export function JobStageCard({
                 <span className="leading-tight [overflow-wrap:anywhere]">{step.label}</span>
               </span>
               <span className="sr-only">
-                , {step.fill === "half" ? (step.key === "invoice" ? "sent, not paid yet" : "sent, not signed yet") : STATE_WORDS[step.state]}. Go
-                to it.
+                ,{" "}
+                {step.fill !== undefined && step.fill > 0 && step.fill < 1
+                  ? step.key === "invoice"
+                    ? "sent, not paid yet"
+                    : step.key === "approval"
+                      ? "sent, not signed yet"
+                      : step.fill > 0.5
+                        ? "priced, parts not picked up yet"
+                        : "listed, not priced yet"
+                  : STATE_WORDS[step.state]}
+                . Go to it.
               </span>
             </button>
           </li>

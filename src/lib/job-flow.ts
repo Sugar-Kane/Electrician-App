@@ -38,8 +38,12 @@ export type StageStep = {
   key: StageKey;
   label: string;
   state: "done" | "current" | "todo";
-  /** Half done: the contract sent but not signed, the invoice sent but not paid. */
-  fill?: "half";
+  /**
+   * Part done, as a share of the bar: the contract sent but not signed and the
+   * invoice sent but not paid are a half; Materials goes in thirds (listed,
+   * priced, picked up).
+   */
+  fill?: number;
 };
 
 /**
@@ -183,15 +187,24 @@ function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[]
   const order: StageKey[] =
     flow === "diagnostic"
       ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice"]
-      : ["scope", "quotes", "estimate", "approval", "materials", "schedule", "work", "invoice"];
+      : ["scope", "estimate", "approval", "schedule", "work", "invoice"];
   if (current === "paid") current = "invoice";
+  // The list, its quotes and picking the parts up are one Materials step.
+  if (current === "quotes") current = "scope";
+  if (current === "materials") {
+    // Picking up comes after the contract: everything before Schedule is
+    // done except Materials, which is the step being worked.
+    return steps(flow, "schedule", finished).map((step) =>
+      step.key === "scope" ? { ...step, state: "current" as const } : step.key === "schedule" ? { ...step, state: "todo" as const } : step,
+    );
+  }
   const labels: Record<StageKey, string> = {
     intake: "Intake",
     schedule: "Schedule",
     travel: "Travel",
     diagnose: "Diagnose",
     decide: "Next step",
-    scope: "Materials list",
+    scope: "Materials",
     quotes: "Supplier quotes",
     estimate: "Estimate",
     approval: "Contract",
@@ -216,19 +229,34 @@ export function jobFlow(input: StageInput): FlowStage {
   const invoicePaid = paidStep?.state === "done";
   const contractSent = Boolean(input.agreement?.sent) || Boolean(input.agreement?.signed);
   const contractSigned = Boolean(input.agreement?.signed);
+  // Materials in thirds: listed, priced, picked up (or nothing to pick up).
+  const listed = input.materialListCount > 0 || input.lineCount > 0;
+  const priced = input.lineCount > 0 || (input.materialListCount > 0 && input.unpricedMaterialCount === 0);
+  const pickedUp = input.materialsReady || (input.lineCount > 0 && input.partCount === 0);
+  const materialsShare = priced && pickedUp ? 1 : priced ? 2 / 3 : listed ? 1 / 3 : 0;
+  const partly = (step: StageStep, share: number): StageStep => ({
+    ...step,
+    // Part filled, and current only if the flow is on it: an invoice sent
+    // ahead of the contract is not the step being worked.
+    state: step.state === "current" ? "current" : "todo",
+    fill: share,
+  });
   return {
     ...stage,
     steps: stage.steps.map((step) => {
       // Sent fills half the bar; paid or signed fills the rest.
       if (step.key === "invoice") {
         if (invoicePaid) return { ...step, state: "done" as const, fill: undefined };
-        // Half filled, and current only if the flow is on it: an invoice sent
-        // ahead of the contract is not the step being worked.
-        if (invoiceSent) return { ...step, state: step.state === "current" ? ("current" as const) : ("todo" as const), fill: "half" as const };
+        if (invoiceSent) return partly(step, 1 / 2);
       }
       if (step.key === "approval") {
         if (contractSigned) return { ...step, state: "done" as const, fill: undefined };
-        if (contractSent) return { ...step, fill: "half" as const };
+        if (contractSent) return partly(step, 1 / 2);
+      }
+      if (step.key === "scope" && stage.flow === "work_order") {
+        if (materialsShare === 1) return { ...step, state: "done" as const, fill: undefined };
+        if (materialsShare > 0) return partly(step, materialsShare);
+        return step;
       }
       return step;
     }),
