@@ -24,7 +24,14 @@ import { hasCoordinates, type Coordinates } from "./coordinates.ts";
 import { US_STATES } from "./us-states.ts";
 
 export type GeocodeAnswer =
-  | { kind: "placed"; coordinates: Coordinates; formatted: string }
+  | {
+      kind: "placed";
+      coordinates: Coordinates;
+      formatted: string;
+      /** The town and ZIP as Google has them, when its answer names them. */
+      city?: string;
+      postalCode?: string;
+    }
   /** This address: somebody should check it. Other addresses may be fine. */
   | { kind: "missed"; reason: string }
   /**
@@ -187,7 +194,21 @@ export function readGeocodeAnswer(
       };
     }
 
-    return { kind: "placed", coordinates, formatted };
+    // The town, with the same fallbacks as address-search.ts: `locality` is
+    // absent for an unincorporated place such as Nipomo's neighbours.
+    const part = (type: string) =>
+      (best.address_components?.find((component) => component.types?.includes(type))?.long_name ?? "").trim();
+    const city =
+      part("locality") || part("postal_town") || part("sublocality_level_1") || part("administrative_area_level_3");
+    const postalCode = part("postal_code");
+
+    return {
+      kind: "placed",
+      coordinates,
+      formatted,
+      ...(city ? { city } : {}),
+      ...(postalCode ? { postalCode } : {}),
+    };
   }
 
   if (MISSED_REASONS[status]) return { kind: "missed", reason: MISSED_REASONS[status]! };

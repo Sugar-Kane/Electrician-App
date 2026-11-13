@@ -22,12 +22,19 @@
  * Both were filed as handled, which is how a customer who never paid and a
  * hazard somebody escalated both ended up greyed out at the bottom of the page
  * with their buttons hidden — the two states most in need of a person.
+ *
+ * `expired` joined them later, for the same reason. It is a customer who asked
+ * for a visit, was sent a pay link, and did not pay before the hold ran out.
+ * Filed as handled, nobody rang them, and the one person who had already said
+ * yes was the one nobody followed up. It waits here until somebody books it or
+ * dismisses it.
  */
 const OPEN_STATUSES = new Set([
   "new",
   "needs_review",
   "awaiting_payment",
   "safety_escalated",
+  "expired",
 ]);
 
 export function isOpenRequest(status: string): boolean {

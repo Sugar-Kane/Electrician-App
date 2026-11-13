@@ -22,6 +22,7 @@ import {
   resendReply,
   slotList,
   unreachableCaller,
+  checkSpokenAddress,
 } from "@/lib/booking-tool-rules";
 import {
   resendBookingLink,
@@ -34,6 +35,7 @@ import {
   recordBookingRequest,
   websiteCallbackInProgress,
 } from "@/lib/intake-shared";
+import { geocodeAddress, isGeocodingConfigured } from "@/lib/geocoding";
 import { type ToolResult } from "@/lib/mcp-protocol";
 import { type McpSession } from "@/lib/mcp-session-token";
 import { decideIntakeAction } from "@/lib/sms-intake";
@@ -254,7 +256,7 @@ export async function runBookingTool(input: {
   // First thing on every call, so it answers before any schedule is loaded.
   if (input.name === "look_up_caller") return lookUpCaller(input);
 
-  const { context, timeZone, owner, organizationSlug, diagnosticMinutes } =
+  const { context, timeZone, owner, organizationSlug, diagnosticMinutes, baseState } =
     await loadIntakeContext({
     database: input.database,
     organizationId: input.session.organizationId,
@@ -285,6 +287,28 @@ export async function runBookingTool(input: {
   if (input.name === "book_visit") {
     const shortfall = intakeShortfall(input.args);
     if (shortfall) return { isError: true, text: shortfall };
+
+    // The town as heard, against the map. Short, because the caller is on the
+    // line; a lookup that fails or finds nothing changes nothing.
+    const said = (key: string) => (typeof input.args[key] === "string" ? (input.args[key] as string).trim() : "");
+    if (isGeocodingConfigured() && said("address_line_1") && said("city")) {
+      const answer = await geocodeAddress(
+        [said("address_line_1"), said("city"), baseState].filter(Boolean).join(", "),
+        baseState || null,
+        2_500,
+      );
+      const check = checkSpokenAddress({
+        line1: said("address_line_1"),
+        city: said("city"),
+        postalCode: said("postal_code"),
+        confirmed: said("address_confirmed"),
+        found: answer.kind === "placed" ? answer : null,
+      });
+      if (check.kind === "ask") return { isError: true, text: check.text };
+      if (check.kind === "fill") {
+        input = { ...input, args: { ...input.args, postal_code: check.postalCode } };
+      }
+    }
   }
 
   // And on a callback: did the customer actually get to choose? A caller with

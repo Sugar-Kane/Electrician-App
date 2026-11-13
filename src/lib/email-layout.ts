@@ -28,9 +28,15 @@ function escape(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** A yellow button, for the one thing the email asks the reader to do. */
-export function emailButton(href: string, label: string): string {
-  return `<a href="${escape(href)}" class="btn" style="display:inline-block;background:${YELLOW};color:${NAVY};font-weight:700;padding:13px 24px;border-radius:12px;text-decoration:none;font-size:16px">${escape(label)}</a>`;
+/**
+ * A yellow button, for the one thing the email asks the reader to do. `wide`
+ * fills the width of the message, for the one that must not be missed (paying).
+ */
+export function emailButton(href: string, label: string, wide = false): string {
+  const shape = wide
+    ? "display:block;text-align:center;padding:16px 20px;font-size:17px"
+    : "display:inline-block;padding:13px 24px;font-size:16px";
+  return `<a href="${escape(href)}" class="btn" style="${shape};background:${YELLOW};color:${NAVY};font-weight:700;border-radius:12px;text-decoration:none">${escape(label)}</a>`;
 }
 
 /** The display name from a From line ("Pacific Plains Electric <bookings@…>"), or "". */
@@ -66,6 +72,22 @@ export function contactButtons(phone: string): string {
   </table>`;
 }
 
+/** How tall the logo badge is drawn in the header. */
+const LOGO_HEIGHT = 56;
+
+/**
+ * The badge's width at that height, read from its file name
+ * ("…-<width>x<height>.png", email-logo.ts), and whether the name is written
+ * beside it. A wide logo is a wordmark and already says the name; a mark alone
+ * does not. A name that tells us nothing is treated as a square mark.
+ */
+export function logoShape(url: string): { width: number; named: boolean } {
+  const size = /-(\d+)x(\d+)\.png$/.exec(url);
+  const ratio = size && Number(size[2]) > 0 ? Number(size[1]) / Number(size[2]) : 1;
+  const width = Math.max(LOGO_HEIGHT, Math.min(260, Math.round(LOGO_HEIGHT * ratio)));
+  return { width, named: ratio <= 2 };
+}
+
 export function brandedEmail(input: {
   /** The message itself: paragraphs, tables, links. */
   html: string;
@@ -87,6 +109,7 @@ export function brandedEmail(input: {
   // Only an https image: a mail app blocks anything else, and a broken image
   // in the header is worse than the name alone.
   const logo = /^https:\/\//.test(input.logoUrl ?? "") ? escape(input.logoUrl as string) : "";
+  const shape = logoShape(logo);
   const preheader = escape((input.preheader ?? "").replace(/\s+/g, " ").trim().slice(0, 140));
   /*
    * Light first, on purpose. A whole dark frame read well in a light inbox, but
@@ -130,9 +153,12 @@ export function brandedEmail(input: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
         <tr>
           ${logo
-            ? `<td class="head" style="background:${NAVY};border-radius:18px 18px 0 0;padding:20px 28px 16px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-            <img src="${logo}" alt="${name}" width="220" style="display:block;width:220px;max-width:100%;height:auto;border:0;">
-            <div style="margin-top:14px;height:4px;width:56px;border-radius:4px;background:${YELLOW};line-height:4px;font-size:0;">&nbsp;</div>
+            ? `<td class="head" style="background:${NAVY};border-radius:18px 18px 0 0;padding:18px 24px 14px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td style="vertical-align:middle;"><img src="${logo}" alt="${shape.named ? "" : name}" width="${shape.width}" height="${LOGO_HEIGHT}" style="display:block;width:${shape.width}px;height:${LOGO_HEIGHT}px;border:0;border-radius:12px;"></td>
+              ${shape.named ? `<td style="vertical-align:middle;padding-left:12px;font-size:19px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;color:#ffffff;">${name}</td>` : ""}
+            </tr></table>
+            <div style="margin-top:12px;height:4px;width:56px;border-radius:4px;background:${YELLOW};line-height:4px;font-size:0;">&nbsp;</div>
           </td>`
             : `<td class="head" style="background:${NAVY};border-radius:18px 18px 0 0;padding:22px 28px 18px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <div style="font-size:20px;font-weight:800;letter-spacing:-0.01em;color:#ffffff;">${name}</div>

@@ -165,6 +165,8 @@ export type LoadedContext = {
   context: IntakeContext;
   timeZone: string;
   organizationSlug: string;
+  /** The state the business works in, for looking up an address said without one. */
+  baseState: string;
   diagnosticMinutes: number;
   messagingServiceSid: string;
   /** Where this business wants to hear about a booking. */
@@ -263,6 +265,7 @@ export async function loadIntakeContext(input: {
   return {
     timeZone,
     organizationSlug: slug,
+    baseState: text(organization?.base_state),
     diagnosticMinutes:
       typeof settings?.diagnostic_minutes === "number"
         ? settings.diagnostic_minutes
@@ -829,9 +832,9 @@ export async function recordBookingRequest(input: {
       : "";
 
     if (payUrl) {
-      // Stripe requires a session expiry at least 30 minutes in the future.
-      // One minute of clock/network allowance keeps the customer-promised
-      // 30-minute hold valid while the session is being created.
+      // The hold the customer was promised, plus a minute of clock and network
+      // allowance while the Checkout session is created. Stripe's own limits on
+      // a session's expiry are applied where the session is made.
       const heldUntil = new Date(
         Date.now() + decision.holdMinutes * 60_000 + 60_000,
       ).toISOString();

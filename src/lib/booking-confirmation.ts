@@ -69,7 +69,11 @@ const CUSTOMER_COPY = {
     wentOver: "What we went over",
     received: (fee: string) =>
       `Diagnostic fee received: ${fee}. If more work is needed, this amount is credited toward the approved work order.`,
-    pay: "Pay and confirm this appointment",
+    pay: (fee: string) => `Pay ${fee} to confirm your appointment`,
+    payHow: (fee: string) =>
+      `To confirm, pay the ${fee} diagnostic fee by card with the button below. It takes about a minute, and your time is confirmed as soon as it goes through.`,
+    payHowText: (fee: string) =>
+      `To confirm, pay the ${fee} diagnostic fee by card at the link below. It takes about a minute, and your time is confirmed as soon as it goes through.`,
     view: "View this appointment",
     change: (phone: string) => `Need to change it, or think something is wrong? Call ${phone}.`,
     subjectHeld: (slot: string) => `Payment needed to confirm: ${slot}`,
@@ -106,7 +110,11 @@ const CUSTOMER_COPY = {
     wentOver: "Lo que hablamos",
     received: (fee: string) =>
       `Tarifa de diagnóstico recibida: ${fee}. Si se necesita más trabajo, esta cantidad se acredita a la orden de trabajo aprobada.`,
-    pay: "Pagar y confirmar esta cita",
+    pay: (fee: string) => `Pagar ${fee} para confirmar su cita`,
+    payHow: (fee: string) =>
+      `Para confirmar, pague la tarifa de diagnóstico de ${fee} con tarjeta usando el botón de abajo. Toma como un minuto, y su horario queda confirmado en cuanto se procese.`,
+    payHowText: (fee: string) =>
+      `Para confirmar, pague la tarifa de diagnóstico de ${fee} con tarjeta en el enlace de abajo. Toma como un minuto, y su horario queda confirmado en cuanto se procese.`,
     view: "Ver esta cita",
     change: (phone: string) => `¿Necesita cambiarla, o cree que algo está mal? Llame al ${phone}.`,
     subjectHeld: (slot: string) => `Pago pendiente para confirmar: ${slot}`,
@@ -615,7 +623,8 @@ export function confirmationEmail(
     ...answers.flatMap((entry) => [entry.question, `  ${entry.answer}`]),
     ...(paid ? ["", copy.received(facts.diagnosticFee)] : []),
     "",
-    facts.link ? `${state === "held" ? copy.pay : copy.view}: ${facts.link}` : "",
+    facts.link && state === "held" ? copy.payHowText(facts.diagnosticFee) : "",
+    facts.link ? `${state === "held" ? copy.pay(facts.diagnosticFee) : copy.view}: ${facts.link}` : "",
     copy.change(facts.businessPhone),
     "",
     facts.businessName,
@@ -648,8 +657,9 @@ export function confirmationEmail(
         ].join("")
       : "",
     paid ? `<p>${escapeHtml(copy.received(facts.diagnosticFee))}</p>` : "",
+    facts.link && state === "held" ? `<p>${escapeHtml(copy.payHow(facts.diagnosticFee))}</p>` : "",
     facts.link
-      ? `<p>${emailButton(facts.link, state === "held" ? copy.pay : copy.view)}</p>`
+      ? `<p>${emailButton(facts.link, state === "held" ? copy.pay(facts.diagnosticFee) : copy.view, state === "held")}</p>`
       : "",
     `<p>${escapeHtml(copy.change(facts.businessPhone))}</p>`,
     `<p>${escapeHtml(facts.businessName)}</p>`,

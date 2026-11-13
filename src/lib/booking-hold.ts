@@ -25,8 +25,14 @@ export type HoldDecision =
   /** Never confirm an unpaid visit when checkout is unavailable. */
   | { kind: "payment_unavailable"; feeCents: number; because: string };
 
-/** Long enough to find a card, short enough not to lose the slot for a day. */
-export const HOLD_MINUTES = 30;
+/**
+ * A day, however the visit was booked: phone, text or the website. The
+ * customer gets a link and pays when they are next at their phone or their
+ * card; half an hour lost the slot before most of them looked. The cost is
+ * that an unpaid booking keeps a window off the calendar for a day. A day is
+ * also the longest Stripe lets a Checkout session stay open.
+ */
+export const HOLD_MINUTES = 24 * 60;
 
 export function decideHold(input: {
   /** Only a booked visit can be held. A callback owes nothing. */

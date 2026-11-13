@@ -29,3 +29,14 @@ export function smsConsentDisclosure(businessName: string): string {
 export function smsConsentRecord(businessName: string): string {
   return `[v${SMS_CONSENT_VERSION}] ${smsConsentDisclosure(businessName)}`;
 }
+
+/**
+ * Where a consent came from, exactly as the database accepts it
+ * (messaging_consent_source_check). A source outside this list is refused by
+ * the database, and the consent is then not on file at all.
+ */
+export const CONSENT_SOURCES = ["booking_form", "verbal", "written", "inbound_text", "import", "admin"] as const;
+export type ConsentSource = (typeof CONSENT_SOURCES)[number];
+
+/** A caller who asked, on the phone, for their booking link by text. */
+export const PHONE_BOOKING_CONSENT_SOURCE: ConsentSource = "verbal";

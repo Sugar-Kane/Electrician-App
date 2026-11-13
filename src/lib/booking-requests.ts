@@ -259,7 +259,7 @@ export type BookingHistory = {
 };
 
 const PAGE = 40;
-const OPEN = ["new", "needs_review", "awaiting_payment", "safety_escalated"];
+const OPEN = ["new", "needs_review", "awaiting_payment", "safety_escalated", "expired"];
 
 /**
  * What somebody typed, safe to put inside a quoted PostgREST filter value:

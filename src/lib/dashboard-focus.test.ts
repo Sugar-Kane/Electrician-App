@@ -306,7 +306,8 @@ test("a web booking waiting on review counts, a card being typed in does not", (
   // awaiting_payment is the customer's move, not the business's.
   assert.equal(openBookingRequests([{ status: "awaiting_payment" }]), 0);
   assert.equal(openBookingRequests([{ status: "confirmed" }]), 0);
-  assert.equal(openBookingRequests([{ status: "expired" }]), 0);
+  // A hold that ran out unpaid is the business's move again.
+  assert.equal(openBookingRequests([{ status: "expired" }]), 1);
 });
 
 test("a display name that came from an email is not a name", () => {

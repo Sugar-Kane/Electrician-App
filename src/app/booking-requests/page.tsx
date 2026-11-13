@@ -143,6 +143,11 @@ function RequestCard({ request }: { request: BookingRequest }) {
                   : "No text consent: call them."}
             </p>
           ) : null}
+          {request.status === "expired" ? (
+            <p className="mt-2 text-xs font-semibold text-caution">
+              Didn&apos;t pay in time, so this time is no longer held. Call them to see if they still want the visit.
+            </p>
+          ) : null}
           {request.safetyFlags.length > 0 ? (
             <p className="mt-2 flex items-start gap-1.5 text-xs text-critical">
               <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />

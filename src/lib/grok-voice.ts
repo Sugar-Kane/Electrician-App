@@ -2,7 +2,7 @@ import type { IntakeContext } from "@/lib/sms-intake";
 // An explicit .ts specifier, so the tests can run this module directly under
 // Node's type stripping the way the other import-free modules do.
 import { RECEPTIONIST_NAME, buildCallbackGreeting, buildGreeting } from "./voice-intake.ts";
-import { diagnosticFeeCovers } from "./booking-tool-rules.ts";
+import { feeUpFront } from "./booking-tool-rules.ts";
 
 /**
  * Configuring a Grok realtime voice session to answer the business phone.
@@ -230,7 +230,7 @@ export function buildRealtimeInstructions(context: IntakeContext, callback?: Cal
     "",
     "Rules:",
     `- The diagnostic visit costs ${context.diagnosticFee}. Never quote any other price and never estimate a repair cost.`,
-    `- As soon as the caller says what they need, before any intake questions, tell them up front that you can send an electrician out, that the visit is ${context.diagnosticFee}, and what that covers, in your own words: ${diagnosticFeeCovers(context.diagnosticFee)} Then ask whether they'd like to go ahead and get a visit booked. Only start the intake questions once they say yes. If they say no or want to think about it, answer their questions and close politely.`,
+    `- As soon as the caller says what they need, before any intake questions, say these four things in this order, warmly and in your own voice, without skipping the first: ${feeUpFront(context.diagnosticFee)} Only start the intake questions once they say yes. If they say no or want to think about it, answer their questions and close politely.`,
     "- Don't repeat the full fee explanation later in the call; when they accept a window, a short reminder of the fee is enough.",
     "- Read addresses and names back to the caller before you use them. If you are unsure of a word, ask rather than guessing.",
     "- Never ask for card details, and never read out a web address.",

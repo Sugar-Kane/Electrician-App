@@ -51,7 +51,12 @@ export function isGeocodingConfigured(): boolean {
  * `savedState` is the state on the job, so a match in another state is caught
  * rather than drawn (geocode-answer.ts).
  */
-export async function geocodeAddress(address: string, savedState?: string | null): Promise<GeocodeAnswer> {
+export async function geocodeAddress(
+  address: string,
+  savedState?: string | null,
+  /** Shorter for a lookup a caller is waiting on the phone for. */
+  timeoutMs: number = LOOKUP_TIMEOUT_MS,
+): Promise<GeocodeAnswer> {
   const key = process.env.GOOGLE_MAPS_SERVER_KEY;
   if (!key) {
     return {
@@ -73,7 +78,7 @@ export async function geocodeAddress(address: string, savedState?: string | null
   url.searchParams.set("region", "us");
 
   try {
-    const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS) });
+    const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
     const payload = await response.json().catch(() => null);
     return readGeocodeAnswer(payload, { savedState, httpStatus: response.status });
   } catch (error) {
@@ -86,7 +91,7 @@ export async function geocodeAddress(address: string, savedState?: string | null
         ? "Google's address lookup didn't answer in time."
         : "Google's address lookup couldn't be reached.",
       detail: timedOut
-        ? `No answer within ${LOOKUP_TIMEOUT_MS / 1000} seconds.`
+        ? `No answer within ${timeoutMs / 1000} seconds.`
         : "The request failed before Google answered.",
     };
   }
