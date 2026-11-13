@@ -60,18 +60,30 @@ export const JOB_STAGE_LABELS: Record<JobStage, string> = {
   canceled: "Canceled",
 };
 
-/** The filters, in the order the work moves through them. */
-export const JOB_STAGE_FILTERS: { value: JobStage | "all"; label: string }[] = [
-  { value: "all", label: "All" },
+/** Every job still to be done: any stage but completed or canceled. */
+export const TO_DO = "todo";
+
+export function isToDo(stage: JobStage): boolean {
+  return stage !== "completed" && stage !== "canceled";
+}
+
+/**
+ * The filters. "To do" is first and is what the list opens on, because the
+ * list is opened to see what is left; then the stages in the order the work
+ * moves through them; "All", which is mostly finished work, is last.
+ */
+export const JOB_STAGE_FILTERS: { value: JobStage | "all" | typeof TO_DO; label: string }[] = [
+  { value: TO_DO, label: "To do" },
   { value: "needs_estimate", label: JOB_STAGE_LABELS.needs_estimate },
   { value: "awaiting_approval", label: JOB_STAGE_LABELS.awaiting_approval },
   { value: "to_schedule", label: JOB_STAGE_LABELS.to_schedule },
   { value: "scheduled", label: JOB_STAGE_LABELS.scheduled },
   { value: "in_progress", label: JOB_STAGE_LABELS.in_progress },
   { value: "completed", label: JOB_STAGE_LABELS.completed },
+  { value: "all", label: "All" },
 ];
 
-export function isJobStageFilter(value: string): value is JobStage | "all" {
+export function isJobStageFilter(value: string): value is JobStage | "all" | typeof TO_DO {
   return JOB_STAGE_FILTERS.some((filter) => filter.value === value);
 }
 

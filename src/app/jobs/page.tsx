@@ -11,6 +11,8 @@ import { jobProgress, openSteps, type ProgressKey } from "@/lib/job-progress";
 import {
   JOB_STAGE_FILTERS,
   JOB_STAGE_LABELS,
+  TO_DO,
+  isToDo,
   isJobStageFilter,
   jobStage,
   startTimePassed,
@@ -124,7 +126,9 @@ function matches(job: PilotJob, query: string): boolean {
 
 function filterHref(stage: string, query: string): string {
   const params = new URLSearchParams();
-  if (stage !== "all") params.set("stage", stage);
+  // "To do" is what the list opens on, so it needs no parameter of its own,
+  // except beside a search, which on its own looks through every job.
+  if (stage !== TO_DO || query) params.set("stage", stage);
   if (query) params.set("q", query);
   const search = params.toString();
   return search ? `/jobs?${search}` : "/jobs";
@@ -149,9 +153,11 @@ export default async function JobsPage({
       .filter(isPastVisit)
       .map((item) => item.jobNumber),
   );
-  const stage: JobStage | "all" | typeof TIME_PASSED =
-    askedStage === TIME_PASSED ? TIME_PASSED : isJobStageFilter(askedStage) ? askedStage : "all";
   const query = q.slice(0, 80);
+  // Opens on what is left to do. A search with no filter chosen looks through
+  // every job, so a finished one can still be found by name.
+  const stage: JobStage | "all" | typeof TO_DO | typeof TIME_PASSED =
+    askedStage === TIME_PASSED ? TIME_PASSED : isJobStageFilter(askedStage) ? askedStage : query ? "all" : TO_DO;
 
   const rows: Row[] = jobs.map((job) => {
     const agreement = agreements[job.id] ?? null;
@@ -173,10 +179,13 @@ export default async function JobsPage({
   const counts = new Map<string, number>();
   for (const row of searched) counts.set(row.stage, (counts.get(row.stage) ?? 0) + 1);
   const toConfirm = searched.filter((row) => row.toConfirm);
+  const toDo = searched.filter((row) => isToDo(row.stage));
   const shown = sortRows(
     stage === "all"
       ? searched
-      : stage === TIME_PASSED
+      : stage === TO_DO
+        ? toDo
+        : stage === TIME_PASSED
         ? toConfirm
         : searched.filter((row) => row.stage === stage),
   );
@@ -216,7 +225,7 @@ export default async function JobsPage({
     >
       <section className="rounded-panel border border-line bg-surface p-3 sm:p-5">
         <form action="/jobs" className="flex gap-2">
-          {stage !== "all" ? <input type="hidden" name="stage" value={stage} /> : null}
+          {stage !== TO_DO ? <input type="hidden" name="stage" value={stage} /> : null}
           <label className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-raised px-4">
             <Search className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
             <span className="sr-only">Search jobs</span>
@@ -246,7 +255,9 @@ export default async function JobsPage({
             const count =
               filter.value === "all"
                 ? searched.length
-                : filter.value === TIME_PASSED
+                : filter.value === TO_DO
+                  ? toDo.length
+                  : filter.value === TIME_PASSED
                   ? toConfirm.length
                   : (counts.get(filter.value) ?? 0);
             return (
@@ -277,7 +288,9 @@ export default async function JobsPage({
               ? `No ${stage === "all" ? "" : `${label.toLowerCase()} `}jobs match “${query}”.`
               : stage === "all"
                 ? "No jobs yet. New job adds the first one."
-                : stage === TIME_PASSED
+                : stage === TO_DO
+                  ? "Nothing left to do. Every job is completed."
+                  : stage === TIME_PASSED
                   ? "No visits to confirm. Every past visit says what happened."
                   : `No jobs are ${label.toLowerCase()} right now.`}
           </p>
