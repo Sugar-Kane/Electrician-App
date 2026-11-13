@@ -282,13 +282,14 @@ function ContractSigning({
     },
     initialState,
   );
-  // Once the pad opens, bring its panel to the top of the screen (under the
-  // header), so "Hand the phone to the customer" is the first thing in view.
+  // Once the pad opens, scroll so the whole panel ends just above the bottom
+  // bar: the pad, the name, the agreement and Sign contract all in view, with
+  // the margin below clearing the tab bar and the browser's own.
   const padPanel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!inPerson) return;
     const frame = requestAnimationFrame(() => {
-      padPanel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      padPanel.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     });
     return () => cancelAnimationFrame(frame);
   }, [inPerson]);
@@ -333,7 +334,7 @@ function ContractSigning({
           and the page refreshes once they have signed so the signed copy is
           the one on screen.
         */
-        <div ref={padPanel} className="scroll-mt-24 rounded-control border border-line p-3">
+        <div ref={padPanel} className="scroll-mb-[13rem] scroll-mt-24 rounded-control border border-line p-3">
           <p className="mb-3 text-sm text-ink-muted">Hand the phone to the customer to sign.</p>
           <SignaturePad
             token={contract.publicToken}
