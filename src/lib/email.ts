@@ -1,23 +1,7 @@
 import "server-only";
 
-import { logoUrl } from "@/lib/branding-storage";
 import { brandedEmail, senderName } from "@/lib/email-layout";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-
-/** The business's logo for the email header, or "" when it has none or it cannot be read. */
-async function businessLogo(organizationId: string | undefined): Promise<string> {
-  if (!organizationId) return "";
-  try {
-    const { data } = await getSupabaseAdmin()
-      .from("organizations")
-      .select("logo_path")
-      .eq("id", organizationId)
-      .maybeSingle();
-    return logoUrl((data as { logo_path?: string | null } | null)?.logo_path ?? "");
-  } catch {
-    return "";
-  }
-}
+import { emailLogoUrl } from "@/lib/email-logo";
 
 /**
  * Sending one transactional email.
@@ -68,7 +52,7 @@ export async function sendEmail(input: {
     };
   }
 
-  const logo = await businessLogo(input.organizationId);
+  const logo = await emailLogoUrl(input.organizationId);
 
   try {
     const response = await fetch("https://api.resend.com/emails", {

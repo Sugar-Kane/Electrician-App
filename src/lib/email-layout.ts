@@ -52,9 +52,9 @@ export function brandedEmail(input: {
   /** The line inbox previews show under the subject. */
   preheader?: string;
   /**
-   * The business's logo, a public URL. With one, the header is a white
-   * letterhead carrying the logo (which names the business itself); without,
-   * the navy band with the name.
+   * The business's logo drawn for a navy header (email-logo.ts), a public URL.
+   * It names the business itself, so it takes the name's place; without one,
+   * the name.
    */
   logoUrl?: string;
 }): string {
@@ -105,7 +105,7 @@ export function brandedEmail(input: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
         <tr>
           ${logo
-            ? `<td class="head" style="background:#ffffff;border:1px solid ${RULE};border-bottom:0;border-radius:18px 18px 0 0;padding:20px 28px 16px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            ? `<td class="head" style="background:${NAVY};border-radius:18px 18px 0 0;padding:20px 28px 16px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <img src="${logo}" alt="${name}" width="220" style="display:block;width:220px;max-width:100%;height:auto;border:0;">
             <div style="margin-top:14px;height:4px;width:56px;border-radius:4px;background:${YELLOW};line-height:4px;font-size:0;">&nbsp;</div>
           </td>`
