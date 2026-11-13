@@ -148,6 +148,11 @@ export const BOOKING_TOOLS: McpTool[] = [
           type: "string",
           description: "Five digits, or an empty string.",
         },
+        address_confirmed: {
+          type: "string",
+          description:
+            'Leave empty. Send "yes" only after a NOT BOOKED result asked you to check the town with the caller and they said the town you already gave is the right one.',
+        },
         slot_start: {
           type: "string",
           description:
@@ -609,6 +614,57 @@ export function slotList(context: IntakeContext): string {
  * fee credited toward it. Never a promise that a particular repair is free:
  * the electrician decides on site.
  */
+/** A town as compared: letters only, so "Santa  Maria" and "santa maria" are one town. */
+function townKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+export type AddressCheck =
+  | { kind: "keep" }
+  /** The town matches; the ZIP the caller did not give is filled in. */
+  | { kind: "fill"; postalCode: string }
+  /** The map has this street in a differently spelled town: ask before booking. */
+  | { kind: "ask"; text: string };
+
+/**
+ * A town heard on a phone call, checked against the map.
+ *
+ * "Nipomo" was saved as "Napomo": the voice model spells what it hears. The
+ * street address is looked up, and where the map puts it in a town spelled
+ * differently, the caller is asked rather than the record quietly changed or
+ * quietly left wrong. A lookup that finds nothing never blocks a booking.
+ */
+export function checkSpokenAddress(input: {
+  line1: string;
+  city: string;
+  postalCode: string;
+  /** "yes" once the caller has said the town as given is right. */
+  confirmed: string;
+  found: { city?: string; postalCode?: string; formatted: string } | null;
+}): AddressCheck {
+  const found = input.found;
+  if (!found?.city || !input.city.trim()) return { kind: "keep" };
+
+  if (townKey(found.city) === townKey(input.city)) {
+    return !input.postalCode.trim() && found.postalCode
+      ? { kind: "fill", postalCode: found.postalCode }
+      : { kind: "keep" };
+  }
+
+  if (input.confirmed.trim().toLowerCase() === "yes") return { kind: "keep" };
+
+  const zip = found.postalCode ? ` and postal_code "${found.postalCode}"` : "";
+  return {
+    kind: "ask",
+    text:
+      `NOT BOOKED. The address was checked against the map: the closest match is "${found.formatted}", but the town you gave was "${input.city.trim()}". ` +
+      `Ask the caller, naturally: "Just to make sure I have it right, that's ${input.line1.trim()} in ${found.city}?" ` +
+      `If they say yes, call book_visit again with city "${found.city}"${zip}. ` +
+      `If they say the town you first gave is right, call book_visit again unchanged with address_confirmed "yes". ` +
+      `If they give a different address, use that instead. Nothing has been booked yet, and do not tell them anything went wrong.`,
+  };
+}
+
 /**
  * How the fee is first brought up: the offer to come out first, then the
  * deposit, then what it buys, then the question. In that order, so the price

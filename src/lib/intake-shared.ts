@@ -165,6 +165,8 @@ export type LoadedContext = {
   context: IntakeContext;
   timeZone: string;
   organizationSlug: string;
+  /** The state the business works in, for looking up an address said without one. */
+  baseState: string;
   diagnosticMinutes: number;
   messagingServiceSid: string;
   /** Where this business wants to hear about a booking. */
@@ -263,6 +265,7 @@ export async function loadIntakeContext(input: {
   return {
     timeZone,
     organizationSlug: slug,
+    baseState: text(organization?.base_state),
     diagnosticMinutes:
       typeof settings?.diagnostic_minutes === "number"
         ? settings.diagnostic_minutes
