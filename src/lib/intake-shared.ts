@@ -387,6 +387,45 @@ export async function organizationForPhoneNumber(
   return match ? String(match.id) : null;
 }
 
+/**
+ * Fill in a customer's address and email from a booking, field by field and
+ * only where the record is still blank. A text-only lead starts with nothing
+ * but a phone number; the visit they just booked is the best address we have.
+ */
+export async function fillCustomerDetails(
+  database: Database,
+  customerId: string,
+  details: { addressLine1: string; city: string; postalCode: string; email: string },
+): Promise<void> {
+  if (!customerId) return;
+  try {
+    const { data } = await database
+      .from("customers")
+      .select("address_line_1, city, postal_code, email")
+      .eq("id", customerId)
+      .maybeSingle();
+    if (!data) return;
+    const row = data as Record<string, unknown>;
+    const blank = (key: string) => !text(row[key]);
+    const update: Record<string, string> = {};
+    // The address goes in whole or not at all, so a street never ends up beside
+    // a different town.
+    if (blank("address_line_1") && details.addressLine1.trim()) {
+      update.address_line_1 = details.addressLine1.trim().slice(0, 200);
+      if (details.city.trim()) update.city = details.city.trim().slice(0, 100);
+      if (details.postalCode.trim()) update.postal_code = details.postalCode.trim().slice(0, 20);
+    }
+    if (blank("email") && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim())) {
+      update.email = details.email.trim().slice(0, 254);
+    }
+    if (Object.keys(update).length > 0) {
+      await database.from("customers").update(update).eq("id", customerId);
+    }
+  } catch {
+    // A booking is never undone by a profile update that did not go through.
+  }
+}
+
 /** Find the customer this number belongs to, or open a lead for them. */
 export async function findOrCreateCustomerByPhone(input: {
   database: Database;
@@ -696,6 +735,18 @@ export async function recordBookingRequest(input: {
 
   const requestId = created?.id ? String(created.id) : undefined;
   const publicToken = created?.public_token ? String(created.public_token) : undefined;
+
+  // The customer's record learns what the call or text established: their
+  // address and email, where the record has none yet. Never overwrites what
+  // the business or the customer already saved.
+  if (requestId && action.kind === "book") {
+    await fillCustomerDetails(input.database, input.customerId, {
+      addressLine1: action.address.line1,
+      city: action.address.city,
+      postalCode: postalCode ?? "",
+      email: input.email ?? "",
+    });
+  }
 
   /*
    * The first line of this customer's history.

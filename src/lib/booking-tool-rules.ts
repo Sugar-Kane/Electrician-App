@@ -103,6 +103,32 @@ export const BOOKING_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "resend_booking_link",
+    title: "Resend a booking link",
+    description:
+      "For a caller who already has a visit booked or held and says they never got their booking or payment link, or lost it. Ask how they want it (text, email, or both) and confirm the email if they choose email. This sends it right away and says what actually happened: only tell them it was sent if the result says so. Never use it to make a new booking.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        caller_phone: {
+          type: "string",
+          description: "The caller ID number you were given for this call. Never a number the caller says out loud.",
+        },
+        channel: {
+          type: "string",
+          enum: ["text", "email", "both"],
+          description: "How they want the link resent.",
+        },
+        caller_email: {
+          type: "string",
+          description: "An email they gave on this call, read back to them. Empty to use the one on file.",
+        },
+      },
+      required: ["caller_phone", "channel"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "book_visit",
     title: "Book a diagnostic visit",
     description:
@@ -575,6 +601,75 @@ export function slotList(context: IntakeContext): string {
  * Every path that did not write a booking says so in its first three words, so
  * a model skimming the result cannot mistake a refusal for a confirmation.
  */
+/**
+ * What the diagnostic fee buys, as Maya says it.
+ *
+ * The visit and the diagnosis; a small fix the electrician can do on the spot
+ * (a bulb, a switch) usually within it; anything bigger quoted first, with the
+ * fee credited toward it. Never a promise that a particular repair is free:
+ * the electrician decides on site.
+ */
+export function diagnosticFeeCovers(fee: string): string {
+  return `"The ${fee} diagnostic visit covers the trip out and the electrician finding the problem. If it turns out to be something small he can fix right there, like a light bulb or swapping a switch, that's usually taken care of within the visit. If it needs more work than that, he'll go over the cost with you before doing anything, and the ${fee} goes toward that work." Never promise that a particular repair is included; the electrician decides that on site.`;
+}
+
+export type ResendAttempt = { channel: "sms" | "email"; to: string; ok: boolean; detail: string };
+
+/** The last digits of a number or the domain of an email, enough to confirm without reading it all out. */
+function shortDestination(attempt: ResendAttempt): string {
+  if (attempt.channel === "sms") {
+    const digits = attempt.to.replace(/\D/g, "");
+    return digits ? `the number ending in ${digits.slice(-4)}` : "their phone";
+  }
+  return attempt.to ? `their email (${attempt.to})` : "their email";
+}
+
+/**
+ * What resend_booking_link tells Maya: only what really happened.
+ *
+ * `verified` is false when the person on the line could not be tied to a
+ * customer record (a number they read out, not the caller ID of this call):
+ * then nothing about anybody's booking is sent or said.
+ */
+export function resendReply(input: {
+  verified: boolean;
+  found: boolean;
+  held: boolean;
+  slotLabel: string;
+  sent: ResendAttempt[];
+}): ToolResult {
+  if (!input.verified) {
+    return {
+      isError: true,
+      text: "NOT SENT. This caller's number could not be matched to a customer on this call, so no booking link can be sent. Take their name and a callback number and use request_callback so the team can resend it.",
+    };
+  }
+  if (!input.found) {
+    return {
+      isError: true,
+      text: "NOT SENT. There is no booked or held visit on file for this caller, so there is no link to resend. If they want a visit, book one with book_visit as usual.",
+    };
+  }
+  const ok = input.sent.filter((attempt) => attempt.ok);
+  const failed = input.sent.filter((attempt) => !attempt.ok);
+  const lines = [
+    `Their ${input.held ? "held time (awaiting the diagnostic fee)" : "booked visit"} is ${input.slotLabel}.`,
+    ...ok.map((attempt) => `Sent by ${attempt.channel === "sms" ? "text" : "email"} to ${shortDestination(attempt)}.`),
+    ...failed.map((attempt) => `Could not send by ${attempt.channel === "sms" ? "text" : "email"}: ${attempt.detail}`),
+  ];
+  if (ok.length > 0) {
+    lines.push(`Tell them it was just sent ${ok.map((attempt) => (attempt.channel === "sms" ? "by text" : "by email")).join(" and ")} and should arrive in a minute or two. Do not say it has arrived.`);
+  }
+  if (failed.length > 0) {
+    lines.push(
+      ok.length > 0
+        ? "Mention the other channel did not go through, and offer it the other way if that helps."
+        : "Say plainly it did not go through. Offer the other channel (ask for or confirm their email, or their mobile number), or use request_callback so the team can follow up.",
+    );
+  }
+  return { isError: ok.length === 0, text: lines.join(" ") };
+}
+
 export function describeOutcome(input: {
   name: string;
   action: IntakeAction;
@@ -589,6 +684,8 @@ export function describeOutcome(input: {
   handoff?: "transfer" | "callback" | "";
   /** Whether Twilio has taken control of the live call for a human transfer. */
   transfer?: "started" | "unavailable";
+  /** The booking was already there from an earlier call or text; nothing new was sent. */
+  alreadyExisted?: boolean;
 }): ToolResult {
   const { action, context } = input;
 
@@ -647,10 +744,13 @@ export function describeOutcome(input: {
           "Say this back to the customer, in your own voice, all of it:",
           `1. The window and the address, so they can correct you.`,
           input.held
-            ? `2. "I am holding that time. It is confirmed once the ${context.diagnosticFee} diagnostic fee is paid."`
-            : `2. "There is a ${context.diagnosticFee} deposit to hold the appointment."`,
-          `3. "An electrician will call you later today to go over a few more details."`,
-          `4. "I am sending your booking and payment link ${delivery} now."`,
+            ? `2. "I'm holding that time. It's confirmed once the ${context.diagnosticFee} diagnostic fee is paid."`
+            : `2. "The ${context.diagnosticFee} diagnostic visit is all set."`,
+          `3. What the fee covers, if you have not already said it on this call: ${diagnosticFeeCovers(context.diagnosticFee)}`,
+          `4. "An electrician will call you later today to go over a few more details."`,
+          input.alreadyExisted
+            ? `5. This booking was already made earlier, and its link went out then. Ask whether they received it; if they did not, use resend_booking_link and tell them only what its result says.`
+            : `5. "Your booking${input.held ? " and payment" : ""} link is on its way ${delivery}." Say "on its way", never that it has arrived.`,
           "Then ask if there is anything else, and close with a proper goodbye before ending the call.",
           "Do not promise a repair price, and do not take card details on this call.",
         ].join(" "),

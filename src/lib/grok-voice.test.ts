@@ -177,6 +177,7 @@ test("the session is given the booking tools and only the booking tools", () => 
     "look_up_caller",
     "list_open_slots",
     "get_intake_questions",
+    "resend_booking_link",
     "book_visit",
     "log_non_service_call",
     "request_callback",

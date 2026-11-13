@@ -139,7 +139,10 @@ test("the booking result tells her to say the deposit and what happens next", ()
     deliveryPreference: "both",
   });
 
-  assert.match(result.text, /\$95 deposit/);
+  // The fee, what it covers, and that it goes toward any bigger work.
+  assert.match(result.text, /\$95 diagnostic visit/);
+  assert.match(result.text, /\$95 goes toward that work/);
+  assert.match(result.text, /never promise that a particular repair is included/i);
   assert.match(result.text, /call you later today/i);
   assert.match(result.text, /by text and email/);
   assert.match(result.text, /do not take card details/i);
@@ -587,4 +590,38 @@ test("with two call backs on the line at once, neither customer's form is given 
   // The same person who sent the form twice is still one call.
   const again = { ...ON_THE_LINE, id: "33333333-3333-4333-8333-333333333333", callbackCalledAt: "2026-10-13T18:29:00Z" };
   assert.equal(callbackForCaller([ON_THE_LINE, again], "+18055550921", NOW, 0)?.id, again.id);
+});
+
+test("a booking link is never resent to a caller who could not be matched to the customer", async () => {
+  const { resendReply } = await import("./booking-tool-rules.ts");
+  const refused = resendReply({ verified: false, found: true, held: true, slotLabel: "Sat 7:30-10:00 AM", sent: [] });
+  assert.equal(refused.isError, true);
+  assert.match(refused.text, /^NOT SENT/);
+  // Nothing about the booking is said to an unverified caller.
+  assert.doesNotMatch(refused.text, /Sat 7:30/);
+});
+
+test("Maya only says a link was sent when the send succeeded", async () => {
+  const { resendReply } = await import("./booking-tool-rules.ts");
+  const failed = resendReply({
+    verified: true,
+    found: true,
+    held: true,
+    slotLabel: "Sat 7:30-10:00 AM",
+    sent: [{ channel: "sms", to: "+18055551234", ok: false, detail: "The customer has not agreed to texts, or opted out." }],
+  });
+  assert.equal(failed.isError, true);
+  assert.doesNotMatch(failed.text, /Sent by text/);
+  assert.match(failed.text, /did not go through/);
+
+  const sent = resendReply({
+    verified: true,
+    found: true,
+    held: false,
+    slotLabel: "Sat 7:30-10:00 AM",
+    sent: [{ channel: "sms", to: "+18055551234", ok: true, detail: "queued" }],
+  });
+  assert.notEqual(sent.isError, true);
+  assert.match(sent.text, /Sent by text to the number ending in 1234/);
+  assert.match(sent.text, /Do not say it has arrived/);
 });
