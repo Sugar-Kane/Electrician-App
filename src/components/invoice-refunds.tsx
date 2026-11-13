@@ -185,6 +185,14 @@ export function InvoicePayments({
                     </li>
                   ))}
                   {payment.refunds
+                    .filter((refund) => refund.reference)
+                    .map((refund) => (
+                    <li key={`reference-${refund.id}`} className="text-xs text-ink-muted">
+                      Card refund tracking number:{" "}
+                      <span className="select-all font-mono font-semibold text-ink">{refund.reference}</span>
+                    </li>
+                  ))}
+                  {payment.refunds
                     .filter((refund) => refund.status === "succeeded")
                     .map((refund) => (
                     <li key={`receipt-${refund.id}`}>
