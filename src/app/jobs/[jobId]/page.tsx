@@ -9,7 +9,7 @@ import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
 import { JobFollowUps } from "@/components/job-follow-ups";
 import { JobCallRecord } from "@/components/job-call-record";
-import { JobLinesPanel } from "@/components/job-lines-panel";
+import { JobBilling, JobLinesPanel } from "@/components/job-lines-panel";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
@@ -427,7 +427,7 @@ export default async function JobDetailPage({
     </div>
   );
   // On a diagnostic the time is its own step, so the visit card leaves it out.
-  const stepLayout = stage.flow === "diagnostic" && Boolean(controls) && !canceled;
+  const stepLayout = Boolean(controls) && !canceled;
   const identity = identityBlock(!stepLayout);
 
 
@@ -804,6 +804,25 @@ export default async function JobDetailPage({
     "";
   const invoiceSummary = billingNote || (lines.length > 0 ? `${lines.length} ${lines.length === 1 ? "line" : "lines"} · ${formatCents(totals.subtotalCents)}` : "Nothing billed yet");
 
+  const materialsSummary = state === "completed"
+    ? "Done"
+    : controls?.materialsReadyAt
+      ? "Picked up"
+      : controls?.materialsBoughtAt
+        ? "Bought, not picked up yet"
+        : lines.length > 0 || listItems.length > 0
+          ? `Listed${unpricedItems > 0 ? ` · ${unpricedItems} unpriced` : ""}`
+          : "Nothing listed yet";
+  const contractSummary = currentAgreement ? agreementState : "Not sent yet";
+  const workSummary =
+    state === "completed"
+      ? "Finished"
+      : showsWorkspace(state)
+        ? "Under way"
+        : job.startsAt
+          ? `Booked ${job.dateLabel}`
+          : "Not booked yet";
+
   return (
     <FieldPageShell
       compact
@@ -837,7 +856,7 @@ export default async function JobDetailPage({
 
       {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} canEndVisit={state === "arrived" || state === "working" || state === "review"} /> : null}
 
-      {stepLayout && controls ? (
+      {stepLayout && controls && stage.flow === "diagnostic" ? (
         /*
          * A diagnostic, one card per step of the bar above, in its order:
          * Intake, Schedule, Travel, Diagnose, Next step, Invoice. The step
@@ -996,6 +1015,140 @@ export default async function JobDetailPage({
         </>
       ) : null}
 
+      {stepLayout && controls && stage.flow === "work_order" ? (
+        /*
+         * A work order, one card per step of the bar above, in its order:
+         * Materials, Estimate, Schedule, Contract, Work, Invoice. The step
+         * being worked is open; finished ones fold to a line with a tick.
+         */
+        <>
+          <StepCard id="work-materials" number={1} title="Materials" state={stepState("scope")} summary={materialsSummary}>
+            <div className="divide-y divide-line">
+              {job.summary || job.serviceNotes || job.accessNotes ? (
+                <div className="pb-4">
+                  {job.summary ? <p className="text-sm leading-6 text-ink">{job.summary}</p> : null}
+                  {callRecord?.reference ? (
+                    <p className="mt-2 text-xs text-ink-muted">
+                      Website ref <span className="font-mono font-semibold text-ink">{callRecord.reference}</span>
+                    </p>
+                  ) : null}
+                  {job.serviceNotes ? (
+                    <p className="mt-3 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">{job.serviceNotes}</p>
+                  ) : null}
+                  {job.accessNotes ? (
+                    <p className="mt-3 flex items-start gap-2 rounded-control bg-white/[0.03] p-3 text-sm leading-6 text-ink-muted">
+                      <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-caution" aria-hidden />
+                      <span className="min-w-0 whitespace-pre-line">{job.accessNotes}</span>
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {materialChat ? (
+                <div className="py-4">
+                  <JobMaterialChat
+                    jobNumber={controls.jobNumber}
+                    saved={materialChat.saved}
+                    markupPercent={materialChat.markupPercent}
+                    forChatGpt={materialChat.forChatGpt}
+                    jobDescription={job.summary}
+                    hasLines={lines.length > 0}
+                    startFolded={false}
+                  />
+                </div>
+              ) : null}
+              {lines.some((line) => line.kind === "material") && state !== "completed" ? (
+                <div id="parts-ready" className="scroll-mt-24 pt-4">
+                  <MaterialsSteps
+                    jobNumber={controls.jobNumber}
+                    bought={Boolean(controls.materialsBoughtAt)}
+                    pickedUp={Boolean(controls.materialsReadyAt)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </StepCard>
+
+          <StepCard id="estimate" number={2} title="Estimate" state={stepState("estimate")} summary={totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)}` : "Not priced yet"}>
+            <JobLinesPanel
+              jobNumber={controls.jobNumber}
+              lines={lines}
+              totals={totals}
+              invoices={invoices}
+              stock={stock}
+              lineStock={lineStock}
+              withBilling={false}
+            />
+          </StepCard>
+
+          <StepCard id="visits" number={3} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>
+            {scheduleEditor}
+            {pastVisits.length > 0 ? (
+              <ol className="mt-4 space-y-2 text-sm">
+                {pastVisits.map((visit, index) => (
+                  <li key={visit.id} className="rounded-control border border-line px-3 py-2.5">
+                    <span className="block font-semibold">
+                      Visit {index + 1} · {visitDay(visit.arrivedAt || visit.windowStart || visit.endedAt, history.timeZone)}
+                    </span>
+                    <span className="block text-ink-muted">
+                      {visit.arrivedAt ? `Arrived ${visitTime(visit.arrivedAt, history.timeZone)} · ` : ""}
+                      Ended {visitTime(visit.endedAt, history.timeZone)}
+                    </span>
+                    {visit.note ? <span className="mt-1 block whitespace-pre-line leading-6">{visit.note}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </StepCard>
+
+          <StepCard number={4} title="Contract" state={stepState("approval")} summary={contractSummary}>
+            <JobContract
+              jobNumber={controls.jobNumber}
+              contracts={contracts}
+              customerName={job.contactName || job.customer}
+              customerPhone={job.phone}
+              changes={agreement}
+            />
+          </StepCard>
+
+          <StepCard id="findings" number={5} title="Work" state={stepState("work")} summary={workSummary}>
+            <div className="divide-y divide-line">
+              <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
+              {workspaceOpen ? (
+                <>
+                  <div className="py-4">
+                    <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
+                  </div>
+                  <div className="py-4">
+                    <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
+                  </div>
+                  {state === "arrived" || state === "working" || state === "review" ? (
+                    <div className="pt-4">
+                      <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <p className="pt-4 text-sm text-ink-muted">Photos and notes open once the work starts.</p>
+              )}
+            </div>
+          </StepCard>
+
+          <StepCard number={6} title="Invoice" state={stepState("invoice")} summary={invoiceSummary}>
+            <JobBilling
+              jobNumber={controls.jobNumber}
+              lines={lines}
+              invoices={invoices}
+              billing={{
+                jobCompleted: state === "completed",
+                agreementSigned: Boolean(currentAgreement?.signedAt),
+                hasPhone: Boolean(job.phone),
+                hasEmail: Boolean(job.email),
+              }}
+            />
+          </StepCard>
+        </>
+      ) : null}
+
       {stepLayout ? null : visitCard}
 
       {stepLayout ? null : requestCard}
@@ -1045,7 +1198,7 @@ export default async function JobDetailPage({
         </section>
       ) : null}
 
-      {controls && stage.flow === "work_order" ? (
+      {controls && stage.flow === "work_order" && !stepLayout ? (
         <SectionRow
           title="Contract"
           summary={`${totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)} · ` : ""}${approvalSummary}`}
