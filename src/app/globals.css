@@ -377,3 +377,15 @@ pre {
     display: none;
   }
 }
+
+/*
+ * iOS zooms the page in whenever a field under 16px takes focus, and leaves it
+ * offset. Every field is 16px on a phone, whatever its own text size says.
+ */
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

@@ -24,6 +24,8 @@ export type MaterialItem = {
   note: string;
   /** What one costs at Home Depot and Lowe's, when it has been looked up. */
   prices?: ItemPrices;
+  /** What one costs you, typed in by hand when the item was listed, in cents. */
+  costCents?: number;
 };
 
 export type MaterialBlock = { type: "text"; text: string } | { type: "items"; items: MaterialItem[] };
@@ -303,6 +305,8 @@ export function normalizeMaterialList(raw: unknown): MaterialList | null {
           // Prices stay only while they are still this item's, and sane.
           const prices = readItemPrices(i.prices, itemPriceKey(item));
           if (prices) item.prices = prices;
+          const cost = Number(i.costCents);
+          if (i.costCents !== undefined && i.costCents !== null && Number.isInteger(cost) && cost >= 0 && cost <= 1_000_000) item.costCents = cost;
           items.push(item);
         }
         if (items.length > 0) blocks.push({ type: "items", items });
