@@ -84,7 +84,7 @@ test("C2: a fee paid at booking with the repair booked as a work order bills not
 test("D: a work order with no scope builds the material list first", () => {
   const stage = jobFlow(input());
   assert.equal(stage.primary.kind === "go" && stage.primary.label, "Build material list");
-  assert.deepEqual(stage.steps.map((step) => step.label), ["Materials", "Estimate", "Contract", "Schedule", "Work", "Invoice"]);
+  assert.deepEqual(stage.steps.map((step) => step.label), ["Materials", "Estimate", "Schedule", "Contract", "Work", "Invoice"]);
 });
 
 test("E: unpriced list items need supplier quotes, never a made-up price", () => {
@@ -100,12 +100,13 @@ test("F: priced but unapproved work is not dispatched", () => {
   assert.notEqual(sent.primary.kind, "visit");
 });
 
-test("G: approved work gathers materials, then books, then starts the trip", () => {
+test("G: priced work is booked, then signed, then gathers materials, then starts the trip", () => {
   const signed = { sent: true, signed: true };
+  const book = jobFlow(input({ lineCount: 3, partCount: 2, scheduled: false }));
+  assert.equal(book.primary.kind === "go" && book.primary.label, "Schedule visit");
+  assert.equal(book.steps.find((step) => step.key === "schedule")?.state, "current");
   const gather = jobFlow(input({ lineCount: 3, partCount: 2, agreement: signed }));
   assert.equal(gather.primary.kind, "materials_ready");
-  const book = jobFlow(input({ lineCount: 3, partCount: 2, agreement: signed, materialsReady: true, scheduled: false }));
-  assert.equal(book.primary.kind === "go" && book.primary.label, "Confirm appointment");
   const go = jobFlow(input({ lineCount: 3, partCount: 2, agreement: signed, materialsReady: true }));
   assert.deepEqual(go.primary, { kind: "visit", label: "Start trip", href: "#work" });
 });

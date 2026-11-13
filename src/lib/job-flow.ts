@@ -189,15 +189,15 @@ function steps(flow: JobFlow, current: StageKey, finished: boolean): StageStep[]
   const order: StageKey[] =
     flow === "diagnostic"
       ? ["intake", "schedule", "travel", "diagnose", "decide", "invoice"]
-      : ["scope", "estimate", "approval", "schedule", "work", "invoice"];
+      : ["scope", "estimate", "schedule", "approval", "work", "invoice"];
   if (current === "paid") current = "invoice";
   // The list, its quotes and picking the parts up are one Materials step.
   if (current === "quotes") current = "scope";
   if (current === "materials") {
-    // Picking up comes after the contract: everything before Schedule is
-    // done except Materials, which is the step being worked.
-    return steps(flow, "schedule", finished).map((step) =>
-      step.key === "scope" ? { ...step, state: "current" as const } : step.key === "schedule" ? { ...step, state: "todo" as const } : step,
+    // Picking up comes after the contract: everything before Work is done
+    // except Materials, which is the step being worked.
+    return steps(flow, "work", finished).map((step) =>
+      step.key === "scope" ? { ...step, state: "current" as const } : step.key === "work" ? { ...step, state: "todo" as const } : step,
     );
   }
   const labels: Record<StageKey, string> = {
@@ -473,6 +473,20 @@ function flowOf(input: StageInput): FlowStage {
         needsDecision: false,
       };
     }
+    // With the estimate in hand, the visit is booked, then the contract
+    // signed for that price and date.
+    if (!input.scheduled) {
+      return {
+        flow,
+        steps: steps(flow, "schedule", false),
+        status: invoiced ? "Needs a time · invoiced" : "Needs a time",
+        primary: go("Schedule visit", input.scheduleHref),
+        hint: input.estimateLabel
+          ? `Estimate: ${input.estimateLabel}. Set the arrival window, then send the contract.`
+          : "Set the arrival window, then send the contract.",
+        needsDecision: false,
+      };
+    }
     if (!signed) {
       // Invoiced or not, nothing moves past approval until the customer signs.
       // An invoice already out is said, so Nick knows where the job stands.
@@ -493,8 +507,8 @@ function flowOf(input: StageInput): FlowStage {
           : sent
             ? "Waiting for the customer to sign. Resend it, or have them sign in person."
             : input.estimateLabel
-              ? `Estimate: ${input.estimateLabel}. The customer signs the contract for it before the work is booked.`
-              : "The customer signs the contract for the price before the work is booked.",
+              ? `Estimate: ${input.estimateLabel}. The customer signs the contract for it before the work goes ahead.`
+              : "The customer signs the contract for the price before the work goes ahead.",
         needsDecision: false,
       };
     }
@@ -504,19 +518,7 @@ function flowOf(input: StageInput): FlowStage {
         steps: steps(flow, "materials", false),
         status: "Pick up parts",
         primary: { kind: "materials_ready", label: "Mark picked up" },
-        hint: input.scheduled
-          ? "Have the parts in hand before you drive out. You can still start the trip if they are on the truck."
-          : "Have the parts in hand, then book the visit.",
-        needsDecision: false,
-      };
-    }
-    if (!input.scheduled) {
-      return {
-        flow,
-        steps: steps(flow, "schedule", false),
-        status: "Ready to schedule",
-        primary: go("Confirm appointment", input.scheduleHref),
-        hint: "Approved and ready. Set the arrival window.",
+        hint: "Have the parts in hand before you drive out. You can still start the trip if they are on the truck.",
         needsDecision: false,
       };
     }
