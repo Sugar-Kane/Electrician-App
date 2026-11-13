@@ -56,7 +56,7 @@ export async function loadChangeJob(
   const { data } = await supabase
     .from("jobs")
     .select(
-      `id, status, property_id, technician_id, scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
+      `id, status, property_id, customer_id, technician_id, scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        organization_id, customers ( first_name, last_name, company_name, phone, email ),
        organizations ( name, phone, timezone )`,
     )
@@ -77,6 +77,7 @@ export async function loadChangeJob(
     id: text(row.id),
     organizationId,
     propertyId: text(row.property_id),
+    customerId: text(row.customer_id),
     technicianId: text(row.technician_id) || null,
     status: text(row.status),
     start: text(row.arrival_window_start) || text(row.scheduled_start),

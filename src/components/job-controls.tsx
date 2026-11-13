@@ -50,7 +50,9 @@ export type JobPlaceDetails = {
  * The same four boxes as New job, suggestions and all, so a correction is
  * checked the way the address was when it was first typed.
  */
-function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDetails }) {
+export function JobPlace({ jobNumber, place: given }: { jobNumber: string; place: JobPlaceDetails | null }) {
+  // No address yet: the same boxes, empty, and saving creates it.
+  const place: JobPlaceDetails = given ?? { street: "", unit: "", town: "", city: "", state: "", postalCode: "", accessNotes: "" };
   const [state, action] = useActionState(updateJobPlace, initialState);
 
   return (
@@ -63,8 +65,7 @@ function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDeta
           <div className="min-w-0">
             <h2 className="text-lg font-semibold tracking-tight">Where the work is</h2>
             <p className="text-sm text-ink-muted">
-              {place.street}
-              {place.town ? `, ${place.town}` : ""}
+              {place.street ? `${place.street}${place.town ? `, ${place.town}` : ""}` : "No address yet"}
             </p>
           </div>
         </div>
@@ -105,7 +106,7 @@ function JobPlace({ jobNumber, place }: { jobNumber: string; place: JobPlaceDeta
         <FormMessage error={state.error} notice={state.notice} />
 
         <div className="mt-5">
-          <SubmitButton pendingLabel="Saving…">Save address</SubmitButton>
+          <SubmitButton pendingLabel="Saving…">{given ? "Save address" : "Add address"}</SubmitButton>
         </div>
       </section>
     </form>
@@ -224,7 +225,7 @@ export function JobControls({
         </section>
       </form>
 
-      {place ? <JobPlace jobNumber={jobNumber} place={place} /> : null}
+      <JobPlace jobNumber={jobNumber} place={place} />
 
       {diagnostic ? <JobDiagnosticFee jobNumber={jobNumber} diagnostic={diagnostic} /> : null}
 
