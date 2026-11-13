@@ -162,6 +162,7 @@ export async function deliverInvoice(input: {
       const mail = paidCopy ? paidInvoiceEmail(withPdf) : preview ? invoicePreviewEmail(withPdf) : invoiceEmail(withPdf);
       const sent = await sendEmail({
         organizationId: input.organizationId,
+        contactButtons: true,
         to: input.customerEmail,
         subject: mail.subject,
         text: mail.text,

@@ -2,6 +2,27 @@ import "server-only";
 
 import { brandedEmail, senderName } from "@/lib/email-layout";
 import { emailLogoUrl } from "@/lib/email-logo";
+import { dialable } from "@/lib/email-layout";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+
+/**
+ * Where a customer reaching the business should call or text: the owner's own
+ * phone (Settings → Notifications), a person rather than the line the
+ * assistant answers, else the business line. "" when there is neither.
+ */
+async function businessContact(organizationId: string): Promise<string> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from("organizations")
+      .select("phone, owner_notification_phone")
+      .eq("id", organizationId)
+      .maybeSingle();
+    const row = (data ?? {}) as { phone?: string | null; owner_notification_phone?: string | null };
+    return dialable(row.owner_notification_phone) || dialable(row.phone);
+  } catch {
+    return "";
+  }
+}
 
 /**
  * Sending one transactional email.
@@ -42,6 +63,8 @@ export async function sendEmail(input: {
   attachments?: { filename: string; content: string }[];
   /** The business sending it, so its logo heads the email. */
   organizationId?: string;
+  /** A customer email: add Call and Text buttons to reach the business. */
+  contactButtons?: boolean;
 }): Promise<EmailResult> {
   const auth = credentials();
   if (!auth) {
@@ -53,6 +76,7 @@ export async function sendEmail(input: {
   }
 
   const logo = await emailLogoUrl(input.organizationId);
+  const contact = input.contactButtons && input.organizationId ? await businessContact(input.organizationId) : "";
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -65,13 +89,14 @@ export async function sendEmail(input: {
         from: input.from || auth.from,
         to: [input.to],
         subject: input.subject,
-        text: input.text,
+        text: contact ? `${input.text}\n\nQuestions? Call or text ${contact}.` : input.text,
         // Every email in the same Volteira frame, named for the business sending it.
         html: brandedEmail({
           html: input.html,
           businessName: senderName(input.from || auth.from) || "Volteira",
           preheader: input.text,
           logoUrl: logo,
+          contactPhone: contact,
         }),
         // So a customer replying to a confirmation reaches the business rather
         // than a no-reply mailbox nobody watches.

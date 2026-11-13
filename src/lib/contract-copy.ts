@@ -97,6 +97,7 @@ export async function sendSignedContractCopy(input: {
       ].filter((line, index, all) => line !== "" || (index > 0 && all[index - 1] !== ""));
       const sent = await sendEmail({
         organizationId: input.organizationId,
+        contactButtons: true,
         to: email,
         subject: `Your signed ${word} with ${businessName}`,
         text: lines.join("\n"),

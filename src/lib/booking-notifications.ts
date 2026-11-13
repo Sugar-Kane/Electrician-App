@@ -421,6 +421,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
     const message = confirmationEmail(customerFacts, messageState);
     const sent = await sendEmail({
       organizationId: input.organizationId,
+      contactButtons: true,
       to: input.email,
       subject: message.subject,
       text: message.text,
