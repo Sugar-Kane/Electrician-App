@@ -52,7 +52,8 @@ export function goTo(href: string, event?: React.MouseEvent<HTMLAnchorElement>) 
   }
   // Inside a step card, the card comes to the top of the screen, title first,
   // rather than the page landing part way down it.
-  const card = target.closest<HTMLElement>("[data-step-card]");
+  // A fold of its own inside a card (the return visit form) is brought up itself.
+  const card = target instanceof HTMLDetailsElement && !target.hasAttribute("data-step-card") ? null : target.closest<HTMLElement>("[data-step-card]");
   (card ?? target).scrollIntoView({ behavior: "smooth", block: "start" });
   // Keyboard and screen-reader users land there too.
   const focusable = target instanceof HTMLDetailsElement ? target.querySelector("summary") : null;

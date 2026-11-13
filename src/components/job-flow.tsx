@@ -181,8 +181,8 @@ export function JobStageCard({
       {stage.hint ? <p className="mt-2 text-sm leading-6 text-ink-muted">{stage.hint}</p> : null}
       {canEndVisit ? (
         <a
-          href="#visits"
-          onClick={(event) => goTo("#visits", event)}
+          href="#return-visit"
+          onClick={(event) => goTo(document.getElementById("return-visit") ? "#return-visit" : "#visits", event)}
           className="tap-target mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-ink-muted underline underline-offset-4"
         >
           Need to come back another day?

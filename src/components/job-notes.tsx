@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, LoaderCircle, Send } from "lucide-react";
 
 import { saveTechnicianNotes } from "@/app/jobs/[jobId]/line-actions";
 import { DictateButton } from "@/components/dictate-button";
@@ -121,8 +122,24 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
         speaking a note and walking away persists it exactly as typing one and
         walking away does.
       */}
-      <div className="mt-2 flex flex-wrap items-center">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <DictateButton value={value} onText={change} variant="labelled" />
+        {/* Notes save themselves too; this is the clear "done" for what was written. */}
+        <button
+          type="button"
+          onClick={flush}
+          disabled={saveState === "saving" || (!value.trim() && saveState !== "failed")}
+          className="tap-target inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
+        >
+          {saveState === "saving" ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+          ) : saveState === "saved" ? (
+            <Check className="h-4 w-4" aria-hidden />
+          ) : (
+            <Send className="h-4 w-4" aria-hidden />
+          )}
+          {saveState === "saving" ? "Submitting…" : saveState === "saved" ? "Submitted" : "Submit"}
+        </button>
       </div>
     </section>
   );
