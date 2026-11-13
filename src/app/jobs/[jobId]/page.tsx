@@ -293,7 +293,9 @@ export default async function JobDetailPage({
         ? "schedule_later"
         : repairLineCount > 0
           ? "fix_now"
-          : state === "completed" || hasFeeLine
+          : // The fee on the job counts as "diagnostic only" once the visit is
+            // under way: before that it is just the fee invoice sent ahead.
+            state === "completed" || (hasFeeLine && showsWorkspace(state))
             ? "diagnostic_only"
             : null;
   const showsDecision = !canceled && (stage.needsDecision || diagnosticChosen !== null);
@@ -778,6 +780,14 @@ export default async function JobDetailPage({
     return step.state;
   };
   const beforeArrival = state === "scheduled" || state === "en_route";
+  // Diagnosing and choosing what happens next share one card: open while
+  // either is being worked, done once both are.
+  const diagnoseState: StepCardState =
+    stepState("diagnose") === "current" || stepState("decide") === "current"
+      ? "current"
+      : stepState("diagnose") === "done" && stepState("decide") === "done"
+        ? "done"
+        : "todo";
   const feeRow = serviceDetails.find((row) => row.label === "Diagnostic fee");
   const intakeSummary = feeRow ? `Diagnostic fee ${feeRow.value}` : "What the customer asked for";
   const travelSummary =
@@ -938,9 +948,9 @@ export default async function JobDetailPage({
             )}
           </StepCard>
 
-          <StepCard id="findings" number={4} title="Diagnose" state={stepState("diagnose")} summary={beforeArrival ? "Photos and notes, once you arrive" : "Photos and notes from the visit"}>
+          <StepCard id="findings" number={4} title="Diagnose & next step" state={diagnoseState} summary={beforeArrival ? "Photos, notes and what happens next, once you arrive" : nextStepSummary === "Chosen after diagnosing" ? "Photos and notes, then choose what happens next" : nextStepSummary}>
             {beforeArrival ? (
-              <p className="text-sm text-ink-muted">Opens once you arrive: photos and notes of what you find.</p>
+              <p className="text-sm text-ink-muted">Opens once you arrive: photos and notes of what you find, then whether to finish with the diagnostic, fix it now, or book a work order.</p>
             ) : (
               <div className="divide-y divide-line">
                 <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
@@ -950,6 +960,24 @@ export default async function JobDetailPage({
                 <div className="py-4">
                   <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
                 </div>
+                {/* With what was found in view: finish here, fix it now, or book the bigger job. */}
+                {showsDecision ? (
+                  <div className="py-4">
+                    <DiagnosticDecision
+                      embedded
+                      jobNumber={controls.jobNumber}
+                      completed={state === "completed"}
+                      feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
+                      feeDue={diagnosticFeeDue}
+                      chosen={stage.needsDecision ? null : diagnosticChosen}
+                    />
+                  </div>
+                ) : null}
+                {showFollowUps ? (
+                  <div id="repairs" className="scroll-mt-24 py-4 [&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
+                    <JobFollowUps jobNumber={controls.jobNumber} booked={followUps.booked} creditCents={followUps.creditCents} />
+                  </div>
+                ) : null}
                 {state === "arrived" || state === "working" || state === "review" ? (
                   <div className="pt-4">
                     <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
@@ -959,27 +987,7 @@ export default async function JobDetailPage({
             )}
           </StepCard>
 
-          <StepCard number={5} title="Next step" state={stepState("decide")} summary={nextStepSummary}>
-            {showsDecision ? (
-              <DiagnosticDecision
-                embedded
-                jobNumber={controls.jobNumber}
-                completed={state === "completed"}
-                feeLabel={controls.diagnostic.feeCents > 0 ? formatCents(controls.diagnostic.feeCents) : ""}
-                feeDue={diagnosticFeeDue}
-                chosen={stage.needsDecision ? null : diagnosticChosen}
-              />
-            ) : (
-              <p className="text-sm text-ink-muted">After diagnosing: diagnostic only, fix it now, or book the bigger job as a work order.</p>
-            )}
-            {showFollowUps ? (
-              <div id="repairs" className="mt-4 scroll-mt-24 border-t border-line pt-4 [&>section]:mt-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
-                <JobFollowUps jobNumber={controls.jobNumber} booked={followUps.booked} creditCents={followUps.creditCents} />
-              </div>
-            ) : null}
-          </StepCard>
-
-          <StepCard id="work-materials" number={6} title="Invoice" state={stepState("invoice")} summary={invoiceSummary}>
+          <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} summary={invoiceSummary}>
             <div className="divide-y divide-line">
               {materialChat && !materialsFolded ? (
                 <div className="pb-4">
