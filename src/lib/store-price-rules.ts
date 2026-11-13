@@ -252,3 +252,22 @@ export function storePricing(
     store: chosen.store,
   };
 }
+
+/**
+ * A listed item's pricing row: its store price when one was found for this
+ * unit, otherwise the cost typed in when it was listed, plus the markup.
+ */
+export function listedItemPricing(
+  item: { prices?: ItemPrices | null; costCents?: number },
+  store: StoreName | null,
+  unit: string,
+  markupPercent: number,
+): { unitPrice: string; unitCost: string; store: StoreName | null } {
+  const fromStore = storePricing(item.prices, store, unit, markupPercent);
+  if (fromStore.unitPrice || item.costCents === undefined) return fromStore;
+  return {
+    unitPrice: dollarsText(customerPriceCents(item.costCents, markupPercent)),
+    unitCost: dollarsText(item.costCents),
+    store: null,
+  };
+}

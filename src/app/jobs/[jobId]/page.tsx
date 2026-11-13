@@ -17,6 +17,7 @@ import { DiagnosticDecision, JobStageCard } from "@/components/job-flow";
 import { JobWorkflow } from "@/components/job-workflow";
 import { JobSchedule } from "@/components/job-schedule";
 import { JobPlace } from "@/components/job-controls";
+import { AddMaterialsToEstimate } from "@/components/add-materials-to-estimate";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -229,7 +230,7 @@ export default async function JobDetailPage({
     section.blocks.flatMap((block) => (block.type === "items" ? block.items : [])),
   );
   const unpricedItems = listItems.filter(
-    (item) => !item.prices || !Object.keys(item.prices).some((key) => key !== "use"),
+    (item) => item.costCents === undefined && (!item.prices || !Object.keys(item.prices).some((key) => key !== "use")),
   ).length;
 
   // The diagnostic's own fee: on which invoice, and whether that is paid.
@@ -1102,6 +1103,7 @@ export default async function JobDetailPage({
           </StepCard>
 
           <StepCard id="estimate" number={2} title="Estimate" state={stepState("estimate")} summary={totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)}` : "Not priced yet"}>
+            {listItems.length > 0 && state !== "completed" ? <AddMaterialsToEstimate count={listItems.length} /> : null}
             <JobLinesPanel
               jobNumber={controls.jobNumber}
               lines={lines}

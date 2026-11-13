@@ -35,7 +35,7 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
     section.blocks.flatMap((block) => (block.type === "items" ? block.items : [])),
   );
   const unpricedItems = listItems.filter(
-    (item) => !item.prices || !Object.keys(item.prices).some((key) => key !== "use"),
+    (item) => item.costCents === undefined && (!item.prices || !Object.keys(item.prices).some((key) => key !== "use")),
   ).length;
 
   const state = workflow?.state ?? "scheduled";

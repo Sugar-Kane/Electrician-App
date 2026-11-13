@@ -5,6 +5,7 @@ import { carryPrices, itemPriceKey, normalizeMaterialList, parseMaterialList, ty
 import {
   chosenStorePrice,
   customerPriceCents,
+  listedItemPricing,
   readStorePrices,
   storePricing,
   storeProductUrl,
@@ -152,4 +153,18 @@ test("prices stay with an item only while it is the same thing", () => {
   assert.ok(items.type === "items");
   assert.equal(items.items[0].prices?.homeDepot?.cents, 89);
   assert.equal(items.items[1].prices, undefined);
+});
+
+test("a listed item's typed cost prices it for the estimate, with the markup, when no store price fits", () => {
+  assert.deepEqual(listedItemPricing({ costCents: 1250 }, null, "each", 20), { unitPrice: "15.00", unitCost: "12.50", store: null });
+  assert.deepEqual(listedItemPricing({}, null, "each", 20), { unitPrice: "", unitCost: "", store: null });
+});
+
+test("a typed cost on a list item survives saving, and a bad one is dropped", () => {
+  const read = (costCents: unknown) =>
+    normalizeMaterialList({ intro: "", title: "", closing: "", sections: [{ id: "s", heading: "Parts", blocks: [{ type: "items", items: [{ id: "a", qty: "1", name: "Breaker", note: "", costCents }] }] }] });
+  const first = (list: MaterialList | null) => (list?.sections[0]?.blocks[0] as { items: { costCents?: number }[] }).items[0];
+  assert.equal(first(read(1899))?.costCents, 1899);
+  assert.equal(first(read(-5))?.costCents, undefined);
+  assert.equal(first(read(12.5))?.costCents, undefined);
 });

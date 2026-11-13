@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ClipboardCopy,
   ExternalLink,
-  ListChecks,
   LoaderCircle,
   Pencil,
   Plus,
@@ -40,6 +39,7 @@ import {
   STORE_NAMES,
   STORES,
   chosenStorePrice,
+  listedItemPricing,
   dollarsText,
   storePricing,
   type ItemPrices,
@@ -143,6 +143,9 @@ function ItemEditor({
   const [qty, setQty] = useState(item.qty);
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note);
+  const [cost, setCost] = useState(item.costCents !== undefined ? (item.costCents / 100).toFixed(2) : "");
+  const costCents = cost.trim() === "" ? undefined : Math.round(Number(cost.replace(/[$,\s]/g, "")) * 100);
+  const costOk = costCents === undefined || (Number.isFinite(costCents) && costCents >= 0 && costCents <= 1_000_000);
   const field = "min-h-11 w-full rounded-control border border-line bg-raised px-3 text-sm";
   // Names and notes run long ("Eaton BR220 — 20A, 2-pole breaker"), so they
   // get room to be read whole rather than a one-line box that scrolls.
@@ -160,14 +163,30 @@ function ItemEditor({
         </label>
       </div>
       <label className="mt-2 block text-xs text-ink-muted">
+        Cost each (what you pay)
+        <input
+          value={cost}
+          inputMode="decimal"
+          onChange={(event) => setCost(event.target.value)}
+          placeholder="$0.00"
+          className={`${field} mt-1`}
+        />
+        {!costOk ? <span className="mt-1 block text-critical">Enter a price like 12.50.</span> : null}
+      </label>
+      <label className="mt-2 block text-xs text-ink-muted">
         Note
         <textarea value={note} rows={2} onChange={(event) => setNote(event.target.value)} placeholder="verify with the panel labeling" className={`${area} mt-1`} />
       </label>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={!name.trim()}
-          onClick={() => onSave({ ...item, qty: qty.trim(), name: name.trim(), note: note.trim() })}
+          disabled={!name.trim() || !costOk}
+          onClick={() => {
+            const saved: MaterialItem = { ...item, qty: qty.trim(), name: name.trim(), note: note.trim() };
+            if (costCents === undefined) delete saved.costCents;
+            else saved.costCents = costCents;
+            onSave(saved);
+          }}
           className="tap-target inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
         >
           <Check className="h-4 w-4" aria-hidden />
@@ -255,6 +274,7 @@ function ListView({
                             {item.qty ? `${item.qty} × ` : ""}
                             {item.name}
                             {item.note ? <span className="text-ink-faint"> ({item.note})</span> : null}
+                            {item.costCents !== undefined ? <span className="text-ink-muted"> · ${(item.costCents / 100).toFixed(2)} each</span> : null}
                           </span>
                         </label>
                         {/* Outside the label, so opening a store's page never ticks the box. */}
@@ -275,6 +295,7 @@ function ListView({
                             {item.qty ? `${item.qty} × ` : ""}
                             {item.name}
                             {item.note ? <span className="text-ink-faint"> ({item.note})</span> : null}
+                            {item.costCents !== undefined ? <span className="text-ink-muted"> · ${(item.costCents / 100).toFixed(2)} each</span> : null}
                           </span>
                           {!live ? <Pencil className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-faint opacity-60 group-hover:opacity-100" aria-hidden /> : null}
                         </button>
@@ -342,7 +363,7 @@ function PricingSheet({
         unit: line.unit,
         prices: item.prices,
         pick,
-        ...storePricing(item.prices, pick, line.unit, markupPercent),
+        ...listedItemPricing(item, pick, line.unit, markupPercent),
       };
     }),
   );
@@ -526,6 +547,25 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, hasLines, sta
   const [typing, setTyping] = useState(false);
   // The first typed item's id, made once rather than on every render.
   const [firstItemId] = useState(() => `n${Date.now().toString(36)}`);
+  // "Add materials to estimate" on the Estimate card opens this list with its
+  // items to tick, then prices the ticked ones onto the estimate.
+  const card = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const choose = () => {
+      setEditingId(null);
+      setAddingTo(null);
+      setNotice("");
+      setChoosing(true);
+      let fold: HTMLElement | null = card.current;
+      while (fold) {
+        if (fold instanceof HTMLDetailsElement) fold.open = true;
+        fold = fold.parentElement?.closest("details") ?? null;
+      }
+      card.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener("volteira:choose-materials", choose);
+    return () => window.removeEventListener("volteira:choose-materials", choose);
+  }, []);
   const abort = useRef<AbortController | null>(null);
   // The list as it is on screen now, for prices that arrive a minute later.
   const listNow = useRef(list);
@@ -656,7 +696,7 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, hasLines, sta
   const lastPrompt = lastAsked >= 0 ? messages[lastAsked] : undefined;
 
   return (
-    <details id="materials-chat" className="group scroll-mt-24" open={startsOpen}>
+    <details ref={card} id="materials-chat" className="group scroll-mt-24" open={startsOpen}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 text-sm font-semibold">
@@ -796,20 +836,6 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, hasLines, sta
             )
           ) : (
             <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={clearing}
-                onClick={() => {
-                  setEditingId(null);
-                  setAddingTo(null);
-                  setNotice("");
-                  setChoosing(true);
-                }}
-                className="tap-target inline-flex min-h-11 items-center gap-1.5 rounded-control border border-brand px-3 text-sm font-semibold text-brand disabled:opacity-60"
-              >
-                <ListChecks className="h-4 w-4" aria-hidden />
-                Add items to the estimate
-              </button>
               <button
                 type="button"
                 onClick={() => {
