@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { BOOKING_TOOL_NAMES } from "@/lib/booking-tool-rules";
-import { callsFor, textsFor } from "@/lib/customer-context";
-import { earlierContactForCall } from "@/lib/customer-context-rules";
+import { callsFor, jobsFor, linkDeliveryFor, profileFor, textsFor } from "@/lib/customer-context";
+import { customerProfileForCall, earlierContactForCall } from "@/lib/customer-context-rules";
 import { buildSessionUpdate, realtimeUrlForCall } from "@/lib/grok-voice";
 import {
   findOrCreateCustomerByPhone,
@@ -134,11 +134,21 @@ export async function POST(request: Request) {
 
   // What this caller has already said by text and on earlier calls. The number
   // is the carrier's caller ID for this very call, not something said on it.
-  const [texts, calls] = await Promise.all([
+  const [texts, calls, profile, jobs, delivery] = await Promise.all([
     textsFor(database, organizationId, customerId),
     callsFor(database, organizationId, customerId),
+    profileFor(database, organizationId, customerId),
+    jobsFor(database, organizationId, customerId),
+    linkDeliveryFor(database, organizationId, customerId),
   ]);
-  const earlier = earlierContactForCall({ texts, calls, timeZone, now: new Date() });
+  const now = new Date();
+  // Who they are on record, then what they said lately.
+  const earlier = [
+    customerProfileForCall({ profile, jobs, delivery, timeZone, now }),
+    earlierContactForCall({ texts, calls, timeZone, now }),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   return NextResponse.json({
     callId: call.callId,

@@ -1,7 +1,7 @@
 import "server-only";
 
-import type { EarlierCall, EarlierText } from "@/lib/customer-context-rules";
-import { EARLIER_CONTACT_DAYS } from "@/lib/customer-context-rules";
+import type { CustomerProfile, EarlierCall, EarlierText, LinkDelivery, ProfileJob } from "@/lib/customer-context-rules";
+import { EARLIER_CONTACT_DAYS, PROFILE_JOBS } from "@/lib/customer-context-rules";
 import type { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -85,4 +85,70 @@ export async function callsFor(database: Database, organizationId: string, custo
     windowEnd: text(row.arrival_window_end) || null,
     address: text(row.address_line_1),
   }));
+}
+
+/** Their name, email and address on file. */
+export async function profileFor(database: Database, organizationId: string, customerId: string): Promise<CustomerProfile | null> {
+  const { data } = await database
+    .from("customers")
+    .select("first_name, last_name, email, address_line_1, city")
+    .eq("organization_id", organizationId)
+    .eq("id", customerId)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  const first = text(row.first_name);
+  return {
+    // Text-only contacts are saved as "Text"; that is not a name to greet anyone by.
+    firstName: first === "Text" ? "" : first,
+    lastName: text(row.last_name),
+    email: text(row.email),
+    address: [text(row.address_line_1), text(row.city)].filter(Boolean).join(", "),
+  };
+}
+
+/** Their jobs, newest first: enough for the next visit and the latest ones done. */
+export async function jobsFor(database: Database, organizationId: string, customerId: string): Promise<ProfileJob[]> {
+  const { data } = await database
+    .from("jobs")
+    .select("job_number, status, category, customer_description, scheduled_start, scheduled_end")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .order("created_at", { ascending: false })
+    .limit(PROFILE_JOBS + 4);
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    jobNumber: String(row.job_number ?? ""),
+    status: text(row.status),
+    kind: text(row.category).replace(/_/g, " "),
+    description: text(row.customer_description),
+    start: text(row.scheduled_start) || null,
+    end: text(row.scheduled_end) || null,
+  }));
+}
+
+/** Their latest open booking, and every attempt to send them its link. */
+export async function linkDeliveryFor(database: Database, organizationId: string, customerId: string): Promise<LinkDelivery | null> {
+  const { data } = await database
+    .from("booking_requests")
+    .select("status, arrival_window_start, notification_results")
+    .eq("organization_id", organizationId)
+    .eq("customer_id", customerId)
+    .in("status", ["awaiting_payment", "confirmed", "scheduled"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  const attempts = (Array.isArray(row.notification_results) ? row.notification_results : []) as Record<string, unknown>[];
+  return {
+    status: text(row.status),
+    windowStart: text(row.arrival_window_start) || null,
+    attempts: attempts.map((attempt) => ({
+      channel: text(attempt.channel),
+      ok: attempt.ok === true,
+      at: text(attempt.at),
+      audience: text(attempt.audience),
+      detail: text(attempt.detail),
+    })),
+  };
 }

@@ -104,3 +104,85 @@ export function earlierCallsForText(input: { calls: EarlierCall[]; timeZone: str
     ...calls.map((call) => callLine(call, input.timeZone)),
   ].join("\n");
 }
+
+/** Who the customer is, from their record, for the phone assistant. */
+export type CustomerProfile = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  address: string;
+};
+
+export type ProfileJob = {
+  jobNumber: string;
+  status: string;
+  kind: string;
+  description: string;
+  start: string | null;
+  end: string | null;
+};
+
+/** The customer's latest booking, and whether its link reached them. */
+export type LinkDelivery = {
+  windowStart: string | null;
+  status: string;
+  attempts: { channel: string; ok: boolean; at: string; audience: string; detail: string }[];
+};
+
+/** How many jobs are worth telling Maya about: the next ones and the latest done. */
+export const PROFILE_JOBS = 4;
+
+function deliveryLine(delivery: LinkDelivery, timeZone: string): string {
+  const mine = delivery.attempts.filter((attempt) => attempt.audience === "customer");
+  if (mine.length === 0) return "- Their booking link: no record of it being sent.";
+  const latest = [...mine].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-3);
+  const said = latest.map((attempt) => {
+    const how = attempt.channel === "sms" ? "text" : "email";
+    const at = Number.isFinite(Date.parse(attempt.at)) ? ` ${when(attempt.at, timeZone)}` : "";
+    return attempt.ok ? `sent by ${how}${at}` : `${how} failed${at} (${oneLine(attempt.detail, 80)})`;
+  });
+  const anyOk = latest.some((attempt) => attempt.ok);
+  return `- Their booking link: ${said.join("; ")}.${anyOk ? "" : " It never reached them: offer to resend it with resend_booking_link."}`;
+}
+
+/**
+ * The note on a returning customer: their name and address on file, their
+ * upcoming and recent jobs, and whether their last booking link reached them.
+ * Empty when there is nothing on record, so a stranger is greeted as one.
+ */
+export function customerProfileForCall(input: {
+  profile: CustomerProfile | null;
+  jobs: ProfileJob[];
+  delivery: LinkDelivery | null;
+  timeZone: string;
+  now: Date;
+}): string {
+  const { profile } = input;
+  const name = profile ? [profile.firstName, profile.lastName].filter(Boolean).join(" ") : "";
+  const open = new Set(["canceled", "cancelled", "completed", "no_show"]);
+  const upcoming = input.jobs
+    .filter((job) => !open.has(job.status) && job.start && Date.parse(job.start) >= input.now.getTime() - 12 * 3_600_000)
+    .sort((a, b) => Date.parse(a.start ?? "") - Date.parse(b.start ?? ""));
+  const past = input.jobs.filter((job) => !upcoming.includes(job));
+  const shown = [...upcoming, ...past].slice(0, PROFILE_JOBS);
+  const lines = [
+    ...(name ? [`- Name on file: ${name}. Greet them by first name.`] : []),
+    ...(profile?.address ? [`- Address on file: ${profile.address}. Confirm it rather than asking again.`] : []),
+    ...(profile?.email ? [`- Email on file: ${profile.email}.`] : []),
+    ...shown.map((job) => {
+      const window = job.start ? ` for ${when(job.start, input.timeZone)}` : "";
+      const what = job.kind || "electrical work";
+      const about = job.description ? ` (${oneLine(job.description, 120)})` : "";
+      return `- Job #${job.jobNumber}: ${what}${about}, ${job.status.replace(/_/g, " ")}${window}.`;
+    }),
+    ...(input.delivery ? [deliveryLine(input.delivery, input.timeZone)] : []),
+  ];
+  if (lines.length === 0) return "";
+  return [
+    "This is a returning customer. What is on their record:",
+    ...lines,
+    upcoming.length
+      ? "They have a visit coming up: if they don't say why they called, ask whether it's about that visit. Help with that visit rather than booking a second one."
+      : "Greet them as someone the business knows, and ask how you can help today.",
+  ].join("\n");
+}

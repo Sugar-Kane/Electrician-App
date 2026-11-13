@@ -19,10 +19,12 @@ import {
   intakeQuestionList,
   intakeShortfall,
   looksLikeSolicitation,
+  resendReply,
   slotList,
   unreachableCaller,
 } from "@/lib/booking-tool-rules";
 import {
+  resendBookingLink,
   sendBookingConfirmations,
   sendCallbackAlert,
 } from "@/lib/booking-notifications";
@@ -37,8 +39,8 @@ import { type McpSession } from "@/lib/mcp-session-token";
 import { decideIntakeAction } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/activity";
-import { callsFor, customerForPhone, textsFor } from "@/lib/customer-context";
-import { earlierContactForCall } from "@/lib/customer-context-rules";
+import { callsFor, customerForPhone, jobsFor, linkDeliveryFor, profileFor, textsFor } from "@/lib/customer-context";
+import { customerProfileForCall, earlierContactForCall } from "@/lib/customer-context-rules";
 import { toE164 } from "@/lib/phone-format";
 import { countInboundCallsInProgress, findActiveInboundTwilioCall, redirectTwilioCall } from "@/lib/twilio";
 import { liveTransferTwiml, transferActionUrl } from "@/lib/twilio-transfer";
@@ -118,27 +120,86 @@ async function lookUpCaller(input: {
   const match = phone ? await callbackOnTheLine({ ...input, phone, business, now }) : null;
 
   /*
-   * What they have already said by text and on earlier calls, so the call
-   * picks up from there. Only for somebody known to be on this call: the
-   * caller a per-call link was made for, the person Maya called back, or a
-   * number Twilio has on a live call to the business right now. A number the
-   * model was talked into asking about gets nothing.
+   * Who they are and what they have already said, so the call picks up from
+   * there. Only for somebody known to be on this call (see verifiedCustomer):
+   * a number the model was talked into asking about gets nothing.
    */
-  let customerId = input.session.customerId ?? null;
-  if (!customerId && phone) {
-    const onTheLine = Boolean(match) || Boolean(business && (await findActiveInboundTwilioCall({ from: phone, to: business })));
-    if (onTheLine) customerId = await customerForPhone(input.database, input.session.organizationId, phone);
-  }
+  const customerId = await verifiedCustomer({ ...input, phone, business, calledBack: Boolean(match) });
+  const { organizationId } = input.session;
   const earlier = customerId
-    ? earlierContactForCall({
-        texts: await textsFor(input.database, input.session.organizationId, customerId),
-        calls: await callsFor(input.database, input.session.organizationId, customerId),
-        timeZone,
-        now,
-      })
+    ? [
+        customerProfileForCall({
+          profile: await profileFor(input.database, organizationId, customerId),
+          jobs: await jobsFor(input.database, organizationId, customerId),
+          delivery: await linkDeliveryFor(input.database, organizationId, customerId),
+          timeZone,
+          now,
+        }),
+        earlierContactForCall({
+          texts: await textsFor(input.database, organizationId, customerId),
+          calls: await callsFor(input.database, organizationId, customerId),
+          timeZone,
+          now,
+        }),
+      ]
+        .filter(Boolean)
+        .join("\n\n")
     : "";
 
   return { text: callerLookupReply(match, earlier) };
+}
+
+/**
+ * The customer on this call, when it can be known for certain.
+ *
+ * The number comes from the model, and a caller can talk a model into asking
+ * about somebody else's. So it counts only when it is pinned some other way:
+ * the customer a per-call link was made for; the caller ID the call system
+ * passed in for this session; the person Maya called back; or a number Twilio
+ * has on a live call to the business right now. Otherwise null, and Maya
+ * treats them as a new caller.
+ */
+async function verifiedCustomer(input: {
+  database: Database;
+  session: McpSession;
+  phone: string;
+  business: string;
+  calledBack: boolean;
+}): Promise<string | null> {
+  if (input.session.customerId) return input.session.customerId;
+  const { phone } = input;
+  if (!phone) return null;
+  const pinned = input.session.phone ? toE164(input.session.phone) === phone : false;
+  const onTheLine =
+    pinned ||
+    input.calledBack ||
+    Boolean(input.business && (await findActiveInboundTwilioCall({ from: phone, to: input.business })));
+  return onTheLine ? customerForPhone(input.database, input.session.organizationId, phone) : null;
+}
+
+/** Sending a known caller their booking link again, and saying what happened. */
+async function resendLink(input: {
+  database: Database;
+  session: McpSession;
+  args: Record<string, unknown>;
+}): Promise<ToolResult> {
+  const phone = callerPhone(input.args);
+  const { data: organization } = await input.database
+    .from("organizations")
+    .select("phone")
+    .eq("id", input.session.organizationId)
+    .maybeSingle();
+  const business = String(organization?.phone ?? "");
+  const customerId = await verifiedCustomer({ ...input, phone, business, calledBack: false });
+  if (!customerId) return resendReply({ verified: false, found: false, held: false, slotLabel: "", sent: [] });
+  const channel = input.args.channel === "email" || input.args.channel === "both" ? input.args.channel : "text";
+  const result = await resendBookingLink({
+    organizationId: input.session.organizationId,
+    customerId,
+    channel,
+    email: callerEmail(input.args),
+  });
+  return resendReply({ verified: true, ...result });
 }
 
 /** The website request whose call back is this call, if it is one. */
@@ -203,6 +264,7 @@ export async function runBookingTool(input: {
   });
 
   if (input.name === "log_non_service_call") return logNonServiceCall(input);
+  if (input.name === "resend_booking_link") return resendLink(input);
 
   // The safety net for a sales call the model filed as a callback anyway: the
   // owner is not texted about it and nothing is saved as a request.
@@ -482,6 +544,7 @@ export async function runBookingTool(input: {
       held: Boolean(recorded.payUrl),
       needsReview: recorded.needsReview,
       transfer,
+      alreadyExisted: recorded.alreadyExisted,
     }),
     // So the call log can show which booking this call saved, and support can
     // tell "said it was booked" from "is booked".

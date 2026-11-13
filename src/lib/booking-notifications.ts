@@ -22,7 +22,7 @@ import {
 } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import { localeFor } from "@/lib/intake-phrases";
-import { slotLabel } from "@/lib/intake-shared";
+import { loadIntakeContext, slotLabel } from "@/lib/intake-shared";
 import { callbackConsentStep, consentIsActive } from "@/lib/messaging-rules";
 import { type IntakeContext } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -816,4 +816,161 @@ async function sendOwnerRequestAlert(input: {
   } catch {
     // Deliberately silent, like its siblings.
   }
+}
+
+export type ResendResult = {
+  /** The booking found for this customer, or none. */
+  found: boolean;
+  held: boolean;
+  slotLabel: string;
+  sent: { channel: "sms" | "email"; to: string; ok: boolean; detail: string }[];
+};
+
+/**
+ * Sending a customer their booking link again, on a call where they say it
+ * never arrived.
+ *
+ * Their latest open booking: a time held for payment or a confirmed visit.
+ * Sent now and awaited, so Maya is told what actually happened (sent, or why
+ * not) rather than promising something nothing did. The same consent ledger
+ * as every text: a customer who texted STOP is not texted again, and the
+ * resend never records a new opt-in.
+ */
+export async function resendBookingLink(input: {
+  organizationId: string;
+  customerId: string;
+  channel: "text" | "email" | "both";
+  /** An email the caller gave on this call, when theirs on file is wrong or missing. */
+  email?: string;
+}): Promise<ResendResult> {
+  const database = getSupabaseAdmin();
+  const { data } = await database
+    .from("booking_requests")
+    .select(
+      "id, public_token, status, phone, email, contact_name, first_name, last_name, description, address_line_1, city, arrival_window_start, arrival_window_end, language, notification_results",
+    )
+    .eq("organization_id", input.organizationId)
+    .eq("customer_id", input.customerId)
+    .in("status", ["awaiting_payment", "confirmed", "scheduled"])
+    .not("arrival_window_start", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const row = (data ?? null) as Record<string, unknown> | null;
+  const str = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const start = str(row?.arrival_window_start);
+  const end = str(row?.arrival_window_end);
+  const token = str(row?.public_token);
+  if (!row || !start || !end || !token) return { found: false, held: false, slotLabel: "", sent: [] };
+
+  const { context, timeZone } = await loadContextFor(database, input.organizationId);
+  const held = str(row.status) === "awaiting_payment";
+  const notification: BookingNotification = {
+    requestId: str(row.id),
+    organizationId: input.organizationId,
+    customerId: input.customerId,
+    publicToken: token,
+    phone: str(row.phone),
+    context,
+    contactName: str(row.contact_name) || [str(row.first_name), str(row.last_name)].filter(Boolean).join(" "),
+    description: str(row.description),
+    address: { line1: str(row.address_line_1), city: str(row.city) },
+    slot: { start, end },
+    timeZone,
+    origin: process.env.NEXT_PUBLIC_APP_URL ?? "",
+    held,
+    language: str(row.language) || undefined,
+  };
+  const facts = factsFor(notification);
+  const customerFacts = customerFactsFor(notification, facts);
+  const state: BookingMessageState = held ? "held" : "confirmed";
+  const sent: ResendResult["sent"] = [];
+
+  // Texted only on consent already recorded; a resend is never an opt-in.
+  if (input.channel === "text" || input.channel === "both") {
+    const phone = notification.phone;
+    const { data: settings } = await database
+      .from("messaging_settings")
+      .select("messaging_service_sid")
+      .eq("organization_id", input.organizationId)
+      .maybeSingle();
+    const messagingServiceSid = String(settings?.messaging_service_sid ?? "");
+    const { data: consent } = await database
+      .from("messaging_consent")
+      .select("opted_in_at, opted_out_at")
+      .eq("organization_id", input.organizationId)
+      .eq("customer_id", input.customerId)
+      .eq("channel", "sms")
+      .eq("scope", "transactional")
+      .maybeSingle();
+    const consented = consentIsActive({
+      optedInAt: consent?.opted_in_at ? String(consent.opted_in_at) : null,
+      optedOutAt: consent?.opted_out_at ? String(consent.opted_out_at) : null,
+    });
+    if (!phone) {
+      sent.push({ channel: "sms", to: "", ok: false, detail: "No phone number on the booking." });
+    } else if (!messagingServiceSid) {
+      sent.push({ channel: "sms", to: phone, ok: false, detail: "Texting is not set up for this business." });
+    } else if (!consented) {
+      sent.push({ channel: "sms", to: phone, ok: false, detail: "The customer has not agreed to texts, or opted out." });
+    } else {
+      const body = customerConfirmationSms(customerFacts, state);
+      const result = await sendSms({ to: phone, body, messagingServiceSid });
+      sent.push({
+        channel: "sms",
+        to: phone,
+        ok: result.ok,
+        detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
+      });
+      await recordOutbound({ database, organizationId: input.organizationId, customerId: input.customerId, body, result });
+    }
+  }
+
+  if (input.channel === "email" || input.channel === "both") {
+    let email = (input.email ?? "").trim() || str(row.email);
+    if (!email) {
+      const { data: customer } = await database.from("customers").select("email").eq("id", input.customerId).maybeSingle();
+      email = str(customer?.email);
+    }
+    if (!email || !looksLikeEmail(email)) {
+      sent.push({ channel: "email", to: email, ok: false, detail: "No usable email address." });
+    } else {
+      const message = confirmationEmail(customerFacts, state);
+      const result = await sendEmail({
+        organizationId: input.organizationId,
+        contactButtons: true,
+        to: email,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+        from: emailSender(facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+      });
+      sent.push({ channel: "email", to: email, ok: result.ok, detail: result.ok ? result.id : `${result.errorCode}: ${result.errorDetail}` });
+    }
+  }
+
+  // Kept with the booking's other attempts, so "did they get it?" has one answer.
+  try {
+    const prior = Array.isArray(row.notification_results) ? row.notification_results : [];
+    const at = new Date().toISOString();
+    await database
+      .from("booking_requests")
+      .update({
+        notification_results: [
+          ...prior,
+          ...sent.map((attempt) => ({ ...attempt, audience: "customer", phase: "resend", at })),
+        ],
+      })
+      .eq("id", notification.requestId);
+  } catch {
+    // Deliberately silent.
+  }
+
+  return { found: true, held, slotLabel: customerFacts.slotLabel, sent };
+}
+
+async function loadContextFor(database: Database, organizationId: string) {
+  const { context, timeZone } = await loadIntakeContext({ database, organizationId, isFirstReply: false });
+  return { context, timeZone };
 }
