@@ -1,3 +1,5 @@
+import { emailButton } from "./email-layout.ts";
+
 /**
  * What a customer is sent when they are asked to pay.
  *
@@ -159,7 +161,7 @@ export function invoiceEmail(facts: InvoiceFacts): Mail {
     ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
     ...(facts.pdfAttached ? ["<p>Your invoice is attached as a PDF.</p>"] : []),
     facts.payUrl
-      ? `<p><a href="${escapeHtml(facts.payUrl)}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Pay ${escapeHtml(amount)}</a></p>`
+      ? `<p>${emailButton(facts.payUrl, `Pay ${amount}`)}</p>`
       : `<p>To pay, call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     ...(facts.viewUrl && facts.viewUrl !== facts.payUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your invoice</a></p>`] : []),
     `<p>Questions about this invoice? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
@@ -217,7 +219,7 @@ export function invoicePreviewEmail(facts: InvoiceFacts): Mail {
     `<p>Estimated total: <strong>${escapeHtml(amount)}</strong></p>`,
     ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
     "<p><strong>Nothing is due yet.</strong> We will send the final invoice when the work is complete.</p>",
-    ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">See the preview</a></p>`] : []),
+    ...(facts.viewUrl ? [`<p>${emailButton(facts.viewUrl, "See the preview")}</p>`] : []),
     `<p>Questions? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
   ]);
@@ -279,7 +281,7 @@ export function paidInvoiceEmail(facts: InvoiceFacts): Mail {
     "</table>",
     ...(summary ? [`<p style="color:#475569">For: ${escapeHtml(summary)}</p>`] : []),
     ...(facts.pdfAttached ? ["<p>Your paid invoice is attached as a PDF.</p>"] : []),
-    ...(facts.viewUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your paid invoice</a></p>`] : []),
+    ...(facts.viewUrl ? [`<p>${emailButton(facts.viewUrl, "View your paid invoice")}</p>`] : []),
     `<p>Questions? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
   ]);

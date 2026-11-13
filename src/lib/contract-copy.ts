@@ -1,5 +1,7 @@
 import "server-only";
 
+import { emailButton } from "@/lib/email-layout";
+
 import { createElement, type ReactElement } from "react";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 
@@ -97,7 +99,14 @@ export async function sendSignedContractCopy(input: {
         to: email,
         subject: `Your signed ${word} with ${businessName}`,
         text: lines.join("\n"),
-        html: lines.map((line) => (line ? `<p>${escapeHtml(line)}</p>` : "")).join(""),
+        html: [
+          `<p>${escapeHtml(greeting)}</p>`,
+          `<p style="font-size:20px;margin:0 0 8px"><strong>Your signed ${escapeHtml(word)}</strong></p>`,
+          `<p>Thank you for signing ${escapeHtml(what.replace("contract", word))} with <strong>${escapeHtml(businessName)}</strong>.</p>`,
+          attachment ? `<p>Your signed copy is attached.</p>` : "",
+          link ? `<p style="margin:20px 0">${emailButton(link, `View your signed ${word}`)}</p>` : "",
+          `<p style="color:#475569">${escapeHtml(businessName)}</p>`,
+        ].join(""),
         from: emailSender(businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
         ...(attachment ? { attachments: [attachment] } : {}),
       });

@@ -12,6 +12,7 @@
  */
 
 import { intakeQuestionIn } from "./intake-phrases.ts";
+import { emailButton } from "./email-layout.ts";
 
 export type BookingFacts = {
   paid?: boolean;
@@ -277,7 +278,7 @@ export function ownerBookingEmail(
         ]
       : []),
     `<p><strong>Deposit:</strong> ${escapeHtml(facts.diagnosticFee)}</p>`,
-    jobUrl ? `<p><a href="${escapeHtml(jobUrl)}">Open the job</a></p>` : "",
+    jobUrl ? `<p>${emailButton(jobUrl, "Open the job")}</p>` : "",
   ]
     .filter(Boolean)
     .join("");
@@ -411,7 +412,7 @@ export function ownerCallbackEmail(facts: CallbackFacts): EmailBody {
         ]
       : []),
     "<p><strong>Nothing is scheduled.</strong> No visit was booked on this call.</p>",
-    facts.link ? `<p><a href="${escapeHtml(facts.link)}">Open the request</a></p>` : "",
+    facts.link ? `<p>${emailButton(facts.link, "Open the request")}</p>` : "",
   ]
     .filter(Boolean)
     .join("");
@@ -521,7 +522,7 @@ export function ownerCallbackOutcomeEmail(facts: CallbackOutcomeFacts): EmailBod
       `<p style="font-size:18px;margin:0 0 4px"><strong>${escapeHtml(heading)}</strong></p>`,
       `<p style="margin:0 0 16px"><a href="tel:${escapeHtml(tel)}">${escapeHtml(facts.customerPhone)}</a></p>`,
       `<p>${escapeHtml(sentence)}</p>`,
-      facts.link ? `<p><a href="${escapeHtml(facts.link)}">Open the request</a></p>` : "",
+      facts.link ? `<p>${emailButton(facts.link, "Open the request")}</p>` : "",
     ].join(""),
   };
 }
@@ -556,7 +557,7 @@ export function ownerWebsiteRequestEmail(facts: WebsiteRequestFacts): EmailBody 
     `<p style="margin:0 0 16px"><a href="tel:${escapeHtml(tel)}">${escapeHtml(facts.customerPhone)}</a></p>`,
     ...details.map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`),
     `<p><strong>${escapeHtml(next)}</strong></p>`,
-    facts.link ? `<p><a href="${escapeHtml(facts.link)}">Open the request</a></p>` : "",
+    facts.link ? `<p>${emailButton(facts.link, "Open the request")}</p>` : "",
   ]
     .filter(Boolean)
     .join("");
@@ -648,7 +649,7 @@ export function confirmationEmail(
       : "",
     paid ? `<p>${escapeHtml(copy.received(facts.diagnosticFee))}</p>` : "",
     facts.link
-      ? `<p><a href="${escapeHtml(facts.link)}">${state === "held" ? copy.pay : copy.view}</a></p>`
+      ? `<p>${emailButton(facts.link, state === "held" ? copy.pay : copy.view)}</p>`
       : "",
     `<p>${escapeHtml(copy.change(facts.businessPhone))}</p>`,
     `<p>${escapeHtml(facts.businessName)}</p>`,

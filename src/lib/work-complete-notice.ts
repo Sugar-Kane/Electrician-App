@@ -2,6 +2,7 @@ import "server-only";
 
 import { sendJobEventMessage } from "@/lib/automatic-messages";
 import { emailSender } from "@/lib/booking-confirmation";
+import { emailButton } from "@/lib/email-layout";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml, invoiceViewUrl } from "@/lib/invoice-messages";
@@ -131,7 +132,7 @@ export async function sendWorkCompleteNotice(jobId: string, notice: CompletionNo
                 )
                 .join("")}`
             : "",
-          invoiceLink ? `<p><a href="${escapeHtml(invoiceLink)}">View your invoice</a></p>` : "",
+          invoiceLink ? `<p>${emailButton(invoiceLink, "View your invoice")}</p>` : "",
           text(organization?.phone) ? `<p>Questions? Call ${escapeHtml(text(organization?.phone))}.</p>` : "",
         ]
           .filter(Boolean)

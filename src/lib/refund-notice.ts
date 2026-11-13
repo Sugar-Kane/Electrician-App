@@ -106,7 +106,17 @@ export async function sendRefundNotice(refundId: string): Promise<{ email: strin
         to: email,
         subject: `Your refund of ${amount} from ${businessName}`,
         text: lines.join("\n"),
-        html: lines.map((line) => (line ? `<p>${escapeHtml(line)}</p>` : "")).join(""),
+        html: [
+          `<p>${escapeHtml(firstName ? `Hi ${firstName},` : "Hello,")}</p>`,
+          `<p style="font-size:14px;color:#475569;margin:0">Refund</p>`,
+          `<p style="font-size:28px;margin:0 0 12px"><strong>${escapeHtml(amount)}</strong></p>`,
+          `<p>${escapeHtml(`${businessName} has refunded ${amount}${forWhat}.`)}</p>`,
+          `<p>${escapeHtml(when)}</p>`,
+          businessPhone
+            ? `<p>Questions? Call us at <a href="tel:${escapeHtml(businessPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(businessPhone)}</a>.</p>`
+            : "",
+          `<p style="color:#475569">${escapeHtml(businessName)}</p>`,
+        ].join(""),
         from: emailSender(businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
       });
       outcome.email = sent.ok ? "sent" : `${sent.errorCode}: ${sent.errorDetail}`;
