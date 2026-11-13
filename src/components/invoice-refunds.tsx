@@ -185,7 +185,7 @@ export function InvoicePayments({
                     </li>
                   ))}
                   {payment.refunds
-                    .filter((refund) => refund.status === "succeeded" || refund.status === "pending")
+                    .filter((refund) => refund.status === "succeeded")
                     .map((refund) => (
                     <li key={`receipt-${refund.id}`}>
                       <RefundReceipt invoiceId={invoiceId} refundId={refund.id} />

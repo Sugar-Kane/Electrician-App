@@ -616,18 +616,64 @@ export async function sendRefundReceiptAction(_previous: InvoiceActionState, for
   const supabase = asFlexibleClient(await createClient());
   const { data: refund } = await supabase
     .from("invoice_refunds")
-    .select("id, status")
+    .select("id, status, stripe_refund_id, invoice_payment_id")
     .eq("id", refundId)
     .eq("invoice_id", invoiceId)
     .eq("organization_id", context.organizationId)
     .maybeSingle();
   if (!refund) return { error: "That refund could not be found." };
-  if (refund.status !== "succeeded" && refund.status !== "pending") return { error: "Only a refund that went through has a receipt." };
+
+  const { data: payment } = text(refund.invoice_payment_id)
+    ? await supabase.from("invoice_payments").select("stripe_checkout_session_id").eq("id", text(refund.invoice_payment_id)).maybeSingle()
+    : { data: null };
+  const online = Boolean(text(payment?.stripe_checkout_session_id));
+  const stripeRefundId = text(refund.stripe_refund_id);
+
+  // A card refund is asked of Stripe itself, now: only money Stripe says went
+  // back gets a receipt, whatever our own record says.
+  let stripeStatus: string | null = null;
+  let reference = "";
+  if (online && stripeRefundId) {
+    const { getStripe } = await import("@/lib/stripe");
+    const { paymentAccountFor } = await import("@/lib/stripe-connect");
+    const stripe = getStripe();
+    const account = await paymentAccountFor(context.organizationId);
+    if (stripe && account) {
+      try {
+        const found = await stripe.refunds.retrieve(stripeRefundId, {}, { stripeAccount: account.accountId });
+        stripeStatus = found.status ?? null;
+        const card = (found.destination_details as { card?: { reference?: string | null } } | null | undefined)?.card;
+        reference = card?.reference ?? "";
+        // Our record follows Stripe's answer.
+        if (stripeStatus && stripeStatus !== text(refund.status)) {
+          const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+          const { refundStatusFromStripe } = await import("@/lib/invoice-refund");
+          await asFlexibleClient(getSupabaseAdmin()).rpc("settle_invoice_refund", {
+            p_refund_id: refundId,
+            p_status: refundStatusFromStripe(stripeStatus),
+            p_stripe_refund_id: stripeRefundId,
+            p_failure_reason: found.failure_reason ?? null,
+          });
+        }
+      } catch (error) {
+        console.error("refund receipt: stripe lookup failed", { refundId, error: error instanceof Error ? error.message : String(error) });
+        stripeStatus = null;
+      }
+    }
+  }
+
+  const { refundReceiptAllowed } = await import("@/lib/invoice-refund");
+  const allowed = refundReceiptAllowed({ online, status: text(refund.status), stripeRefundId, stripeStatus });
+  if (!allowed.ok) {
+    revalidatePath(`/invoices/${invoiceId}`);
+    return { error: allowed.reason };
+  }
 
   const { sendRefundReceipt } = await import("@/lib/refund-notice");
-  const told = await sendRefundReceipt(refundId);
+  const told = await sendRefundReceipt(refundId, reference);
+  revalidatePath(`/invoices/${invoiceId}`);
   const by = [told.email === "sent" ? "email" : "", told.sms === "sent" ? "text" : ""].filter(Boolean);
   return by.length > 0
     ? { error: "", notice: `Refund receipt sent by ${by.join(" and ")}.` }
-    : { error: `Not sent: ${told.email === "no email on file" ? "no email on file" : told.email}; text: ${told.sms}.` };
+    : { error: `Not sent. Email: ${told.email}. Text: ${told.sms}.` };
 }

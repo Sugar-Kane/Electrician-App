@@ -56,16 +56,18 @@ const REFUND_COLUMNS =
  * claimed, so it can be sent as often as asked; the caller has already
  * checked the refund is theirs.
  */
-export async function sendRefundReceipt(refundId: string): Promise<{ email: string; sms: string }> {
-  return sendRefundNotice(refundId, { receipt: true });
+export async function sendRefundReceipt(refundId: string, reference = ""): Promise<{ email: string; sms: string }> {
+  return sendRefundNotice(refundId, { receipt: true, reference });
 }
 
 export async function sendRefundNotice(
   refundId: string,
-  options: { receipt?: boolean } = {},
+  /** `reference`: the card network's number for the refund (from Stripe), for the customer to trace it. */
+  options: { receipt?: boolean; reference?: string } = {},
 ): Promise<{ email: string; sms: string }> {
   const outcome = { email: "not sent", sms: "not sent" };
   const receipt = options.receipt === true;
+  const reference = (options.reference ?? "").trim();
   try {
     const database = getSupabaseAdmin();
     // Claim it: only the first caller for a refund that is done or on its way.
@@ -146,6 +148,7 @@ export async function sendRefundNotice(
         ...(totals
           ? ["", `Paid: ${dollars(totals.paid)}`, `Refunded: -${dollars(totals.refunded)}`, `Kept: ${dollars(Math.max(totals.paid - totals.refunded, 0))}`]
           : []),
+        ...(reference ? [`Card refund reference: ${reference}`] : []),
         businessPhone ? `Questions? Call us at ${businessPhone}.` : "",
         "",
         businessName,
@@ -173,6 +176,9 @@ export async function sendRefundNotice(
                     `<tr><td style="padding:6px 16px 6px 0;color:#475569;${index === all.length - 1 ? "border-top:1px solid #e2e8f0;" : ""}">${escapeHtml(name)}</td><td style="padding:6px 0;text-align:right;font-weight:600;${index === all.length - 1 ? "border-top:1px solid #e2e8f0;" : ""}">${escapeHtml(value)}</td></tr>`,
                 )
                 .join("")}</table>`
+            : "",
+          reference
+            ? `<p style="font-size:14px;color:#475569">Card refund reference: <strong>${escapeHtml(reference)}</strong><br>Your card company can use this number to find the refund.</p>`
             : "",
           businessPhone
             ? `<p>Questions? Call us at <a href="tel:${escapeHtml(businessPhone.replace(/[^\d+]/g, ""))}">${escapeHtml(businessPhone)}</a>.</p>`
