@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
+import { completeDraftFields, placeholdersUsed } from "@/lib/contract-template";
 import { callOffJob, changeJob, loadChangeJob } from "@/lib/job-changes-server";
 import { readAccessNotes, readStreetAddress, readUnit } from "@/lib/property-details";
-import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -70,7 +71,34 @@ export async function updateJobPlace(
     return { error: "This job is canceled. Cancelled jobs cannot be edited." };
   }
   if (!job.propertyId) {
-    return { error: "This job has no address, so there is nowhere to keep these." };
+    // No address yet: this one becomes the job's place.
+    const { data: created, error: createError } = await job.supabase
+      .from("properties")
+      .insert({
+        organization_id: job.organizationId,
+        customer_id: job.customerId || null,
+        address_line_1: address.value.line1,
+        address_line_2: unit || null,
+        city: address.value.city,
+        state: address.value.state,
+        postal_code: address.value.postalCode,
+        access_notes: accessNotes || null,
+      })
+      .select("id")
+      .maybeSingle();
+    const propertyId = text(created?.id);
+    if (createError || !propertyId) return { error: "That address could not be saved." };
+    const { error: linkError } = await job.supabase
+      .from("jobs")
+      .update({ property_id: propertyId })
+      .eq("id", job.id)
+      .eq("organization_id", job.organizationId);
+    if (linkError) return { error: "That address could not be saved." };
+    const filled = await fillDraftServiceAddress(job.supabase, job.organizationId, job.id, address.value);
+    revalidatePath(`/jobs/${jobNumber}`);
+    revalidatePath(`/jobs/${jobNumber}/edit`);
+    revalidatePath("/route");
+    return { error: "", notice: filled ? "Address saved, and added to the draft contract." : "Address saved." };
   }
 
   const { data: saved } = await job.supabase
@@ -109,10 +137,77 @@ export async function updateJobPlace(
     return { error: "Those details could not be saved." };
   }
 
+  const filled = await fillDraftServiceAddress(job.supabase, job.organizationId, job.id, address.value);
   revalidatePath(`/jobs/${jobNumber}`);
   revalidatePath(`/jobs/${jobNumber}/edit`);
   if (moved) revalidatePath("/route");
-  return { error: "", notice: "Saved. Every job at this address shows these." };
+  return {
+    error: "",
+    notice: filled ? "Saved, and added to the draft contract." : "Saved. Every job at this address shows these.",
+  };
+}
+
+/**
+ * The service address, filled into the job's newest unsent draft contract
+ * that was made without one ({{service_address}} still standing).
+ *
+ * As a new draft, the way completing a draft's details always works: a
+ * contract's text is never changed in place. A draft that was sent, signed,
+ * or already has an address is left exactly as it is. Its PDF is built again.
+ */
+async function fillDraftServiceAddress(
+  supabase: FlexibleSupabaseClient,
+  organizationId: string,
+  jobId: string,
+  address: { line1: string; city: string; state: string; postalCode: string },
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("contracts")
+    .select("id, kind, body, scope, status, signed_at, total_cents, deposit_cents, deposit_paid, organizations ( timezone )")
+    .eq("organization_id", organizationId)
+    .eq("job_id", jobId)
+    .neq("status", "void")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const draft = data as Record<string, unknown> | null;
+  if (!draft || draft.status !== "draft" || draft.signed_at) return false;
+  const body = text(draft.body);
+  if (!placeholdersUsed(body).includes("service_address")) return false;
+
+  const line = [address.line1, address.city, address.state, address.postalCode].filter(Boolean).join(", ");
+  const filled = completeDraftFields(body, { service_address: line });
+  const { data: created, error } = await supabase
+    .from("contracts")
+    .insert({
+      organization_id: organizationId,
+      job_id: jobId,
+      kind: draft.kind === "change_order" ? "change_order" : "agreement",
+      body: filled.body,
+      scope: text(draft.scope),
+      unfilled: filled.unfilled,
+      status: "draft",
+      total_cents: draft.total_cents ?? null,
+      deposit_cents: draft.deposit_cents ?? null,
+      deposit_paid: draft.deposit_paid ?? null,
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !created?.id) {
+    console.error("filling the draft contract's address failed", { code: error?.code });
+    return false;
+  }
+  const { data: auth } = await supabase.auth.getUser();
+  const organization = draft.organizations as Record<string, unknown> | null;
+  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
+  await generateContractPdf({
+    database: supabase,
+    organizationId,
+    contractId: text(created.id),
+    timeZone: text(organization?.timezone) || "America/Los_Angeles",
+    uploadedBy: auth.user?.id ?? "",
+  }).catch(() => null);
+  return true;
 }
 
 export async function updateJob(
