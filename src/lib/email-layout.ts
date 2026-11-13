@@ -28,9 +28,15 @@ function escape(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** A yellow button, for the one thing the email asks the reader to do. */
-export function emailButton(href: string, label: string): string {
-  return `<a href="${escape(href)}" class="btn" style="display:inline-block;background:${YELLOW};color:${NAVY};font-weight:700;padding:13px 24px;border-radius:12px;text-decoration:none;font-size:16px">${escape(label)}</a>`;
+/**
+ * A yellow button, for the one thing the email asks the reader to do. `wide`
+ * fills the width of the message, for the one that must not be missed (paying).
+ */
+export function emailButton(href: string, label: string, wide = false): string {
+  const shape = wide
+    ? "display:block;text-align:center;padding:16px 20px;font-size:17px"
+    : "display:inline-block;padding:13px 24px;font-size:16px";
+  return `<a href="${escape(href)}" class="btn" style="${shape};background:${YELLOW};color:${NAVY};font-weight:700;border-radius:12px;text-decoration:none">${escape(label)}</a>`;
 }
 
 /** The display name from a From line ("Pacific Plains Electric <bookings@…>"), or "". */

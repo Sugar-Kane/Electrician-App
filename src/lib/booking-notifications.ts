@@ -24,6 +24,7 @@ import { sendEmail } from "@/lib/email";
 import { localeFor } from "@/lib/intake-phrases";
 import { loadIntakeContext, slotLabel } from "@/lib/intake-shared";
 import { callbackConsentStep, consentIsActive } from "@/lib/messaging-rules";
+import { PHONE_BOOKING_CONSENT_SOURCE } from "@/lib/sms-consent";
 import { type IntakeContext } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendSms } from "@/lib/twilio";
@@ -269,8 +270,12 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   } else if (messagingServiceSid && input.phone && wantsText) {
     const consentMode = input.customerSmsConsent ?? "phone_booking";
 
+    // Recorded only here, where the caller asked for their link by text
+    // (wantsText above). A consent the database refused is not a consent: the
+    // text is then not sent, and the reason says so.
+    let consentSaved = true;
     if (consentMode === "phone_booking") {
-      await database.from("messaging_consent").upsert(
+      const { error } = await database.from("messaging_consent").upsert(
         {
           organization_id: input.organizationId,
           customer_id: input.customerId,
@@ -278,11 +283,12 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
           scope: "transactional",
           opted_in_at: new Date().toISOString(),
           opted_out_at: null,
-          source: "phone_booking",
-          proof_text: `Caller gave this number on a phone call to book ${facts.slotLabel}.`,
+          source: PHONE_BOOKING_CONSENT_SOURCE,
+          proof_text: `Caller asked on a phone call for their booking link by text to this number, to book ${facts.slotLabel}.`,
         },
         { onConflict: "customer_id,channel,scope" },
       );
+      consentSaved = !error;
     }
 
     const { data: consent } =
@@ -309,7 +315,9 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
         to: input.phone,
         audience: "customer",
         ok: false,
-        detail: "Customer transactional SMS consent is not active.",
+        detail: consentSaved
+          ? "Customer transactional SMS consent is not active."
+          : "The customer agreed to texts on the call, but that could not be saved, so no text was sent.",
       });
     } else {
       const body = customerConfirmationSms(customerFacts, messageState);

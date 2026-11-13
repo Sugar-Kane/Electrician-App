@@ -609,6 +609,20 @@ export function slotList(context: IntakeContext): string {
  * fee credited toward it. Never a promise that a particular repair is free:
  * the electrician decides on site.
  */
+/**
+ * How the fee is first brought up: the offer to come out first, then the
+ * deposit, then what it buys, then the question. In that order, so the price
+ * is never the first thing a caller hears.
+ */
+export function feeUpFront(fee: string): string {
+  return [
+    `1. Offer the visit first: "We'd be happy to send an electrician out to take a look."`,
+    `2. Then the deposit: "I do want to let you know up front, to book the visit we require a ${fee} deposit."`,
+    `3. Then what it provides: ${diagnosticFeeCovers(fee)}`,
+    `4. Then ask: "Would you like to go ahead and get a visit booked?"`,
+  ].join(" ");
+}
+
 export function diagnosticFeeCovers(fee: string): string {
   return `"The ${fee} diagnostic visit covers the trip out and the electrician finding the problem. If it turns out to be something small he can fix right there, like a light bulb or swapping a switch, that's usually taken care of within the visit. If it needs more work than that, he'll go over the cost with you before doing anything, and the ${fee} goes toward that work." Never promise that a particular repair is included; the electrician decides that on site.`;
 }
