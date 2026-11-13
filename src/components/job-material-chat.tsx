@@ -6,14 +6,12 @@ import {
   Check,
   ChevronDown,
   ClipboardCopy,
-  ClipboardPaste,
   ExternalLink,
   ListChecks,
   LoaderCircle,
   Pencil,
   Plus,
   RotateCcw,
-  SendHorizontal,
   Sparkles,
   Tag,
   X,
@@ -23,8 +21,6 @@ import { addListedParts, type ListedPart } from "@/app/jobs/[jobId]/line-actions
 import { AiLimitActions } from "@/components/ai-limit-actions";
 import { clearMaterialList, saveMaterialList } from "@/app/jobs/[jobId]/material-list-actions";
 import {
-  carryPrices,
-  chatGptMaterialPrompt,
   estimateLineFor,
   hasContent,
   itemLine,
@@ -32,7 +28,6 @@ import {
   isChecklist,
   listItems,
   parseMaterialList,
-  readPastedMaterialList,
   withCurrentPrices,
   type ChatTurn,
   type MaterialItem,
@@ -57,11 +52,10 @@ import {
  * Each item is then looked up at Home Depot and Lowe's, and chosen items go
  * onto the estimate already priced: the store price plus the markup.
  *
- * The reply streams in and is drawn as it arrives, sections and bullets and
- * all, so it feels like the chat the electrician already uses.
+ * The list is typed here by hand, or written in ChatGPT through Volteira's
+ * connection (save_materials_list), which saves it straight to the job. The
+ * built-in writer and the copy-and-paste from ChatGPT are switched off.
  */
-
-const END = "\u001e";
 
 type Props = {
   jobNumber: string;
@@ -509,88 +503,12 @@ function PricingSheet({
   );
 }
 
-/**
- * Writing the list in ChatGPT's own chat, on the electrician's ChatGPT plan:
- * copy a prompt with the format and the job, and paste back what ChatGPT
- * writes. It becomes the same list as one written here.
- */
-function FromChatGpt({
-  prompt,
-  listed,
-  busy,
-  onUse,
-  onClose,
-}: {
-  prompt: string;
-  listed: boolean;
-  busy: boolean;
-  /** Takes ChatGPT's answer; says why it could not be used, or nothing. */
-  onUse: (answer: string) => string;
-  onClose: () => void;
-}) {
-  const [answer, setAnswer] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [problem, setProblem] = useState("");
-  return (
-    <div className="mt-4 rounded-control border border-line bg-white/[0.015] p-3 sm:p-4">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold">Write it in ChatGPT</p>
-        <button type="button" onClick={onClose} aria-label="Close" className="tap-target -m-2 inline-flex min-h-11 min-w-11 items-center justify-center text-ink-muted">
-          <X className="h-4 w-4" aria-hidden />
-        </button>
-      </div>
-      <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm text-ink-muted">
-        <li>Copy the prompt. It has the list format{listed ? ", this job and the list as it is now" : " and this job"}.</li>
-        <li>Paste it into ChatGPT, add {listed ? "what to change" : "what the job is"} at the end, and send.</li>
-        <li>Tap the copy button under ChatGPT&apos;s answer, then paste the answer here.</li>
-      </ol>
-      <button
-        type="button"
-        onClick={() => {
-          void navigator.clipboard.writeText(prompt).then(() => {
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 2000);
-          });
-        }}
-        className="tap-target mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line px-3 text-sm font-semibold"
-      >
-        {copied ? <Check className="h-4 w-4 text-positive" aria-hidden /> : <ClipboardCopy className="h-4 w-4" aria-hidden />}
-        {copied ? "Prompt copied" : "Copy prompt for ChatGPT"}
-      </button>
-      <label htmlFor="materials-from-chatgpt" className="mt-3 block text-xs font-semibold text-ink-muted">
-        ChatGPT&apos;s answer
-      </label>
-      <textarea
-        id="materials-from-chatgpt"
-        value={answer}
-        onChange={(event) => {
-          setAnswer(event.target.value);
-          setProblem("");
-        }}
-        rows={5}
-        placeholder="Paste the list ChatGPT wrote"
-        className="mt-1 block min-h-24 w-full resize-y rounded-control border border-line bg-raised px-3 py-2 text-base leading-6 outline-none placeholder:text-ink-faint focus:border-brand/60"
-      />
-      {problem ? <p className="mt-2 text-sm text-critical">{problem}</p> : null}
-      <button
-        type="button"
-        disabled={busy || !answer.trim()}
-        onClick={() => setProblem(onUse(answer))}
-        className="tap-target mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
-      >
-        <ClipboardPaste className="h-4 w-4" aria-hidden />
-        {listed ? "Replace the list with this" : "Use this list"}
-      </button>
-    </div>
-  );
-}
 
-export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, jobDescription, hasLines, startFolded = false }: Props) {
+export function JobMaterialChat({ jobNumber, saved, markupPercent, hasLines, startFolded = false }: Props) {
   const [list, setList] = useState<MaterialList>(saved.list);
   const [messages, setMessages] = useState<ChatTurn[]>(saved.messages);
-  const [draft, setDraft] = useState("");
-  const [liveText, setLiveText] = useState<string | null>(null);
-  const [pendingPrompt, setPendingPrompt] = useState("");
+  const [liveText] = useState<string | null>(null);
+  const [pendingPrompt] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -604,9 +522,10 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
   // estimate gives the job lines, and that must not fold the chat shut under
   // the person using it.
   const [startsOpen] = useState(() => !startFolded && (!hasContent(saved.list) || !hasLines));
-  const [fromChatGpt, setFromChatGpt] = useState(false);
   // Typing the list by hand, item by item, with no AI at all.
   const [typing, setTyping] = useState(false);
+  // The first typed item's id, made once rather than on every render.
+  const [firstItemId] = useState(() => `n${Date.now().toString(36)}`);
   const abort = useRef<AbortController | null>(null);
   // The list as it is on screen now, for prices that arrive a minute later.
   const listNow = useRef(list);
@@ -728,106 +647,7 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
     void saveList(next);
   }
 
-  async function send(prompt: string) {
-    const text = prompt.trim();
-    if (!text || writing || clearing) return;
-    setError("");
-    setNotice("");
-    setEditingId(null);
-    setAddingTo(null);
-    setChoosing(false);
-    setPricing(false);
-    setPendingPrompt(text);
-    setLiveText("");
-    setDraft("");
-    const controller = new AbortController();
-    abort.current = controller;
 
-    try {
-      const askedOn = generation.current;
-      await saving.current;
-      // The list was swapped for a newer one from somewhere else while the
-      // last edit was saving: ask about that list only once it has been seen.
-      if (askedOn !== generation.current) {
-        throw new Error("The list was changed somewhere else. This is the list as it is now; send your message again to change it.");
-      }
-      // A revision starts from the list on screen, so an edit the server
-      // refused is tried once more, and nothing is asked until it is kept.
-      if (unsaved.current) await saveList(list);
-      if (askedOn !== generation.current) {
-        throw new Error("The list was changed somewhere else. This is the list as it is now; send your message again to change it.");
-      }
-      if (unsaved.current) {
-        throw new Error("Your last edit to the list was not saved, so nothing was asked yet. Try again in a moment.");
-      }
-      const response = await fetch(`/api/jobs/${encodeURIComponent(jobNumber)}/materials-chat`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: text }),
-        signal: controller.signal,
-      });
-      if (!response.ok || !response.body) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error || "The list could not be written just now. Try again.");
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let all = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        all += decoder.decode(value, { stream: true });
-        const end = all.indexOf(END);
-        setLiveText(end >= 0 ? all.slice(0, end) : all);
-      }
-      const end = all.indexOf(END);
-      const result =
-        end >= 0
-          ? (JSON.parse(all.slice(end + 1)) as { error?: string; list?: MaterialList; messages?: ChatTurn[]; updatedAt?: string | null })
-          : null;
-      if (!result) throw new Error("The reply stopped before it was finished. Try again.");
-      // Changed somewhere else while this was written: show it as it is now.
-      if (result.error && result.list) adopt({ list: result.list, messages: result.messages ?? [], source: null, model: null, updatedAt: result.updatedAt ?? null });
-      if (result.error || !result.list) throw new Error(result.error || "No list came back. Try again.");
-      version.current = result.updatedAt ?? version.current;
-      setList(result.list);
-      listNow.current = result.list;
-      setMessages(result.messages ?? []);
-      setChosen(new Set());
-    } catch (problem) {
-      if (controller.signal.aborted) return;
-      setError(problem instanceof Error ? problem.message : "The list could not be written just now. Try again.");
-      setDraft(text);
-    } finally {
-      setLiveText(null);
-      setPendingPrompt("");
-      abort.current = null;
-    }
-  }
-
-  /*
-   * A list ChatGPT wrote in its own chat, pasted in: it replaces the list like
-   * an answer written here, keeps the store prices of what did not change, and
-   * is saved like any edit, in order, on the version this screen holds.
-   */
-  function takeFromChatGpt(answer: string): string {
-    if (writing || clearing) return "";
-    const pasted = readPastedMaterialList(answer, `p${Date.now().toString(36)}`);
-    // A heading with no items under it is not a list, and would leave the job with none.
-    if (listItems(pasted).length === 0) {
-      return "That doesn't read as a list: it needs headings with bullets under them. Tap the copy button under ChatGPT's answer and paste that.";
-    }
-    if (listed && !window.confirm("Replace the list on this job with the one from ChatGPT?")) return "";
-    setError("");
-    setNotice("");
-    setEditingId(null);
-    setAddingTo(null);
-    setChosen(new Set());
-    const next = carryPrices(list, pasted);
-    persist(next);
-    setFromChatGpt(false);
-    return "";
-  }
 
   // Everything before the latest request is history; the latest request sits
   // right above the list that answers it.
@@ -1024,75 +844,14 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
           </p>
         ) : null}
 
-        {!choosing ? (
-          <form
-            className="mt-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send(draft);
-            }}
-          >
-            <label htmlFor={`materials-prompt-${jobNumber}`} className="sr-only">
-              {listed ? "Ask for changes" : "Describe the job"}
-            </label>
-            <div className="flex items-end gap-2 rounded-control border border-line bg-raised p-2 focus-within:border-brand/60">
-              <textarea
-                id={`materials-prompt-${jobNumber}`}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                    event.preventDefault();
-                    void send(draft);
-                  }
-                }}
-                rows={listed ? 2 : 4}
-                disabled={writing || clearing}
-                placeholder={
-                  listed
-                    ? "Ask for changes, e.g. “add a surge protector” or “the run is 50 ft”"
-                    : "Describe the job, e.g. “Mini-split install: about 30 ft of surface EMT, 230V 20A circuit, outdoor disconnect, liquidtight whip to the condenser.”"
-                }
-                className="min-h-12 min-w-0 flex-1 resize-y bg-transparent px-1 py-1 text-base leading-6 outline-none placeholder:text-ink-faint disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={writing || clearing || !draft.trim()}
-                aria-label={listed ? "Send" : "Write the list"}
-                className="tap-target inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-control bg-brand text-on-brand disabled:opacity-50"
-              >
-                {writing ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : <SendHorizontal className="h-5 w-5" aria-hidden />}
-              </button>
-            </div>
-            {!listed && !draft && jobDescription ? (
-              <button
-                type="button"
-                onClick={() => setDraft(jobDescription)}
-                className="tap-target mt-2 inline-flex min-h-10 max-w-full items-center rounded-chip border border-line px-3 text-xs font-semibold text-ink-muted"
-              >
-                <span className="truncate">Start from the job: “{jobDescription}”</span>
-              </button>
-            ) : null}
-          </form>
-        ) : null}
         {error ? <p className="mt-2 text-sm text-critical">{error}</p> : null}
         <AiLimitActions message={error} />
-
-        {!choosing && fromChatGpt ? (
-          <FromChatGpt
-            prompt={chatGptMaterialPrompt({ ...forChatGpt, list })}
-            listed={listed}
-            busy={writing || clearing}
-            onUse={takeFromChatGpt}
-            onClose={() => setFromChatGpt(false)}
-          />
-        ) : null}
 
         {!listed && !writing && !choosing && typing ? (
           <div className="mt-3 rounded-control border border-line bg-white/[0.015] p-3 sm:p-4">
             <p className="mb-2 text-sm font-semibold">First item</p>
             <ItemEditor
-              item={{ id: `n${Date.now().toString(36)}`, qty: "", name: "", note: "" }}
+              item={{ id: firstItemId, qty: "", name: "", note: "" }}
               onSave={(item) => {
                 // A list of one section to start; "Add item" under it takes the rest.
                 persist({
@@ -1108,7 +867,7 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
           </div>
         ) : null}
 
-        {!listed && !writing && !choosing && !typing && !fromChatGpt ? (
+        {!listed && !writing && !choosing && !typing ? (
           <button
             type="button"
             disabled={clearing}
@@ -1123,17 +882,6 @@ export function JobMaterialChat({ jobNumber, saved, markupPercent, forChatGpt, j
           </button>
         ) : null}
 
-        {!choosing && !fromChatGpt ? (
-          <button
-            type="button"
-            disabled={writing || clearing}
-            onClick={() => setFromChatGpt(true)}
-            className="tap-target mt-1 inline-flex min-h-10 items-center gap-1.5 text-xs font-semibold text-brand disabled:opacity-50"
-          >
-            <ClipboardPaste className="h-3.5 w-3.5" aria-hidden />
-            Write it in ChatGPT instead
-          </button>
-        ) : null}
       </div>
     </details>
   );

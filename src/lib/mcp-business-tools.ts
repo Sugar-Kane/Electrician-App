@@ -1109,7 +1109,7 @@ export async function runBusinessMcpTool(input: {
           "",
           `list_version: ${saved.updatedAt ?? NO_LIST_VERSION}`,
           "",
-          `When the list is written, show it and ask the electrician whether to save it to the job. Once they say yes, save it with save_materials_list (job_number ${job.job_number}, the whole list, list_version above, confirmed true). If saving is not possible here, tell the electrician to tap Copy under your answer and use "Write it in ChatGPT instead" in the job's Materials chat in Volteira.`,
+          `When the list is written, show it and ask the electrician whether to save it to the job. Once they say yes, save it with save_materials_list (job_number ${job.job_number}, the whole list, list_version above, confirmed true). If saving is not possible here, tell the electrician what went wrong; they can also type the list into the job's Materials card in Volteira.`,
         ].join("\n"),
         record: { jobId: text(job.id) },
       };

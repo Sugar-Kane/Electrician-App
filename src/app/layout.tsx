@@ -21,13 +21,16 @@ export const metadata: Metadata = {
  * display. So the guards were written, reviewed and shipped, and none of them
  * had ever run.
  *
- * No `maximumScale` or `userScalable: false`. Pinch-zoom is how somebody reads
- * a part number in bad light, and taking it away to stop an input zooming is
- * fixing the wrong thing — the inputs are 16px, which is what stops it.
+ * Locked at 1x on phones, at the owner's request: iOS zoomed in whenever a
+ * field took focus and left the page sitting offset to one side, so tapping
+ * into a box meant pinching back out afterwards. `maximumScale: 1` stops that
+ * focus zoom; every input is 16px too (globals.css), which stops it as well.
  */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   // The browser chrome matches the app rather than showing a white bar above it.
   themeColor: "#06131d",
