@@ -501,7 +501,7 @@ export function JobWorkflow({
 
             {state === "scheduled" && unscheduled ? (
               <a
-                href={`/jobs/${jobNumber}/edit#window`}
+                href="#schedule"
                 className="tap-target mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-line text-sm font-semibold"
               >
                 <CalendarClock className="h-4 w-4" aria-hidden />

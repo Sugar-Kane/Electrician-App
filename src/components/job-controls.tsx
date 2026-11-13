@@ -12,7 +12,6 @@ import {
 } from "@/app/jobs/[jobId]/actions";
 import { AddressFields } from "@/components/ui/address-fields";
 import { Button, SubmitButton } from "@/components/ui/button";
-import { DateTimeField } from "@/components/ui/date-time-field";
 import { Field, FormMessage, TextInput, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import { MAX_ACCESS_NOTES_LENGTH } from "@/lib/property-details";
@@ -127,9 +126,6 @@ const STATUS_OPTIONS = [
 export function JobControls({
   jobNumber,
   status,
-  startLocal,
-  endLocal,
-  timeZone,
   canceled,
   cancellationReason,
   customerPhone,
@@ -139,11 +135,6 @@ export function JobControls({
 }: {
   jobNumber: string;
   status: string;
-  /** Wall-clock values for the inputs, already in the business's zone. */
-  startLocal: string;
-  endLocal: string;
-  /** The zone those wall-clock values belong to, so the calendar rings today. */
-  timeZone: string;
   canceled: boolean;
   cancellationReason: string;
   customerPhone: string;
@@ -156,21 +147,12 @@ export function JobControls({
   const [editState, editAction] = useActionState(updateJob, initialState);
   const [cancelState, cancelAction] = useActionState(cancelJob, initialState);
   const [confirming, setConfirming] = useState(false);
-  // The window's start as picked, so its end can follow two hours behind.
-  const [windowStart, setWindowStart] = useState(startLocal);
   const [statusValue, setStatusValue] = useState(status);
   // Saved somewhere else (the visit card, a save here): start from that.
   const [savedStatus, setSavedStatus] = useState(status);
   if (status !== savedStatus) {
     setSavedStatus(status);
     setStatusValue(status);
-  }
-
-  // Setting a time schedules a job that was not: the status follows, here
-  // and on the server (changeJob), so the two never disagree.
-  function pickStart(value: string) {
-    setWindowStart(value);
-    if (value && statusValue === "draft") setStatusValue("confirmed");
   }
 
   const reachable = [customerPhone ? "text" : "", customerEmail ? "email" : ""].filter(Boolean);
@@ -215,67 +197,29 @@ export function JobControls({
         // reported — who was told, and what went back on the shelf.
         key={status}
       >
-        <section id="window" className="scroll-mt-24 rounded-panel border border-line bg-surface p-5 sm:p-6">
+        <section id="status" className="scroll-mt-24 rounded-panel border border-line bg-surface p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-chip bg-brand/10 text-brand">
               <CalendarClock className="h-5 w-5" aria-hidden />
             </span>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Edit this job</h2>
-              <p className="text-sm text-ink-muted">Times are in the business&rsquo;s timezone.</p>
+              <h2 className="text-lg font-semibold tracking-tight">Job status</h2>
+              <p className="text-sm text-ink-muted">The time is set on the job page. Setting one marks the job Scheduled.</p>
             </div>
           </div>
 
           <input type="hidden" name="jobNumber" value={jobNumber} />
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Arrival window starts" group>
-              <DateTimeField
-                name="start"
-                defaultValue={startLocal}
-                label="Arrival window starts"
-                timeZone={timeZone}
-                onValueChange={pickStart}
-              />
-            </Field>
-            <Field label="Arrival window ends" group>
-              <DateTimeField
-                name="end"
-                defaultValue={endLocal}
-                label="Arrival window ends"
-                timeZone={timeZone}
-                windowFrom={windowStart}
-              />
-            </Field>
-          </div>
-
-          <div className="mt-4">
+          <div className="mt-5">
             <Field label="Status">
               <SelectField name="status" value={statusValue} onChange={setStatusValue} label="Status" choices={STATUS_OPTIONS} />
             </Field>
           </div>
 
-          <label className="mt-4 flex min-h-14 cursor-pointer items-center gap-3 rounded-control border border-line bg-raised px-4">
-            <input
-              type="checkbox"
-              name="notifyCustomer"
-              defaultChecked
-              className="h-5 w-5 shrink-0 accent-[color:var(--color-brand)]"
-            />
-            <span className="text-sm">
-              Tell the customer if the time changes
-              <span className="mt-0.5 block text-xs text-ink-muted">
-                {reachable.length > 0
-                  ? `Sent by ${reachable.join(" and ")}. Nothing is sent for other edits.`
-                  : "No phone or email on file, so nothing can be sent."}
-              </span>
-            </span>
-          </label>
-
           <FormMessage error={editState.error} notice={editState.notice} />
 
           <div className="mt-5">
-            <SubmitButton pendingLabel="Saving…">Save changes</SubmitButton>
+            <SubmitButton pendingLabel="Saving…">Save status</SubmitButton>
           </div>
         </section>
       </form>

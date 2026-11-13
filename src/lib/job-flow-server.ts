@@ -51,7 +51,7 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
   const progress = jobProgress({
     kindOfWork: job.kindOfWork,
     scheduledLabel: job.startsAt ? `${job.dateLabel} · ${job.time}` : "",
-    scheduleHref: `/jobs/${job.id}/edit#window`,
+    scheduleHref: `/jobs/${job.id}#schedule`,
     workflowState: state,
     pricedCents: totals.subtotalCents,
     partCount,
@@ -83,7 +83,7 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
     kindOfWork: job.kindOfWork,
     workflowState: state,
     scheduled: Boolean(job.startsAt),
-    scheduleHref: `/jobs/${job.id}/edit#window`,
+    scheduleHref: `/jobs/${job.id}#schedule`,
     progress: progress.steps,
     lineCount: lines.length,
     partCount,
