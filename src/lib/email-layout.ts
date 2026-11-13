@@ -51,9 +51,18 @@ export function brandedEmail(input: {
   businessName: string;
   /** The line inbox previews show under the subject. */
   preheader?: string;
+  /**
+   * The business's logo, a public URL. With one, the header is a white
+   * letterhead carrying the logo (which names the business itself); without,
+   * the navy band with the name.
+   */
+  logoUrl?: string;
 }): string {
   if (isWholeDocument(input.html)) return input.html;
   const name = escape(input.businessName.trim() || "Volteira");
+  // Only an https image: a mail app blocks anything else, and a broken image
+  // in the header is worse than the name alone.
+  const logo = /^https:\/\//.test(input.logoUrl ?? "") ? escape(input.logoUrl as string) : "";
   const preheader = escape((input.preheader ?? "").replace(/\s+/g, " ").trim().slice(0, 140));
   /*
    * Light first, on purpose. A whole dark frame read well in a light inbox, but
@@ -95,10 +104,15 @@ export function brandedEmail(input: {
     <td align="center" style="padding:24px 12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
         <tr>
-          <td class="head" style="background:${NAVY};border-radius:18px 18px 0 0;padding:22px 28px 18px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          ${logo
+            ? `<td class="head" style="background:#ffffff;border:1px solid ${RULE};border-bottom:0;border-radius:18px 18px 0 0;padding:20px 28px 16px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <img src="${logo}" alt="${name}" width="220" style="display:block;width:220px;max-width:100%;height:auto;border:0;">
+            <div style="margin-top:14px;height:4px;width:56px;border-radius:4px;background:${YELLOW};line-height:4px;font-size:0;">&nbsp;</div>
+          </td>`
+            : `<td class="head" style="background:${NAVY};border-radius:18px 18px 0 0;padding:22px 28px 18px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <div style="font-size:20px;font-weight:800;letter-spacing:-0.01em;color:#ffffff;">${name}</div>
             <div style="margin-top:10px;height:4px;width:56px;border-radius:4px;background:${YELLOW};line-height:4px;font-size:0;">&nbsp;</div>
-          </td>
+          </td>`}
         </tr>
         <tr>
           <td class="card" style="background:#ffffff;border-radius:0 0 18px 18px;border:1px solid ${RULE};border-top:0;padding:28px 28px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${INK};">

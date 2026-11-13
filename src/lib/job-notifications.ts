@@ -90,6 +90,7 @@ export async function notifyJobChange(input: {
     });
   } else {
     const sent = await sendEmail({
+        organizationId: input.organizationId,
       to: input.customerEmail,
       subject: mail.subject,
       text: mail.text,

@@ -386,6 +386,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
         : undefined;
     const message = ownerBookingEmail(facts, jobUrl, messageState);
     const sent = await sendEmail({
+      organizationId: input.organizationId,
       to: ownerEmail,
       subject: message.subject,
       text: message.text,
@@ -419,6 +420,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   if (input.email && wantsEmail && looksLikeEmail(input.email) && !linkAlreadyTexted) {
     const message = confirmationEmail(customerFacts, messageState);
     const sent = await sendEmail({
+      organizationId: input.organizationId,
       to: input.email,
       subject: message.subject,
       text: message.text,
@@ -574,6 +576,7 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
   if (ownerEmail) {
     const message = ownerCallbackEmail(facts);
     const sent = await sendEmail({
+      organizationId: input.organizationId,
       to: ownerEmail,
       subject: message.subject,
       text: message.text,

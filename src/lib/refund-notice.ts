@@ -154,6 +154,7 @@ export async function sendRefundNotice(
         businessName,
       ].filter((line, index, all) => line !== "" || (index > 0 && all[index - 1] !== ""));
       const sent = await sendEmail({
+        organizationId: organizationId,
         to: email,
         subject: receipt ? `Refund receipt: ${amount} from ${businessName}` : `Your refund of ${amount} from ${businessName}`,
         text: lines.join("\n"),
