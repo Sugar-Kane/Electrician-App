@@ -204,12 +204,13 @@ test("the contract and the invoice each fill half when sent and the rest when si
   assert.equal(invoice?.state, "current");
 });
 
-test("Materials fills in thirds: listed, priced, picked up", () => {
+test("Materials fills in thirds: listed, bought, picked up", () => {
   const scope = (overrides: Partial<StageInput>) => jobFlow(input(overrides)).steps.find((step) => step.key === "scope");
   assert.equal(scope({})?.fill, undefined);
   assert.equal(scope({ materialListCount: 4, unpricedMaterialCount: 2 })?.fill, 1 / 3);
-  assert.equal(scope({ lineCount: 3, partCount: 2 })?.fill, 2 / 3);
+  assert.equal(scope({ lineCount: 3, partCount: 2 })?.fill, 1 / 3);
+  assert.equal(scope({ lineCount: 3, partCount: 2, materialsBought: true })?.fill, 2 / 3);
   assert.equal(scope({ lineCount: 3, partCount: 2, materialsReady: true })?.state, "done");
-  // Labor only: nothing to pick up, so priced is the whole step.
+  // Labor only: nothing to buy or pick up, so listed is the whole step.
   assert.equal(scope({ lineCount: 1, partCount: 0 })?.state, "done");
 });

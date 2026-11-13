@@ -40,7 +40,7 @@ import { formatCents } from "@/lib/job-lines";
 import { showsWorkAndMaterials, showsWorkspace } from "@/lib/job-workflow";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
 import { JobMaterialChat } from "@/components/job-material-chat";
-import { MaterialsForm } from "@/components/job-progress";
+import { MaterialsSteps } from "@/components/job-progress";
 import { EndVisitForReturn } from "@/components/job-visits";
 import { getJobVisitsByNumber } from "@/lib/job-visits-server";
 
@@ -261,6 +261,7 @@ export default async function JobDetailPage({
     materialListCount: listItems.length,
     unpricedMaterialCount: unpricedItems,
     materialsReady: Boolean(controls?.materialsReadyAt),
+    materialsBought: Boolean(controls?.materialsBoughtAt || controls?.materialsReadyAt),
     agreement: currentAgreement
       ? {
           signed: Boolean(currentAgreement.signedAt),
@@ -669,17 +670,11 @@ export default async function JobDetailPage({
           */}
           {stage.flow === "work_order" && lines.some((line) => line.kind === "material") && state !== "completed" ? (
             <div id="parts-ready" className="scroll-mt-24 pb-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-line bg-white/[0.02] p-3">
-                <p className="text-sm">
-                  <span className="block font-semibold">Pick up parts</span>
-                  <span className="block text-xs text-ink-muted">
-                    {controls.materialsReadyAt
-                      ? "Marked ready: the parts are in hand."
-                      : "Mark them ready once the parts are on the truck."}
-                  </span>
-                </p>
-                <MaterialsForm jobNumber={controls.jobNumber} ready={Boolean(controls.materialsReadyAt)} />
-              </div>
+              <MaterialsSteps
+                jobNumber={controls.jobNumber}
+                bought={Boolean(controls.materialsBoughtAt)}
+                pickedUp={Boolean(controls.materialsReadyAt)}
+              />
             </div>
           ) : null}
           {materialChat ? (

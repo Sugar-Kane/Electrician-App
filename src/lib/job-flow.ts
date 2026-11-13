@@ -102,6 +102,8 @@ export type StageInput = {
   /** Items on the materials list with no store price matched yet. */
   unpricedMaterialCount: number;
   materialsReady: boolean;
+  /** The parts were bought (picked up counts as bought). */
+  materialsBought?: boolean;
   agreement: { sent: boolean; signed: boolean } | null;
   /** Work orders booked from this diagnostic. */
   followUpCount: number;
@@ -229,11 +231,13 @@ export function jobFlow(input: StageInput): FlowStage {
   const invoicePaid = paidStep?.state === "done";
   const contractSent = Boolean(input.agreement?.sent) || Boolean(input.agreement?.signed);
   const contractSigned = Boolean(input.agreement?.signed);
-  // Materials in thirds: listed, priced, picked up (or nothing to pick up).
+  // Materials in thirds: listed (and priced, which happen together), bought,
+  // picked up. Labor only has nothing to buy, so listed is the whole step.
   const listed = input.materialListCount > 0 || input.lineCount > 0;
-  const priced = input.lineCount > 0 || (input.materialListCount > 0 && input.unpricedMaterialCount === 0);
-  const pickedUp = input.materialsReady || (input.lineCount > 0 && input.partCount === 0);
-  const materialsShare = priced && pickedUp ? 1 : priced ? 2 / 3 : listed ? 1 / 3 : 0;
+  const nothingToBuy = input.lineCount > 0 && input.partCount === 0;
+  const pickedUp = input.materialsReady || nothingToBuy;
+  const bought = Boolean(input.materialsBought) || pickedUp;
+  const materialsShare = listed && pickedUp ? 1 : listed && bought ? 2 / 3 : listed ? 1 / 3 : 0;
   const partly = (step: StageStep, share: number): StageStep => ({
     ...step,
     // Part filled, and current only if the flow is on it: an invoice sent
@@ -499,7 +503,7 @@ function flowOf(input: StageInput): FlowStage {
         flow,
         steps: steps(flow, "materials", false),
         status: "Pick up parts",
-        primary: { kind: "materials_ready", label: "Mark materials ready" },
+        primary: { kind: "materials_ready", label: "Mark picked up" },
         hint: input.scheduled
           ? "Have the parts in hand before you drive out. You can still start the trip if they are on the truck."
           : "Have the parts in hand, then book the visit.",

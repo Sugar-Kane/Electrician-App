@@ -90,6 +90,7 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
     materialListCount: listItems.length,
     unpricedMaterialCount: unpricedItems,
     materialsReady: Boolean(controls.materialsReadyAt),
+    materialsBought: Boolean(controls.materialsBoughtAt || controls.materialsReadyAt),
     agreement,
     followUpCount: followUps.booked.length,
     diagnosticFeeDue:

@@ -424,6 +424,8 @@ export type JobProgressFacts = {
   pricedCents: number;
   partCount: number;
   materialsReadyAt: string | null;
+  /** When the parts were marked bought; picked up is `materialsReadyAt`. */
+  materialsBoughtAt?: string | null;
   invoices: { status: string; lastSentAt: string | null; paidAt: string | null; previewSentAt: string | null }[];
   unbilledCents: number;
 };
@@ -509,6 +511,8 @@ export async function getJobControls(jobNumber: string): Promise<{
   technicianNotes: string;
   /** When the parts were marked gathered and ready, or null. */
   materialsReadyAt: string | null;
+  /** When the parts were marked bought; picked up is `materialsReadyAt`. */
+  materialsBoughtAt?: string | null;
   /** The job's diagnostic fee: what it carries, whether it was paid, whether it is a follow-up. */
   diagnostic: { feeCents: number; paid: boolean; followUp: boolean };
   /**
@@ -535,7 +539,7 @@ export async function getJobControls(jobNumber: string): Promise<{
   const { data } = await context.database
     .from("jobs")
     .select(
-      `job_number, status, canceled_at, cancellation_reason, technician_notes, materials_ready_at,
+      `job_number, status, canceled_at, cancellation_reason, technician_notes, materials_ready_at, materials_bought_at,
        diagnostic_fee_cents, diagnostic_paid, follow_up_of,
        scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        customers ( phone, email ),
@@ -568,6 +572,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     customerEmail: str(customer?.email),
     technicianNotes: str(row.technician_notes),
     materialsReadyAt: str(row.materials_ready_at) || null,
+    materialsBoughtAt: str(row.materials_bought_at) || null,
     diagnostic: {
       feeCents: Number(row.diagnostic_fee_cents ?? 0),
       paid: row.diagnostic_paid === true,

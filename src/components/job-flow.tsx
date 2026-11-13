@@ -132,8 +132,8 @@ export function JobStageCard({
                     : step.key === "approval"
                       ? "sent, not signed yet"
                       : step.fill > 0.5
-                        ? "priced, parts not picked up yet"
-                        : "listed, not priced yet"
+                        ? "bought, not picked up yet"
+                        : "listed, not bought yet"
                   : STATE_WORDS[step.state]}
                 . Go to it.
               </span>
