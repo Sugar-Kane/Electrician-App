@@ -34,7 +34,7 @@ const STEP_TARGETS: Record<StageKey, string[]> = {
   decide: ["#next-action", "#repairs", "#work"],
   scope: ["#parts-ready", "#work-materials", "#work"],
   quotes: ["#work-materials", "#work"],
-  estimate: ["#contract", "#work-materials", "#work"],
+  estimate: ["#estimate", "#contract", "#work-materials", "#work"],
   approval: ["#contract", "#work"],
   materials: ["#parts-ready", "#work-materials", "#work"],
   work: ["#findings", "#work"],

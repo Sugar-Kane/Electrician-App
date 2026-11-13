@@ -633,9 +633,12 @@ export function JobLinesPanel({
   stock,
   lineStock = {},
   billing = { jobCompleted: false, agreementSigned: false, hasPhone: false, hasEmail: false },
+  withBilling = true,
 }: {
   /** Where the job stands, for what the billing section offers next. */
   billing?: BillingContext;
+  /** False where billing is shown on its own (JobBilling), as a work order's Invoice step does. */
+  withBilling?: boolean;
   jobNumber: string;
   lines: JobLine[];
   totals: JobLineTotals;
@@ -702,7 +705,7 @@ export function JobLinesPanel({
         </>
       )}
 
-      <BillingSection jobNumber={jobNumber} lines={lines} invoices={invoices} billing={billing} />
+      {withBilling ? <BillingSection jobNumber={jobNumber} lines={lines} invoices={invoices} billing={billing} /> : null}
 
       {adding ? (
         <AddLineForm
@@ -735,5 +738,24 @@ export function JobLinesPanel({
         </div>
       )}
     </section>
+  );
+}
+
+/** The job's invoices and what to bill next, on their own: a work order's Invoice step. */
+export function JobBilling({
+  jobNumber,
+  lines,
+  invoices = [],
+  billing,
+}: {
+  jobNumber: string;
+  lines: JobLine[];
+  invoices?: JobInvoiceSummary[];
+  billing: BillingContext;
+}) {
+  return (
+    <div className="[&>#billing]:mt-0 [&>#billing]:border-t-0 [&>#billing]:pt-0">
+      <BillingSection jobNumber={jobNumber} lines={lines} invoices={invoices} billing={billing} />
+    </div>
   );
 }
