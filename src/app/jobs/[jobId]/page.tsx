@@ -15,6 +15,7 @@ import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
 import { DiagnosticDecision, JobStageCard } from "@/components/job-flow";
 import { JobWorkflow } from "@/components/job-workflow";
+import { JobSchedule } from "@/components/job-schedule";
 import { AssignTechnician } from "@/components/assign-technician";
 import { JobSource } from "@/components/ui/job-source";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -195,7 +196,7 @@ export default async function JobDetailPage({
   const progress = jobProgress({
     kindOfWork: job.kindOfWork,
     scheduledLabel: job.startsAt ? `${job.dateLabel} · ${job.time}` : "",
-    scheduleHref: `/jobs/${job.id}/edit#window`,
+    scheduleHref: "#schedule",
     workflowState: state,
     pricedCents: totals.subtotalCents,
     partCount: lines.filter((line) => line.kind === "material").length,
@@ -254,7 +255,7 @@ export default async function JobDetailPage({
     kindOfWork: job.kindOfWork,
     workflowState: state,
     scheduled: Boolean(job.startsAt),
-    scheduleHref: `/jobs/${job.id}/edit#window`,
+    scheduleHref: "#schedule",
     progress: progress.steps,
     lineCount: lines.length,
     partCount: lines.filter((line) => line.kind === "material").length,
@@ -381,9 +382,9 @@ export default async function JobDetailPage({
           {job.workType.replace(/_/g, " ")}
           <JobSource channel={job.channel} className="normal-case" />
         </p>
-        {/* The time, the address and its access notes are all changed on Job
-            settings, which opens on the time. */}
-        {controls && !canceled ? <EditLink href={`/jobs/${job.id}/edit#window`} label="Edit time and address" /> : null}
+        {/* The address and its access notes are changed on Job settings; the
+            time right here, below. */}
+        {controls && !canceled ? <EditLink href={`/jobs/${job.id}/edit#place`} label="Edit address" /> : null}
       </div>
       {/* The visit that found this work, one tap back. */}
       {followUps.followsUp ? (
@@ -395,8 +396,17 @@ export default async function JobDetailPage({
           Follow-up to {followUps.followsUp.kindOfWork.toLowerCase()} #{followUps.followsUp.jobNumber}
         </Link>
       ) : null}
-      {/* No time yet is said once, by the status below, not as " · –". */}
-      {job.startsAt ? (
+      {/* The time, set and changed here, folded once saved. */}
+      {controls && !canceled ? (
+        <JobSchedule
+          jobNumber={controls.jobNumber}
+          startLocal={controls.startLocal}
+          endLocal={controls.endLocal}
+          timeZone={controls.timeZone}
+          label={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : ""}
+          reachable={[controls.customerPhone ? "text" : "", controls.customerEmail ? "email" : ""].filter(Boolean)}
+        />
+      ) : job.startsAt ? (
         <p className="mt-0.5 text-sm text-ink-muted">
           {job.dateLabel} · {job.time}–{job.endTime}
         </p>
@@ -798,12 +808,12 @@ export default async function JobDetailPage({
                 ) : null}
               </span>
               {!showsWorkspace(state) ? (
-                <Link
-                  href={`/jobs/${job.id}/edit#window`}
+                <a
+                  href="#schedule"
                   className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand"
                 >
                   {job.startsAt ? "Change time" : "Schedule"}
-                </Link>
+                </a>
               ) : null}
             </li>
           </ol>

@@ -67,7 +67,7 @@ function stepChips(job: PilotJob, stage: JobStage, facts: JobProgressFacts | und
   const { steps } = jobProgress({
     kindOfWork: job.kindOfWork,
     scheduledLabel: job.startsAt ? `${job.dateLabel} · ${job.time}` : "",
-    scheduleHref: `/jobs/${job.id}/edit#window`,
+    scheduleHref: `/jobs/${job.id}#schedule`,
     workflowState: workflowStateOf(job.stage ?? ""),
     pricedCents: facts?.pricedCents ?? 0,
     partCount: facts?.partCount ?? 0,

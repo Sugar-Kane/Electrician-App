@@ -56,14 +56,15 @@ export function JobMenu({
         <MenuItem icon={<Pencil className="h-[18px] w-[18px]" aria-hidden />}>Edit job</MenuItem>
       </Link>
 
-      <Link href={`${edit}#window`} role="menuitem">
+      {/* A plain link: a hash on this same page, which opens the time on the job card. */}
+      <a href={`/jobs/${jobNumber}#schedule`} role="menuitem">
         <MenuItem
           icon={<CalendarClock className="h-[18px] w-[18px]" aria-hidden />}
           description="Move the arrival window and tell the customer"
         >
           Reschedule
         </MenuItem>
-      </Link>
+      </a>
 
       {canBookWorkOrder ? (
         <Link href={`/jobs/new?from=${jobNumber}`} role="menuitem">
