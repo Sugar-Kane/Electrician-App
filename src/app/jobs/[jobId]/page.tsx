@@ -1014,6 +1014,10 @@ export default async function JobDetailPage({
           </StepCard>
 
           <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} fill={stepFill("invoice")} summary={invoiceSummary}>
+            {/* A repair done on the spot: the list's items go onto the bill priced, as on a work order's estimate. */}
+            {materialChat && !materialsFolded && listItems.length > 0 && state !== "completed" ? (
+              <AddMaterialsToEstimate count={listItems.length} label="Add materials to the bill" />
+            ) : null}
             <div className="divide-y divide-line">
               {materialChat && !materialsFolded ? (
                 <div className="pb-4">
