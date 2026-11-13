@@ -62,7 +62,7 @@ export async function GET(
   }
 
   // Voice and text bookings create Checkout before the link is sent, so the
-  // 30-minute Stripe session and the 30-minute slot hold share one clock. A
+  // Stripe session and the slot hold share one clock. A
   // repeat tap retrieves that session rather than extending the hold.
   if (intent.checkout_session_id?.startsWith("cs_")) {
     const stripe = getStripe();

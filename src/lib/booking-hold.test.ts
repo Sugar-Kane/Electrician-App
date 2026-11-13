@@ -82,6 +82,11 @@ test("the held sentence names the amount and the link", () => {
   assert.match(said, /\$100 diagnostic fee/);
   assert.match(said, /https:\/\/volteira\.com\/booking\/abc\/pay/);
   assert.match(said, /30 minutes/);
+  // A day's hold is said in hours, not as 1440 minutes.
+  assert.match(
+    holdSentence({ feeCents: 18000, payUrl: "https://volteira.com/booking/abc/pay", holdMinutes: 24 * 60 }),
+    /holding it for 24 hours/,
+  );
 });
 
 test("no link, nothing said — never a sentence pointing nowhere", () => {

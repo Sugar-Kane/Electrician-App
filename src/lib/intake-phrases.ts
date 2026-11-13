@@ -112,7 +112,7 @@ const EN: IntakePhrases = {
     `${business}: thanks! You're all set for ${slotLabel}. Need to change it? Call ${phone}.`,
   holding: (business, slotLabel) => `${business}: holding ${slotLabel} for you.`,
   holdSentence: (fee, payUrl, minutes) =>
-    `To confirm this time, pay the ${fee} diagnostic fee here: ${payUrl} — we are holding it for ${minutes} minutes.`,
+    `To confirm this time, pay the ${fee} diagnostic fee here: ${payUrl} — we are holding it for ${minutes >= 120 && minutes % 60 === 0 ? `${minutes / 60} hours` : `${minutes} minutes`}.`,
   questionsAt: (phone) => `Questions? ${phone}`,
 };
 
@@ -170,7 +170,7 @@ const ES: IntakePhrases = {
     `${business}: ¡gracias! Ya tiene su cita para ${slotLabel}; si necesita cambiarla, llame al ${phone}.`,
   holding: (business, slotLabel) => `${business}: le estamos apartando ${endSentence(slotLabel)}`,
   holdSentence: (fee, payUrl, minutes) =>
-    `Para confirmar este horario, pague la tarifa de diagnóstico de ${fee} aquí: ${payUrl} — se lo apartamos por ${minutes} minutos.`,
+    `Para confirmar este horario, pague la tarifa de diagnóstico de ${fee} aquí: ${payUrl} — se lo apartamos por ${minutes >= 120 && minutes % 60 === 0 ? `${minutes / 60} horas` : `${minutes} minutos`}.`,
   questionsAt: (phone) => `¿Preguntas? ${phone}`,
 };
 

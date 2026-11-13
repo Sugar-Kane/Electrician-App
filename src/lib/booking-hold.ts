@@ -25,8 +25,14 @@ export type HoldDecision =
   /** Never confirm an unpaid visit when checkout is unavailable. */
   | { kind: "payment_unavailable"; feeCents: number; because: string };
 
-/** Long enough to find a card, short enough not to lose the slot for a day. */
-export const HOLD_MINUTES = 30;
+/**
+ * A day, for a visit booked by phone or text. The caller gets a link and pays
+ * when they are next at their phone or their card; half an hour lost the slot
+ * before most of them looked. The cost is that an unpaid caller keeps a window
+ * off the calendar for a day. A booking made on the website is paid there and
+ * then, and keeps its own half hour (book/[slug]/actions.ts).
+ */
+export const HOLD_MINUTES = 24 * 60;
 
 export function decideHold(input: {
   /** Only a booked visit can be held. A callback owes nothing. */
