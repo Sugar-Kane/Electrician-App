@@ -145,25 +145,15 @@ export default async function InvoicePage({
         }
         if (status === "void" || owed <= 0) return null;
         return (
-          <>
-            {/* Sent from here, by text or email, with the link to pay. */}
-            <InvoiceSendPanel
+          str(invoice.stripe_invoice_id) ? null : (
+            <PaidInHandForm
               invoiceId={invoiceId}
-              label={invoiceLabel(invoice)}
-              phone={str(customer?.phone)}
-              email={str(customer?.email)}
-              alreadySent={Boolean(str(invoice.last_sent_at))}
+              label={`invoice ${invoiceLabel(invoice)}`}
+              owedCents={owed}
+              hasPhone={hasPhone}
+              hasEmail={hasEmail}
             />
-            {str(invoice.stripe_invoice_id) ? null : (
-          <PaidInHandForm
-            invoiceId={invoiceId}
-            label={`invoice ${invoiceLabel(invoice)}`}
-            owedCents={owed}
-            hasPhone={hasPhone}
-            hasEmail={hasEmail}
-          />
-            )}
-          </>
+          )
         );
       })()}
 
@@ -205,6 +195,20 @@ export default async function InvoicePage({
           </div>
         </section>
       )}
+
+      {/* Sent from the bottom, once the bill above looks right: by text or
+          email, with the link to view and pay it. */}
+      {str(invoice.status) !== "paid" &&
+      str(invoice.status) !== "void" &&
+      Number(invoice.balance_due_cents ?? invoice.total_cents ?? 0) > 0 ? (
+        <InvoiceSendPanel
+          invoiceId={invoiceId}
+          label={`invoice ${invoiceLabel(invoice)}`}
+          phone={str(customer?.phone)}
+          email={str(customer?.email)}
+          alreadySent={Boolean(str(invoice.last_sent_at))}
+        />
+      ) : null}
     </FieldPageShell>
   );
 }
