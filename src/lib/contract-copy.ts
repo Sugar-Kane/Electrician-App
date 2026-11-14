@@ -11,6 +11,7 @@ import { ContractDocument, contractFileName, documentWord } from "@/lib/pdf/cont
 import { loadContractDocument } from "@/lib/pdf/contract-data";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { sendCustomerText } from "@/lib/customer-text";
 import { sendSms } from "@/lib/twilio";
 
 /**
@@ -129,9 +130,16 @@ export async function sendSignedContractCopy(input: {
       if (!sid) outcome.sms = "texting not set up";
       else {
         const body = `${businessName}: thank you for signing ${what}. Your signed copy: ${link}`;
-        const result = await sendSms({ organizationId: input.organizationId, customerId, to: phone, body, messagingServiceSid: sid });
-        outcome.sms = result.ok ? "sent" : `${result.errorCode}: ${result.errorDetail}`;
-        if (result.ok) await recordText(database, input.organizationId, customerId, body, result.providerMessageId);
+        // Saved first and tracked by Twilio's delivery report, like every
+        // other text to a customer, so a copy that never arrives shows as such.
+        const result = await sendCustomerText(asFlexibleClient(database), {
+          organizationId: input.organizationId,
+          customerId,
+          body,
+          send: sendSms,
+          pauseAssistant: false,
+        });
+        outcome.sms = result.ok ? "sent" : `${result.code}: ${result.message}`;
       }
     } else {
       outcome.sms = phone ? "no link to send" : "no phone on file";

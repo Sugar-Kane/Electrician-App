@@ -1073,13 +1073,19 @@ export async function runBusinessMcpTool(input: {
         };
       }
 
-      const sent = await sendSms({
+      // Saved in the customer's conversation, with Twilio's delivery report,
+      // the same as the job page's send (customer-text.ts).
+      const outcome = await sendCustomerText(asFlexibleClient(database), {
         organizationId,
         customerId,
         to: phone,
         body: signingLinkMessage({ businessName: text(organization?.name), jobNumber: job.job_number, link: `${origin}/contract/${token}`, kind: contract.kind }),
-        messagingServiceSid,
+        send: sendSms,
+        pauseAssistant: false,
       });
+      const sent = outcome.ok
+        ? ({ ok: true } as const)
+        : ({ ok: false, errorCode: outcome.code, errorDetail: outcome.message } as const);
       if (!sent.ok) {
         await database
           .from("contracts")

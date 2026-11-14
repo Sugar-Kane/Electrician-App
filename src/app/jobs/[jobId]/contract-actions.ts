@@ -803,8 +803,13 @@ export async function sendSigningLink(
     };
   }
 
+  // Sent the way the inbox sends: saved in the customer's conversation first,
+  // with Twilio reporting back whether it was delivered, so "did they get the
+  // link?" has an answer on the job and in Messages. The assistant is not
+  // paused: this is an automatic text, not a person taking over the thread.
   const { sendSms } = await import("@/lib/twilio");
-  const sent = await sendSms({
+  const { sendCustomerText } = await import("@/lib/customer-text");
+  const outcome = await sendCustomerText(supabase, {
     organizationId,
     customerId: text(customer?.id),
     to: phone,
@@ -814,8 +819,12 @@ export async function sendSigningLink(
       link,
       kind: contract.kind,
     }),
-    messagingServiceSid,
+    send: sendSms,
+    pauseAssistant: false,
   });
+  const sent = outcome.ok
+    ? ({ ok: true } as const)
+    : ({ ok: false, errorCode: outcome.code, errorDetail: outcome.message } as const);
 
   if (!sent.ok) {
     // Released, so the contract does not read as sent when nothing was.
