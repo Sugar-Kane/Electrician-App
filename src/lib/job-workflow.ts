@@ -181,24 +181,6 @@ export function stateLabel(state: WorkflowState): string {
   }
 }
 
-/** How loudly the state should be drawn. Tokens, not colours. */
-export function stateTone(state: WorkflowState): "brand" | "positive" | "critical" | "muted" {
-  switch (state) {
-    case "en_route":
-    case "arrived":
-    case "working":
-      return "brand";
-    case "review":
-    case "completed":
-      return "positive";
-    case "canceled":
-    case "no_show":
-      return "critical";
-    default:
-      return "muted";
-  }
-}
-
 /** A job nobody is going to work on: nothing to start, nothing to finish. */
 export function isClosed(state: WorkflowState): boolean {
   return state === "completed" || state === "canceled" || state === "no_show";

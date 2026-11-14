@@ -27,17 +27,3 @@ export function isSupportedTimezone(value: string): boolean {
 export function timezoneLabel(value: string): string {
   return TIMEZONE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
-
-/** "3:42 PM PDT" — what the business's clock reads right now. */
-export function currentTimeIn(value: string, now: Date = new Date()): string {
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: value,
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-    }).format(now);
-  } catch {
-    return "";
-  }
-}
