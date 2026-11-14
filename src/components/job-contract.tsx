@@ -11,7 +11,7 @@ import {
   PenLine,
   RefreshCw,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import {
@@ -195,6 +195,18 @@ function ApprovalPreview({
 
 function MissingContractDetails({ contract }: { contract: JobContractRecord }) {
   const [state, save, pending] = useActionState(completeContractDetails, initialState);
+  const router = useRouter();
+  const pathname = usePathname();
+  // Saving makes a new draft. On this contract's own page, go to that draft:
+  // the page is bound to the id in its address, so it would otherwise keep
+  // showing the incomplete one it replaced.
+  useEffect(() => {
+    const next = state.contractId;
+    const here = `/contract/${contract.id}`;
+    if (next && next !== contract.id && pathname?.includes(here)) {
+      router.replace(pathname.replace(here, `/contract/${next}`));
+    }
+  }, [state.contractId, contract.id, pathname, router]);
   return (
     <form action={save} className="space-y-3 rounded-control border border-line p-3">
       <input type="hidden" name="contractId" value={contract.id} />

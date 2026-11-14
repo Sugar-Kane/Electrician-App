@@ -11,6 +11,10 @@ import {
   getPublicBookingConfirmation,
 } from "@/lib/public-booking";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { feeLabel } from "@/lib/booking-hold";
+import { sendOwnerSms } from "@/lib/twilio";
+import { sendEmail } from "@/lib/email";
+import { emailSender } from "@/lib/booking-confirmation";
 
 function text(value: unknown) {
   return typeof value === "string" ? value : "";
@@ -107,7 +111,82 @@ async function sendPaidBookingConfirmations(input: {
   }
 }
 
-export async function fulfillPaidBooking(session: Stripe.Checkout.Session) {
+/**
+ * A payment that could not become a job (the window had already started when
+ * they paid, or the time could no longer be booked): the booking is in review
+ * with the money taken, and the owner is told once, by each booking-alert
+ * channel they set up (text, email or both), to book a new time or refund. The claim on payment_notified_at keeps the webhook and the
+ * return page from both sending it.
+ */
+async function alertPaidButUnscheduled(bookingToken: string, checkoutSessionId: string) {
+  try {
+    const database = getSupabaseAdmin();
+    const { data: claimed } = await database
+      .from("booking_requests")
+      .update({ payment_notified_at: new Date().toISOString() })
+      .eq("public_token", bookingToken)
+      .eq("deposit_checkout_session_id", checkoutSessionId)
+      .eq("status", "needs_review")
+      .is("payment_notified_at", null)
+      .select("organization_id, contact_name, first_name, last_name, phone, deposit_cents")
+      .maybeSingle();
+    const row = claimed as Record<string, unknown> | null;
+    if (!row) return;
+    const organizationId = text(row.organization_id);
+    const [{ data: organization }, { data: settings }] = await Promise.all([
+      database
+        .from("organizations")
+        .select("name, owner_notification_phone, owner_notification_email")
+        .eq("id", organizationId)
+        .maybeSingle(),
+      database.from("messaging_settings").select("messaging_service_sid").eq("organization_id", organizationId).maybeSingle(),
+    ]);
+    const business = (organization ?? {}) as Record<string, unknown>;
+    const ownerPhone = text(business.owner_notification_phone);
+    const ownerEmail = text(business.owner_notification_email);
+    const messagingServiceSid = text((settings as Record<string, unknown> | null)?.messaging_service_sid);
+    const name = text(row.contact_name) || [text(row.first_name), text(row.last_name)].filter(Boolean).join(" ") || "A customer";
+    const fee = feeLabel(Number(row.deposit_cents ?? 0));
+    const customerPhone = text(row.phone);
+    const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+    const link = origin ? `${origin}/booking-requests` : "";
+    const said =
+      `${name} paid the ${fee} diagnostic fee, but their time could no longer be booked. ` +
+      `Call ${customerPhone || "them"} to book a new time or refund it.`;
+
+    // Each channel the business set up for booking alerts, independently: an
+    // email-only business is told by email, a text-only one by text.
+    if (ownerPhone && messagingServiceSid) {
+      await sendOwnerSms({
+        organizationId,
+        to: ownerPhone,
+        body: `Paid, needs a new time: ${said}${link ? ` ${link}` : ""}`,
+        messagingServiceSid,
+      });
+    }
+    if (ownerEmail) {
+      const businessName = text(business.name) || "Your business";
+      const html = (value: string) =>
+        value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      await sendEmail({
+        organizationId,
+        to: ownerEmail,
+        subject: `Paid, needs a new time: ${name}`,
+        text: `${said}${link ? `\n\nBooking requests: ${link}` : ""}`,
+        html: `<p>${html(said)}</p>${link ? `<p><a href="${html(link)}">Open booking requests</a></p>` : ""}`,
+        from: emailSender(businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+      });
+    }
+  } catch (error) {
+    // The payment and the review are already recorded; the alert is extra.
+    console.error("paid but unscheduled alert failed", error);
+  }
+}
+
+export async function fulfillPaidBooking(
+  session: Stripe.Checkout.Session,
+  options: { paidAt?: string } = {},
+) {
   const bookingToken = session.metadata?.booking_token;
   const paymentIntentId =
     typeof session.payment_intent === "string"
@@ -130,6 +209,7 @@ export async function fulfillPaidBooking(session: Stripe.Checkout.Session) {
     paymentIntentId,
     amountCents: session.amount_total,
     currency: session.currency,
+    paidAt: options.paidAt,
   });
 
   // A held-time notice and a paid confirmation are two different events. The
@@ -143,6 +223,8 @@ export async function fulfillPaidBooking(session: Stripe.Checkout.Session) {
     });
     // A failed calendar write is retryable; deterministic event IDs prevent duplicates.
     await syncPaidBookingCalendar(bookingToken);
+  } else {
+    await alertPaidButUnscheduled(bookingToken, session.id);
   }
 
   return getPublicBookingConfirmation(bookingToken, session.id);

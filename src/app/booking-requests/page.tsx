@@ -181,16 +181,29 @@ function RequestCard({ request }: { request: BookingRequest }) {
 
         {!handled ? (
           <>
-            <form action={scheduleBookingRequest}>
-              <input type="hidden" name="requestId" value={request.id} />
-              <button
-                type="submit"
+            {request.status === "expired" ? (
+              // The hold ran out, so its window was released and may since
+              // have gone to somebody else (or passed). Book a fresh time
+              // rather than reusing that one.
+              <Link
+                href="/jobs/new"
                 className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip bg-brand px-4 text-xs font-semibold text-on-brand"
               >
                 <CalendarPlus className="h-4 w-4" aria-hidden />
-                {request.arrivalWindow ? "Create the job" : "Create an unscheduled job"}
-              </button>
-            </form>
+                Book a new time
+              </Link>
+            ) : (
+              <form action={scheduleBookingRequest}>
+                <input type="hidden" name="requestId" value={request.id} />
+                <button
+                  type="submit"
+                  className="tap-target inline-flex min-h-11 items-center gap-2 rounded-chip bg-brand px-4 text-xs font-semibold text-on-brand"
+                >
+                  <CalendarPlus className="h-4 w-4" aria-hidden />
+                  {request.arrivalWindow ? "Create the job" : "Create an unscheduled job"}
+                </button>
+              </form>
+            )}
             <form action={dismissBookingRequest}>
               <input type="hidden" name="requestId" value={request.id} />
               <button

@@ -99,7 +99,7 @@ export async function updateJobPlace(
     revalidatePath(`/jobs/${jobNumber}`);
     revalidatePath(`/jobs/${jobNumber}/edit`);
     revalidatePath("/route");
-    return { error: "", notice: filled ? "Address saved, and added to the draft contract." : "Address saved." };
+    return { error: "", notice: draftNote(filled, "Address saved", "Address saved.") };
   }
 
   const { data: saved } = await job.supabase
@@ -145,7 +145,7 @@ export async function updateJobPlace(
   if (moved) revalidatePath("/route");
   return {
     error: "",
-    notice: filled ? "Saved, and added to the draft contract." : "Saved. Every job at this address shows these.",
+    notice: draftNote(filled, "Saved", "Saved. Every job at this address shows these."),
   };
 }
 
@@ -169,10 +169,10 @@ async function fillDraftServiceAddress(
   organizationId: string,
   jobId: string,
   address: { line1: string; city: string; state: string; postalCode: string },
-): Promise<boolean> {
+): Promise<"filled" | "stale" | "none"> {
   const { data } = await supabase
     .from("contracts")
-    .select("id, kind, body, scope, status, signed_at, total_cents, deposit_cents, deposit_paid, organizations ( timezone )")
+    .select("id, kind, body, scope, status, signed_at, created_at, total_cents, deposit_cents, deposit_paid, organizations ( timezone )")
     .eq("organization_id", organizationId)
     .eq("job_id", jobId)
     .neq("status", "void")
@@ -180,9 +180,20 @@ async function fillDraftServiceAddress(
     .limit(1)
     .maybeSingle();
   const draft = data as Record<string, unknown> | null;
-  if (!draft || draft.status !== "draft" || draft.signed_at) return false;
+  if (!draft || draft.status !== "draft" || draft.signed_at) return "none";
   const body = text(draft.body);
-  if (!placeholdersUsed(body).includes("service_address")) return false;
+  if (!placeholdersUsed(body).includes("service_address")) return "none";
+
+  // The copy keeps this draft's wording and is dated now, so it must not be
+  // made after work this draft never listed: a line written since would read
+  // as covered by a document that does not mention it, and later change
+  // orders would leave it out (the same guard as completeContractDetails).
+  const { count: writtenSince } = await supabase
+    .from("job_line_items")
+    .select("id", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .gt("created_at", text(draft.created_at));
+  if (writtenSince) return "stale";
 
   const line = [address.line1, address.city, address.state, address.postalCode].filter(Boolean).join(", ");
   const filled = completeDraftFields(body, { service_address: line });
@@ -204,7 +215,7 @@ async function fillDraftServiceAddress(
     .maybeSingle();
   if (error || !created?.id) {
     console.error("filling the draft contract's address failed", { code: error?.code });
-    return false;
+    return "none";
   }
   const { data: auth } = await supabase.auth.getUser();
   const organization = draft.organizations as Record<string, unknown> | null;
@@ -216,7 +227,16 @@ async function fillDraftServiceAddress(
     timeZone: text(organization?.timezone) || "America/Los_Angeles",
     uploadedBy: auth.user?.id ?? "",
   }).catch(() => null);
-  return true;
+  return "filled";
+}
+
+/** What the address save says about the draft contract. */
+function draftNote(filled: "filled" | "stale" | "none", saved: string, otherwise: string): string {
+  if (filled === "filled") return `${saved}, and added to the draft contract.`;
+  if (filled === "stale") {
+    return `${saved}. The draft contract was made before some of the job's items, so generate a new draft to include them and this address.`;
+  }
+  return otherwise;
 }
 
 export async function updateJob(

@@ -3,7 +3,7 @@ import "server-only";
 import { sendBookingConfirmations, sendCallbackAlert } from "@/lib/booking-notifications";
 import { readInboundText, type IntakeTurn } from "@/lib/claude";
 import {
-  HOLD_MINUTES,
+  holdMinutesFor,
   bookingNeedsReviewReply,
   heldReply,
 } from "@/lib/booking-hold";
@@ -260,7 +260,7 @@ export async function handleInboundText(input: {
             ),
             feeCents: recorded.feeCents,
             payUrl: recorded.payUrl,
-            holdMinutes: HOLD_MINUTES,
+            holdMinutes: holdMinutesFor(action.slot.start),
             businessPhone: context.businessPhone,
             language: action.language,
           })

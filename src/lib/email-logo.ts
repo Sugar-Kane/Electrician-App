@@ -20,8 +20,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
  * correctly.
  *
  * Made once per logo and kept beside it in the public branding bucket. The
- * file name carries the logo's path and the picture's size, so a new logo gets
- * a new copy and the layout knows the shape without fetching it. Never throws:
+ * file name carries the logo's path and when that file was last written, and
+ * the picture's size: a new logo gets a new copy (even one uploaded over the
+ * old file under the same name), and the layout knows the shape without
+ * fetching it. Never throws:
  * without a logo, or when the copy cannot be made, "" and the header shows the
  * name alone.
  */
@@ -94,9 +96,18 @@ export async function emailLogoUrl(organizationId: string | undefined): Promise<
     const source = ((data as { logo_path?: string | null } | null)?.logo_path ?? "").trim().replace(/^\/+/, "");
     if (!source) return "";
 
-    // "<logo>-b2-<width>x<height>.png": found by its start, read by its end.
-    const stem = `${createHash("sha256").update(source).digest("hex").slice(0, 24)}-${DRAWING}-`;
     const bucket = database.storage.from(BRANDING_BUCKET);
+    // A replaced logo is uploaded over the same name (upsert), so the path
+    // alone would keep finding the old copy. Its last write tells them apart.
+    const slash = source.lastIndexOf("/");
+    const folder = slash >= 0 ? source.slice(0, slash) : "";
+    const name = slash >= 0 ? source.slice(slash + 1) : source;
+    const listed = await bucket.list(folder, { search: name });
+    const file = listed.data?.find((entry) => entry.name === name);
+    const revision = String(file?.updated_at ?? (file?.metadata as { eTag?: string } | undefined)?.eTag ?? "");
+
+    // "<logo>-b2-<width>x<height>.png": found by its start, read by its end.
+    const stem = `${createHash("sha256").update(`${source}|${revision}`).digest("hex").slice(0, 24)}-${DRAWING}-`;
     const existing = await bucket.list(FOLDER, { search: stem });
     const kept = existing.data?.find((file) => file.name.startsWith(stem) && /-\d+x\d+\.png$/.test(file.name));
     if (kept) return logoUrl(`${FOLDER}/${kept.name}`);

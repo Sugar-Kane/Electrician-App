@@ -108,7 +108,9 @@ export async function POST(request: Request) {
     try {
       // A booking is only confirmed by the very checkout attached to it, so a
       // deposit is believed from whichever account it was charged on.
-      await fulfillPaidBooking(event.data.object);
+      // Stripe's time for the payment, so a webhook delayed or retried past
+      // the arrival window is not mistaken for a late payment.
+      await fulfillPaidBooking(event.data.object, { paidAt: new Date(event.created * 1000).toISOString() });
       // Memberships are Volteira's own, never a connected account's.
       if (!connectedAccount) await fulfillSubscriptionCheckout(event.data.object);
     } catch {

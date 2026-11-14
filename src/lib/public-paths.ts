@@ -21,7 +21,8 @@
 /** Whole sections that are public, by their leading segment. */
 // "invoice" (singular) is the customer's link to read one invoice by its
 // token. "invoices" (plural) is the business's list and stays signed in.
-const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "invite", "invoice", "journal", "legal"];
+// "estimate" is the same for an estimate: the customer's link by its token.
+const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "estimate", "invite", "invoice", "journal", "legal"];
 
 /**
  * Single public pages and files.

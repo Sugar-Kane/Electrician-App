@@ -8,7 +8,7 @@ import {
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
 import { originFromHeaders, startBookingCheckout } from "@/lib/booking-checkout";
-import { HOLD_MINUTES } from "@/lib/booking-hold";
+import { holdUntil } from "@/lib/booking-hold";
 import {
   getPublicBookingPage,
   prepareBookingCheckout,
@@ -232,7 +232,8 @@ export async function startPublicBooking(
   // ago with the database's own shorter deadline; this resets it to match the
   // Checkout session, whose expiry Stripe's limits are applied to where the
   // session is made (booking-checkout.ts).
-  const heldUntil = new Date(Date.now() + (HOLD_MINUTES + 1) * 60_000).toISOString();
+  // Never past the start of the arrival window (holdUntil).
+  const heldUntil = holdUntil(slotStart);
   if (!(await prepareBookingCheckout(intake.booking_token, heldUntil))) {
     return { error: "That arrival window could not be held. Choose another available time." };
   }

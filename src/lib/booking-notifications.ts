@@ -28,6 +28,7 @@ import { PHONE_BOOKING_CONSENT_SOURCE } from "@/lib/sms-consent";
 import { type IntakeContext } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { STOPPED_ERROR, sendOwnerSms, sendSms } from "@/lib/twilio";
+import { feeLabel, liveVisit } from "@/lib/booking-hold";
 
 /**
  * Telling everyone who needs to know what happened to a booking request.
@@ -848,24 +849,49 @@ export async function resendBookingLink(input: {
   const { data } = await database
     .from("booking_requests")
     .select(
-      "id, public_token, status, phone, email, contact_name, first_name, last_name, description, address_line_1, city, arrival_window_start, arrival_window_end, language, notification_results",
+      "id, public_token, status, phone, email, contact_name, first_name, last_name, description, address_line_1, city, arrival_window_start, arrival_window_end, expires_at, deposit_cents, language, notification_results",
     )
     .eq("organization_id", input.organizationId)
     .eq("customer_id", input.customerId)
     .in("status", ["awaiting_payment", "confirmed", "scheduled"])
     .not("arrival_window_start", "is", null)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
 
-  const row = (data ?? null) as Record<string, unknown> | null;
+  // Only a visit still to come: a hold that has not run out, or a confirmed
+  // visit whose window has not ended (liveVisit). A past appointment is never
+  // re-sent as though it were the one they have booked.
+  const now = new Date();
+  const rows = (data ?? []) as Record<string, unknown>[];
+  const row =
+    rows.find((candidate) =>
+      liveVisit(
+        [
+          {
+            status: String(candidate.status ?? ""),
+            arrival_window_start: (candidate.arrival_window_start as string | null) ?? null,
+            arrival_window_end: (candidate.arrival_window_end as string | null) ?? null,
+            expires_at: (candidate.expires_at as string | null) ?? null,
+          },
+        ],
+        now,
+      ),
+    ) ?? null;
   const str = (value: unknown) => (typeof value === "string" ? value.trim() : "");
   const start = str(row?.arrival_window_start);
   const end = str(row?.arrival_window_end);
   const token = str(row?.public_token);
   if (!row || !start || !end || !token) return { found: false, held: false, slotLabel: "", sent: [] };
 
-  const { context, timeZone } = await loadContextFor(database, input.organizationId);
+  const loaded = await loadContextFor(database, input.organizationId);
+  const timeZone = loaded.timeZone;
+  // The fee this booking was made at, not today's: a held customer pays the
+  // amount on their Checkout session, so the message quotes that amount.
+  const agreedCents = Number(row.deposit_cents);
+  const context =
+    Number.isFinite(agreedCents) && agreedCents > 0
+      ? { ...loaded.context, diagnosticFee: feeLabel(agreedCents) }
+      : loaded.context;
   const held = str(row.status) === "awaiting_payment";
   const notification: BookingNotification = {
     requestId: str(row.id),
