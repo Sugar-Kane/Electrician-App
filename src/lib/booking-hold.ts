@@ -34,6 +34,28 @@ export type HoldDecision =
  */
 export const HOLD_MINUTES = 24 * 60;
 
+/**
+ * How long this booking's time is actually held: a day, but never past the
+ * start of the arrival window. A visit this afternoon cannot be paid for
+ * tonight and confirmed for a time already gone; the hold, and the Checkout
+ * session that shares its clock, end when the window starts.
+ */
+export function holdMinutesFor(slotStartIso: string | null | undefined, nowMs = Date.now()): number {
+  const start = Date.parse(slotStartIso ?? "");
+  if (!Number.isFinite(start)) return HOLD_MINUTES;
+  return Math.max(0, Math.min(HOLD_MINUTES, Math.floor((start - nowMs) / 60_000)));
+}
+
+/**
+ * When the hold ends: the day plus a minute of allowance while the Checkout
+ * session is created, or the start of the arrival window if that comes first.
+ */
+export function holdUntil(slotStartIso: string | null | undefined, nowMs = Date.now()): string {
+  const day = nowMs + (HOLD_MINUTES + 1) * 60_000;
+  const start = Date.parse(slotStartIso ?? "");
+  return new Date(Number.isFinite(start) ? Math.min(day, start) : day).toISOString();
+}
+
 export function decideHold(input: {
   /** Only a booked visit can be held. A callback owes nothing. */
   intent: "book" | "callback";

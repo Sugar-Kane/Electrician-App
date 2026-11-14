@@ -213,7 +213,11 @@ function NavigateLink({ url, className, iconClassName, floating = false }: { url
     setMissing(true);
     const fold = document.getElementById("service-address");
     if (fold instanceof HTMLDetailsElement) {
-      fold.open = true;
+      // The address sits inside the Schedule step, itself a fold that is
+      // usually closed by now; open every fold around it, or it stays hidden.
+      for (let open: Element | null = fold; open; open = open.parentElement?.closest("details") ?? null) {
+        if (open instanceof HTMLDetailsElement) open.open = true;
+      }
       fold.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };

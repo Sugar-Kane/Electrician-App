@@ -225,7 +225,12 @@ export default async function JobsPage({
     >
       <section className="rounded-panel border border-line bg-surface p-3 sm:p-5">
         <form action="/jobs" className="flex gap-2">
-          {stage !== TO_DO ? <input type="hidden" name="stage" value={stage} /> : null}
+          {/*
+            A filter somebody chose (To do among them) stays chosen when they
+            search again. Only the default opening view, with no filter in the
+            address, lets a search look through every job.
+          */}
+          {askedStage && stage === askedStage ? <input type="hidden" name="stage" value={stage} /> : null}
           <label className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-raised px-4">
             <Search className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
             <span className="sr-only">Search jobs</span>

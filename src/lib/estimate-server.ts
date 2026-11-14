@@ -115,19 +115,28 @@ export async function sendJobEstimate(input: {
 
   const { data: latestRows } = await database
     .from("estimates")
-    .select("id, estimate_number, total_cents, status, last_sent_at, preview_token")
+    .select("id, estimate_number, total_cents, status, last_sent_at, preview_token, deliveries")
     .eq("organization_id", organizationId)
     .eq("job_id", jobId)
     .order("created_at", { ascending: false })
     .limit(1);
   const latest = (Array.isArray(latestRows) ? latestRows[0] : null) as Record<string, unknown> | null;
   const latestSent = latest ? Date.parse(text(latest.last_sent_at)) : NaN;
-  if (
+  // The same estimate sent a moment ago. A second tap for a channel that
+  // already went is a double tap; a text asked for after an email (or a retry
+  // of the one that failed) is not, and is sent on that same estimate, so the
+  // link already in their inbox stays the current one.
+  const justSent =
     latest &&
     Number(latest.total_cents) === totalCents &&
     Number.isFinite(latestSent) &&
     (Date.now() - latestSent) / 1000 < DOUBLE_TAP_SECONDS
-  ) {
+      ? latest
+      : null;
+  const earlierAttempts = (justSent && Array.isArray(justSent.deliveries) ? justSent.deliveries : []) as DeliveryAttempt[];
+  const alreadyWent = new Set(earlierAttempts.filter((attempt) => attempt.ok).map((attempt) => attempt.channel));
+  if (justSent) for (const channel of alreadyWent) wants.delete(channel);
+  if (latest && justSent && wants.size === 0) {
     return {
       ok: true,
       message: `EST-${text(String(latest.estimate_number ?? ""))} for ${formatMoney(totalCents / 100)} was just sent.`,
@@ -140,7 +149,9 @@ export async function sendJobEstimate(input: {
   }
 
   const expiresAt = new Date(Date.now() + VALID_DAYS * 24 * 60 * 60 * 1000);
-  const { data: created, error: createError } = await database
+  const { data: created, error: createError } = justSent
+    ? { data: justSent, error: null }
+    : await database
     .from("estimates")
     .insert({
       organization_id: organizationId,
@@ -229,7 +240,7 @@ export async function sendJobEstimate(input: {
   await database
     .from("estimates")
     .update({
-      deliveries: attempts,
+      deliveries: [...earlierAttempts, ...attempts],
       ...(succeeded ? { status: "sent", last_sent_at: new Date().toISOString() } : {}),
     })
     .eq("id", estimateId)

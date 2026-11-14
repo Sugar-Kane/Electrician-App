@@ -2,7 +2,7 @@ import "server-only";
 
 import { recordActivity } from "@/lib/activity";
 import { startBookingCheckout } from "@/lib/booking-checkout";
-import { decideHold, liveVisit, payLinkFor, type ConversationVisitRow, type LiveVisit } from "@/lib/booking-hold";
+import { decideHold, holdUntil, liveVisit, payLinkFor, type ConversationVisitRow, type LiveVisit } from "@/lib/booking-hold";
 import type { CallbackFacts } from "@/lib/grok-voice";
 import {
   readLanguage,
@@ -835,9 +835,8 @@ export async function recordBookingRequest(input: {
       // The hold the customer was promised, plus a minute of clock and network
       // allowance while the Checkout session is created. Stripe's own limits on
       // a session's expiry are applied where the session is made.
-      const heldUntil = new Date(
-        Date.now() + decision.holdMinutes * 60_000 + 60_000,
-      ).toISOString();
+      // Never past the start of the arrival window (holdUntil).
+      const heldUntil = holdUntil(action.slot.start);
 
       const { data: holding, error: holdError } = await input.database
         .from("booking_requests")

@@ -29,6 +29,25 @@ export async function scheduleBookingRequest(formData: FormData) {
   const requestId = value(formData, "requestId");
   if (!requestId) redirect(queueUrl("error", "That request could not be found."));
 
+  // An expired hold released its window, which may since have been booked by
+  // somebody else, and a window already started cannot be booked at all.
+  // Neither is written as a job at its old time; a new time is chosen instead.
+  const { data: request } = await asFlexibleClient(supabase)
+    .from("booking_requests")
+    .select("status, arrival_window_start")
+    .eq("id", requestId)
+    .maybeSingle();
+  const row = request as { status?: string; arrival_window_start?: string | null } | null;
+  const start = row?.arrival_window_start ? Date.parse(row.arrival_window_start) : Number.NaN;
+  if (row?.status === "expired" || (Number.isFinite(start) && start <= Date.now())) {
+    redirect(
+      queueUrl(
+        "error",
+        "That time is no longer held and may have gone to someone else. Book them a new time with New job.",
+      ),
+    );
+  }
+
   const { error } = await asFlexibleClient(supabase).rpc("schedule_sms_booking_request", {
     p_request_id: requestId,
   });

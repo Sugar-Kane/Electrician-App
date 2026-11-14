@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   decideHold,
+  holdMinutesFor,
+  holdUntil,
   feeLabel,
   heldReply,
   holdSentence,
@@ -185,4 +187,18 @@ test("a conversation with a live hold or a paid visit ahead gets no second hold"
     liveVisit([{ ...held, status: "scheduled", arrival_window_end: "2026-10-13T20:00:00Z" }], now),
     null,
   );
+});
+
+test("a hold never outlasts the start of the visit it holds", () => {
+  const now = Date.parse("2026-11-14T12:00:00Z");
+  // A visit three hours away is held for three hours, not a day.
+  assert.equal(holdMinutesFor("2026-11-14T15:00:00Z", now), 180);
+  assert.equal(holdUntil("2026-11-14T15:00:00Z", now), "2026-11-14T15:00:00.000Z");
+  // A visit days away keeps the day's hold, with its minute of allowance.
+  assert.equal(holdMinutesFor("2026-11-20T15:00:00Z", now), HOLD_MINUTES);
+  assert.equal(holdUntil("2026-11-20T15:00:00Z", now), new Date(now + (HOLD_MINUTES + 1) * 60_000).toISOString());
+  // A window already started is not held at all.
+  assert.equal(holdMinutesFor("2026-11-14T11:00:00Z", now), 0);
+  // No window: the day's hold.
+  assert.equal(holdMinutesFor(null, now), HOLD_MINUTES);
 });
