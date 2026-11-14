@@ -7,6 +7,7 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { SpanishBadge } from "@/components/language-badge";
 import { jobNeedsMaterialStop, pilotJobs } from "@/lib/pilot-data";
 import { JobContract } from "@/components/job-contract";
+import { DiagnosticFeeCard } from "@/components/diagnostic-fee-card";
 import { JobFollowUps } from "@/components/job-follow-ups";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobBilling, JobLinesPanel } from "@/components/job-lines-panel";
@@ -902,6 +903,9 @@ export default async function JobDetailPage({
       ) : null}
 
       {controls && !canceled ? <JobStageCard stage={stage} jobNumber={controls.jobNumber} canEndVisit={state === "arrived" || state === "working" || state === "review"} /> : null}
+
+      {/* A diagnostic fee paid online at booking, and its refunds. Nothing for other jobs. */}
+      {controls ? <DiagnosticFeeCard jobNumber={controls.jobNumber} /> : null}
 
       {stepLayout && controls && stage.flow === "diagnostic" ? (
         /*
