@@ -179,6 +179,15 @@ begin
   perform pg_temp.check(r.status = 'failed', 'retries stop at the attempt limit');
 end $$;
 
+do $$
+declare p uuid := pg_temp.propose('issue_refund');
+begin
+  perform pg_temp.decide('00000000-0000-0000-0000-00000000000a', p, 'approve', pg_temp.hash(p));
+  perform pg_temp.check((select count(*) from public.claim_supervised_actions(array['send_customer_message'], 10, 30, p)) = 0, 'a refund is never claimed by an executor that does not run refunds');
+  perform pg_temp.check((select code from private.reconcile_supervised_action('00000000-0000-0000-0000-00000000000a', p, 'executed', 'Refunded in Stripe')) = 'ok', 'the owner records an approved refund as done by hand');
+  perform pg_temp.check((select count(*) from public.claim_supervised_actions(array['issue_refund'], 10, 30, p)) = 0, 'and nothing can run it again');
+end $$;
+
 -- Internal work from an event needs no person -----------------------------
 do $$
 declare p uuid := pg_temp.propose('create_internal_task', null, null, 'system', null, 'event');

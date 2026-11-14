@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { advanceVisit } from "@/lib/job-changes-server";
 import { isWorkflowState, type WorkflowState } from "@/lib/job-workflow";
@@ -144,6 +145,12 @@ export async function advanceJob(
   if (result.finished) {
     revalidatePath("/inventory");
     revalidatePath("/materials");
+    // Phase 2 automation (off unless VOLTEIRA_PHASE2_TRIGGERS_ENABLED): after the reply.
+    const { organizationId, id } = job;
+    after(async () => {
+      const { emitJobCompleted } = await import("@/lib/automation-triggers-server");
+      await emitJobCompleted(organizationId, id);
+    });
   }
 
   return { error: "", state: result.state, notice: result.notice };

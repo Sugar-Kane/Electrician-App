@@ -1,148 +1,198 @@
 /**
- * Phase 2 security boundary for AI-suggested business actions.
- * This module is intentionally pure: no AI response or MCP caller can grant
- * itself execution privileges by changing a label or approval flag.
+ * Phase 2: the rules for AI-proposed actions, free of imports so they can be
+ * tested directly.
+ *
+ * The database is the authority (supabase/migrations/20261115000000_
+ * supervised_actions.sql): it decides who may approve, binds approval to the
+ * content fingerprint, and moves status. These functions mirror its policy so
+ * the app can explain a refusal before asking, and classify what a provider
+ * said so the executor never mistakes "unknown" for "failed".
  */
-export const SUPERVISED_ACTIONS = {
-  send_contract: "contract",
-  send_estimate: "estimate",
-  purchase_materials: "purchase",
-  issue_refund: "refund",
-  change_price: "pricing",
-  cancel_job: "cancellation",
-  send_customer_message: "communication",
-  create_internal_task: "internal",
-} as const;
 
-export type SupervisedAction = keyof typeof SUPERVISED_ACTIONS;
-export type ApprovalState = "proposed" | "approved" | "rejected" | "expired" | "executing" | "completed" | "failed";
-export type Decision = { actorId: string; role: string; at: string; actionDigest: string };
-export type ActionProposal = {
-  id: string;
-  organizationId: string;
-  createdBy: string;
-  action: SupervisedAction;
-  payloadDigest: string;
-  state: ApprovalState;
-  expiresAt: string;
-  approvedBy?: string | null;
-  approvedAt?: string | null;
-  executionId?: string | null;
-};
+export const SUPERVISED_ACTIONS = [
+  "send_text",
+  "add_job_note",
+  "send_customer_message",
+  "send_customer_email",
+  "create_internal_task",
+  "send_contract",
+  "send_estimate",
+  "purchase_materials",
+  "issue_refund",
+  "change_price",
+  "cancel_job",
+] as const;
 
-const FINANCIAL_OR_BINDING = new Set<SupervisedAction>([
-  "send_contract", "send_estimate", "purchase_materials", "issue_refund", "change_price", "cancel_job",
-]);
+export type SupervisedAction = (typeof SUPERVISED_ACTIONS)[number];
 
-export function requiresHumanApproval(action: SupervisedAction): boolean {
-  return action !== "create_internal_task";
+export type ProposalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "revision_requested"
+  | "superseded"
+  | "expired"
+  | "executing"
+  | "executed"
+  | "failed"
+  | "uncertain";
+
+export function isSupervisedAction(value: unknown): value is SupervisedAction {
+  return typeof value === "string" && (SUPERVISED_ACTIONS as readonly string[]).includes(value);
 }
 
-export function mayApprove(role: string, action: SupervisedAction): boolean {
-  if (role === "owner") return true;
-  return role === "admin" && !FINANCIAL_OR_BINDING.has(action);
+/** Binding or financial: the owner, and only the owner, approves. */
+const OWNER_ONLY = new Set<SupervisedAction>([
+  "send_contract",
+  "send_estimate",
+  "purchase_materials",
+  "issue_refund",
+  "change_price",
+  "cancel_job",
+]);
+
+const CUSTOMER_MESSAGES = new Set<SupervisedAction>(["send_text", "send_customer_message", "send_customer_email"]);
+
+/**
+ * Who may approve an action: "owner", "admin" (an owner or an admin), or null
+ * for an action nobody may approve (unknown: fail closed). A customer message
+ * from an approved template may be approved by an admin; one written for the
+ * occasion needs the owner. Same as private.supervised_action_approver.
+ */
+export function approverFor(action: string, templateKey: string | null): "owner" | "admin" | null {
+  if (!isSupervisedAction(action)) return null;
+  if (OWNER_ONLY.has(action)) return "owner";
+  if (CUSTOMER_MESSAGES.has(action)) return templateKey ? "admin" : "owner";
+  return "admin";
+}
+
+export function mayApprove(role: string, action: string, templateKey: string | null): boolean {
+  const needed = approverFor(action, templateKey);
+  if (!needed) return false;
+  return role === "owner" || (needed === "admin" && role === "admin");
+}
+
+/** Owner-only actions: binding documents and money. */
+export function isOwnerOnly(action: string): boolean {
+  return isSupervisedAction(action) && OWNER_ONLY.has(action);
+}
+
+export function isCustomerMessage(action: string): boolean {
+  return isSupervisedAction(action) && CUSTOMER_MESSAGES.has(action);
+}
+
+/** Seconds before retry n (1-based): 30s, 2m, 8m, 32m, capped at an hour. Same as the database. */
+export function retryDelaySeconds(attempt: number): number {
+  const n = Math.max(0, Math.min(attempt, 10) - 1);
+  return Math.min(3600, 30 * 4 ** n);
 }
 
 /**
- * Execution must be checked again by the server using a fresh DB record.
- * An approval is bound to exact immutable action arguments by digest.
- * Database transaction and unique execution key are still required.
+ * What a provider's answer means for an action:
+ *
+ * - succeeded: it confirmed the action;
+ * - failed: it refused, and doing it again would not help;
+ * - retryable: it certainly did not happen, and may next time;
+ * - uncertain: it may have happened. A timeout or dropped connection is not
+ *   proof of failure, so nothing is sent again until someone checks.
  */
-export function mayBeginExecution(
-  proposal: ActionProposal,
-  organizationId: string,
-  actionDigest: string,
-  now: Date,
-): boolean {
-  return Number.isFinite(now.getTime())
-    && proposal.organizationId === organizationId
-    && proposal.state === "approved"
-    && proposal.payloadDigest === actionDigest
-    && proposal.approvedBy !== null
-    && typeof proposal.approvedBy === "string"
-    && proposal.approvedBy.length > 0
-    && !proposal.executionId
-    && Number.isFinite(Date.parse(proposal.expiresAt))
-    && Date.parse(proposal.expiresAt) > now.getTime();
+export type ExecutionOutcome = "succeeded" | "failed" | "retryable" | "uncertain";
+
+/**
+ * A provider error code (Twilio's numeric codes, Resend's names, an HTTP
+ * status, or this app's own "network_error") classified.
+ */
+export function classifyProviderError(errorCode: string): Exclude<ExecutionOutcome, "succeeded"> {
+  const code = errorCode.trim().toLowerCase();
+  if (!code || code === "network_error" || code === "timeout") return "uncertain";
+  // Rate limited: the provider said no before doing anything.
+  if (code === "429" || code === "20429" || code === "rate_limit_exceeded") return "retryable";
+  const status = Number(code);
+  // A server error mid-request may or may not have done the work.
+  if (Number.isInteger(status) && status >= 500 && status < 600) return "uncertain";
+  if (code === "internal_server_error" || code === "application_error") return "uncertain";
+  return "failed";
 }
 
-export function mayDecide(
-  proposal: ActionProposal,
-  decision: Decision,
-  organizationId: string,
-  now: Date,
-): boolean {
-  return Number.isFinite(now.getTime())
-    && proposal.organizationId === organizationId
-    && proposal.state === "proposed"
-    && proposal.payloadDigest === decision.actionDigest
-    && proposal.createdBy !== decision.actorId
-    && mayApprove(decision.role, proposal.action)
-    && Number.isFinite(Date.parse(proposal.expiresAt))
-    && Date.parse(proposal.expiresAt) > now.getTime();
+/**
+ * The action types this deployment's executor may carry out, from
+ * VOLTEIRA_PHASE2_EXECUTE (comma-separated). Empty unless set: nothing runs.
+ * Unknown names are dropped, never guessed at.
+ */
+export function enabledActionTypes(setting: string | undefined): SupervisedAction[] {
+  if (!setting) return [];
+  const wanted = setting.split(",").map((part) => part.trim()).filter(Boolean);
+  return SUPERVISED_ACTIONS.filter((action) => wanted.includes(action));
 }
 
-/** The next state is determined on the server, never accepted from a model. */
-export type ProposalEvent =
-  | { type: "approve"; decision: Decision }
-  | { type: "reject"; decision: Decision }
-  | { type: "expire" }
-  | { type: "claim_execution"; organizationId: string; actionDigest: string; executionId: string }
-  | { type: "execution_succeeded"; executionId: string }
-  | { type: "execution_failed"; executionId: string };
+/** What a decision's result code means, said to the person who tried. */
+export function decisionMessage(code: string): string {
+  switch (code) {
+    case "ok":
+      return "Saved.";
+    case "not_found":
+      return "That proposal could not be found.";
+    case "forbidden":
+      return "Your role can't approve this kind of action. The business owner can.";
+    case "self_approval":
+      return "You proposed this yourself, so someone else has to approve it.";
+    case "already_decided":
+      return "Someone has already decided this proposal.";
+    case "content_changed":
+      return "This proposal is not the one you were shown. Reload and review it again.";
+    case "expired":
+      return "This proposal ran out before it was approved. Ask for a new one.";
+    case "unauthenticated":
+      return "Sign in again to decide.";
+    case "not_uncertain":
+      return "Only an action whose outcome is unknown can be settled this way.";
+    case "restricted_channel":
+      return "Binding and financial actions are approved in Volteira itself, not from ChatGPT.";
+    default:
+      return "The decision could not be saved. Try again.";
+  }
+}
 
-export type ProposalTransition =
-  | { ok: true; proposal: ActionProposal }
-  | { ok: false; reason: "unauthorized" | "invalid_state" | "expired" | "mismatched_execution" };
+/** Plain words for a status, for the inbox and ChatGPT. */
+export function statusLabel(status: string): string {
+  switch (status) {
+    case "pending":
+      return "Waiting for approval";
+    case "approved":
+      return "Approved, waiting to run";
+    case "executing":
+      return "Running";
+    case "executed":
+      return "Done";
+    case "failed":
+      return "Failed";
+    case "uncertain":
+      return "Outcome unknown, needs checking";
+    case "rejected":
+      return "Rejected";
+    case "expired":
+      return "Expired";
+    case "superseded":
+      return "Replaced";
+    case "revision_requested":
+      return "Changes requested";
+    default:
+      return status;
+  }
+}
 
-export function transitionProposal(
-  proposal: ActionProposal,
-  event: ProposalEvent,
-  organizationId: string,
-  now: Date,
-): ProposalTransition {
-  if (proposal.organizationId !== organizationId || !Number.isFinite(now.getTime())) {
-    return { ok: false, reason: "unauthorized" };
-  }
-  if (event.type === "expire") {
-    if (proposal.state !== "proposed" && proposal.state !== "approved") {
-      return { ok: false, reason: "invalid_state" };
-    }
-    if (Date.parse(proposal.expiresAt) > now.getTime()) {
-      return { ok: false, reason: "invalid_state" };
-    }
-    return { ok: true, proposal: { ...proposal, state: "expired" } };
-  }
-  if (event.type === "approve" || event.type === "reject") {
-    if (!mayDecide(proposal, event.decision, organizationId, now)) {
-      return { ok: false, reason: "unauthorized" };
-    }
-    return {
-      ok: true,
-      proposal: {
-        ...proposal,
-        state: event.type === "approve" ? "approved" : "rejected",
-        ...(event.type === "approve"
-          ? { approvedBy: event.decision.actorId, approvedAt: now.toISOString() }
-          : {}),
-      },
-    };
-  }
-  if (event.type === "claim_execution") {
-    if (event.organizationId !== organizationId || !event.executionId.trim()) {
-      return { ok: false, reason: "unauthorized" };
-    }
-    if (!mayBeginExecution(proposal, organizationId, event.actionDigest, now)) {
-      return { ok: false, reason: "invalid_state" };
-    }
-    return { ok: true, proposal: { ...proposal, state: "executing", executionId: event.executionId } };
-  }
-  if (proposal.state !== "executing") return { ok: false, reason: "invalid_state" };
-  if (!proposal.executionId || proposal.executionId !== event.executionId) {
-    return { ok: false, reason: "mismatched_execution" };
-  }
-  return {
-    ok: true,
-    proposal: { ...proposal, state: event.type === "execution_succeeded" ? "completed" : "failed" },
-  };
+/** The inbox's views and the statuses each shows. */
+export const PROPOSAL_VIEWS = {
+  pending: ["pending"],
+  approved: ["approved"],
+  running: ["executing"],
+  attention: ["uncertain", "failed"],
+  done: ["executed"],
+  closed: ["rejected", "expired", "superseded", "revision_requested"],
+} as const satisfies Record<string, readonly ProposalStatus[]>;
+
+export type ProposalView = keyof typeof PROPOSAL_VIEWS;
+
+export function proposalView(value: unknown): ProposalView {
+  return typeof value === "string" && value in PROPOSAL_VIEWS ? (value as ProposalView) : "pending";
 }

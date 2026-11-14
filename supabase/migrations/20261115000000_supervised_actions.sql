@@ -210,7 +210,8 @@ begin
   end if;
   if not (
        (old.status = 'pending' and new.status in ('approved', 'rejected', 'expired', 'superseded', 'revision_requested'))
-    or (old.status = 'approved' and new.status in ('executing', 'expired', 'superseded', 'failed'))
+    -- 'executed' from approved: the owner did it by hand (reconcile below).
+    or (old.status = 'approved' and new.status in ('executing', 'expired', 'superseded', 'failed', 'executed'))
     -- 'approved' again is a retry scheduled after a failure known to be safe.
     or (old.status = 'executing' and new.status in ('executed', 'failed', 'uncertain', 'approved'))
     or (old.status = 'uncertain' and new.status in ('executed', 'failed'))
@@ -294,7 +295,7 @@ begin
             case
               when old.status = 'executing' and new.status = 'approved' then 'retry_scheduled'
               when old.status = 'approved' and new.status = 'executing' then 'claimed'
-              when old.status = 'uncertain' then 'reconciled'
+              when old.status = 'uncertain' or (old.status = 'approved' and new.status = 'executed') then 'reconciled'
               else new.status
             end,
             old.status, new.status, actor, kind, channel, new.content_hash, new.attempts,
@@ -738,7 +739,10 @@ $$;
 revoke all on function public.finish_supervised_action(uuid, uuid, text, text, jsonb, text, timestamptz) from public, anon, authenticated;
 grant execute on function public.finish_supervised_action(uuid, uuid, text, text, jsonb, text, timestamptz) to service_role;
 
--- An owner settles an uncertain action after checking what really happened.
+-- An owner settles an action by hand: an uncertain one after checking what
+-- really happened, or an approved one they carried out themselves (or
+-- decided against) instead of the executor. Binding and financial actions
+-- are never run by the executor, so this is how they are closed.
 create or replace function private.reconcile_supervised_action(
   p_actor uuid,
   p_proposal_id uuid,
@@ -769,7 +773,7 @@ begin
     return query select false, 'forbidden', proposal.status;
     return;
   end if;
-  if proposal.status <> 'uncertain' then
+  if proposal.status not in ('uncertain', 'approved') then
     return query select false, 'not_uncertain', proposal.status;
     return;
   end if;
