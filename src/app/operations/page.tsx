@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 import { ArrowUpRight, CheckCircle2, Clock3, LockKeyhole, ShieldCheck, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
-import { OperationsApprovalControls } from "@/components/operations-approval-controls";
+import { SupervisedProposalCard } from "@/components/supervised-proposal-card";
 import { canViewAiOperations } from "@/lib/ai-operations-policy";
+import { PROPOSAL_VIEWS, proposalView, type ProposalView } from "@/lib/supervised-actions";
+import { auditFor, listSupervisedProposals } from "@/lib/supervised-actions-server";
+import { runnableActionTypes } from "@/lib/supervised-executor";
 import { loadNeedsAction } from "@/lib/needs-action";
 import { currentContext } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -13,19 +16,6 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 
 export const metadata: Metadata = { title: "AI operations | Volteira" };
 export const dynamic = "force-dynamic";
-
-type ApprovalRow = {
-  id: string;
-  action_type: string;
-  status: string;
-  reason: string | null;
-  content: string | null;
-  created_at: string;
-  expires_at: string | null;
-  pre_authorized: boolean;
-  content_hash: string;
-  target: unknown;
-};
 
 type ToolActivity = {
   id: string;
@@ -44,15 +34,27 @@ function activityTime(value: string, timeZone: string): string {
   }).format(new Date(value));
 }
 
-export default async function AiOperationsPage() {
+const VIEW_LABELS: Record<ProposalView, string> = {
+  pending: "Waiting for you",
+  approved: "Approved",
+  running: "Running",
+  attention: "Needs a check",
+  done: "Done",
+  closed: "Rejected or expired",
+};
+
+export default async function AiOperationsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const context = await currentContext();
   if (!context) redirect("/login");
   if (!canViewAiOperations(context.role)) redirect("/");
+  const view = proposalView((await searchParams).view);
+  const approvalsEnabled = process.env.VOLTEIRA_PHASE2_APPROVALS_ENABLED === "true";
+  const runnable = new Set<string>(runnableActionTypes(process.env.VOLTEIRA_PHASE2_EXECUTE));
 
   const database = getSupabaseAdmin();
   // Both reads are restricted to the verified organization in the session,
   // never an organization identifier supplied in the URL or by a model.
-  const [attention, activity, approvals] = await Promise.all([
+  const [attention, activity, approvals, events] = await Promise.all([
     loadNeedsAction(asFlexibleClient(database), context.organizationId, context.timeZone),
     database
       .from("mcp_call_log")
@@ -61,17 +63,19 @@ export default async function AiOperationsPage() {
       .eq("method", "tools/call")
       .order("created_at", { ascending: false })
       .limit(25),
+    listSupervisedProposals(asFlexibleClient(database), context.organizationId, view, 50),
     database
-      .from("task_proposals")
-      .select("id,action_type,status,reason,content,content_hash,target,created_at,expires_at,pre_authorized")
+      .from("automation_events")
+      .select("id,event_type,status,created_at")
       .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false })
-      .limit(50),
+      .limit(10),
   ]);
   const rows = (activity.data ?? []) as ToolActivity[];
   const failed = rows.filter((row) => row.is_error).length;
-  const proposals = (approvals.data ?? []) as ApprovalRow[];
-  const pending = proposals.filter((proposal) => proposal.status === "pending" && !proposal.pre_authorized);
+  const proposals = approvals.ok ? approvals.proposals : [];
+  const trails = await auditFor(asFlexibleClient(database), context.organizationId, proposals.map((proposal) => proposal.id));
+  const recentEvents = (events.data ?? []) as { id: string; event_type: string; status: string; created_at: string }[];
 
   return (
     <FieldPageShell
@@ -84,48 +88,78 @@ export default async function AiOperationsPage() {
         <div>
           <h2 className="font-semibold">Supervised mode</h2>
           <p className="mt-1 text-sm leading-6 text-ink-muted">
-            This first view is read-only. It does not send customer messages, sign contracts, buy materials,
-            change prices, or start background AI work. Those actions continue to require the existing approval flows.
+            AI can suggest. Nothing reaches a customer or touches money until a person approves the exact wording shown here.
+            Contracts, estimates, purchases, refunds, price changes and cancellations need the owner, and Volteira never carries them out by itself.
           </p>
         </div>
       </section>
 
-      <section className="mt-4 rounded-panel border border-line bg-surface p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">AI approval inbox</h2>
-          <span className="rounded-full bg-white/[0.05] px-3 py-1 text-xs text-ink-muted">{pending.length} pending</span>
+      <section className="mt-4 rounded-panel border border-line bg-surface p-4 sm:p-6" aria-labelledby="inbox-heading">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="inbox-heading" className="text-lg font-semibold">AI approval inbox</h2>
+          {approvals.ok ? (
+            <span className="rounded-full bg-white/[0.05] px-3 py-1 text-xs text-ink-muted">{approvals.counts.pending} waiting</span>
+          ) : null}
         </div>
-        <p className="mt-2 text-sm text-ink-muted">
-          Actual assistant proposals for this business. Approval and execution controls remain disabled until atomic authorization and audit are verified.
-        </p>
-        {approvals.error ? (
+        <nav aria-label="Proposal views" className="-mx-1 mt-3 flex gap-1 overflow-x-auto pb-1">
+          {(Object.keys(PROPOSAL_VIEWS) as ProposalView[]).map((key) => (
+            <Link
+              key={key}
+              href={key === "pending" ? "/operations" : `/operations?view=${key}`}
+              aria-current={key === view ? "page" : undefined}
+              className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold ${
+                key === view ? "border-brand bg-brand/10 text-brand" : "border-line text-ink-muted"
+              }`}
+            >
+              {VIEW_LABELS[key]}
+              {approvals.ok ? <span className="text-ink-faint">{approvals.counts[key]}</span> : null}
+            </Link>
+          ))}
+        </nav>
+        {!approvalsEnabled ? (
+          <p className="mt-3 text-xs text-caution">Approving is switched off for now. Proposals can be reviewed but not decided.</p>
+        ) : null}
+        {!approvals.ok ? (
           <p className="mt-4 rounded-control bg-caution-bg p-3 text-sm text-caution">
-            The approval inbox could not be loaded. No approval actions are available.
+            The approval inbox could not be loaded. Nothing can be decided until it loads.
           </p>
-        ) : pending.length === 0 ? (
+        ) : proposals.length === 0 ? (
           <p className="mt-4 rounded-control border border-line p-4 text-sm text-ink-muted">
-            No pending AI approval requests.
+            {view === "pending" ? "Nothing is waiting for approval." : `Nothing in "${VIEW_LABELS[view]}".`}
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
-            {pending.map((proposal) => (
-              <li key={proposal.id} className="rounded-control border border-line p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold">{proposal.action_type.replaceAll("_", " ")}</p>
-                  <span className="text-xs text-ink-faint">{activityTime(proposal.created_at, context.timeZone)}</span>
-                </div>
-                {proposal.reason ? <p className="mt-2 text-sm text-ink-muted">{proposal.reason}</p> : null}
-                {proposal.target && typeof proposal.target === "object" ? (
-                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-control border border-line p-3 text-xs">
-                    {JSON.stringify(proposal.target, null, 2)}
-                  </pre>
-                ) : null}
-                {proposal.content ? <p className="mt-2 whitespace-pre-wrap break-words text-sm">{proposal.content}</p> : null}
-                {proposal.expires_at ? <p className="mt-2 text-xs text-ink-faint">Expires {activityTime(proposal.expires_at, context.timeZone)}</p> : null}
-                <OperationsApprovalControls id={proposal.id} contentHash={proposal.content_hash} enabled={process.env.VOLTEIRA_PHASE2_APPROVALS_ENABLED === "true"} />
-              </li>
+            {proposals.map((proposal) => (
+              <SupervisedProposalCard
+                key={proposal.id}
+                proposal={proposal}
+                audit={trails.get(proposal.id) ?? []}
+                role={context.role}
+                timeZone={context.timeZone}
+                enabled={approvalsEnabled}
+                runnable={[...runnable]}
+              />
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="mt-4 rounded-panel border border-line bg-surface p-4 sm:p-6">
+        <h2 className="text-lg font-semibold">Recent automation activity</h2>
+        <p className="mt-1 text-sm text-ink-muted">Business events the automation saw, each counted once.</p>
+        {recentEvents.length === 0 ? (
+          <p className="mt-3 rounded-control bg-white/[0.03] p-4 text-sm text-ink-muted">No automation events yet.</p>
+        ) : (
+          <ol className="mt-3 divide-y divide-line">
+            {recentEvents.map((event) => (
+              <li key={event.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span className="min-w-0 truncate">{event.event_type.replace(".", " ").replaceAll("_", " ")}</span>
+                <span className="shrink-0 text-xs text-ink-faint">
+                  {event.status === "processed" ? "Proposed" : event.status === "ignored" ? "Nothing needed" : event.status} · {activityTime(event.created_at, context.timeZone)}
+                </span>
+              </li>
+            ))}
+          </ol>
         )}
       </section>
 

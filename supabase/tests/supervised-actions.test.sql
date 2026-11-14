@@ -209,6 +209,28 @@ begin
   perform pg_temp.check(e1.created and not e2.created and e1.event_id = e2.event_id, 'a repeated event is recorded once');
 end $$;
 
+-- Website lead handoff: the intake reports lead.received with Volteira's
+-- request id; a resent form is the same request, so one event, one follow-up,
+-- which runs without a person because it is internal.
+do $$
+declare e1 record; e2 record; p1 uuid; p2 uuid; claimed public.task_proposals; r record;
+begin
+  select * into e1 from public.record_automation_event('10000000-0000-0000-0000-000000000001', 'lead.received', 'req-77', null, 'c0000000-0000-0000-0000-000000000001');
+  select * into e2 from public.record_automation_event('10000000-0000-0000-0000-000000000001', 'lead.received', 'req-77', null, 'c0000000-0000-0000-0000-000000000001');
+  perform pg_temp.check(e1.created and not e2.created, 'a resent website request is one lead event');
+  select proposal_id into p1 from public.create_supervised_proposal('10000000-0000-0000-0000-000000000001', 'create_internal_task',
+    'Follow up with Pat about their website request.', 'New website request', 'event', null, 'system', now() + interval '3 days',
+    null, 'c0000000-0000-0000-0000-000000000001', null, null, null, null, 'lead_follow_up', '{}'::jsonb, '{}'::jsonb, null, 'lead.received:req-77:follow_up', e1.event_id);
+  select proposal_id into p2 from public.create_supervised_proposal('10000000-0000-0000-0000-000000000001', 'create_internal_task',
+    'Follow up with Pat about their website request.', 'New website request', 'event', null, 'system', now() + interval '3 days',
+    null, 'c0000000-0000-0000-0000-000000000001', null, null, null, null, 'lead_follow_up', '{}'::jsonb, '{}'::jsonb, null, 'lead.received:req-77:follow_up', e1.event_id);
+  perform pg_temp.check(p1 = p2, 'and one follow-up');
+  select * into claimed from public.claim_supervised_actions(array['create_internal_task'], 10, 60, p1);
+  perform pg_temp.check(claimed.id = p1, 'the follow-up runs without waiting for a person');
+  select * into r from public.finish_supervised_action(p1, claimed.claim_token, 'succeeded', 'activity-1');
+  perform pg_temp.check(r.status = 'executed', 'and is recorded done');
+end $$;
+
 -- Audit -------------------------------------------------------------------
 do $$
 declare p uuid := pg_temp.propose('issue_refund');
