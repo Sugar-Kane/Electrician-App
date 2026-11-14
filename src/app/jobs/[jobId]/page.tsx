@@ -802,6 +802,9 @@ export default async function JobDetailPage({
 
   // Where each step of a diagnostic stands, for its card: open while it is
   // being worked, folded with a tick once done.
+  // The step a link asked for (the jobs list's step chips send ?step=), in the
+  // cards' own names, so that card opens even when it is not the current one.
+  const askedCard = initialStep === "materials" ? "scope" : initialStep === "paid" ? "invoice" : initialStep;
   const stepState = (key: string): StepCardState => {
     const step = stage.steps.find((entry) => entry.key === key);
     if (!step) return "todo";
@@ -1000,7 +1003,16 @@ export default async function JobDetailPage({
 
           <StepCard id="findings" number={4} title="Diagnose & next step" state={diagnoseState} summary={beforeArrival ? "Photos, notes and what happens next, once you arrive" : nextStepSummary === "Chosen after diagnosing" ? "Photos and notes, then choose what happens next" : nextStepSummary}>
             {beforeArrival ? (
-              <p className="text-sm text-ink-muted">Opens once you arrive: photos and notes of what you find, then whether to finish with the diagnostic, fix it now, or book a work order.</p>
+              <>
+                <p className="text-sm text-ink-muted">Opens once you arrive: photos and notes of what you find, then whether to finish with the diagnostic, fix it now, or book a work order.</p>
+                {/* A work order can be booked before the visit (job menu); one
+                    already booked stays in view with its status and link. */}
+                {followUps.booked.length > 0 ? (
+                  <div className="mt-4 border-t border-line pt-4">
+                    <JobFollowUps jobNumber={controls.jobNumber} booked={followUps.booked} creditCents={followUps.creditCents} />
+                  </div>
+                ) : null}
+              </>
             ) : (
               <div className="divide-y divide-line">
                 <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
@@ -1037,13 +1049,18 @@ export default async function JobDetailPage({
             )}
           </StepCard>
 
-          <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} fill={stepFill("invoice")} summary={invoiceSummary}>
+          <StepCard id="work-materials" number={5} title="Invoice" state={stepState("invoice")} open={askedCard === "invoice"} fill={stepFill("invoice")} summary={invoiceSummary}>
             {/* A repair done on the spot: the list's items go onto the bill priced, as on a work order's estimate. */}
             {materialChat && !materialsFolded && listItems.length > 0 && state !== "completed" ? (
               <AddMaterialsToEstimate count={listItems.length} label="Add materials to the bill" />
             ) : null}
             <div className="divide-y divide-line">
-              {materialChat && !materialsFolded ? (
+              {/*
+                Folded, not left out, before the first repair line: choosing
+                "Fix it now" adds only the diagnostic fee, so hiding it would
+                leave no way to build the list that the first items come from.
+              */}
+              {materialChat ? (
                 <div className="pb-4">
                   <JobMaterialChat
                     jobNumber={controls.jobNumber}
@@ -1056,7 +1073,7 @@ export default async function JobDetailPage({
                   />
                 </div>
               ) : null}
-              <div className={materialChat && !materialsFolded ? "pt-4" : ""}>
+              <div className={materialChat ? "pt-4" : ""}>
                 <JobLinesPanel
                   jobNumber={controls.jobNumber}
                   lines={lines}
@@ -1085,7 +1102,7 @@ export default async function JobDetailPage({
          */
         <>
           <StepScroller jobNumber={controls.jobNumber} current={currentStepKey} />
-          <StepCard id="work-materials" number={1} title="Materials" state={stepState("scope")} fill={stepFill("scope")} summary={materialsSummary}>
+          <StepCard id="work-materials" number={1} title="Materials" state={stepState("scope")} open={askedCard === "scope"} fill={stepFill("scope")} summary={materialsSummary}>
             <div className="divide-y divide-line">
               {job.summary || job.serviceNotes || job.accessNotes ? (
                 <div className="pb-4">
@@ -1104,6 +1121,13 @@ export default async function JobDetailPage({
                       <span className="min-w-0 whitespace-pre-line">{job.accessNotes}</span>
                     </p>
                   ) : null}
+                </div>
+              ) : null}
+              {/* The intake itself (answers, urgency, where it came from): the
+                  request card that showed it is not drawn in this layout. */}
+              {callRecord ? (
+                <div className="py-4">
+                  <JobCallRecord record={callRecord} timeZone={messaging?.timezone ?? "UTC"} />
                 </div>
               ) : null}
               {materialChat ? (
@@ -1131,7 +1155,7 @@ export default async function JobDetailPage({
             </div>
           </StepCard>
 
-          <StepCard id="estimate" number={2} title="Estimate" state={stepState("estimate")} summary={totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)}` : "Not priced yet"}>
+          <StepCard id="estimate" number={2} title="Estimate" state={stepState("estimate")} open={askedCard === "estimate"} summary={totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)}` : "Not priced yet"}>
             {listItems.length > 0 && state !== "completed" ? <AddMaterialsToEstimate count={listItems.length} /> : null}
             <JobLinesPanel
               jobNumber={controls.jobNumber}
@@ -1181,7 +1205,7 @@ export default async function JobDetailPage({
             ) : null}
           </StepCard>
 
-          <StepCard number={4} title="Contract" state={stepState("approval")} fill={stepFill("approval")} summary={contractSummary}>
+          <StepCard number={4} title="Contract" state={stepState("approval")} open={askedCard === "approval"} fill={stepFill("approval")} summary={contractSummary}>
             <JobContract
               jobNumber={controls.jobNumber}
               contracts={contracts}
@@ -1191,7 +1215,7 @@ export default async function JobDetailPage({
             />
           </StepCard>
 
-          <StepCard id="findings" number={5} title="Work" state={stepState("work")} summary={workSummary}>
+          <StepCard id="findings" number={5} title="Work" state={stepState("work")} open={askedCard === "work"} summary={workSummary}>
             <div className="divide-y divide-line">
               <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
               {workspaceOpen ? (
@@ -1214,7 +1238,7 @@ export default async function JobDetailPage({
             </div>
           </StepCard>
 
-          <StepCard number={6} title="Invoice" state={stepState("invoice")} fill={stepFill("invoice")} summary={invoiceSummary}>
+          <StepCard number={6} title="Invoice" state={stepState("invoice")} open={askedCard === "invoice"} fill={stepFill("invoice")} summary={invoiceSummary}>
             <JobBilling
               jobNumber={controls.jobNumber}
               lines={lines}
@@ -1432,6 +1456,7 @@ function StepCard({
   summary,
   state,
   fill,
+  open,
   children,
 }: {
   id?: string;
@@ -1439,6 +1464,8 @@ function StepCard({
   title: string;
   summary: string;
   state: StepCardState;
+  /** Opened because the link asked for this step (?step=), whatever its state. */
+  open?: boolean;
   /** The share done of a step that is part way, e.g. 0.5 for an invoice sent, not paid. */
   fill?: number;
   children: React.ReactNode;
@@ -1451,7 +1478,7 @@ function StepCard({
       id={id}
       data-step-card
       data-step-current={state === "current" ? "true" : undefined}
-      open={state === "current"}
+      open={state === "current" || open === true}
       className={`group mt-3 scroll-mt-24 rounded-panel border bg-surface ${state === "current" ? "border-brand/50" : "border-line"}`}
     >
       <summary className="tap-target flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
