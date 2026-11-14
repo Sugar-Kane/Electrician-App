@@ -2,11 +2,9 @@ import "server-only";
 
 import { sendWebsiteRequestAlert } from "@/lib/booking-notifications";
 import { isMcpConfigured } from "@/lib/mcp-session";
-import { readInboundText } from "@/lib/claude";
 import { loadIntakeContext, openWebsiteRequest } from "@/lib/intake-shared";
 import { consentIsActive } from "@/lib/messaging-rules";
 import { toE164 } from "@/lib/phone-format";
-import { buildIntakeSystemPrompt, decideIntakeAction, INTAKE_QUESTIONS } from "@/lib/sms-intake";
 import { replyToCustomer } from "@/lib/sms-intake-runner";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTwilioConfigured, placeCall } from "@/lib/twilio";
@@ -14,7 +12,6 @@ import { RECEPTIONIST_NAME } from "@/lib/voice-intake";
 import {
   websiteCallDecision,
   websiteOpener,
-  websiteOpenerFallback,
   websiteTextDecision,
   type IntakeConsent,
 } from "@/lib/website-intake";
@@ -160,42 +157,16 @@ export async function followUpWebsiteRequest(input: {
     const website = await openWebsiteRequest(database, { organizationId: input.organizationId, conversationId });
     if (!website) return { texted: false, reason: "request_closed" };
 
-    // The same assistant that answers texts, reading the form as the
-    // customer's first message: it asks for what is missing, or offers the
-    // first open window when it has enough. A booking needs the customer's own
-    // yes, so the first message never books anything.
-    const context = loaded.context;
-    context.intakeBeforeOffer = true;
-    context.emailCopy = true;
-    context.photoOfferHandled = false;
-    const modelDecision = await readInboundText({
-      system: buildIntakeSystemPrompt(context),
-      turns: [{ role: "user", text: website.turn }],
+    // The first text is fixed: who is writing, why, the visit and its price,
+    // and whether they want to go ahead (websiteOpener). The questions start
+    // with their reply, answered by the same assistant that answers texts,
+    // which reads the form as the customer's first message.
+    const body = websiteOpener({
+      businessName: loaded.context.businessName,
+      assistantName: RECEPTIONIST_NAME,
+      firstName: website.firstName,
+      fee: loaded.context.diagnosticFee,
     });
-    const action = decideIntakeAction({ decision: modelDecision, customerText: website.turn, context });
-
-    // Written as Maya, the same receptionist who answers the phone.
-    const body =
-      modelDecision && (action.kind === "ask" || action.kind === "propose")
-        ? websiteOpener({
-            businessName: context.businessName,
-            assistantName: RECEPTIONIST_NAME,
-            firstName: website.firstName,
-            reply: action.reply,
-          })
-        : websiteOpenerFallback({
-            businessName: context.businessName,
-            assistantName: RECEPTIONIST_NAME,
-            firstName: website.firstName,
-            firstQuestion: INTAKE_QUESTIONS[0].question,
-          });
-    if (!modelDecision || (action.kind !== "ask" && action.kind !== "propose")) {
-      console.error("website request opener sent the fallback", {
-        requestId: input.requestId,
-        decided: Boolean(modelDecision),
-        kind: action.kind,
-      });
-    }
 
     const sent = await replyToCustomer({
       database,

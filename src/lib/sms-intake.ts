@@ -695,6 +695,14 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     "",
     `The diagnostic visit costs ${context.diagnosticFee}.`,
     "",
+    // The phone's order (feeUpFront): the visit, then its price, then the
+    // questions. A conversation that opens with the website text has already
+    // done this; one the customer starts has not.
+    `Before the first intake question, the conversation must have offered the visit and told them its price. If no earlier message in this conversation has, your first reply does it, in one short text, then asks whether they'd like to go ahead: we'd be happy to send an electrician out; booking takes a ${context.diagnosticFee} diagnostic deposit; it covers the trip and finding the problem; small fixes like a bulb or a switch are usually included; if it needs more work, the ${context.diagnosticFee} goes toward it. Their yes starts the intake questions. Don't explain the fee again after that.`,
+    "",
+    "Write like a person texting: short, warm, plain. Vary how you acknowledge an answer, and never start a message with the business's name.",
+    "Never ask for anything the customer has already told you in this conversation, the street address included. Read the whole conversation before each reply. What they texted wins over the website form.",
+    "",
     "BEFORE offering any arrival window or asking to book, collect the name, address, and basic intake below. Ask one question per message and carry the answers",
     `into propose_visit AND confirm_visit as answer_<key>. At least ${MINIMUM_INTAKE_ANSWERS} must be answered:`,
     ...INTAKE_QUESTIONS.map(({ key, question }) => `- ${key}: ${question}`),
@@ -708,7 +716,10 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
           context.existingVisit.state === "held"
             ? `This customer already has a visit held for ${context.existingVisit.labels.en}, and the payment link to confirm it has already been texted to them.`
             : `This customer already has a visit booked and paid for ${context.existingVisit.labels.en}.`,
-          "Do not propose or confirm another visit, and never send another link. Answer what they said in one short ask_for question (thank them for a photo; the electrician will see it). If they want a different time, tell them to call the business.",
+          // "(thank them for a photo; the electrician will see it)" was read as
+          // the reply itself: a customer who texted "Thank you" was thanked for
+          // a photo they never sent.
+          "Do not propose or confirm another visit, and never send another link. Reply in one short ask_for message to what they actually said: a thank-you gets a short \"You're welcome, see you then!\"; mention a photo only if their message says they attached one. If they want a different time, tell them to call the business.",
         ]
       : []),
     "",

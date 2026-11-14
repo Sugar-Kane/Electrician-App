@@ -138,13 +138,20 @@ export function websiteIntakeTurn(request: {
   preferredTimes: string;
   email: string;
 }): string {
-  const where = [request.address, [request.city, request.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  // A ZIP alone is not an address. Said as "The address is 93444", it read as
+  // the address on file, and the assistant asked for the street address again
+  // after the customer had already texted it.
+  const where = request.address
+    ? [request.address, [request.city, request.postalCode].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    : "";
+  const area = !request.address ? [request.city, request.postalCode].filter(Boolean).join(" ") : "";
   return [
     "[Sent from the request form on the business's website]",
     request.contactName ? `My name is ${request.contactName}.` : "",
     request.serviceName ? `I need help with: ${request.serviceName}.` : "",
     request.description ? `What's happening: ${request.description}` : "",
     where ? `The address is ${where}.` : "",
+    area ? `I'm in ${area}; I haven't given my street address yet.` : "",
     request.preferredTimes ? `Good times for me: ${request.preferredTimes}.` : "",
     request.email ? `My email is ${request.email}.` : "",
   ]
@@ -158,16 +165,26 @@ export function websiteIntakeTurn(request: {
  * Somebody who filled in a form a minute ago and gets a text from a number they
  * don't know needs the business's name and the reason in the first line, or it
  * reads as spam and gets a STOP.
+ *
+ * Then the visit and its price, before any question, the same order the phone
+ * follows (feeUpFront in booking-tool-rules.ts): an offer to come out, the
+ * deposit, what it buys, and whether they want to go ahead. A test text that
+ * opened straight into intake questions never mentioned the $180 until the
+ * time was offered. Fixed wording, so it is the same every time.
  */
 export function websiteOpener(input: {
   businessName: string;
   assistantName: string;
   firstName: string;
-  reply: string;
+  fee: string;
 }): string {
   const name = displayFirstName(input.firstName);
   const hello = name ? `Hi ${name}, ` : "Hi, ";
-  return `${hello}this is ${input.assistantName} from ${input.businessName}. I just received your request on our website and would like to get you scheduled with an electrician. ${withoutGreeting(input.reply)}`;
+  return [
+    `${hello}this is ${input.assistantName} from ${input.businessName}. Thanks for your request on our website. We'd be happy to send an electrician out.`,
+    `Just so you know up front, booking the visit takes a ${input.fee} diagnostic deposit. It covers the trip and finding the problem; small fixes like a bulb or a switch are usually included, and if it needs more work, the ${input.fee} goes toward it.`,
+    "Would you like me to get you scheduled? Reply STOP to opt out.",
+  ].join(" ");
 }
 
 /** "adam" as typed into a form reads as "Adam"; a name typed with capitals is left alone. */
@@ -176,16 +193,6 @@ function displayFirstName(name: string): string {
   return trimmed === trimmed.toLowerCase() ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : trimmed;
 }
 
-/**
- * The assistant's reply without its own "Hi Adam —": the opener has already
- * said hello, and a text that greets twice reads like two systems talking.
- */
-function withoutGreeting(reply: string): string {
-  const trimmed = reply.trim();
-  const stripped = trimmed.replace(/^(hi|hello|hey|hola)\b[^.!?,\u2014\u2013-]{0,40}[,!.\u2014\u2013-]+\s*/i, "");
-  if (!stripped || stripped === trimmed) return trimmed;
-  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
-}
 
 export type CallDecision = { call: true } | { call: false; reason: "duplicate" | "not_asked" | "calling_not_set_up" };
 
@@ -243,21 +250,6 @@ export function websiteCallbackVoicemailTwiml(message: string): string {
  * from the business: the same introduction, and the first question a visit
  * needs answered. Their reply goes to the assistant like any other text.
  */
-export function websiteOpenerFallback(input: {
-  businessName: string;
-  assistantName: string;
-  firstName: string;
-  firstQuestion: string;
-}): string {
-  const question = input.firstQuestion.trim();
-  return websiteOpener({
-    businessName: input.businessName,
-    assistantName: input.assistantName,
-    firstName: input.firstName,
-    reply: `To start, ${question.charAt(0).toLowerCase()}${question.slice(1)} Reply STOP to opt out.`,
-  });
-}
-
 export type CallbackOutcome = "completed" | "voicemail" | "no_answer" | "busy" | "failed";
 
 /**

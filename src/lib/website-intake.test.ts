@@ -7,7 +7,7 @@ import {
   newWebsiteKey,
   parseWebsiteRequest,
   websiteCallDecision,
-  websiteOpenerFallback,
+  websiteOpener,
   websiteTextDecision,
 } from "./website-intake.ts";
 
@@ -91,15 +91,18 @@ test("the assistant texts once, only with consent, never after a STOP", () => {
   assert.deepEqual(websiteTextDecision({ ...fresh, textingConfigured: false }), { send: false, reason: "texting_not_set_up" });
 });
 
-test("the first text says who is writing and how to stop", () => {
-  const text = websiteOpenerFallback({
+test("the first text says who is writing, the fee up front, and how to stop", () => {
+  const text = websiteOpener({
     businessName: "Pacific Plains Electric",
     assistantName: "Maya",
     firstName: "jane",
-    firstQuestion: "Is this affecting the whole house, one room, or a single outlet or fixture?",
+    fee: "$180",
   });
   assert.match(text, /^Hi Jane, this is Maya from Pacific Plains Electric\./);
-  assert.match(text, /To start, is this affecting the whole house/);
+  // The visit is offered before the price, and the price before any question.
+  assert.ok(text.indexOf("send an electrician out") < text.indexOf("$180 diagnostic deposit"));
+  assert.match(text, /the \$180 goes toward it/);
+  assert.match(text, /Would you like me to get you scheduled\?/);
   assert.match(text, /Reply STOP to opt out\.$/);
 });
 
