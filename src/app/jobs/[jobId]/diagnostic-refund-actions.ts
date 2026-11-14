@@ -40,7 +40,9 @@ export async function refundDiagnosticFeeAction(
 
   const check = checkRefund({
     canRefund: context.role === "owner" || context.role === "admin",
-    paymentCents: payment.amountCents,
+    // What already came off an invoice was given back as a credit; it cannot
+    // be refunded as well.
+    paymentCents: Math.max(0, payment.amountCents - payment.creditUsedCents),
     refunds: payment.refunds,
     amountText: String(formData.get("amount") ?? ""),
   });

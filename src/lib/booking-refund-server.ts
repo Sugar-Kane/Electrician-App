@@ -1,5 +1,6 @@
 import "server-only";
 
+import { creditGivenCents } from "@/lib/follow-up-jobs";
 import { refundStatusFromStripe, type RefundStatus } from "@/lib/invoice-refund";
 import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor } from "@/lib/stripe-connect";
@@ -34,6 +35,12 @@ export type DiagnosticFeePayment = {
   id: string;
   amountCents: number;
   paidAt: string;
+  /**
+   * Of the fee, what has already come off an invoice (not void) on this job or
+   * one booked from it. That part was given back as a credit and cannot also
+   * be refunded (begin_booking_refund refuses it).
+   */
+  creditUsedCents: number;
   refunds: {
     id: string;
     amountCents: number;
@@ -63,16 +70,31 @@ export async function getJobDiagnosticPayment(
   const row = payment as Row | null;
   if (!row?.id) return null;
 
-  const { data: refunds, error } = await db
-    .from("booking_payment_refunds")
-    .select("id, amount_cents, status, reason, created_at, failure_reason")
-    .eq("payment_id", text(row.id))
-    .order("created_at", { ascending: true });
+  const [{ data: refunds, error }, { data: followUps }] = await Promise.all([
+    db
+      .from("booking_payment_refunds")
+      .select("id, amount_cents, status, reason, created_at, failure_reason")
+      .eq("payment_id", text(row.id))
+      .order("created_at", { ascending: true }),
+    db.from("jobs").select("id").eq("organization_id", organizationId).eq("follow_up_of", jobId),
+  ]);
+  const jobIds = [jobId, ...((followUps ?? []) as Row[]).map((job) => text(job.id)).filter(Boolean)];
+  const { data: invoices } = await db
+    .from("invoices")
+    .select("status, diagnostic_credit_cents")
+    .eq("organization_id", organizationId)
+    .in("job_id", jobIds);
 
   return {
     id: text(row.id),
     amountCents: Number(row.amount_cents ?? 0),
     paidAt: text(row.paid_at),
+    creditUsedCents: creditGivenCents(
+      ((invoices ?? []) as Row[]).map((invoice) => ({
+        status: text(invoice.status),
+        diagnosticCreditCents: Number(invoice.diagnostic_credit_cents ?? 0),
+      })),
+    ),
     // A database without the refunds table yet simply has none.
     refunds: (error ? [] : ((refunds ?? []) as Row[])).map((refund) => ({
       id: text(refund.id),

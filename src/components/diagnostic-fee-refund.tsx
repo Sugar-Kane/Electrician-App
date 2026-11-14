@@ -58,8 +58,10 @@ export function DiagnosticFeeRefund({
   canRefund: boolean;
 }) {
   const [state, action] = useActionState(refundDiagnosticFeeAction, initial);
-  const left = refundableCents(payment.amountCents, payment.refunds);
-  const refunded = payment.amountCents - left;
+  const refunded = payment.amountCents - refundableCents(payment.amountCents, payment.refunds);
+  // What already came off an invoice was given back as a credit, so it cannot
+  // be refunded to the card as well.
+  const left = refundableCents(Math.max(0, payment.amountCents - payment.creditUsedCents), payment.refunds);
 
   return (
     <section aria-labelledby="diagnostic-fee-heading" className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5">
@@ -69,7 +71,9 @@ export function DiagnosticFeeRefund({
         </h2>
         {refunded > 0 ? (
           <p className="text-sm text-ink-muted">
-            {left === 0 ? "Refunded in full" : `${formatCents(refunded)} refunded · ${formatCents(left)} kept`}
+            {refunded >= payment.amountCents
+              ? "Refunded in full"
+              : `${formatCents(refunded)} refunded · ${formatCents(payment.amountCents - refunded)} kept`}
           </p>
         ) : null}
       </div>
@@ -94,6 +98,13 @@ export function DiagnosticFeeRefund({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {payment.creditUsedCents > 0 ? (
+        <p className="mt-2 text-xs leading-5 text-ink-muted">
+          {formatCents(Math.min(payment.creditUsedCents, payment.amountCents))} of this fee has already come off an
+          invoice as a credit, so it can&apos;t also be refunded here. To give it back, adjust that invoice.
+        </p>
       ) : null}
 
       {canRefund && left > 0 ? (
