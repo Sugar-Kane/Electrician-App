@@ -208,7 +208,7 @@ export async function refundInvoicePayment(
   if (notify) {
     const told = await sendRefundNotice(refundId);
     const by = [told.email === "sent" ? "email" : "", told.sms === "sent" ? "text" : ""].filter(Boolean);
-    message += by.length > 0 ? ` The customer was told by ${by.join(" and ")}.` : " The customer could not be told (no email on file, and no texting consent).";
+    message += by.length > 0 ? ` The customer was told by ${by.join(" and ")}.` : " The customer could not be told (no email on file, and no text went through).";
   }
 
   await recordActivity(db, {

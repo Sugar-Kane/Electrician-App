@@ -159,7 +159,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "send_text",
     title: "Text a customer",
     description:
-      "Send an operational SMS to an existing customer with active SMS consent. Explicit owner approval of the exact recipient and text is required.",
+      "Send an operational SMS to an existing customer who has not replied STOP. Explicit owner approval of the exact recipient and text is required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -211,7 +211,7 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
     name: "send_contract_for_signature",
     title: "Text a contract for signature",
     description:
-      "Text the customer a link to sign a job's contract on their phone: the job's newest contract that is not cancelled, once it is fully filled in. The business signs it first with the saved signature of the owner who connected ChatGPT, then the customer gets the link at the phone number on their customer record. Only for a customer with active SMS consent. Explicit owner approval is required.",
+      "Text the customer a link to sign a job's contract on their phone: the job's newest contract that is not cancelled, once it is fully filled in. The business signs it first with the saved signature of the owner who connected ChatGPT, then the customer gets the link at the phone number on their customer record. Not for a customer who replied STOP. Explicit owner approval is required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1040,6 +1040,8 @@ export async function runBusinessMcpTool(input: {
       }
 
       const sent = await sendSms({
+        organizationId,
+        customerId,
         to: phone,
         body: signingLinkMessage({ businessName: text(organization?.name), jobNumber: job.job_number, link: `${origin}/contract/${token}`, kind: contract.kind }),
         messagingServiceSid,

@@ -4,7 +4,8 @@ import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
  * Text one customer from a business, the same way Send in the inbox does.
  * Used by send_text in ChatGPT/Claude and by an approved assistant action.
  *
- * - Refuses without active SMS consent, a phone number, or a messaging service.
+ * - Refuses without a phone number or a messaging service; sendSms refuses a
+ *   customer who replied STOP.
  * - Finds or opens the customer's conversation (bringing it back if it was
  *   cleared from the inbox) and stands the auto-reply down, because a person
  *   is talking.
@@ -20,7 +21,7 @@ import type { FlexibleSupabaseClient } from "./supabase/flexible.ts";
 type Database = FlexibleSupabaseClient;
 
 export type SendResult = { ok: true; providerMessageId: string; status: string } | { ok: false; errorCode: string; errorDetail: string };
-export type SmsSender = (input: { to: string; body: string; messagingServiceSid: string; statusCallbackUrl?: string }) => Promise<SendResult>;
+export type SmsSender = (input: { organizationId: string; customerId: string; to: string; body: string; messagingServiceSid: string; statusCallbackUrl?: string }) => Promise<SendResult>;
 
 export type CustomerTextOutcome =
   | { ok: true; messageId: string; conversationId: string; providerMessageId: string; phone: string }
@@ -31,12 +32,15 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : typeof value === "number" && Number.isFinite(value) ? String(value) : "";
 }
 
-/** Whether a customer may be texted now: a phone, and consent given and not withdrawn. */
+/**
+ * Whether a customer can be texted: a phone number on file. Consent is not
+ * checked here: `sendSms` is the one place it is, and only a STOP refuses.
+ */
 export async function textingAllowed(
   db: Database,
   organizationId: string,
   customerId: string,
-): Promise<{ ok: true; phone: string } | { ok: false; code: "NO_CONSENT" | "NO_PHONE"; message: string }> {
+): Promise<{ ok: true; phone: string } | { ok: false; code: "NO_PHONE"; message: string }> {
   const { data: customer } = await db
     .from("customers")
     .select("id, phone")
@@ -45,17 +49,6 @@ export async function textingAllowed(
     .maybeSingle();
   const phone = text((customer as Record<string, unknown> | null)?.phone);
   if (!phone) return { ok: false, code: "NO_PHONE", message: "The customer has no phone number." };
-  const { data: consent } = await db
-    .from("messaging_consent")
-    .select("opted_in_at, opted_out_at")
-    .eq("organization_id", organizationId)
-    .eq("customer_id", customerId)
-    .eq("channel", "sms")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const row = consent as Record<string, unknown> | null;
-  if (!row?.opted_in_at || row.opted_out_at) return { ok: false, code: "NO_CONSENT", message: "The customer does not have active SMS consent." };
   return { ok: true, phone };
 }
 
@@ -129,6 +122,8 @@ export async function sendCustomerText(
 
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
   const result = await input.send({
+    organizationId,
+    customerId,
     to: phone,
     body,
     messagingServiceSid: sid,

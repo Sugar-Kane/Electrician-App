@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
-  getConsent,
   getConversationThread,
   getMessagingContext,
   getSendingConfiguration,
@@ -21,10 +20,10 @@ function appUrl() {
 /**
  * Send one message in a conversation.
  *
- * Consent is checked here, against the ledger, at the moment of sending —
- * never from anything the browser posted. A thread that was sendable when the
- * page rendered may not be by the time Send is pressed, because the customer
- * can reply STOP in between.
+ * Consent is checked by `sendSms`, against the ledger, at the moment of
+ * sending — never from anything the browser posted. A thread that was sendable
+ * when the page rendered may not be by the time Send is pressed, because the
+ * customer can reply STOP in between; the refusal is recorded on the message.
  */
 export async function sendConversationMessage(
   conversationId: string,
@@ -42,15 +41,6 @@ export async function sendConversationMessage(
 
   const thread = await getConversationThread(context, conversationId);
   if (!thread) return { error: "That conversation could not be found." };
-
-  const consent = await getConsent(context, thread.customerId);
-  if (!consent.optedIn) {
-    return {
-      error: consent.optedOutAt
-        ? "This customer replied STOP. They have to opt in again themselves."
-        : "This customer has not opted in to text messages.",
-    };
-  }
 
   if (thread.quietHours.currentlyQuiet && !overrideQuietHours) {
     return {
@@ -100,6 +90,8 @@ export async function sendConversationMessage(
   const origin = appUrl();
 
   const result = await sendSms({
+    organizationId: context.organizationId,
+    customerId: thread.customerId,
     to: thread.phone,
     body,
     messagingServiceSid: settings.messagingServiceSid,
@@ -168,9 +160,6 @@ export async function startConversation(formData: FormData): Promise<void> {
 
   const context = await getMessagingContext();
   if (!context) return;
-
-  const consent = await getConsent(context, customerId);
-  if (!consent.optedIn) return;
 
   const { data: existing } = await context.database
     .from("conversations")

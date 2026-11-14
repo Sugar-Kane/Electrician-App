@@ -141,6 +141,8 @@ export async function retryText(formData: FormData): Promise<void> {
 
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
   const result = await sendSms({
+    organizationId: target.organizationId,
+    customerId: facts.customer?.id ?? "",
     to: toE164(phone),
     body: facts.message.body,
     messagingServiceSid: facts.messaging.serviceSid,

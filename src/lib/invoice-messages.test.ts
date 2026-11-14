@@ -12,7 +12,6 @@ import {
   paidInvoiceCanBeSent,
   paidInvoiceEmail,
   paidInvoiceSms,
-  repliedStop,
   type DeliveryAttempt,
   type InvoiceFacts,
 } from "./invoice-messages.ts";
@@ -222,13 +221,6 @@ test("a preview never reads as a bill: nothing due, no pay link, the final invoi
   assert.match(mail.subject, /preview/i);
 });
 
-test("an invoice is never texted to a customer whose last word was STOP", () => {
-  assert.equal(repliedStop(null), false, "no consent row is not an opt-out");
-  assert.equal(repliedStop({ optedInAt: "2026-09-01T00:00:00Z", optedOutAt: null }), false);
-  assert.equal(repliedStop({ optedInAt: null, optedOutAt: "2026-09-02T00:00:00Z" }), true);
-  assert.equal(repliedStop({ optedInAt: "2026-09-01T00:00:00Z", optedOutAt: "2026-09-02T00:00:00Z" }), true);
-  assert.equal(repliedStop({ optedInAt: "2026-09-03T00:00:00Z", optedOutAt: "2026-09-02T00:00:00Z" }), false, "START after STOP");
-});
 
 
 test("a paid invoice reads as a record of payment, never as a bill", () => {

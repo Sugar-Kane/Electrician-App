@@ -7,7 +7,6 @@ import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 
 import { emailSender, looksLikeEmail } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
-import { consentIsActive } from "@/lib/messaging-rules";
 import { ContractDocument, contractFileName, documentWord } from "@/lib/pdf/contract-document";
 import { loadContractDocument } from "@/lib/pdf/contract-data";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -117,35 +116,20 @@ export async function sendSignedContractCopy(input: {
       outcome.email = "no email on file";
     }
 
-    // Text, with the link: only with consent on the ledger.
+    // Text, with the link. sendSms refuses a customer who replied STOP.
     const phone = text(customer.phone);
     const customerId = text(job.customer_id);
     if (phone && customerId && link) {
-      const [{ data: consent }, { data: settings }] = await Promise.all([
-        database
-          .from("messaging_consent")
-          .select("opted_in_at, opted_out_at")
-          .eq("organization_id", input.organizationId)
-          .eq("customer_id", customerId)
-          .eq("channel", "sms")
-          .eq("scope", "transactional")
-          .maybeSingle(),
-        database
-          .from("messaging_settings")
-          .select("messaging_service_sid")
-          .eq("organization_id", input.organizationId)
-          .maybeSingle(),
-      ]);
-      const active = consentIsActive({
-        optedInAt: consent?.opted_in_at ? String(consent.opted_in_at) : null,
-        optedOutAt: consent?.opted_out_at ? String(consent.opted_out_at) : null,
-      });
+      const { data: settings } = await database
+        .from("messaging_settings")
+        .select("messaging_service_sid")
+        .eq("organization_id", input.organizationId)
+        .maybeSingle();
       const sid = text(settings?.messaging_service_sid);
-      if (!active) outcome.sms = "no texting consent";
-      else if (!sid) outcome.sms = "texting not set up";
+      if (!sid) outcome.sms = "texting not set up";
       else {
         const body = `${businessName}: thank you for signing ${what}. Your signed copy: ${link}`;
-        const result = await sendSms({ to: phone, body, messagingServiceSid: sid });
+        const result = await sendSms({ organizationId: input.organizationId, customerId, to: phone, body, messagingServiceSid: sid });
         outcome.sms = result.ok ? "sent" : `${result.errorCode}: ${result.errorDetail}`;
         if (result.ok) await recordText(database, input.organizationId, customerId, body, result.providerMessageId);
       }

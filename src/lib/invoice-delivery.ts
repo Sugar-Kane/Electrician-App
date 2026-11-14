@@ -10,7 +10,6 @@ import {
   paidInvoiceEmail,
   paidInvoiceSms,
   invoiceViewUrl,
-  repliedStop,
   type DeliveryAttempt,
   type DeliveryChannel,
   type InvoiceFacts,
@@ -48,7 +47,7 @@ export async function deliverInvoice(input: {
   kind?: "invoice" | "preview" | "paid";
   /**
    * Whose invoice it is, when the caller already knows. Found from the
-   * invoice otherwise: every send checks STOP, whoever started it.
+   * invoice otherwise, so sendSms can check STOP whoever started it.
    */
   customerId?: string;
 }): Promise<DeliveryAttempt[]> {
@@ -57,7 +56,7 @@ export async function deliverInvoice(input: {
   const paidCopy = input.kind === "paid";
   const database = getSupabaseAdmin();
 
-  // Read off the invoice itself, so the link and the STOP check do not depend
+  // Read off the invoice itself, so the link and the customer for the STOP check do not depend
   // on every caller (the screen, the assistant, ChatGPT) remembering them.
   const { data: owner, error: ownerError } = await database
     .from("invoices")
@@ -113,22 +112,11 @@ export async function deliverInvoice(input: {
       });
     } else if (!input.customerPhone) {
       note({ channel: "sms", to: "", ok: false, detail: "No phone number on this customer." });
-    } else if (found.unknown) {
-      note({
-        channel: "sms",
-        to: input.customerPhone,
-        ok: false,
-        detail: "Could not check whether this customer replied STOP, so no text was sent. Try again.",
-      });
-    } else if (found.id && (await optedOut(database, input.organizationId, found.id)) !== "clear") {
-      note({
-        channel: "sms",
-        to: input.customerPhone,
-        ok: false,
-        detail: "This customer replied STOP, or it could not be checked, so no text was sent.",
-      });
     } else {
+      // sendSms refuses a customer who replied STOP.
       const result = await sendSms({
+        organizationId: input.organizationId,
+        customerId: found.id,
         to: input.customerPhone,
         body: paidCopy ? paidInvoiceSms(facts) : preview ? invoicePreviewSms(facts) : invoiceSms(facts),
         messagingServiceSid,
@@ -213,32 +201,6 @@ export async function deliverInvoice(input: {
   }
 
   return attempts;
-}
-
-/**
- * Whether a customer's last word on texts was STOP. "unknown" when the record
- * could not be read, which the caller treats as STOP: a text is never sent on
- * a guess.
- */
-async function optedOut(
-  database: ReturnType<typeof getSupabaseAdmin>,
-  organizationId: string,
-  customerId: string,
-): Promise<"stopped" | "clear" | "unknown"> {
-  const { data, error } = await database
-    .from("messaging_consent")
-    .select("opted_in_at, opted_out_at")
-    .eq("organization_id", organizationId)
-    .eq("customer_id", customerId)
-    .eq("channel", "sms")
-    .eq("scope", "transactional")
-    .maybeSingle();
-  if (error) return "unknown";
-  return repliedStop(
-    data ? { optedInAt: data.opted_in_at ? String(data.opted_in_at) : null, optedOutAt: data.opted_out_at ? String(data.opted_out_at) : null } : null,
-  )
-    ? "stopped"
-    : "clear";
 }
 
 /** The business's customer with this number, for an invoice with no job to say whose it is. */
