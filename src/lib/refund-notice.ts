@@ -1,11 +1,12 @@
 import "server-only";
 
 import { emailSender, looksLikeEmail } from "@/lib/booking-confirmation";
-import { recordText } from "@/lib/contract-copy";
+import { sendCustomerText } from "@/lib/customer-text";
 import { sendEmail } from "@/lib/email";
 import { invoiceLabel } from "@/lib/invoice-label";
 import { refundStatusFromStripe, refundSummary } from "@/lib/invoice-refund";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { STOPPED_ERROR, sendSms } from "@/lib/twilio";
 
 /**
@@ -212,12 +213,20 @@ export async function sendRefundNotice(
         const smsBody = totals
           ? `${body} Paid ${dollars(totals.paid)}, refunded ${dollars(totals.refunded)}, kept ${dollars(Math.max(totals.paid - totals.refunded, 0))}.`
           : body;
-        const result = await sendSms({ organizationId, customerId, to: phone, body: smsBody, messagingServiceSid: sid });
-        outcome.sms = result.ok ? "sent" : result.errorCode === STOPPED_ERROR ? "replied STOP" : `${result.errorCode}: ${result.errorDetail}`;
-        if (result.ok) {
-          anySent = true;
-          await recordText(database, organizationId, customerId, smsBody, result.providerMessageId);
-        } else if (result.errorCode !== STOPPED_ERROR) anyFailed = true;
+        // Saved in the customer's conversation first and tracked by Twilio's
+        // delivery report, like every other text to a customer, so a notice
+        // that never arrives shows as undelivered rather than "sent".
+        const result = await sendCustomerText(asFlexibleClient(database), {
+          organizationId,
+          customerId,
+          body: smsBody,
+          send: sendSms,
+          pauseAssistant: false,
+        });
+        const stopped = !result.ok && result.code === "SEND_FAILED" && result.errorCode === STOPPED_ERROR;
+        outcome.sms = result.ok ? "sent" : stopped ? "replied STOP" : `${result.code}: ${result.message}`;
+        if (result.ok) anySent = true;
+        else if (!stopped) anyFailed = true;
       }
     } else {
       outcome.sms = phone ? "no customer record" : "no phone on file";
