@@ -54,7 +54,8 @@ export function mayBeginExecution(
   actionDigest: string,
   now: Date,
 ): boolean {
-  return proposal.organizationId === organizationId
+  return Number.isFinite(now.getTime())
+    && proposal.organizationId === organizationId
     && proposal.state === "approved"
     && proposal.payloadDigest === actionDigest
     && proposal.approvedBy !== null
@@ -71,11 +72,77 @@ export function mayDecide(
   organizationId: string,
   now: Date,
 ): boolean {
-  return proposal.organizationId === organizationId
+  return Number.isFinite(now.getTime())
+    && proposal.organizationId === organizationId
     && proposal.state === "proposed"
     && proposal.payloadDigest === decision.actionDigest
     && proposal.createdBy !== decision.actorId
     && mayApprove(decision.role, proposal.action)
     && Number.isFinite(Date.parse(proposal.expiresAt))
     && Date.parse(proposal.expiresAt) > now.getTime();
+}
+
+/** The next state is determined on the server, never accepted from a model. */
+export type ProposalEvent =
+  | { type: "approve"; decision: Decision }
+  | { type: "reject"; decision: Decision }
+  | { type: "expire" }
+  | { type: "claim_execution"; organizationId: string; actionDigest: string; executionId: string }
+  | { type: "execution_succeeded"; executionId: string }
+  | { type: "execution_failed"; executionId: string };
+
+export type ProposalTransition =
+  | { ok: true; proposal: ActionProposal }
+  | { ok: false; reason: "unauthorized" | "invalid_state" | "expired" | "mismatched_execution" };
+
+export function transitionProposal(
+  proposal: ActionProposal,
+  event: ProposalEvent,
+  organizationId: string,
+  now: Date,
+): ProposalTransition {
+  if (proposal.organizationId !== organizationId || !Number.isFinite(now.getTime())) {
+    return { ok: false, reason: "unauthorized" };
+  }
+  if (event.type === "expire") {
+    if (proposal.state !== "proposed" && proposal.state !== "approved") {
+      return { ok: false, reason: "invalid_state" };
+    }
+    if (Date.parse(proposal.expiresAt) > now.getTime()) {
+      return { ok: false, reason: "invalid_state" };
+    }
+    return { ok: true, proposal: { ...proposal, state: "expired" } };
+  }
+  if (event.type === "approve" || event.type === "reject") {
+    if (!mayDecide(proposal, event.decision, organizationId, now)) {
+      return { ok: false, reason: "unauthorized" };
+    }
+    return {
+      ok: true,
+      proposal: {
+        ...proposal,
+        state: event.type === "approve" ? "approved" : "rejected",
+        ...(event.type === "approve"
+          ? { approvedBy: event.decision.actorId, approvedAt: now.toISOString() }
+          : {}),
+      },
+    };
+  }
+  if (event.type === "claim_execution") {
+    if (event.organizationId !== organizationId || !event.executionId.trim()) {
+      return { ok: false, reason: "unauthorized" };
+    }
+    if (!mayBeginExecution(proposal, organizationId, event.actionDigest, now)) {
+      return { ok: false, reason: "invalid_state" };
+    }
+    return { ok: true, proposal: { ...proposal, state: "executing", executionId: event.executionId } };
+  }
+  if (proposal.state !== "executing") return { ok: false, reason: "invalid_state" };
+  if (!proposal.executionId || proposal.executionId !== event.executionId) {
+    return { ok: false, reason: "mismatched_execution" };
+  }
+  return {
+    ok: true,
+    proposal: { ...proposal, state: event.type === "execution_succeeded" ? "completed" : "failed" },
+  };
 }
