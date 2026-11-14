@@ -463,6 +463,8 @@ export async function chooseDiagnosticOutcome(jobNumber: string, outcome: string
       quantity: 1,
       unit: "visit",
       unit_price_cents: context.billedJob.diagnosticFeeCents,
+      // The fee the customer was quoted at booking: no admin fee goes on it.
+      admin_fee_cents: 0,
     });
     if (error) return { error: "The diagnostic fee could not be added to the job. Try again." };
   }
@@ -525,6 +527,8 @@ export async function sendDiagnosticFeeInvoice(jobNumber: string): Promise<LineA
       quantity: 1,
       unit: "visit",
       unit_price_cents: billedJob.diagnosticFeeCents,
+      // The fee the customer was quoted at booking: no admin fee goes on it.
+      admin_fee_cents: 0,
     });
     if (error) return { error: "The diagnostic fee could not be added to the job. Try again." };
   }

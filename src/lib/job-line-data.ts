@@ -86,7 +86,7 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
   const { data, error } = await context.database
     .from("job_line_items")
     .select(
-      "id, kind, description, quantity, unit, unit_price_cents, unit_cost_cents, pack_size, pack_unit, inventory_item_id, invoice_id, created_at, notes",
+      "id, kind, description, quantity, unit, unit_price_cents, unit_cost_cents, pack_size, pack_unit, inventory_item_id, invoice_id, created_at, notes, admin_fee_cents",
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -112,9 +112,33 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
     invoiceId: str(row.invoice_id) || null,
     createdAt: str(row.created_at),
     notes: str(row.notes),
+    adminFeeCents: num(row.admin_fee_cents),
   }));
 
   return { jobId, lines, totals: jobLineTotals(lines) };
+}
+
+/** The newest estimate that reached the customer, as "EST-4 · $1,040.00 · Nov 13". Empty when none has. */
+export async function getJobLatestEstimate(jobNumber: string): Promise<string> {
+  const context = await resolveContext();
+  if (!context) return "";
+  const jobId = await resolveJobId(jobNumber);
+  if (!jobId) return "";
+  const { data } = await context.database
+    .from("estimates")
+    .select("estimate_number, total_cents, last_sent_at")
+    .eq("organization_id", context.organizationId)
+    .eq("job_id", jobId)
+    .not("last_sent_at", "is", null)
+    .order("last_sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const row = data as Record<string, unknown> | null;
+  if (!row) return "";
+  const sent = new Date(str(row.last_sent_at));
+  const day = Number.isNaN(sent.getTime()) ? "" : ` · ${sent.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num(row.total_cents) / 100);
+  return `EST-${String(row.estimate_number ?? "")} · ${money}${day}`;
 }
 
 /** One of a job's invoices, as the lines panel shows it and the billing rules read it. */
