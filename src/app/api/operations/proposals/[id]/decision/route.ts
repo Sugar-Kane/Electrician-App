@@ -52,6 +52,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       !proposal.expires_at || Date.parse(proposal.expires_at) <= Date.now()) {
     return NextResponse.json({ error: "Proposal changed, expired, or already decided" }, { status: 409 });
   }
+  const { data: execution, error: executionError } = await db.from("task_executions")
+    .select("requested_by")
+    .eq("id", proposal.execution_id)
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+  if (executionError || !execution) return NextResponse.json({ error: "Cannot verify proposal origin" }, { status: 409 });
+  if (execution.requested_by === context.userId) return NextResponse.json({ error: "Self-approval is not allowed" }, { status: 403 });
   // Compare-and-swap prevents a second decision from overwriting the first.
   // The content hash also binds the decision to the displayed proposal.
   const { data: updated, error: updateError } = await db.from("task_proposals")
