@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CircleDollarSign, X } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, ChevronRight, CircleDollarSign, X } from "lucide-react";
 
 import { onTabListKeyDown } from "@/components/ui/keyboard";
 import { InvoiceRow } from "@/components/invoice-row";
@@ -12,6 +13,7 @@ import {
   type InvoiceFilter,
   type PaidPeriod,
 } from "@/lib/dashboard-metrics";
+import type { DiagnosticPayment } from "@/lib/job-data";
 import type { PilotInvoice } from "@/lib/pilot-data";
 
 /**
@@ -51,11 +53,18 @@ const cents = (dollars: number | undefined) => Math.round((dollars ?? 0) * 100);
 
 export function InvoiceList({
   invoices,
+  diagnosticPayments = [],
   initialStatus,
   paidPeriod = null,
   today = "",
 }: {
   invoices: PilotInvoice[];
+  /**
+   * Diagnostic fees paid online at booking. No invoice carries them (the later
+   * invoice credits them), so they are listed beside the invoices on Paid and
+   * All, and counted in that total, the same as Today's "Paid today".
+   */
+  diagnosticPayments?: DiagnosticPayment[];
   initialStatus: string;
   /** Narrows Paid to what was paid today or this month, from `?paid=`. */
   paidPeriod?: PaidPeriod | null;
@@ -79,6 +88,15 @@ export function InvoiceList({
       ),
     [invoices, status, period, today],
   );
+  const visiblePayments = useMemo(
+    () =>
+      status === "all" || status === "paid"
+        ? diagnosticPayments.filter(
+            (payment) => status !== "paid" || !period || paidInPeriod(payment.paidOn, period, today),
+          )
+        : [],
+    [diagnosticPayments, status, period, today],
+  );
   // On All, drafts are part of what is listed but not of what is owed, so
   // the total says how much of it has not been sent.
   const draftTotal =
@@ -97,7 +115,9 @@ export function InvoiceList({
         balanceCents: cents(invoice.balance ?? invoice.amount),
       })),
       status,
-    ) / 100;
+    ) /
+      100 +
+    visiblePayments.reduce((sum, payment) => sum + payment.amount, 0);
 
   return (
     <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
@@ -170,9 +190,36 @@ export function InvoiceList({
           <InvoiceRow key={invoice.id} invoice={invoice} />
         ))}
 
-        {visible.length === 0 ? (
+        {visiblePayments.map((payment) => (
+          <Link
+            key={payment.id}
+            href={`/jobs/${payment.jobId}`}
+            className="tap-row flex min-h-[52px] items-center gap-3 rounded-control border border-line px-4 py-3 active:bg-white/5"
+          >
+            <span className="hidden h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5 min-[360px]:grid">
+              <CheckCircle2 className="h-5 w-5 text-brand" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-sm font-semibold">{payment.customer}</span>
+                <span className="shrink-0 text-sm font-semibold">
+                  ${payment.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              </span>
+              <span className="mt-0.5 block break-words text-xs leading-5 text-ink-muted">
+                Diagnostic fee · paid online {payment.paidLabel}
+              </span>
+              <span className="mt-1 inline-block rounded-full bg-positive-bg px-2 py-0.5 text-[10px] font-semibold text-positive">
+                Paid
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+          </Link>
+        ))}
+
+        {visible.length === 0 && visiblePayments.length === 0 ? (
           <p className="rounded-control border border-dashed border-line p-8 text-center text-sm text-ink-muted">
-            {invoices.length === 0
+            {invoices.length === 0 && diagnosticPayments.length === 0
               ? "No invoices yet. They appear here once a job is invoiced."
               : period && status === "paid"
                 ? `Nothing ${PERIOD_LABELS[period].toLowerCase()}.`

@@ -352,6 +352,60 @@ export async function getInvoices(): Promise<{ invoices: PilotInvoice[]; source:
   return { invoices, source: "supabase" };
 }
 
+/** A diagnostic fee paid online at booking: money in, with no invoice of its own. */
+export type DiagnosticPayment = {
+  id: string;
+  customer: string;
+  /** Dollars, like PilotInvoice.amount. */
+  amount: number;
+  /** The job number it paid for, for the link. */
+  jobId: string;
+  /** The business's calendar day it was paid, YYYY-MM-DD. */
+  paidOn: string;
+  paidLabel: string;
+};
+
+/**
+ * Diagnostic fees customers paid online when they booked.
+ *
+ * They are in `payments`, not `invoices`: the later invoice takes the fee off
+ * as a credit, so its total never includes it. Left out of the money screens,
+ * a paid booking showed nowhere in what the business had taken.
+ */
+export async function getDiagnosticPayments(): Promise<DiagnosticPayment[]> {
+  const context = await resolveContext();
+  if (!context) return [];
+
+  const { data, error } = await asFlexibleClient(context.database)
+    .from("payments")
+    .select("id, amount_cents, paid_at, jobs ( job_number, customers ( first_name, last_name, company_name ) )")
+    .eq("organization_id", context.organizationId)
+    .eq("status", "succeeded")
+    .not("booking_request_id", "is", null)
+    .not("paid_at", "is", null)
+    .order("paid_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return (data as Record<string, unknown>[]).map((row) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const job = (row.jobs ?? {}) as any;
+    const customer = job.customers ?? {};
+    const paidAt = new Date(String(row.paid_at));
+    return {
+      id: String(row.id),
+      customer:
+        customer.company_name ||
+        [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
+        "Customer",
+      amount: Number(row.amount_cents ?? 0) / 100,
+      jobId: String(job.job_number ?? ""),
+      paidOn: isoDateInZone(paidAt, context.timeZone),
+      paidLabel: inZone(String(row.paid_at), context.timeZone, { month: "short", day: "numeric" }),
+    };
+  });
+}
+
 /** How far back finished work is checked for a missing invoice. */
 export const UNBILLED_WINDOW_DAYS = 30;
 

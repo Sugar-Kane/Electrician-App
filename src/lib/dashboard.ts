@@ -272,7 +272,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const dayStart = new Date(zonedWallClockToIso(`${today}T00:00`, zone));
     const dayEnd = new Date(zonedWallClockToIso(`${shiftDays(today, 1)}T00:00`, zone));
 
-    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business, refunds] =
+    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business, refunds, bookingPayments] =
       await Promise.all([
         supabase
           .from("jobs")
@@ -326,7 +326,28 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .eq("organization_id", organizationId)
           .eq("status", "succeeded")
           .gte("settled_at", new Date(dayStart.getTime() - 2 * 86_400_000).toISOString()),
+        // Diagnostic fees paid online at booking. No invoice carries them (the
+        // later invoice credits the fee), so without these a paid booking was
+        // missing from every money figure. Back to the start of last month for
+        // the month-to-date comparison.
+        asFlexibleClient(supabase)
+          .from("payments")
+          .select("amount_cents,paid_at")
+          .eq("organization_id", organizationId)
+          .eq("status", "succeeded")
+          .not("booking_request_id", "is", null)
+          .gte("paid_at", new Date(dayStart.getTime() - 63 * 86_400_000).toISOString()),
       ]);
+    const bookingPaymentRows = (
+      (bookingPayments.data ?? []) as { amount_cents: number | null; paid_at: string | null }[]
+    ).filter((row) => row.paid_at);
+    const bookingPaidBetween = (from: Date, to: Date) =>
+      bookingPaymentRows
+        .filter((row) => {
+          const at = new Date(row.paid_at!).getTime();
+          return at >= from.getTime() && at < to.getTime();
+        })
+        .reduce((total, row) => total + Number(row.amount_cents ?? 0), 0);
     const refundRows = ((refunds.data ?? []) as { amount_cents: number | null; settled_at: string | null }[]).filter(
       (row) => row.settled_at,
     );
@@ -350,7 +371,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           const at = new Date(invoice.paid_at).getTime();
           return at >= from.getTime() && at < to.getTime();
         })
-        .reduce((total, invoice) => total + invoice.total_cents, 0);
+        .reduce((total, invoice) => total + invoice.total_cents, 0) + bookingPaidBetween(from, to);
 
     // Today's takings by the same day rule as the Paid today list it opens:
     // the business's calendar day each invoice was paid on.
@@ -360,7 +381,9 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           invoice.status === "paid" &&
           paidInPeriod(invoice.paid_at ? isoDateInZone(new Date(invoice.paid_at), zone) : "", "today", today),
       )
-      .reduce((total, invoice) => total + invoice.total_cents, 0) - refundedBetween(dayStart, dayEnd);
+      .reduce((total, invoice) => total + invoice.total_cents, 0) +
+      bookingPaidBetween(dayStart, dayEnd) -
+      refundedBetween(dayStart, dayEnd);
     const paidYesterday = paidBetween(yesterdayStart, dayStart) - refundedBetween(yesterdayStart, dayStart);
 
     // One rule with the Invoices list: owed means sent and not settled, and a
