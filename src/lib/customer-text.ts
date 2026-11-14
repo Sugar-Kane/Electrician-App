@@ -60,6 +60,15 @@ export async function sendCustomerText(
     body: string;
     send: SmsSender;
     onSaved?: (messageId: string) => Promise<void>;
+    /**
+     * A person is talking, so the auto-reply stands down (the default). An
+     * automatic text the business triggers, such as a contract's signing link
+     * or its signed copy, passes false: the conversation's assistant carries on
+     * as it would have without it.
+     */
+    pauseAssistant?: boolean;
+    /** The number to text, already normalised by the caller; else the customer's on file. */
+    to?: string;
   },
 ): Promise<CustomerTextOutcome> {
   const { organizationId, customerId } = input;
@@ -68,7 +77,8 @@ export async function sendCustomerText(
 
   const allowed = await textingAllowed(db, organizationId, customerId);
   if (!allowed.ok) return { ok: false, sent: false, code: allowed.code, message: `${allowed.message} Nothing was sent.` };
-  const phone = allowed.phone;
+  const phone = input.to || allowed.phone;
+  const pause = input.pauseAssistant !== false;
 
   const { data: settings } = await db
     .from("messaging_settings")
@@ -92,19 +102,27 @@ export async function sendCustomerText(
   const found = existing as Record<string, unknown> | null;
   let conversationId = text(found?.id);
   if (conversationId) {
-    await db
-      .from("conversations")
-      .update({ assistant_paused_at: now })
-      .eq("organization_id", organizationId)
-      .eq("id", conversationId)
-      .is("assistant_paused_at", null);
+    if (pause) {
+      await db
+        .from("conversations")
+        .update({ assistant_paused_at: now })
+        .eq("organization_id", organizationId)
+        .eq("id", conversationId)
+        .is("assistant_paused_at", null);
+    }
     if (found?.deleted_at) {
       await db.from("conversations").update({ deleted_at: null, deleted_by: null }).eq("organization_id", organizationId).eq("id", conversationId);
     }
   } else {
     const { data: created } = await db
       .from("conversations")
-      .insert({ organization_id: organizationId, customer_id: customerId, channel: "sms", status: "open", assistant_paused_at: now })
+      .insert({
+        organization_id: organizationId,
+        customer_id: customerId,
+        channel: "sms",
+        status: "open",
+        ...(pause ? { assistant_paused_at: now } : {}),
+      })
       .select("id")
       .maybeSingle();
     conversationId = text((created as Record<string, unknown> | null)?.id);
