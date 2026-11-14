@@ -100,6 +100,12 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "More",
     items: [
       {
+        label: "AI operations",
+        href: "/operations",
+        icon: "ListChecks",
+        description: "Review business actions and AI activity",
+      },
+      {
         label: "Booking requests",
         href: "/booking-requests",
         icon: "Inbox",
