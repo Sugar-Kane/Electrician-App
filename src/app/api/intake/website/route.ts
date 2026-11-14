@@ -130,6 +130,18 @@ export async function POST(request: Request) {
         },
       }),
     );
+    // Phase 2 automation (off unless VOLTEIRA_PHASE2_TRIGGERS_ENABLED): a
+    // follow-up for the owner, keyed by the request so a resent form is one.
+    after(async () => {
+      const { emitAutomationEvent } = await import("@/lib/automation-triggers-server");
+      await emitAutomationEvent({
+        organizationId,
+        type: "lead.received",
+        key: requestId,
+        customerId,
+        facts: { requestId, service: input.serviceName || input.service || "", contactMethod: input.contactMethod || "" },
+      });
+    });
   }
 
   return NextResponse.json(

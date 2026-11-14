@@ -65,6 +65,8 @@ export async function sendEmail(input: {
   organizationId?: string;
   /** A customer email: add Call and Text buttons to reach the business. */
   contactButtons?: boolean;
+  /** Sent as Idempotency-Key: the provider sends one email per key, however often it is retried. */
+  idempotencyKey?: string;
 }): Promise<EmailResult> {
   const auth = credentials();
   if (!auth) {
@@ -84,6 +86,7 @@ export async function sendEmail(input: {
       headers: {
         Authorization: `Bearer ${auth.apiKey}`,
         "Content-Type": "application/json",
+        ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey.slice(0, 256) } : {}),
       },
       body: JSON.stringify({
         from: input.from || auth.from,

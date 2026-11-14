@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 
 import { readSignature, unsignableBecause } from "@/lib/contract-signing";
 import { generateContractPdf } from "@/lib/pdf/contract-data";
@@ -153,6 +154,12 @@ export async function signContract(
   } catch (error) {
     console.error("signed contract copy failed", { signedId, error });
   }
+
+  // Phase 2 automation (off unless VOLTEIRA_PHASE2_TRIGGERS_ENABLED): after the reply.
+  after(async () => {
+    const { emitContractSigned } = await import("@/lib/automation-triggers-server");
+    await emitContractSigned(contract.organization_id, signedId);
+  });
 
   revalidatePath(`/contract/${token}`);
   return { error: "", signed: true };
