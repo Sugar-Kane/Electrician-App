@@ -475,10 +475,14 @@ function websiteNextStep(texting: WebsiteRequestFacts["texting"]): string {
 export function ownerWebsiteRequestSms(facts: WebsiteRequestFacts): string {
   const who = squash(facts.contactName) || "Someone";
   const what = [squash(facts.serviceName), squash(facts.town)].filter(Boolean).join(", ");
+  // The website's reference is a long id the owner never needs on a phone
+  // screen; it stays in the email. A description typed without a full stop
+  // would otherwise run straight into the next sentence.
+  const said = squash(facts.description ?? "");
   return clip(
     [
-      `Website request${facts.reference ? ` ${squash(facts.reference)}` : ""}: ${who}, ${facts.customerPhone}${what ? ` — ${what}` : ""}.`,
-      facts.description ? squash(facts.description) : "",
+      `Website request: ${who}, ${facts.customerPhone}${what ? ` — ${what}` : ""}.`,
+      said ? (/[.!?]["')]?$/.test(said) ? said : `${said}.`) : "",
       websiteNextStep(facts.texting),
     ]
       .filter(Boolean)
