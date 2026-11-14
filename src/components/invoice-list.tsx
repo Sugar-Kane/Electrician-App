@@ -215,7 +215,7 @@ export function InvoiceList({
         {visiblePayments.map((payment) => (
           <Link
             key={payment.id}
-            href={`/jobs/${payment.jobId}`}
+            href={payment.href}
             className="tap-row flex min-h-[52px] items-center gap-3 rounded-control border border-line px-4 py-3 active:bg-white/5"
           >
             <span className="hidden h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5 min-[360px]:grid">

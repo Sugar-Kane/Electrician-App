@@ -360,8 +360,10 @@ export type DiagnosticPayment = {
   amount: number;
   /** Dollars given back from it so far, by refunds that went through. */
   refunded: number;
-  /** The job number it paid for, for the link. */
+  /** The job number it paid for, or "" while it has none. */
   jobId: string;
+  /** The job, or the booking requests for a paid request not yet scheduled. */
+  href: string;
   /** The business's calendar day it was paid, YYYY-MM-DD. */
   paidOn: string;
   paidLabel: string;
@@ -393,14 +395,27 @@ function customerName(customer: Record<string, unknown> | null | undefined): str
   return String(row.company_name ?? "") || [row.first_name, row.last_name].filter(Boolean).join(" ") || "Customer";
 }
 
+/**
+ * Who a booking payment (or its refund) was from, and where it opens: its
+ * job, or, for a request paid for but not yet scheduled (no job), the booking
+ * requests, named from the request itself.
+ */
 function bookingCustomer(row: Record<string, unknown>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const job = (row.jobs ?? {}) as any;
-  return { jobId: String(job.job_number ?? ""), customer: customerName(job.customers) };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const request = (row.booking_requests ?? {}) as any;
+  const jobId = String(job.job_number ?? "");
+  const named = String(request.contact_name ?? "") || [request.first_name, request.last_name].filter(Boolean).join(" ");
+  return {
+    jobId,
+    href: jobId ? `/jobs/${jobId}` : "/booking-requests",
+    customer: job.customers ? customerName(job.customers) : named || "Customer",
+  };
 }
 
 const CUSTOMER = "customers ( first_name, last_name, company_name )";
-const BOOKING_JOB = `jobs ( job_number, ${CUSTOMER} )`;
+const BOOKING_JOB = `jobs ( job_number, ${CUSTOMER} ), booking_requests ( contact_name, first_name, last_name )`;
 
 /**
  * Diagnostic fees customers paid online when they booked, and every refund:
@@ -461,14 +476,14 @@ export async function getDiagnosticPayments(): Promise<{
   const invoiceRows = (invoiceRefunds.error ? [] : (invoiceRefunds.data ?? [])) as Record<string, unknown>[];
   const refunds: ListedRefund[] = [
     ...bookingRows.map((row): ListedRefund => {
-      const { jobId, customer } = bookingCustomer(row);
+      const { href, customer } = bookingCustomer(row);
       return {
         id: `booking-${String(row.id)}`,
         kind: "diagnostic",
         customer,
         amount: Number(row.amount_cents ?? 0) / 100,
         what: "Diagnostic fee refunded",
-        href: `/jobs/${jobId}`,
+        href,
         ...on(row),
       };
     }),
