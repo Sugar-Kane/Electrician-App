@@ -12,6 +12,7 @@ const TITLES: Record<string, string> = {
   awaiting: "Awaiting payment",
   unpaid: "Awaiting payment",
   overdue: "Overdue invoices",
+  refunded: "Refunds",
 };
 
 const PERIOD_TITLES: Record<PaidPeriod, string> = {
@@ -56,7 +57,7 @@ export default async function InvoicesPage({
       <InvoiceList
         invoices={invoices}
         diagnosticPayments={diagnostic.payments}
-        diagnosticRefunds={diagnostic.refunds}
+        refunds={diagnostic.refunds}
         initialStatus={status}
         paidPeriod={period}
         today={today}

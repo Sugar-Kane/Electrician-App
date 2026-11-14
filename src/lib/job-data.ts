@@ -367,51 +367,61 @@ export type DiagnosticPayment = {
   paidLabel: string;
 };
 
-/** Money given back from a diagnostic fee, on the day it went back. */
-export type DiagnosticRefund = {
+/**
+ * Money given back: from an invoice payment or a diagnostic fee paid at
+ * booking. Counted on the day it went through; one still on its way is listed
+ * but not counted.
+ */
+export type ListedRefund = {
   id: string;
+  kind: "invoice" | "diagnostic";
   customer: string;
   /** Dollars, positive: the list shows it as money out. */
   amount: number;
-  jobId: string;
-  /** The business's calendar day the refund went through, YYYY-MM-DD. */
+  /** "INV-24 refunded" or "Diagnostic fee refunded". */
+  what: string;
+  href: string;
+  /** Went through (counted), or still on its way at Stripe. */
+  settled: boolean;
+  /** The business's calendar day it went through, or was started, YYYY-MM-DD. */
   refundedOn: string;
   refundedLabel: string;
 };
 
+function customerName(customer: Record<string, unknown> | null | undefined): string {
+  const row = customer ?? {};
+  return String(row.company_name ?? "") || [row.first_name, row.last_name].filter(Boolean).join(" ") || "Customer";
+}
+
 function bookingCustomer(row: Record<string, unknown>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const job = (row.jobs ?? {}) as any;
-  const customer = job.customers ?? {};
-  return {
-    jobId: String(job.job_number ?? ""),
-    customer:
-      customer.company_name ||
-      [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
-      "Customer",
-  };
+  return { jobId: String(job.job_number ?? ""), customer: customerName(job.customers) };
 }
 
-const BOOKING_JOB = "jobs ( job_number, customers ( first_name, last_name, company_name ) )";
+const CUSTOMER = "customers ( first_name, last_name, company_name )";
+const BOOKING_JOB = `jobs ( job_number, ${CUSTOMER} )`;
 
 /**
- * Diagnostic fees customers paid online when they booked, and what has been
- * refunded from them.
+ * Diagnostic fees customers paid online when they booked, and every refund:
+ * from those fees and from invoice payments.
  *
- * They are in `payments`, not `invoices`: the later invoice takes the fee off
- * as a credit, so its total never includes it. A refund of one (given in
- * Stripe and reported by its webhook) is in `booking_payment_refunds`, and
- * counts on the day it went through, as invoice refunds do.
+ * The fees are in `payments`, not `invoices`: the later invoice takes the fee
+ * off as a credit, so its total never includes it. Their refunds (given in
+ * Volteira or in Stripe) are in `booking_payment_refunds`, an invoice's in
+ * `invoice_refunds`. Failed and canceled refunds gave nothing back and are
+ * left out.
  */
 export async function getDiagnosticPayments(): Promise<{
   payments: DiagnosticPayment[];
-  refunds: DiagnosticRefund[];
+  refunds: ListedRefund[];
 }> {
   const context = await resolveContext();
   if (!context) return { payments: [], refunds: [] };
   const database = asFlexibleClient(context.database);
+  const zone = context.timeZone;
 
-  const [paid, refunded] = await Promise.all([
+  const [paid, bookingRefunds, invoiceRefunds] = await Promise.all([
     database
       .from("payments")
       .select(`id, amount_cents, paid_at, ${BOOKING_JOB}`)
@@ -422,25 +432,65 @@ export async function getDiagnosticPayments(): Promise<{
       .order("paid_at", { ascending: false }),
     database
       .from("booking_payment_refunds")
-      .select(`id, payment_id, amount_cents, settled_at, ${BOOKING_JOB}`)
+      .select(`id, payment_id, amount_cents, status, created_at, settled_at, ${BOOKING_JOB}`)
       .eq("organization_id", context.organizationId)
-      .eq("status", "succeeded")
-      .not("settled_at", "is", null)
-      .order("settled_at", { ascending: false }),
+      .in("status", ["succeeded", "pending"])
+      .order("created_at", { ascending: false }),
+    database
+      .from("invoice_refunds")
+      .select(
+        `id, amount_cents, status, created_at, settled_at, invoices ( id, invoice_number, number_label, jobs ( job_number, ${CUSTOMER} ) )`,
+      )
+      .eq("organization_id", context.organizationId)
+      .in("status", ["succeeded", "pending"])
+      .order("created_at", { ascending: false }),
   ]);
 
-  // A business whose database has no refunds table yet simply has none.
-  const refundRows = (refunded.error ? [] : (refunded.data ?? [])) as Record<string, unknown>[];
-  const refunds: DiagnosticRefund[] = refundRows.map((row) => ({
-    id: String(row.id),
-    ...bookingCustomer(row),
-    amount: Number(row.amount_cents ?? 0) / 100,
-    refundedOn: isoDateInZone(new Date(String(row.settled_at)), context.timeZone),
-    refundedLabel: inZone(String(row.settled_at), context.timeZone, { month: "short", day: "numeric" }),
-  }));
+  const on = (row: Record<string, unknown>) => {
+    const settled = String(row.status) === "succeeded" && Boolean(row.settled_at);
+    const at = String(settled ? row.settled_at : row.created_at);
+    return {
+      settled,
+      refundedOn: isoDateInZone(new Date(at), zone),
+      refundedLabel: inZone(at, zone, { month: "short", day: "numeric" }),
+    };
+  };
+
+  // A database without the booking refunds table yet simply has none.
+  const bookingRows = (bookingRefunds.error ? [] : (bookingRefunds.data ?? [])) as Record<string, unknown>[];
+  const invoiceRows = (invoiceRefunds.error ? [] : (invoiceRefunds.data ?? [])) as Record<string, unknown>[];
+  const refunds: ListedRefund[] = [
+    ...bookingRows.map((row): ListedRefund => {
+      const { jobId, customer } = bookingCustomer(row);
+      return {
+        id: `booking-${String(row.id)}`,
+        kind: "diagnostic",
+        customer,
+        amount: Number(row.amount_cents ?? 0) / 100,
+        what: "Diagnostic fee refunded",
+        href: `/jobs/${jobId}`,
+        ...on(row),
+      };
+    }),
+    ...invoiceRows.map((row): ListedRefund => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invoice = (row.invoices ?? {}) as any;
+      const job = invoice.jobs ?? {};
+      return {
+        id: `invoice-${String(row.id)}`,
+        kind: "invoice",
+        customer: customerName(job.customers),
+        amount: Number(row.amount_cents ?? 0) / 100,
+        what: `INV-${invoiceLabel(invoice)} refunded`,
+        href: invoice.id ? `/invoices/${String(invoice.id)}` : `/jobs/${String(job.job_number ?? "")}`,
+        ...on(row),
+      };
+    }),
+  ].sort((a, b) => b.refundedOn.localeCompare(a.refundedOn));
 
   const refundedByPayment = new Map<string, number>();
-  for (const row of refundRows) {
+  for (const row of bookingRows) {
+    if (String(row.status) !== "succeeded") continue;
     const key = String(row.payment_id ?? "");
     refundedByPayment.set(key, (refundedByPayment.get(key) ?? 0) + Number(row.amount_cents ?? 0));
   }
@@ -451,8 +501,8 @@ export async function getDiagnosticPayments(): Promise<{
       ...bookingCustomer(row),
       amount: Number(row.amount_cents ?? 0) / 100,
       refunded: (refundedByPayment.get(String(row.id)) ?? 0) / 100,
-      paidOn: isoDateInZone(new Date(String(row.paid_at)), context.timeZone),
-      paidLabel: inZone(String(row.paid_at), context.timeZone, { month: "short", day: "numeric" }),
+      paidOn: isoDateInZone(new Date(String(row.paid_at)), zone),
+      paidLabel: inZone(String(row.paid_at), zone, { month: "short", day: "numeric" }),
     }),
   );
 

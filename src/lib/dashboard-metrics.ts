@@ -241,7 +241,11 @@ export function receivables(
  * "owed" opens it, and a tab that left the late ones out would show less than
  * the number that was tapped. Overdue is the late part of it.
  */
-export type InvoiceFilter = "all" | "draft" | "awaiting" | "overdue" | "paid";
+/**
+ * "refunded" lists money given back (refund rows, not invoices), so no
+ * invoice is in it and it adds no invoice total.
+ */
+export type InvoiceFilter = "all" | "draft" | "awaiting" | "overdue" | "paid" | "refunded";
 
 export function inInvoiceFilter(state: InvoiceState, filter: InvoiceFilter): boolean {
   switch (filter) {
@@ -255,6 +259,8 @@ export function inInvoiceFilter(state: InvoiceState, filter: InvoiceFilter): boo
       return state === "overdue";
     case "paid":
       return state === "paid";
+    case "refunded":
+      return false;
   }
 }
 
