@@ -13,7 +13,7 @@ import {
 
 import { fulfillPaidBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
-import { getPublicBookingPage } from "@/lib/public-booking";
+import { getBookingPaymentIntent, getPublicBookingPage } from "@/lib/public-booking";
 import { paymentAccountFor } from "@/lib/stripe-connect";
 
 export const metadata: Metadata = {
@@ -38,6 +38,7 @@ export default async function BookingConfirmationPage({
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const stripe = getStripe();
   let confirmation = null;
+  let paidButUnscheduled = false;
 
   // The checkout lives on the business's own Stripe account.
   const bookingPage = stripe && query.session_id?.startsWith("cs_") ? await getPublicBookingPage(slug) : null;
@@ -50,10 +51,46 @@ export default async function BookingConfirmationPage({
       });
       if (session.metadata?.organization_slug === slug) {
         confirmation = await fulfillPaidBooking(session);
+        // Paid, but the time could not be booked (it had started, or was
+        // taken): the money is recorded and the business is told. Say so,
+        // rather than asking them to refresh a page that will never confirm.
+        const token = session.metadata?.booking_token;
+        if (!confirmation && token && session.payment_status === "paid") {
+          const intent = await getBookingPaymentIntent(token);
+          paidButUnscheduled = Boolean(intent?.already_paid && intent.status === "needs_review");
+        }
       }
     } catch {
       confirmation = null;
     }
+  }
+
+  if (!confirmation && paidButUnscheduled) {
+    const phone = bookingPage?.business_phone ?? "";
+    return (
+      <main className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
+        <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 text-center sm:p-8">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-caution-bg text-caution">
+            <ReceiptText className="h-7 w-7" aria-hidden />
+          </span>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-caution">Payment received</p>
+          <h1 className="mt-2 text-2xl font-semibold">That time is no longer available</h1>
+          <p className="mt-3 text-sm leading-6 text-ink-muted">
+            Your payment went through, but the time you chose could no longer be booked.{" "}
+            {bookingPage?.display_name || "The business"} has been told and will contact you to book a new time or refund
+            your payment. You don&apos;t need to pay again.
+          </p>
+          {phone ? (
+            <a
+              href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+              className="tap-target mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-5 text-sm font-semibold text-on-brand"
+            >
+              <Phone className="h-4 w-4" aria-hidden /> Call {phone}
+            </a>
+          ) : null}
+        </section>
+      </main>
+    );
   }
 
   if (!confirmation) {

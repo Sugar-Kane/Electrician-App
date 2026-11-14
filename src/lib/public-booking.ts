@@ -189,6 +189,8 @@ export async function confirmPublicBookingPayment(input: {
   paymentIntentId: string;
   amountCents: number;
   currency: string;
+  /** When the customer paid, by Stripe's clock; judged against the window, not when this runs. */
+  paidAt?: string;
 }) {
   // Only a signature-verified Stripe event (or a server-side retrieval of the
   // completed session) reaches this helper. The database permission mirrors
@@ -200,6 +202,7 @@ export async function confirmPublicBookingPayment(input: {
     p_payment_intent_id: input.paymentIntentId,
     p_amount_cents: input.amountCents,
     p_currency: input.currency,
+    ...(input.paidAt ? { p_paid_at: input.paidAt } : {}),
   });
 
   if (error) throw new Error("Unable to confirm the paid booking.");
