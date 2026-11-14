@@ -63,7 +63,7 @@ The PPE site (`lib/volteira/forward.ts`) posts each request with its own `refere
 1. Apply `20261115000000_supervised_actions.sql` in the Supabase SQL editor; then align `supabase_migrations.schema_migrations` to version `20261115000000`, name `supervised_actions` (see AGENTS.md).
 2. Turn on `VOLTEIRA_PHASE2_APPROVALS_ENABLED` and `VOLTEIRA_PHASE2_MCP_ENABLED` only. Propose a note from ChatGPT on a test job; approve it in the inbox; confirm the history.
 3. Turn on `VOLTEIRA_PHASE2_TRIGGERS_ENABLED`. Watch "Recent automation activity" for a few days; proposals wait in the inbox.
-4. Set `VOLTEIRA_SUPERVISED_WORKER_TOKEN`, `VOLTEIRA_PHASE2_WORKER_ENABLED`, and `VOLTEIRA_PHASE2_EXECUTE=add_job_note,create_internal_task`. Schedule the worker (pg_cron + pg_net, every 5 minutes, like the old task worker, with the token in Vault).
+4. Set `VOLTEIRA_SUPERVISED_WORKER_TOKEN`, `VOLTEIRA_PHASE2_WORKER_ENABLED`, and `VOLTEIRA_PHASE2_EXECUTE=add_job_note,create_internal_task`. Schedule the worker with `20261115010000_supervised_worker_schedule.sql` (pg_cron every 5 minutes; the token is generated in Vault and copied to Vercel). Stop it with `select cron.unschedule('volteira-supervised-worker');`.
 5. With a test customer who has opted in, add `send_customer_message` to `VOLTEIRA_PHASE2_EXECUTE`; approve one reminder; confirm delivery in Messages and Twilio.
 
 ## Rollback
