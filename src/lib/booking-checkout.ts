@@ -165,6 +165,10 @@ export async function startBookingCheckout(input: {
           },
           // Volteira's share; Stripe's processing fee is the business's.
           application_fee_amount: volteiraFeeCents(input.feeCents) || undefined,
+          // Stripe sends its receipt to this address whatever the business's
+          // own Stripe email settings say, so "a receipt has been sent" on the
+          // confirmation page is true for every customer who gave an email.
+          receipt_email: input.email || undefined,
         },
         success_url: `${input.origin}/book/${encodeURIComponent(input.slug)}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${back}?pay=canceled`,
