@@ -13,6 +13,17 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 export const metadata: Metadata = { title: "AI operations | Volteira" };
 export const dynamic = "force-dynamic";
 
+type ApprovalRow = {
+  id: string;
+  action_type: string;
+  status: string;
+  reason: string | null;
+  content: string | null;
+  created_at: string;
+  expires_at: string | null;
+  pre_authorized: boolean;
+};
+
 type ToolActivity = {
   id: string;
   tool_name: string | null;
@@ -38,7 +49,7 @@ export default async function AiOperationsPage() {
   const database = getSupabaseAdmin();
   // Both reads are restricted to the verified organization in the session,
   // never an organization identifier supplied in the URL or by a model.
-  const [attention, activity] = await Promise.all([
+  const [attention, activity, approvals] = await Promise.all([
     loadNeedsAction(asFlexibleClient(database), context.organizationId, context.timeZone),
     database
       .from("mcp_call_log")
@@ -47,9 +58,17 @@ export default async function AiOperationsPage() {
       .eq("method", "tools/call")
       .order("created_at", { ascending: false })
       .limit(25),
+    database
+      .from("task_proposals")
+      .select("id,action_type,status,reason,content,created_at,expires_at,pre_authorized")
+      .eq("organization_id", context.organizationId)
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
   const rows = (activity.data ?? []) as ToolActivity[];
   const failed = rows.filter((row) => row.is_error).length;
+  const proposals = (approvals.data ?? []) as ApprovalRow[];
+  const pending = proposals.filter((proposal) => proposal.status === "pending" && !proposal.pre_authorized);
 
   return (
     <FieldPageShell
@@ -66,6 +85,40 @@ export default async function AiOperationsPage() {
             change prices, or start background AI work. Those actions continue to require the existing approval flows.
           </p>
         </div>
+      </section>
+
+      <section className="mt-4 rounded-panel border border-line bg-surface p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">AI approval inbox</h2>
+          <span className="rounded-full bg-white/[0.05] px-3 py-1 text-xs text-ink-muted">{pending.length} pending</span>
+        </div>
+        <p className="mt-2 text-sm text-ink-muted">
+          Actual assistant proposals for this business. Approval and execution controls remain disabled until atomic authorization and audit are verified.
+        </p>
+        {approvals.error ? (
+          <p className="mt-4 rounded-control bg-caution-bg p-3 text-sm text-caution">
+            The approval inbox could not be loaded. No approval actions are available.
+          </p>
+        ) : pending.length === 0 ? (
+          <p className="mt-4 rounded-control border border-line p-4 text-sm text-ink-muted">
+            No pending AI approval requests.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {pending.map((proposal) => (
+              <li key={proposal.id} className="rounded-control border border-line p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{proposal.action_type.replaceAll("_", " ")}</p>
+                  <span className="text-xs text-ink-faint">{activityTime(proposal.created_at, context.timeZone)}</span>
+                </div>
+                {proposal.reason ? <p className="mt-2 text-sm text-ink-muted">{proposal.reason}</p> : null}
+                {proposal.content ? <p className="mt-2 whitespace-pre-wrap break-words text-sm">{proposal.content}</p> : null}
+                {proposal.expires_at ? <p className="mt-2 text-xs text-ink-faint">Expires {activityTime(proposal.expires_at, context.timeZone)}</p> : null}
+                <p className="mt-3 text-xs text-caution">Awaiting secure approval controls. No action has been sent.</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
