@@ -358,6 +358,8 @@ export type DiagnosticPayment = {
   customer: string;
   /** Dollars, like PilotInvoice.amount. */
   amount: number;
+  /** Dollars given back from it so far, by refunds that went through. */
+  refunded: number;
   /** The job number it paid for, for the link. */
   jobId: string;
   /** The business's calendar day it was paid, YYYY-MM-DD. */
@@ -365,45 +367,96 @@ export type DiagnosticPayment = {
   paidLabel: string;
 };
 
+/** Money given back from a diagnostic fee, on the day it went back. */
+export type DiagnosticRefund = {
+  id: string;
+  customer: string;
+  /** Dollars, positive: the list shows it as money out. */
+  amount: number;
+  jobId: string;
+  /** The business's calendar day the refund went through, YYYY-MM-DD. */
+  refundedOn: string;
+  refundedLabel: string;
+};
+
+function bookingCustomer(row: Record<string, unknown>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const job = (row.jobs ?? {}) as any;
+  const customer = job.customers ?? {};
+  return {
+    jobId: String(job.job_number ?? ""),
+    customer:
+      customer.company_name ||
+      [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
+      "Customer",
+  };
+}
+
+const BOOKING_JOB = "jobs ( job_number, customers ( first_name, last_name, company_name ) )";
+
 /**
- * Diagnostic fees customers paid online when they booked.
+ * Diagnostic fees customers paid online when they booked, and what has been
+ * refunded from them.
  *
  * They are in `payments`, not `invoices`: the later invoice takes the fee off
- * as a credit, so its total never includes it. Left out of the money screens,
- * a paid booking showed nowhere in what the business had taken.
+ * as a credit, so its total never includes it. A refund of one (given in
+ * Stripe and reported by its webhook) is in `booking_payment_refunds`, and
+ * counts on the day it went through, as invoice refunds do.
  */
-export async function getDiagnosticPayments(): Promise<DiagnosticPayment[]> {
+export async function getDiagnosticPayments(): Promise<{
+  payments: DiagnosticPayment[];
+  refunds: DiagnosticRefund[];
+}> {
   const context = await resolveContext();
-  if (!context) return [];
+  if (!context) return { payments: [], refunds: [] };
+  const database = asFlexibleClient(context.database);
 
-  const { data, error } = await asFlexibleClient(context.database)
-    .from("payments")
-    .select("id, amount_cents, paid_at, jobs ( job_number, customers ( first_name, last_name, company_name ) )")
-    .eq("organization_id", context.organizationId)
-    .eq("status", "succeeded")
-    .not("booking_request_id", "is", null)
-    .not("paid_at", "is", null)
-    .order("paid_at", { ascending: false });
+  const [paid, refunded] = await Promise.all([
+    database
+      .from("payments")
+      .select(`id, amount_cents, paid_at, ${BOOKING_JOB}`)
+      .eq("organization_id", context.organizationId)
+      .eq("status", "succeeded")
+      .not("booking_request_id", "is", null)
+      .not("paid_at", "is", null)
+      .order("paid_at", { ascending: false }),
+    database
+      .from("booking_payment_refunds")
+      .select(`id, payment_id, amount_cents, settled_at, ${BOOKING_JOB}`)
+      .eq("organization_id", context.organizationId)
+      .eq("status", "succeeded")
+      .not("settled_at", "is", null)
+      .order("settled_at", { ascending: false }),
+  ]);
 
-  if (error || !data) return [];
+  // A business whose database has no refunds table yet simply has none.
+  const refundRows = (refunded.error ? [] : (refunded.data ?? [])) as Record<string, unknown>[];
+  const refunds: DiagnosticRefund[] = refundRows.map((row) => ({
+    id: String(row.id),
+    ...bookingCustomer(row),
+    amount: Number(row.amount_cents ?? 0) / 100,
+    refundedOn: isoDateInZone(new Date(String(row.settled_at)), context.timeZone),
+    refundedLabel: inZone(String(row.settled_at), context.timeZone, { month: "short", day: "numeric" }),
+  }));
 
-  return (data as Record<string, unknown>[]).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const job = (row.jobs ?? {}) as any;
-    const customer = job.customers ?? {};
-    const paidAt = new Date(String(row.paid_at));
-    return {
+  const refundedByPayment = new Map<string, number>();
+  for (const row of refundRows) {
+    const key = String(row.payment_id ?? "");
+    refundedByPayment.set(key, (refundedByPayment.get(key) ?? 0) + Number(row.amount_cents ?? 0));
+  }
+
+  const payments: DiagnosticPayment[] = (paid.error ? [] : ((paid.data ?? []) as Record<string, unknown>[])).map(
+    (row) => ({
       id: String(row.id),
-      customer:
-        customer.company_name ||
-        [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
-        "Customer",
+      ...bookingCustomer(row),
       amount: Number(row.amount_cents ?? 0) / 100,
-      jobId: String(job.job_number ?? ""),
-      paidOn: isoDateInZone(paidAt, context.timeZone),
+      refunded: (refundedByPayment.get(String(row.id)) ?? 0) / 100,
+      paidOn: isoDateInZone(new Date(String(row.paid_at)), context.timeZone),
       paidLabel: inZone(String(row.paid_at), context.timeZone, { month: "short", day: "numeric" }),
-    };
-  });
+    }),
+  );
+
+  return { payments, refunds };
 }
 
 /** How far back finished work is checked for a missing invoice. */

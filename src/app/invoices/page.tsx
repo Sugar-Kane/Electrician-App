@@ -37,7 +37,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ status?: string; paid?: string }>;
 }) {
-  const [{ status = "all", paid = "" }, { invoices }, diagnosticPayments, context] = await Promise.all([
+  const [{ status = "all", paid = "" }, { invoices }, diagnostic, context] = await Promise.all([
     searchParams,
     getInvoices(),
     getDiagnosticPayments(),
@@ -55,7 +55,8 @@ export default async function InvoicesPage({
     >
       <InvoiceList
         invoices={invoices}
-        diagnosticPayments={diagnosticPayments}
+        diagnosticPayments={diagnostic.payments}
+        diagnosticRefunds={diagnostic.refunds}
         initialStatus={status}
         paidPeriod={period}
         today={today}
