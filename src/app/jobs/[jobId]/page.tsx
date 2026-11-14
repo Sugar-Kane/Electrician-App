@@ -33,7 +33,8 @@ import {
 } from "@/lib/job-data";
 import { getJobIntake } from "@/lib/job-intake";
 import { getJobConversation, getMessagingContext } from "@/lib/messaging";
-import { getJobInvoices, getJobLines, getJobStock, getStockOptions } from "@/lib/job-line-data";
+import { getJobInvoices, getJobLatestEstimate, getJobLines, getJobStock, getStockOptions } from "@/lib/job-line-data";
+import { SendEstimate } from "@/components/send-estimate";
 import { getJobPhotos } from "@/lib/job-photo-data";
 import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { agreementChanges, unbilledCents } from "@/lib/job-billing";
@@ -122,6 +123,7 @@ export default async function JobDetailPage({
     photos,
     messaging,
     history,
+    lastEstimate,
   ] = await Promise.all([
     getJob(jobId),
     getJobVisitsByNumber(jobId).catch(() => []),
@@ -135,6 +137,7 @@ export default async function JobDetailPage({
     getJobPhotos(jobId),
     getMessagingContext(),
     getJobHistory(jobId),
+    getJobLatestEstimate(jobId).catch(() => ""),
   ]);
   if (!job) notFound();
 
@@ -1135,6 +1138,15 @@ export default async function JobDetailPage({
               lineStock={lineStock}
               withBilling={false}
             />
+            {state !== "completed" && state !== "canceled" ? (
+              <SendEstimate
+                jobNumber={controls.jobNumber}
+                totalCents={totals.subtotalCents}
+                hasPhone={Boolean(job.phone)}
+                hasEmail={Boolean(job.email)}
+                lastSentLabel={lastEstimate || undefined}
+              />
+            ) : null}
           </StepCard>
 
           <StepCard id="visits" number={3} title="Schedule" state={stepState("schedule")} summary={job.startsAt ? `${job.dateLabel} · ${job.time}–${job.endTime}` : "No time set"}>

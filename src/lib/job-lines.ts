@@ -13,6 +13,8 @@
  * integer-cent prices without a database.
  */
 
+import { linesAdminFee } from "./admin-fee.ts";
+
 export type LineKind = "labor" | "material";
 
 export type JobLine = {
@@ -34,6 +36,8 @@ export type JobLine = {
   /** When it was written, as an ISO timestamp — what a signed contract is measured against. */
   createdAt?: string;
   notes?: string;
+  /** Admin fee included in unitPriceCents, per unit. For the business only. */
+  adminFeeCents?: number | null;
 };
 
 export type JobLineTotals = {
@@ -41,6 +45,8 @@ export type JobLineTotals = {
   materialCents: number;
   subtotalCents: number;
   lineCount: number;
+  /** How much of subtotalCents is the admin fee. Never shown to the customer. */
+  adminFeeCents?: number;
 };
 
 function whole(value: number | undefined): number {
@@ -100,6 +106,7 @@ export function jobLineTotals(lines: JobLine[]): JobLineTotals {
     materialCents,
     subtotalCents: laborCents + materialCents,
     lineCount: safe.length,
+    adminFeeCents: linesAdminFee(safe),
   };
 }
 

@@ -3,6 +3,7 @@ import "server-only";
 import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import { completeDraftFields, fillTemplate, placeholdersUsed, scopePrompt, serviceAddress, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import { deliverInvoice } from "@/lib/invoice-delivery";
+import { sendJobEstimate } from "@/lib/estimate-server";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { describeDelivery, formatMoney } from "@/lib/invoice-messages";
 import { claimUnbilledLines, jobInvoices } from "@/lib/job-billing-server";
@@ -107,6 +108,22 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
       type: "object",
       properties: { description: str("What work the customer needs, with as much known detail as practical.") },
       required: ["description"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "send_estimate",
+    title: "Send estimate",
+    description:
+      "Send the customer an estimate: the total of the priced work and parts on the job (add them with add_job_lines first), by SMS, email or both. It looks like the invoice, with nothing to sign and nothing due. Sending again sends an updated estimate and retires the earlier link. Texts go only to customers who have not replied STOP. Explicit owner approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The existing job number."),
+        channel: { type: "string", enum: ["sms", "email", "both"] },
+        confirmed,
+      },
+      required: ["job_number", "channel", "confirmed"],
       additionalProperties: false,
     },
   },
@@ -502,6 +519,23 @@ export async function runBusinessMcpTool(input: {
       return error
         ? { isError: true, text: "Business hours could not be changed." }
         : { text: `Business hours updated. ${proposal}` };
+    }
+
+    case "send_estimate": {
+      const jobNumber = Number(text(args.job_number));
+      const channel = text(args.channel);
+      const gate = requireConfirmation(args, `Send the estimate for job #${text(args.job_number)} by ${channel}.`);
+      if (gate) return gate;
+      if (!Number.isFinite(jobNumber)) return { isError: true, text: "The job number could not be read. Nothing was sent." };
+      const sent = await sendJobEstimate({
+        database: asFlexibleClient(database),
+        organizationId,
+        jobNumber,
+        channels: channel === "both" ? ["sms", "email"] : channel === "email" ? ["email"] : ["sms"],
+      });
+      if (!sent.ok) return { isError: true, text: sent.message };
+      const fee = sent.adminFeeCents > 0 ? ` It includes ${formatMoney(sent.adminFeeCents / 100)} of admin fee, which the customer does not see.` : "";
+      return { text: `${sent.message}${fee}${sent.viewUrl ? ` Customer link: ${sent.viewUrl}` : ""}` };
     }
 
     case "draft_estimate": {

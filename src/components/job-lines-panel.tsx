@@ -689,6 +689,15 @@ export function JobLinesPanel({
             </dl>
           ) : null}
 
+          {/* For the business only: the admin fee is built into each price the
+              customer pays, and never shown to them as its own charge. */}
+          {totals.adminFeeCents ? (
+            <p className="mt-2 text-xs text-ink-faint">
+              Prices include your admin fee: {formatCents(totals.adminFeeCents)} of {formatCents(totals.subtotalCents)}. The
+              customer sees one total.
+            </p>
+          ) : null}
+
           {/* For the business only: what the parts cost, said as unknown when
               any part has no cost, so a margin is never better than the facts. */}
           {parts > 0 ? (
