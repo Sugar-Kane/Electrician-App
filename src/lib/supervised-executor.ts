@@ -6,7 +6,7 @@ import { evaluateQuietHours } from "@/lib/messaging-rules";
 import { toE164 } from "@/lib/phone-format";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
-import { classifyProviderError, enabledActionTypes, type SupervisedAction } from "@/lib/supervised-actions";
+import { classifyProviderError, enabledActionTypes, invoiceReminderRefusal, type SupervisedAction } from "@/lib/supervised-actions";
 import { sendSms } from "@/lib/twilio";
 
 /**
@@ -45,6 +45,7 @@ export type ClaimedAction = {
   jobId: string | null;
   customerId: string | null;
   recipient: string;
+  amountCents: number | null;
   templateKey: string | null;
   payload: Record<string, unknown>;
   idempotencyKey: string;
@@ -93,6 +94,25 @@ const sendText: Handler = async (action, deps) => {
   const current = toE164(text(customer.phone));
   if (!approved) return { outcome: "failed", error: "No number was approved for this text." };
   if (approved !== current) return { outcome: "failed", error: "The customer's number changed after this was approved. Nothing was sent." };
+
+  // A reminder about an invoice must still be true: not paid, voided or
+  // changed since it was approved (it may have waited, or been deferred).
+  const invoiceId = text(action.payload.invoice_id);
+  if (invoiceId) {
+    const { data: invoice } = await deps.db
+      .from("invoices")
+      .select("id, status, balance_due_cents, due_at")
+      .eq("organization_id", action.organizationId)
+      .eq("id", invoiceId)
+      .maybeSingle();
+    const refusal = invoiceReminderRefusal(
+      { balanceCents: action.amountCents, dueAt: text(action.payload.due_at) || null },
+      invoice
+        ? { status: text(invoice.status), balanceDueCents: Number(invoice.balance_due_cents ?? 0), dueAt: text(invoice.due_at) || null }
+        : null,
+    );
+    if (refusal) return { outcome: "failed", error: refusal };
+  }
 
   const deferral = await quietHoursDeferral(action, deps);
   if (deferral) return deferral;
@@ -210,6 +230,7 @@ function toClaimed(row: Row): ClaimedAction {
     jobId: text(row.job_id) || null,
     customerId: text(row.customer_id) || null,
     recipient: text(row.recipient),
+    amountCents: row.amount_cents === null || row.amount_cents === undefined ? null : Number(row.amount_cents),
     templateKey: text(row.template_key) || null,
     payload: (row.payload && typeof row.payload === "object" ? row.payload : {}) as Record<string, unknown>,
     idempotencyKey: text(row.idempotency_key),

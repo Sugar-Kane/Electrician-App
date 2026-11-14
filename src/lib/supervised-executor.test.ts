@@ -27,6 +27,7 @@ function harness(options: {
   customerPhone?: string;
   quiet?: boolean;
   textOutcome?: Record<string, unknown> | (() => never);
+  invoice?: Record<string, unknown> | null;
 }) {
   const rpcs: { name: string; args: Record<string, unknown> }[] = [];
   const finishes: Finish[] = [];
@@ -42,7 +43,9 @@ function harness(options: {
               : { quiet_hours_start: "23:59:00", quiet_hours_end: "00:00:00" }
             : table === "organizations"
               ? { timezone: "UTC" }
-              : null;
+              : table === "invoices"
+                ? (options.invoice ?? null)
+                : null;
       const q = {
         select: () => q,
         eq: () => q,
@@ -164,4 +167,31 @@ test("a handler that throws partway leaves the action uncertain", async () => {
     },
   });
   assert.equal((await h.run()).results[0]?.outcome, "uncertain");
+});
+
+const reminder: Claim = { ...textClaim, amount_cents: 20000, payload: { invoice_id: "inv-1", due_at: "2026-11-01T00:00:00Z" } };
+
+test("an invoice reminder is not sent once the invoice is paid, voided or changed", async () => {
+  const cases: [Record<string, unknown> | null, string][] = [
+    [{ status: "paid", balance_due_cents: 0, due_at: "2026-11-01T00:00:00Z" }, "paid"],
+    [{ status: "void", balance_due_cents: 20000, due_at: "2026-11-01T00:00:00Z" }, "void"],
+    [{ status: "sent", balance_due_cents: 5000, due_at: "2026-11-01T00:00:00Z" }, "part paid"],
+    [{ status: "sent", balance_due_cents: 20000, due_at: "2026-12-01T00:00:00Z" }, "new due date"],
+    [null, "deleted"],
+  ];
+  for (const [invoice, label] of cases) {
+    const h = harness({ execute: "send_customer_message", claims: [reminder], invoice });
+    assert.equal((await h.run()).results[0]?.outcome, "failed", label);
+    assert.equal(h.texts.length, 0, label);
+  }
+});
+
+test("a reminder whose invoice is unchanged still goes out", async () => {
+  const h = harness({
+    execute: "send_customer_message",
+    claims: [reminder],
+    invoice: { status: "sent", balance_due_cents: 20000, due_at: "2026-11-01T00:00:00Z" },
+  });
+  assert.equal((await h.run()).results[0]?.outcome, "succeeded");
+  assert.equal(h.texts.length, 1);
 });

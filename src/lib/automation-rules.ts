@@ -42,7 +42,10 @@ export type EventFacts = {
   invoiceId?: string;
   invoiceLabel?: string;
   balanceCents?: number;
+  /** Display form, e.g. "Nov 1". */
   dueDate?: string;
+  /** ISO due date, kept with the proposal so the reminder is checked against it before sending. */
+  dueAt?: string;
   payLink?: string;
   // materials.shortage
   itemId?: string;
@@ -144,7 +147,7 @@ export function proposalsFor(type: AutomationEventType, eventKey: string, facts:
               amountCents: balance,
               dedupeKey: key("reminder"),
               expiresInHours: 72,
-              payload: { invoice_id: facts.invoiceId },
+              payload: { invoice_id: facts.invoiceId, due_at: facts.dueAt ?? null },
             },
           ];
         }

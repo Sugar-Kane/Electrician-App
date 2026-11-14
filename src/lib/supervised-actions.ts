@@ -125,6 +125,32 @@ export function enabledActionTypes(setting: string | undefined): SupervisedActio
   return SUPERVISED_ACTIONS.filter((action) => wanted.includes(action));
 }
 
+/**
+ * Whether an approved invoice reminder is still true right before it goes
+ * out. The approval was for a reminder about this balance on this due date;
+ * a payment, a void or a changed due date since then means the wording no
+ * longer holds, so it is not sent (a new proposal is needed). Null when it
+ * may go, else the reason it may not.
+ */
+export function invoiceReminderRefusal(
+  approved: { balanceCents: number | null; dueAt: string | null },
+  current: { status: string; balanceDueCents: number; dueAt: string | null } | null,
+): string | null {
+  if (!current) return "The invoice is no longer on file. Nothing was sent.";
+  const status = current.status.trim().toLowerCase();
+  if (status === "paid" || status === "void" || status === "draft") {
+    return `The invoice is ${status === "void" ? "void" : status === "draft" ? "back in draft" : "paid"} now. Nothing was sent.`;
+  }
+  if (current.balanceDueCents <= 0) return "The invoice has been paid. Nothing was sent.";
+  if (approved.balanceCents === null || current.balanceDueCents !== approved.balanceCents) {
+    return "The balance changed after this was approved. Nothing was sent; a new reminder can be proposed.";
+  }
+  if (approved.dueAt && (current.dueAt ?? "").slice(0, 10) !== approved.dueAt.slice(0, 10)) {
+    return "The due date changed after this was approved. Nothing was sent.";
+  }
+  return null;
+}
+
 /** What a decision's result code means, said to the person who tried. */
 export function decisionMessage(code: string): string {
   switch (code) {

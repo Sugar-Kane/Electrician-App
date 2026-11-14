@@ -161,6 +161,7 @@ export async function scanScheduledAutomationEvents(now: Date = new Date()): Pro
           invoiceLabel: `INV-${invoiceLabel(row)}`,
           balanceCents: Number(row.balance_due_cents ?? 0),
           dueDate: dueAt ? new Date(dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "",
+          dueAt: dueAt || undefined,
           payLink: origin ? invoiceViewUrl(origin, text(row.preview_token)) : undefined,
         },
       },
