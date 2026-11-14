@@ -59,6 +59,54 @@ export function firstTextOptsIn(existing: ConsentFacts | null): boolean {
   return !existing.optedInAt;
 }
 
+export type ManualConsentStep =
+  | { write: "insert" | "update"; already: false }
+  | { write: null; already: true }
+  | { write: null; already: false; refused: string };
+
+/**
+ * Recording that a customer gave the business their mobile number for service.
+ *
+ * Written automatically when the owner enters a number for a job: a customer
+ * who hands over their number for an appointment expects texts about it. It
+ * never undoes a STOP: only the customer texting START does. `existing` is the
+ * customer's current row, or null. "update" fills a row that holds neither
+ * date, and must be written only while both are still empty, so a STOP landing
+ * in between is not overwritten.
+ */
+export function manualConsentStep(existing: ConsentFacts | null): ManualConsentStep {
+  if (!existing) return { write: "insert", already: false };
+  if (existing.optedOutAt) {
+    return {
+      write: null,
+      already: false,
+      refused: "This customer replied STOP. Only they can turn texts back on, by texting START.",
+    };
+  }
+  if (existing.optedInAt) return { write: null, already: true };
+  return { write: "update", already: false };
+}
+
+/**
+ * Why a text may not go to this customer, or null when it may: the one rule
+ * `sendSms` applies to every text.
+ *
+ * Only a STOP refuses. That one is the law and the carriers' rule, and a
+ * customer who asked not to be texted is never texted until they text START.
+ * Nothing else stands in the way of the business working: no record is not a
+ * refusal (the customer gave the number for service), and neither is a record
+ * that could not be read, because Twilio's own opt-out list stops a STOP'd
+ * number at the carrier regardless (error 21610, which then updates the ledger).
+ */
+export function textRefusal(consent: ConsentFacts | null | "unknown"): string | null {
+  if (!consent || consent === "unknown" || !consent.optedOutAt) return null;
+  // An opt-in after the STOP (they texted START) is their latest word.
+  const out = Date.parse(consent.optedOutAt);
+  const back = consent.optedInAt ? Date.parse(consent.optedInAt) : Number.NaN;
+  if (Number.isFinite(back) && back > out) return null;
+  return "This customer replied STOP, so no text was sent. Only they can turn texts back on, by texting START.";
+}
+
 /**
  * Why this customer cannot be texted, or null when they can.
  *
@@ -69,11 +117,9 @@ export function blockedReasonFor(input: {
   consent: ConsentFacts;
   hasMessagingService: boolean;
 }): string | null {
-  if (!consentIsActive(input.consent)) {
-    return input.consent.optedOutAt
-      ? "This customer replied STOP. They have to opt in again themselves before you can text them."
-      : "This customer has not opted in to text messages. Ask them to opt in on the booking page.";
-  }
+  // The same rule as sendSms: only a STOP stops a text.
+  const refused = textRefusal(input.consent);
+  if (refused) return refused;
   if (!input.hasMessagingService) {
     return "No messaging service is connected for this business yet.";
   }

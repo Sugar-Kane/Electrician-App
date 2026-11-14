@@ -5,9 +5,8 @@ import { recordText } from "@/lib/contract-copy";
 import { sendEmail } from "@/lib/email";
 import { invoiceLabel } from "@/lib/invoice-label";
 import { refundStatusFromStripe, refundSummary } from "@/lib/invoice-refund";
-import { consentIsActive } from "@/lib/messaging-rules";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { sendSms } from "@/lib/twilio";
+import { STOPPED_ERROR, sendSms } from "@/lib/twilio";
 
 /**
  * Telling the customer about a refund.
@@ -199,24 +198,13 @@ export async function sendRefundNotice(
     const phone = text(customer.phone);
     const customerId = text(job.customer_id);
     if (phone && customerId) {
-      const [{ data: consent }, { data: settings }] = await Promise.all([
-        database
-          .from("messaging_consent")
-          .select("opted_in_at, opted_out_at")
-          .eq("organization_id", organizationId)
-          .eq("customer_id", customerId)
-          .eq("channel", "sms")
-          .eq("scope", "transactional")
-          .maybeSingle(),
-        database.from("messaging_settings").select("messaging_service_sid").eq("organization_id", organizationId).maybeSingle(),
-      ]);
-      const active = consentIsActive({
-        optedInAt: consent?.opted_in_at ? String(consent.opted_in_at) : null,
-        optedOutAt: consent?.opted_out_at ? String(consent.opted_out_at) : null,
-      });
+      const { data: settings } = await database
+        .from("messaging_settings")
+        .select("messaging_service_sid")
+        .eq("organization_id", organizationId)
+        .maybeSingle();
       const sid = text(settings?.messaging_service_sid);
-      if (!active) outcome.sms = "no texting consent";
-      else if (!sid) outcome.sms = "texting not set up";
+      if (!sid) outcome.sms = "texting not set up";
       else {
         const body = toCard
           ? `${businessName}: we've refunded ${amount}${forWhat}. It usually reaches your card in 5-10 business days.`
@@ -224,12 +212,12 @@ export async function sendRefundNotice(
         const smsBody = totals
           ? `${body} Paid ${dollars(totals.paid)}, refunded ${dollars(totals.refunded)}, kept ${dollars(Math.max(totals.paid - totals.refunded, 0))}.`
           : body;
-        const result = await sendSms({ to: phone, body: smsBody, messagingServiceSid: sid });
-        outcome.sms = result.ok ? "sent" : `${result.errorCode}: ${result.errorDetail}`;
+        const result = await sendSms({ organizationId, customerId, to: phone, body: smsBody, messagingServiceSid: sid });
+        outcome.sms = result.ok ? "sent" : result.errorCode === STOPPED_ERROR ? "replied STOP" : `${result.errorCode}: ${result.errorDetail}`;
         if (result.ok) {
           anySent = true;
           await recordText(database, organizationId, customerId, smsBody, result.providerMessageId);
-        } else anyFailed = true;
+        } else if (result.errorCode !== STOPPED_ERROR) anyFailed = true;
       }
     } else {
       outcome.sms = phone ? "no customer record" : "no phone on file";

@@ -1,10 +1,10 @@
 import "server-only";
 
-import { consentIsActive, evaluateQuietHours } from "@/lib/messaging-rules";
+import { evaluateQuietHours } from "@/lib/messaging-rules";
 import { decideAutomaticSend, type TemplateTrigger } from "@/lib/message-templates";
 import { readLanguage } from "@/lib/customer-language";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { sendSms } from "@/lib/twilio";
+import { STOPPED_ERROR, sendSms } from "@/lib/twilio";
 
 /**
  * Fire the template for an event that just happened to a job.
@@ -59,20 +59,11 @@ export async function sendJobEventMessage(input: {
     if (!organizationId || !customerId) return { sent: false, reason: "Job is incomplete." };
 
     const [
-      { data: consentRow },
       { data: templateRows },
       { data: settingsRow },
       { data: serviceRow },
       { data: orgRow },
     ] = await Promise.all([
-        database
-          .from("messaging_consent")
-          .select("opted_in_at, opted_out_at")
-          .eq("organization_id", organizationId)
-          .eq("customer_id", customerId)
-          .eq("channel", "sms")
-          .eq("scope", "transactional")
-          .maybeSingle(),
         database
           .from("message_templates")
           // Every language for this trigger, chosen between below once the
@@ -101,14 +92,7 @@ export async function sendJobEventMessage(input: {
           .maybeSingle(),
       ]);
 
-    // Consent first, and from the ledger — the same gate the manual composer
-    // uses, so an automatic message can never reach someone who said STOP.
-    const consent = {
-      optedInAt: consentRow?.opted_in_at ? String(consentRow.opted_in_at) : null,
-      optedOutAt: consentRow?.opted_out_at ? String(consentRow.opted_out_at) : null,
-    };
-    if (!consentIsActive(consent)) return { sent: false, reason: "Customer has not opted in." };
-
+    // Consent is checked by sendSms, the one gate every text goes through.
     const messagingServiceSid = text(settingsRow?.messaging_service_sid);
     if (!messagingServiceSid) return { sent: false, reason: "No messaging service configured." };
 
@@ -220,6 +204,7 @@ export async function sendJobEventMessage(input: {
     // Reuse an open thread so automatic messages and anything staff typed sit
     // in one conversation, the way the customer experiences it.
     let conversationId = "";
+    let openedHere = false;
     const { data: existing } = await database
       .from("conversations")
       .select("id")
@@ -247,6 +232,7 @@ export async function sendJobEventMessage(input: {
         .single();
       if (!created) return { sent: false, reason: "Could not open a conversation." };
       conversationId = String(created.id);
+      openedHere = true;
     }
 
     const { data: inserted } = await database
@@ -266,11 +252,19 @@ export async function sendJobEventMessage(input: {
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
     const statusCallbackUrl = origin ? `${origin}/api/twilio/status?message=${messageId}` : undefined;
-    let result = await sendSms({ to: phone, body: outgoing, messagingServiceSid, mediaUrls: input.mediaUrls, statusCallbackUrl });
+    const recipient = { organizationId, customerId, to: phone, body: outgoing, messagingServiceSid, statusCallbackUrl };
+    let result = await sendSms({ ...recipient, mediaUrls: input.mediaUrls });
     // A number that cannot send pictures still sends the words. Never after a
-    // STOP: that refusal is the customer's, not the pictures'.
-    if (!result.ok && (input.mediaUrls?.length ?? 0) > 0 && result.errorCode !== "21610") {
-      result = await sendSms({ to: phone, body: outgoing, messagingServiceSid, statusCallbackUrl });
+    // STOP or with no consent: that refusal is the customer's, not the pictures'.
+    if (!result.ok && (input.mediaUrls?.length ?? 0) > 0 && result.errorCode !== "21610" && result.errorCode !== STOPPED_ERROR) {
+      result = await sendSms(recipient);
+    }
+
+    // No consent: nothing was sent, so nothing is left in the inbox for it.
+    if (!result.ok && result.errorCode === STOPPED_ERROR) {
+      await database.from("messages").delete().eq("id", messageId);
+      if (openedHere) await database.from("conversations").delete().eq("id", conversationId);
+      return { sent: false, reason: result.errorDetail };
     }
 
     if (!result.ok) {

@@ -66,7 +66,16 @@ export async function notifyJobChange(input: {
   } else if (!input.customerPhone) {
     note({ channel: "sms", to: "", ok: false, detail: "No phone number on this customer." });
   } else {
+    // The job's own customer, so sendSms can check whether they replied STOP.
+    const { data: owner } = await database
+      .from("jobs")
+      .select("customer_id")
+      .eq("id", input.jobId)
+      .eq("organization_id", input.organizationId)
+      .maybeSingle();
     const result = await sendSms({
+      organizationId: input.organizationId,
+      customerId: typeof owner?.customer_id === "string" ? owner.customer_id : "",
       to: input.customerPhone,
       body: smsBody,
       messagingServiceSid,

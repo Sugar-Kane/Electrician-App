@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { claimUnbilledLines } from "@/lib/job-billing-server";
+import { recordManualSmsConsent } from "@/lib/manual-sms-consent";
+import { currentContext } from "@/lib/request-context";
 import {
   kindOfWork,
   parseNewJob,
@@ -259,6 +261,23 @@ export async function createJob(
       return keep("That customer could not be saved. Nothing was created.");
     }
     customerId = text(created.id);
+  }
+
+  /*
+   * A customer who gives the business their mobile number for a job expects
+   * texts about it, so that is recorded as their consent, with who entered it.
+   * Automatic, so nothing stands between the owner and the work. Never over a
+   * STOP. Not fatal: the job is what was asked for.
+   */
+  if (job.phone) {
+    const context = await currentContext();
+    const consent = await recordManualSmsConsent(supabase, {
+      organizationId,
+      customerId,
+      userId: context?.userId ?? "",
+      where: "new job",
+    });
+    if (!consent.ok) console.error("new job: text consent not recorded:", consent.reason);
   }
 
   /*

@@ -416,6 +416,14 @@ export async function replyToCustomer(input: {
     .maybeSingle();
   if (conversation?.assistant_paused_at) return false;
 
+  // Whose thread it is, so sendSms can check whether they replied STOP.
+  const { data: thread } = await input.database
+    .from("conversations")
+    .select("customer_id")
+    .eq("id", input.conversationId)
+    .maybeSingle();
+  const customerId = typeof thread?.customer_id === "string" ? thread.customer_id : "";
+
   const { data: inserted } = await input.database
     .from("messages")
     .insert({
@@ -434,6 +442,8 @@ export async function replyToCustomer(input: {
 
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
   const result = await sendSms({
+    organizationId: input.organizationId,
+    customerId,
     to: input.to,
     body: input.body,
     messagingServiceSid: input.messagingServiceSid,

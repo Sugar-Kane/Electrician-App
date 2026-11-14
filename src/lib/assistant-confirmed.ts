@@ -105,7 +105,7 @@ export async function runConfirmedTool(
 
       const { data } = await supabase
         .from("customers")
-        .select("first_name, last_name, company_name, phone")
+        .select("id, first_name, last_name, company_name, phone")
         .eq("organization_id", organizationId)
         .is("archived_at", null)
         .limit(200);
@@ -133,7 +133,7 @@ export async function runConfirmedTool(
       const sid = text(settings?.messaging_service_sid);
       if (!sid) return "This business has no messaging service, so no text could be sent.";
 
-      const result = await sendSms({ to: phone, body, messagingServiceSid: sid });
+      const result = await sendSms({ organizationId, customerId: text(match?.id), to: phone, body, messagingServiceSid: sid });
       return result.ok
         ? `Text sent to ${phone}.`
         : `The text could not be sent (${result.errorCode}: ${result.errorDetail}).`;

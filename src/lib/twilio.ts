@@ -2,7 +2,11 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { readSmsConsent } from "@/lib/manual-sms-consent";
+import { phoneMatches, textRefusal } from "@/lib/messaging-rules";
 import { toE164 } from "@/lib/phone-format";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { publicOrigin, webhookUrlCandidates } from "@/lib/twilio-webhook-url";
 import {
   activeInboundCall,
@@ -236,19 +240,78 @@ export type TwilioSendResult =
   | { ok: true; providerMessageId: string; status: string }
   | { ok: false; errorCode: string; errorDetail: string };
 
+/** The errorCode of a text refused because the customer replied STOP. */
+export const STOPPED_ERROR = "replied_stop";
+
 /**
- * Send one SMS through a tenant's Messaging Service.
+ * Send one SMS to a customer: the one consent check for every text.
+ *
+ * Every text to a customer comes through here, and here is the only place
+ * consent is checked. The only thing that stops a text is a customer who
+ * replied STOP (`textRefusal`); then the reason is in `errorDetail` and nothing
+ * reaches Twilio. Nothing else gets in the way of the business working.
+ * Callers never check consent themselves.
  *
  * The Messaging Service is the tenant's, the credentials are the platform's:
  * that is the ISV shape the schema already assumes, with each tenant owning a
  * messaging service, brand, and campaign under one Twilio account.
  */
 export async function sendSms(input: {
+  /** The business sending, and the customer it goes to. Consent is read for exactly this pair. */
+  organizationId: string;
+  customerId: string;
   to: string;
   body: string;
   messagingServiceSid: string;
   statusCallbackUrl?: string;
   /** Pictures sent with the text (MMS), at most ten public URLs. */
+  mediaUrls?: string[];
+}): Promise<TwilioSendResult> {
+  const consent =
+    input.organizationId && input.customerId
+      ? await readSmsConsent(asFlexibleClient(getSupabaseAdmin()), input.organizationId, input.customerId)
+      : null;
+  const refused = textRefusal(consent);
+  if (refused) return { ok: false, errorCode: STOPPED_ERROR, errorDetail: refused };
+  return postSms(input);
+}
+
+/**
+ * Alert the business's own owner (a new booking, a payment) at the alert
+ * number in their notification settings.
+ *
+ * Not a customer, so no customer consent applies: the owner set this number
+ * up to be texted. Sends only to that number, read fresh here, so this path
+ * cannot be used to reach anybody else.
+ */
+export async function sendOwnerSms(input: {
+  organizationId: string;
+  to: string;
+  body: string;
+  messagingServiceSid: string;
+}): Promise<TwilioSendResult> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("organizations")
+    .select("owner_notification_phone")
+    .eq("id", input.organizationId)
+    .maybeSingle();
+  const alertNumber = typeof data?.owner_notification_phone === "string" ? data.owner_notification_phone : "";
+  if (error || !phoneMatches(alertNumber, input.to)) {
+    return {
+      ok: false,
+      errorCode: "not_owner_number",
+      errorDetail: "That is not this business's alert number, so the owner alert was not sent.",
+    };
+  }
+  return postSms(input);
+}
+
+/** The Twilio call itself. Private, so nothing can text a customer without the check above. */
+async function postSms(input: {
+  to: string;
+  body: string;
+  messagingServiceSid: string;
+  statusCallbackUrl?: string;
   mediaUrls?: string[];
 }): Promise<TwilioSendResult> {
   const auth = credentials();

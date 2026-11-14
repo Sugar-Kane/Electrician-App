@@ -47,6 +47,7 @@ export async function finishWebsiteCallback(input: {
       const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
       await sendCallbackOutcomeAlert({
         requestId: String(claimed.id),
+        organizationId: String(claimed.organization_id),
         businessName: loaded.context.businessName,
         owner: loaded.owner,
         messagingServiceSid: loaded.messagingServiceSid,

@@ -3,8 +3,8 @@
  * ChatGPT connection, and why not when it may not.
  *
  * The rules the job page's "Text signing link" button follows, plus one the
- * button does not need: the customer must have active SMS consent, because a
- * text sent from a chat is not a person standing in front of the customer.
+ * button does not need: the customer must have a phone on file. Whether they
+ * replied STOP is checked by sendSms, the one place every text is checked.
  * The business signs before the customer is asked to, with the saved
  * signature of the owner who connected ChatGPT, so that owner must have one.
  *
@@ -22,7 +22,7 @@ export type ContractSendFacts = {
   } | null;
   /** The owner who connected ChatGPT is a member of this business and has saved a signature. */
   signerReady: boolean;
-  /** The customer has a phone and active SMS consent. */
+  /** The customer has a phone number on file. */
   textingAllowed: boolean;
   textingRefusal?: string;
   /** Texting is set up for the business. */

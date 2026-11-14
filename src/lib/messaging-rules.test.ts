@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   blockedReasonFor,
+  textRefusal,
   callbackConsentStep,
   consentIsActive,
   deliveryStatusApplies,
@@ -11,6 +12,7 @@ import {
   firstTextOptsIn,
   inboxFingerprint,
   initialsFor,
+  manualConsentStep,
   phoneMatches,
   threadFingerprint,
 } from "./messaging-rules.ts";
@@ -58,36 +60,49 @@ test("a customer on file who texts first opts in, but never over a STOP", () => 
   assert.equal(firstTextOptsIn({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: null }), false, "an active opt-in needs nothing written");
 });
 
-test("a customer who replied STOP is refused differently from one who never opted in", () => {
+test("consent recorded when the owner enters a number is written only where nothing is on file, and never over a STOP", () => {
+  assert.deepEqual(manualConsentStep(null), { write: "insert", already: false }, "nothing on file: a new row");
+  assert.deepEqual(manualConsentStep({ optedInAt: null, optedOutAt: null }), { write: "update", already: false }, "an empty row is filled");
+  assert.deepEqual(manualConsentStep({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: null }), { write: null, already: true });
+  const stopped = manualConsentStep({ optedInAt: "2026-08-01T00:00:00Z", optedOutAt: "2026-08-02T00:00:00Z" });
+  assert.equal(stopped.write, null, "a STOP stands");
+  assert.match("refused" in stopped ? stopped.refused : "", /START/);
+  const stoppedOnly = manualConsentStep({ optedInAt: null, optedOutAt: "2026-08-02T00:00:00Z" });
+  assert.equal(stoppedOnly.write, null, "a STOP with no opt-in also stands");
+});
+
+test("only a STOP refuses a text: the one rule every text goes through", () => {
+  assert.equal(textRefusal(null), null, "no record does not stop the business texting about the job");
+  assert.equal(textRefusal({ optedInAt: null, optedOutAt: null }), null);
+  assert.equal(textRefusal("unknown"), null, "an unreadable record is not a STOP; the carrier's own list still blocks one");
+  assert.equal(textRefusal({ optedInAt: "2026-09-01T00:00:00Z", optedOutAt: null }), null);
+  assert.match(textRefusal({ optedInAt: "2026-09-01T00:00:00Z", optedOutAt: "2026-09-02T00:00:00Z" }) ?? "", /STOP/);
+  assert.match(textRefusal({ optedInAt: null, optedOutAt: "2026-09-02T00:00:00Z" }) ?? "", /STOP/);
+  assert.equal(textRefusal({ optedInAt: "2026-09-03T00:00:00Z", optedOutAt: "2026-09-02T00:00:00Z" }), null, "START after STOP");
+});
+
+test("the inbox composer follows the same rule: only a STOP blocks it", () => {
   const stopped = blockedReasonFor({
     consent: { optedInAt: "2026-08-01T00:00:00Z", optedOutAt: "2026-08-02T00:00:00Z" },
     hasMessagingService: true,
   });
   assert.match(stopped ?? "", /replied STOP/);
 
-  const never = blockedReasonFor({
-    consent: { optedInAt: null, optedOutAt: null },
-    hasMessagingService: true,
-  });
-  assert.match(never ?? "", /has not opted in/);
-
+  assert.equal(blockedReasonFor({ consent: { optedInAt: null, optedOutAt: null }, hasMessagingService: true }), null);
   assert.equal(
-    blockedReasonFor({
-      consent: { optedInAt: "2026-08-01T00:00:00Z", optedOutAt: null },
-      hasMessagingService: true,
-    }),
+    blockedReasonFor({ consent: { optedInAt: "2026-08-01T00:00:00Z", optedOutAt: null }, hasMessagingService: true }),
     null,
   );
 });
 
-test("consent is checked before the messaging service is", () => {
+test("a STOP is reported before a missing messaging service", () => {
   // Otherwise a tenant with no service configured would be told to fix their
   // setup when the real answer is that this customer may not be texted at all.
   const reason = blockedReasonFor({
-    consent: { optedInAt: null, optedOutAt: null },
+    consent: { optedInAt: null, optedOutAt: "2026-08-02T00:00:00Z" },
     hasMessagingService: false,
   });
-  assert.match(reason ?? "", /has not opted in/);
+  assert.match(reason ?? "", /replied STOP/);
 });
 
 test("quiet hours wrap around midnight", () => {

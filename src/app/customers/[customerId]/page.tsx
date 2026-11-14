@@ -21,10 +21,25 @@ import { todayInZone } from "@/lib/calendar";
 import { billingParty } from "@/lib/customer-details";
 import { CUSTOMER_DETAIL_COLUMNS, loadCustomerDetails } from "@/lib/customer-details-save";
 import { getCustomerProfile } from "@/lib/customer-profile";
-import { currentContext } from "@/lib/request-context";
+import { currentContext, DEFAULT_TIME_ZONE } from "@/lib/request-context";
+import { CustomerTextConsent, type TextConsentStatus } from "@/components/customer-text-consent";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/job-lines";
+import { textRefusal } from "@/lib/messaging-rules";
+
+/** What the contact card says about texting this customer: the same rule sendSms applies. */
+function textConsentStatus(row: Record<string, unknown> | null, timeZone: string): TextConsentStatus {
+  const facts = row
+    ? {
+        optedInAt: row.opted_in_at ? String(row.opted_in_at) : null,
+        optedOutAt: row.opted_out_at ? String(row.opted_out_at) : null,
+      }
+    : null;
+  if (!textRefusal(facts) || !facts?.optedOutAt) return { state: "on" };
+  const day = new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" });
+  return { state: "stopped", label: day.format(new Date(facts.optedOutAt)) };
+}
 
 function recordingLabel(startedAt: string, timeZone: string): string {
   if (!startedAt) return "Recorded call";
@@ -74,7 +89,7 @@ export default async function CustomerPage({
   if (!profile) notFound();
   const context = await currentContext();
   const db = asFlexibleClient(await createClient());
-  const [details, { data: customerRow }, { data: firstProperty }] = await Promise.all([
+  const [details, { data: customerRow }, { data: firstProperty }, { data: consentRow }] = await Promise.all([
     context ? loadCustomerDetails(db, context.organizationId, profile.id) : Promise.resolve(null),
     db.from("customers").select(CUSTOMER_DETAIL_COLUMNS).eq("id", profile.id).maybeSingle(),
     db
@@ -85,7 +100,15 @@ export default async function CustomerPage({
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle(),
+    db
+      .from("messaging_consent")
+      .select("opted_in_at, opted_out_at, source")
+      .eq("customer_id", profile.id)
+      .eq("channel", "sms")
+      .eq("scope", "transactional")
+      .maybeSingle(),
   ]);
+  const textConsent = textConsentStatus((consentRow ?? null) as Record<string, unknown> | null, context?.timeZone ?? DEFAULT_TIME_ZONE);
   const service = (firstProperty ?? null) as Record<string, unknown> | null;
   const party = billingParty((customerRow ?? null) as Record<string, unknown> | null, service);
   const asText = (value: unknown) => (typeof value === "string" ? value : "");
@@ -184,6 +207,8 @@ export default async function CustomerPage({
             }
           />
         ) : null}
+
+        <CustomerTextConsent hasPhone={Boolean(profile.phone)} status={textConsent} />
 
         <CustomerLanguageControl customerId={profile.id} language={profile.language} />
       </section>

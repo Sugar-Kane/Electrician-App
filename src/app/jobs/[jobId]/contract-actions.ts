@@ -74,7 +74,7 @@ async function loadSignable(supabase: FlexibleSupabaseClient, contractId: string
   const { data } = await supabase
     .from("contracts")
     .select(
-      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, signature_sent_at, organizations ( name, timezone ), jobs ( job_number, customers ( phone ) )",
+      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, signature_sent_at, organizations ( name, timezone ), jobs ( job_number, customers ( id, phone ) )",
     )
     .eq("id", contractId)
     .maybeSingle();
@@ -805,6 +805,8 @@ export async function sendSigningLink(
 
   const { sendSms } = await import("@/lib/twilio");
   const sent = await sendSms({
+    organizationId,
+    customerId: text(customer?.id),
     to: phone,
     body: signingLinkMessage({
       businessName: text(business?.name),

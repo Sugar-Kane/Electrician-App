@@ -23,11 +23,11 @@ import {
 import { sendEmail } from "@/lib/email";
 import { localeFor } from "@/lib/intake-phrases";
 import { loadIntakeContext, slotLabel } from "@/lib/intake-shared";
-import { callbackConsentStep, consentIsActive } from "@/lib/messaging-rules";
+import { callbackConsentStep } from "@/lib/messaging-rules";
 import { PHONE_BOOKING_CONSENT_SOURCE } from "@/lib/sms-consent";
 import { type IntakeContext } from "@/lib/sms-intake";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { sendSms } from "@/lib/twilio";
+import { STOPPED_ERROR, sendOwnerSms, sendSms } from "@/lib/twilio";
 
 /**
  * Telling everyone who needs to know what happened to a booking request.
@@ -291,37 +291,27 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
       consentSaved = !error;
     }
 
-    const { data: consent } =
-      consentMode === "none"
-        ? { data: null }
-        : await database
-            .from("messaging_consent")
-            .select("opted_in_at, opted_out_at")
-            .eq("organization_id", input.organizationId)
-            .eq("customer_id", input.customerId)
-            .eq("channel", "sms")
-            .eq("scope", "transactional")
-            .maybeSingle();
-
-    if (
-      consentMode === "none" ||
-      !consentIsActive({
-        optedInAt: consent?.opted_in_at ? String(consent.opted_in_at) : null,
-        optedOutAt: consent?.opted_out_at ? String(consent.opted_out_at) : null,
-      })
-    ) {
+    // "none" is a caller who did not ask for a text. Otherwise sendSms decides,
+    // from the consent recorded above or earlier.
+    if (consentMode === "none" || !consentSaved) {
       note({
         channel: "sms",
         to: input.phone,
         audience: "customer",
         ok: false,
         detail: consentSaved
-          ? "Customer transactional SMS consent is not active."
+          ? "The customer did not ask for a text."
           : "The customer agreed to texts on the call, but that could not be saved, so no text was sent.",
       });
     } else {
       const body = customerConfirmationSms(customerFacts, messageState);
-      const result = await sendSms({ to: input.phone, body, messagingServiceSid });
+      const result = await sendSms({
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        to: input.phone,
+        body,
+        messagingServiceSid,
+      });
       note({
         channel: "sms",
         to: input.phone,
@@ -330,7 +320,7 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
         ref: result.ok ? result.providerMessageId : undefined,
         detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
       });
-      await recordOutbound({
+      if (result.ok || result.errorCode !== STOPPED_ERROR) await recordOutbound({
         database,
         organizationId: input.organizationId,
         customerId: input.customerId,
@@ -356,7 +346,8 @@ export async function sendBookingConfirmations(input: BookingNotification): Prom
   // reports it as blocking.
   const ownerPhone = input.owner?.phone ?? "";
   if (messagingServiceSid && ownerPhone) {
-    const sent = await sendSms({
+    const sent = await sendOwnerSms({
+      organizationId: input.organizationId,
       to: ownerPhone,
       body: ownerBookingSms(facts, messageState),
       messagingServiceSid,
@@ -557,7 +548,8 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
    */
   const ownerPhone = input.owner?.phone ?? "";
   if (messagingServiceSid && ownerPhone) {
-    const sent = await sendSms({
+    const sent = await sendOwnerSms({
+      organizationId: input.organizationId,
       to: ownerPhone,
       body: ownerCallbackSms(facts),
       messagingServiceSid,
@@ -638,9 +630,10 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
         : null,
     );
 
-    let consentOnFile = !step.record;
-    if (step.mayText && step.record) {
-      const { error } = await database.from("messaging_consent").upsert(
+    // Recorded only where nothing is on file; a STOP stands. Whether the text
+    // may go is then sendSms's call, like every other text.
+    if (step.record) {
+      await database.from("messaging_consent").upsert(
         {
           organization_id: input.organizationId,
           customer_id: input.customerId,
@@ -651,32 +644,27 @@ export async function sendCallbackAlert(input: CallbackNotification): Promise<vo
           source: "verbal",
           proof_text: "Caller gave this number on a phone call and asked to be called back.",
         },
-        { onConflict: "customer_id,channel,scope" },
+        { onConflict: "customer_id,channel,scope", ignoreDuplicates: true },
       );
-      consentOnFile = !error;
     }
 
-    if (!step.mayText) {
-      note({ channel: "sms", to: input.phone, audience: "customer", ok: false, detail: step.reason });
-    } else if (!consentOnFile) {
-      note({
-        channel: "sms",
-        to: input.phone,
-        audience: "customer",
-        ok: false,
-        detail: "Not texted: their consent could not be recorded.",
-      });
-    } else {
-      const body = customerCallbackSms(facts);
-      const result = await sendSms({ to: input.phone, body, messagingServiceSid });
-      note({
-        channel: "sms",
-        to: input.phone,
-        audience: "customer",
-        ok: result.ok,
-        ref: result.ok ? result.providerMessageId : undefined,
-        detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
-      });
+    const body = customerCallbackSms(facts);
+    const result = await sendSms({
+      organizationId: input.organizationId,
+      customerId: input.customerId,
+      to: input.phone,
+      body,
+      messagingServiceSid,
+    });
+    note({
+      channel: "sms",
+      to: input.phone,
+      audience: "customer",
+      ok: result.ok,
+      ref: result.ok ? result.providerMessageId : undefined,
+      detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
+    });
+    if (result.ok || result.errorCode !== STOPPED_ERROR) {
       await recordOutbound({
         database,
         organizationId: input.organizationId,
@@ -722,6 +710,7 @@ export type WebsiteRequestNotification = {
 export async function sendWebsiteRequestAlert(input: WebsiteRequestNotification): Promise<void> {
   await sendOwnerRequestAlert({
     requestId: input.requestId,
+    organizationId: input.organizationId,
     businessName: input.businessName,
     owner: input.owner,
     messagingServiceSid: input.messagingServiceSid,
@@ -737,6 +726,7 @@ export async function sendWebsiteRequestAlert(input: WebsiteRequestNotification)
  */
 export async function sendCallbackOutcomeAlert(input: {
   requestId: string;
+  organizationId: string;
   businessName: string;
   owner?: { email: string; phone: string };
   messagingServiceSid: string;
@@ -744,6 +734,7 @@ export async function sendCallbackOutcomeAlert(input: {
 }): Promise<void> {
   await sendOwnerRequestAlert({
     requestId: input.requestId,
+    organizationId: input.organizationId,
     businessName: input.businessName,
     owner: input.owner,
     messagingServiceSid: input.messagingServiceSid,
@@ -755,6 +746,7 @@ export async function sendCallbackOutcomeAlert(input: {
 /** One owner alert about a request, by text and email, written down on the request. */
 async function sendOwnerRequestAlert(input: {
   requestId: string;
+  organizationId: string;
   businessName: string;
   owner?: { email: string; phone: string };
   messagingServiceSid: string;
@@ -768,7 +760,8 @@ async function sendOwnerRequestAlert(input: {
 
   const ownerPhone = input.owner?.phone ?? "";
   if (input.messagingServiceSid && ownerPhone) {
-    const sent = await sendSms({
+    const sent = await sendOwnerSms({
+      organizationId: input.organizationId,
       to: ownerPhone,
       body: input.sms,
       messagingServiceSid: input.messagingServiceSid,
@@ -895,7 +888,7 @@ export async function resendBookingLink(input: {
   const state: BookingMessageState = held ? "held" : "confirmed";
   const sent: ResendResult["sent"] = [];
 
-  // Texted only on consent already recorded; a resend is never an opt-in.
+  // A customer who replied STOP is refused by sendSms; a resend never records an opt-in.
   if (input.channel === "text" || input.channel === "both") {
     const phone = notification.phone;
     const { data: settings } = await database
@@ -904,34 +897,28 @@ export async function resendBookingLink(input: {
       .eq("organization_id", input.organizationId)
       .maybeSingle();
     const messagingServiceSid = String(settings?.messaging_service_sid ?? "");
-    const { data: consent } = await database
-      .from("messaging_consent")
-      .select("opted_in_at, opted_out_at")
-      .eq("organization_id", input.organizationId)
-      .eq("customer_id", input.customerId)
-      .eq("channel", "sms")
-      .eq("scope", "transactional")
-      .maybeSingle();
-    const consented = consentIsActive({
-      optedInAt: consent?.opted_in_at ? String(consent.opted_in_at) : null,
-      optedOutAt: consent?.opted_out_at ? String(consent.opted_out_at) : null,
-    });
     if (!phone) {
       sent.push({ channel: "sms", to: "", ok: false, detail: "No phone number on the booking." });
     } else if (!messagingServiceSid) {
       sent.push({ channel: "sms", to: phone, ok: false, detail: "Texting is not set up for this business." });
-    } else if (!consented) {
-      sent.push({ channel: "sms", to: phone, ok: false, detail: "The customer has not agreed to texts, or opted out." });
     } else {
       const body = customerConfirmationSms(customerFacts, state);
-      const result = await sendSms({ to: phone, body, messagingServiceSid });
+      const result = await sendSms({
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        to: phone,
+        body,
+        messagingServiceSid,
+      });
       sent.push({
         channel: "sms",
         to: phone,
         ok: result.ok,
         detail: result.ok ? result.status : `${result.errorCode}: ${result.errorDetail}`,
       });
-      await recordOutbound({ database, organizationId: input.organizationId, customerId: input.customerId, body, result });
+      if (result.ok || result.errorCode !== STOPPED_ERROR) {
+        await recordOutbound({ database, organizationId: input.organizationId, customerId: input.customerId, body, result });
+      }
     }
   }
 
