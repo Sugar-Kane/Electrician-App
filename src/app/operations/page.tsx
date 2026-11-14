@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ArrowUpRight, CheckCircle2, Clock3, LockKeyhole, ShieldCheck, TriangleAlert } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
+import { OperationsApprovalControls } from "@/components/operations-approval-controls";
 import { canViewAiOperations } from "@/lib/ai-operations-policy";
 import { loadNeedsAction } from "@/lib/needs-action";
 import { currentContext } from "@/lib/request-context";
@@ -22,6 +23,8 @@ type ApprovalRow = {
   created_at: string;
   expires_at: string | null;
   pre_authorized: boolean;
+  content_hash: string;
+  target: unknown;
 };
 
 type ToolActivity = {
@@ -60,7 +63,7 @@ export default async function AiOperationsPage() {
       .limit(25),
     database
       .from("task_proposals")
-      .select("id,action_type,status,reason,content,created_at,expires_at,pre_authorized")
+      .select("id,action_type,status,reason,content,content_hash,target,created_at,expires_at,pre_authorized")
       .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false })
       .limit(50),
@@ -112,9 +115,14 @@ export default async function AiOperationsPage() {
                   <span className="text-xs text-ink-faint">{activityTime(proposal.created_at, context.timeZone)}</span>
                 </div>
                 {proposal.reason ? <p className="mt-2 text-sm text-ink-muted">{proposal.reason}</p> : null}
+                {proposal.target && typeof proposal.target === "object" ? (
+                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-control border border-line p-3 text-xs">
+                    {JSON.stringify(proposal.target, null, 2)}
+                  </pre>
+                ) : null}
                 {proposal.content ? <p className="mt-2 whitespace-pre-wrap break-words text-sm">{proposal.content}</p> : null}
                 {proposal.expires_at ? <p className="mt-2 text-xs text-ink-faint">Expires {activityTime(proposal.expires_at, context.timeZone)}</p> : null}
-                <p className="mt-3 text-xs text-caution">Awaiting secure approval controls. No action has been sent.</p>
+                <OperationsApprovalControls id={proposal.id} contentHash={proposal.content_hash} enabled={process.env.VOLTEIRA_PHASE2_APPROVALS_ENABLED === "true"} />
               </li>
             ))}
           </ul>
