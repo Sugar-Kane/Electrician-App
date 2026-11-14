@@ -235,7 +235,10 @@ export function jobFlow(input: StageInput): FlowStage {
   // picked up. Labor only has nothing to buy, so listed is the whole step.
   const listed = input.materialListCount > 0 || input.lineCount > 0;
   const nothingToBuy = input.lineCount > 0 && input.partCount === 0;
-  const pickedUp = input.materialsReady || nothingToBuy;
+  // Once the visit is under way or the work is finished, the parts were in
+  // hand whether or not anyone tapped "picked up": the step is done.
+  const workBegun = UNDER_WAY.has(input.workflowState) || input.workflowState === "completed";
+  const pickedUp = input.materialsReady || nothingToBuy || workBegun;
   const bought = Boolean(input.materialsBought) || pickedUp;
   const materialsShare = listed && pickedUp ? 1 : listed && bought ? 2 / 3 : listed ? 1 / 3 : 0;
   const partly = (step: StageStep, share: number): StageStep => ({
