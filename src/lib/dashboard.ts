@@ -272,7 +272,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     const dayStart = new Date(zonedWallClockToIso(`${today}T00:00`, zone));
     const dayEnd = new Date(zonedWallClockToIso(`${shiftDays(today, 1)}T00:00`, zone));
 
-    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business, refunds, bookingPayments] =
+    const [jobs, invoices, estimates, technicians, inventory, activity, profile, business, refunds, bookingPayments, bookingRefunds] =
       await Promise.all([
         supabase
           .from("jobs")
@@ -337,6 +337,13 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           .eq("status", "succeeded")
           .not("booking_request_id", "is", null)
           .gte("paid_at", new Date(dayStart.getTime() - 63 * 86_400_000).toISOString()),
+        // Refunds of those fees, given in Stripe and reported by its webhook.
+        asFlexibleClient(supabase)
+          .from("booking_payment_refunds")
+          .select("amount_cents,settled_at")
+          .eq("organization_id", organizationId)
+          .eq("status", "succeeded")
+          .gte("settled_at", new Date(dayStart.getTime() - 63 * 86_400_000).toISOString()),
       ]);
     const bookingPaymentRows = (
       (bookingPayments.data ?? []) as { amount_cents: number | null; paid_at: string | null }[]
@@ -348,9 +355,16 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
           return at >= from.getTime() && at < to.getTime();
         })
         .reduce((total, row) => total + Number(row.amount_cents ?? 0), 0);
-    const refundRows = ((refunds.data ?? []) as { amount_cents: number | null; settled_at: string | null }[]).filter(
-      (row) => row.settled_at,
-    );
+    // Money given back comes off the day it went back, from an invoice or a
+    // diagnostic fee alike. A database without the booking refunds table yet
+    // has none to take off.
+    const refundRows = [
+      ...((refunds.data ?? []) as { amount_cents: number | null; settled_at: string | null }[]),
+      ...((bookingRefunds.error ? [] : (bookingRefunds.data ?? [])) as {
+        amount_cents: number | null;
+        settled_at: string | null;
+      }[]),
+    ].filter((row) => row.settled_at);
     const refundedBetween = (from: Date, to: Date) =>
       refundRows
         .filter((row) => {

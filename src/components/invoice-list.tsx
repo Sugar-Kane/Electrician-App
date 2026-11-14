@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, CircleDollarSign, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, CircleDollarSign, Undo2, X } from "lucide-react";
 
 import { onTabListKeyDown } from "@/components/ui/keyboard";
 import { InvoiceRow } from "@/components/invoice-row";
@@ -13,7 +13,7 @@ import {
   type InvoiceFilter,
   type PaidPeriod,
 } from "@/lib/dashboard-metrics";
-import type { DiagnosticPayment } from "@/lib/job-data";
+import type { DiagnosticPayment, ListedRefund } from "@/lib/job-data";
 import type { PilotInvoice } from "@/lib/pilot-data";
 
 /**
@@ -42,6 +42,7 @@ const FILTERS: { label: string; value: InvoiceFilter }[] = [
   { label: "Awaiting", value: "awaiting" },
   { label: "Overdue", value: "overdue" },
   { label: "Paid", value: "paid" },
+  { label: "Refunded", value: "refunded" },
 ];
 
 const PERIOD_LABELS: Record<PaidPeriod, string> = {
@@ -54,6 +55,7 @@ const cents = (dollars: number | undefined) => Math.round((dollars ?? 0) * 100);
 export function InvoiceList({
   invoices,
   diagnosticPayments = [],
+  refunds = [],
   initialStatus,
   paidPeriod = null,
   today = "",
@@ -65,6 +67,12 @@ export function InvoiceList({
    * All, and counted in that total, the same as Today's "Paid today".
    */
   diagnosticPayments?: DiagnosticPayment[];
+  /**
+   * Money given back, from invoices and diagnostic fees. All of it is under
+   * Refunded; on Paid and All, what went through is listed on the day it went
+   * back and taken off the total, the same as Today's figure does.
+   */
+  refunds?: ListedRefund[];
   initialStatus: string;
   /** Narrows Paid to what was paid today or this month, from `?paid=`. */
   paidPeriod?: PaidPeriod | null;
@@ -97,6 +105,17 @@ export function InvoiceList({
         : [],
     [diagnosticPayments, status, period, today],
   );
+  const visibleRefunds = useMemo(() => {
+    if (status === "refunded") return refunds;
+    if (status !== "all" && status !== "paid") return [];
+    return refunds.filter(
+      (refund) => refund.settled && (status !== "paid" || !period || paidInPeriod(refund.refundedOn, period, today)),
+    );
+  }, [refunds, status, period, today]);
+  // Only money that has gone back counts; one still on its way is listed.
+  const refundedTotal = visibleRefunds
+    .filter((refund) => refund.settled)
+    .reduce((sum, refund) => sum + refund.amount, 0);
   // On All, drafts are part of what is listed but not of what is owed, so
   // the total says how much of it has not been sent.
   const draftTotal =
@@ -108,7 +127,9 @@ export function InvoiceList({
   // "owed" says; the others add up the invoice totals.
   const owing = status === "awaiting" || status === "overdue";
   const total =
-    listedTotalCents(
+    status === "refunded"
+      ? refundedTotal
+      : listedTotalCents(
       visible.map((invoice) => ({
         state: invoice.state,
         totalCents: cents(invoice.amount),
@@ -117,14 +138,15 @@ export function InvoiceList({
       status,
     ) /
       100 +
-    visiblePayments.reduce((sum, payment) => sum + payment.amount, 0);
+        visiblePayments.reduce((sum, payment) => sum + payment.amount, 0) -
+        refundedTotal;
 
   return (
     <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
       <div
-        // Two rows on a narrow phone rather than five squeezed tabs that
+        // Two rows of three on a phone rather than six squeezed tabs that
         // break "Awaiting" in half.
-        className="grid grid-cols-3 gap-1 min-[440px]:grid-cols-5"
+        className="grid grid-cols-3 gap-1 min-[560px]:grid-cols-6"
         role="tablist"
         aria-label="Filter invoices by status"
         onKeyDown={onTabListKeyDown}
@@ -166,7 +188,7 @@ export function InvoiceList({
 
       <div className="mt-5 flex items-end justify-between rounded-control bg-white/[0.035] p-4">
         <div>
-          <p className="text-xs text-ink-muted">{owing ? "Still owed" : "Visible total"}</p>
+          <p className="text-xs text-ink-muted">{owing ? "Still owed" : status === "refunded" ? "Refunded" : "Visible total"}</p>
           <p className="mt-1 text-3xl font-semibold">
             ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </p>
@@ -212,14 +234,54 @@ export function InvoiceList({
               <span className="mt-1 inline-block rounded-full bg-positive-bg px-2 py-0.5 text-[10px] font-semibold text-positive">
                 Paid
               </span>
+              {payment.refunded > 0 ? (
+                <span className="ml-1 mt-1 inline-block rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+                  {payment.refunded >= payment.amount
+                    ? "Refunded"
+                    : `$${payment.refunded.toLocaleString("en-US", { minimumFractionDigits: 2 })} refunded`}
+                </span>
+              ) : null}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
           </Link>
         ))}
 
-        {visible.length === 0 && visiblePayments.length === 0 ? (
+        {visibleRefunds.map((refund) => (
+          <Link
+            key={refund.id}
+            href={refund.href}
+            className="tap-row flex min-h-[52px] items-center gap-3 rounded-control border border-line px-4 py-3 active:bg-white/5"
+          >
+            <span className="hidden h-11 w-11 shrink-0 place-items-center rounded-control bg-white/5 min-[360px]:grid">
+              <Undo2 className="h-5 w-5 text-ink-muted" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-sm font-semibold">{refund.customer}</span>
+                <span className="shrink-0 text-sm font-semibold">
+                  −${refund.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              </span>
+              <span className="mt-0.5 block break-words text-xs leading-5 text-ink-muted">
+                {refund.what} · {refund.settled ? refund.refundedLabel : `started ${refund.refundedLabel}`}
+              </span>
+              <span
+                className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  refund.settled ? "bg-white/[0.08] text-ink-muted" : "bg-info-bg text-info"
+                }`}
+              >
+                {refund.settled ? "Refunded" : "Refund on its way"}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+          </Link>
+        ))}
+
+        {visible.length === 0 && visiblePayments.length === 0 && visibleRefunds.length === 0 ? (
           <p className="rounded-control border border-dashed border-line p-8 text-center text-sm text-ink-muted">
-            {invoices.length === 0 && diagnosticPayments.length === 0
+            {status === "refunded"
+              ? "No refunds yet."
+              : invoices.length === 0 && diagnosticPayments.length === 0
               ? "No invoices yet. They appear here once a job is invoiced."
               : period && status === "paid"
                 ? `Nothing ${PERIOD_LABELS[period].toLowerCase()}.`

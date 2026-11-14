@@ -12,6 +12,7 @@ const TITLES: Record<string, string> = {
   awaiting: "Awaiting payment",
   unpaid: "Awaiting payment",
   overdue: "Overdue invoices",
+  refunded: "Refunds",
 };
 
 const PERIOD_TITLES: Record<PaidPeriod, string> = {
@@ -37,7 +38,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ status?: string; paid?: string }>;
 }) {
-  const [{ status = "all", paid = "" }, { invoices }, diagnosticPayments, context] = await Promise.all([
+  const [{ status = "all", paid = "" }, { invoices }, diagnostic, context] = await Promise.all([
     searchParams,
     getInvoices(),
     getDiagnosticPayments(),
@@ -55,7 +56,8 @@ export default async function InvoicesPage({
     >
       <InvoiceList
         invoices={invoices}
-        diagnosticPayments={diagnosticPayments}
+        diagnosticPayments={diagnostic.payments}
+        refunds={diagnostic.refunds}
         initialStatus={status}
         paidPeriod={period}
         today={today}
