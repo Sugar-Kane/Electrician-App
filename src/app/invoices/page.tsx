@@ -2,7 +2,7 @@ import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceList } from "@/components/invoice-list";
 import { todayInZone } from "@/lib/calendar";
 import type { PaidPeriod } from "@/lib/dashboard-metrics";
-import { getInvoices } from "@/lib/job-data";
+import { getDiagnosticPayments, getInvoices } from "@/lib/job-data";
 import { currentContext } from "@/lib/request-context";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
@@ -37,9 +37,10 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ status?: string; paid?: string }>;
 }) {
-  const [{ status = "all", paid = "" }, { invoices }, context] = await Promise.all([
+  const [{ status = "all", paid = "" }, { invoices }, diagnosticPayments, context] = await Promise.all([
     searchParams,
     getInvoices(),
+    getDiagnosticPayments(),
     currentContext(),
   ]);
   const period: PaidPeriod | null = paid === "today" || paid === "month" ? paid : null;
@@ -52,7 +53,13 @@ export default async function InvoicesPage({
       eyebrow="Revenue and collections"
       description="Tap an invoice to open its related job and customer context."
     >
-      <InvoiceList invoices={invoices} initialStatus={status} paidPeriod={period} today={today} />
+      <InvoiceList
+        invoices={invoices}
+        diagnosticPayments={diagnosticPayments}
+        initialStatus={status}
+        paidPeriod={period}
+        today={today}
+      />
     </FieldPageShell>
   );
 }
