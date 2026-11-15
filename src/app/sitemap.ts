@@ -24,7 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!origin) return [];
 
   const organizations = await listJournalOrganizations();
-  const entries: MetadataRoute.Sitemap = [];
+  // The release notes are public and meant to be found.
+  const entries: MetadataRoute.Sitemap = [{ url: `${origin}/changelog`, changeFrequency: "weekly" }];
 
   for (const organization of organizations) {
     // Canonical elsewhere. Listing it here asks a crawler to index a URL whose

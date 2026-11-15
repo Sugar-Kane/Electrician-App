@@ -1,3 +1,5 @@
+import { CURRENT_VERSION } from "./releases.ts";
+
 /**
  * The one description of where you can go.
  *
@@ -188,6 +190,12 @@ export const ACCOUNT_MENU_ITEMS: NavItem[] = [
     href: "/account",
     icon: "UserRound",
     description: "Profile, password, plan",
+  },
+  {
+    label: "What's new",
+    href: "/changelog",
+    icon: "Sparkles",
+    description: `Volteira v${CURRENT_VERSION}: latest updates`,
   },
 ];
 

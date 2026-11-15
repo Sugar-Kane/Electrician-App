@@ -9,6 +9,7 @@ import { CUSTOMER_MCP_TOOLS, isCustomerTool, runCustomerTool } from "@/lib/mcp-c
 import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type HistoryDatabase } from "@/lib/mcp-text-history";
 import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
 import { isSupervisedTool, runSupervisedTool, SUPERVISED_MCP_TOOLS, supervisedMcpEnabled } from "@/lib/mcp-supervised-tools";
+import { isReleaseTool, RELEASE_MCP_TOOLS, runReleaseTool } from "@/lib/mcp-release-tools";
 import { organizationTimeZone } from "@/lib/job-billing-server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { logMcpCall } from "@/lib/mcp-log";
@@ -121,7 +122,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   // Phase 2 supervised actions: offered only where VOLTEIRA_PHASE2_MCP_ENABLED is on.
   const supervised = business && supervisedMcpEnabled();
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...RELEASE_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -132,7 +133,9 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     tools,
     callTool: async (name, args) => {
       const toolStartedAt = Date.now();
-      const result = supervised && isSupervisedTool(name)
+      const result = business && isReleaseTool(name)
+        ? runReleaseTool(name, args, process.env.NEXT_PUBLIC_APP_URL ?? "")
+        : supervised && isSupervisedTool(name)
         ? await runSupervisedTool({
             database: asFlexibleClient(database),
             organizationId: session.organizationId,

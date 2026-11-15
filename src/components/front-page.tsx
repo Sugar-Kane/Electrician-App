@@ -390,6 +390,9 @@ export function FrontPage({ videos, preview = false }: { videos: Promise<SiteVid
             <Link href="/demo" className="inline-flex min-h-11 items-center text-ink-muted transition hover:text-ink">
               Demo
             </Link>
+            <Link href="/changelog" className="inline-flex min-h-11 items-center text-ink-muted transition hover:text-ink">
+              What&rsquo;s new
+            </Link>
             <Link href="/login" className="inline-flex min-h-11 items-center text-ink-muted transition hover:text-ink">
               Sign in
             </Link>
