@@ -39,6 +39,8 @@ const PUBLIC_PAGES = new Set([
   "/",
   "/welcome",
   "/demo",
+  // Release notes, like any product's changelog.
+  "/changelog",
   "/login",
   "/signup",
   // Asking for a reset link, and using it. The reset page checks for itself
