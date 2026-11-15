@@ -78,13 +78,13 @@ export function SupervisedProposalCard({
     ["Created", activityTime(proposal.createdAt, timeZone)],
     ["Expires", proposal.expiresAt ? activityTime(proposal.expiresAt, timeZone) : "—"],
   ];
-  const summary = [
-    proposal.actionType.replaceAll("_", " "),
-    proposal.recipient ? `to ${proposal.recipient}` : "",
-    proposal.amountCents !== null ? money(proposal.amountCents) : "",
-    "",
-    proposal.content,
-  ].join("\n");
+  const summary = {
+    action: proposal.actionType.replaceAll("_", " "),
+    recipient: proposal.recipient,
+    amount: proposal.amountCents !== null ? money(proposal.amountCents) : "",
+    customer: proposal.customerName,
+    content: proposal.content,
+  };
 
   return (
     <li className="rounded-control border border-line p-4">
