@@ -172,7 +172,7 @@ export function OperationsApprovalControls({ id, contentHash, enabled, mode, rec
             aria-modal="true"
             aria-labelledby={`confirm-${id}-title`}
             aria-describedby={`confirm-${id}-detail`}
-            className="w-full max-w-md rounded-panel border border-line bg-surface p-5 shadow-2xl"
+            className="max-h-[calc(100dvh-2rem-env(safe-area-inset-bottom))] w-full max-w-md overflow-y-auto overscroll-contain rounded-panel border border-line bg-surface p-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
