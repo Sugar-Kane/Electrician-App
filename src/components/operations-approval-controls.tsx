@@ -4,6 +4,8 @@ import { CheckCircle2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useFocusTrap } from "@/components/ui/keyboard";
+
 /**
  * Approve or reject one proposal, or settle one by hand. The fingerprint sent
  * is the one this card shows, so an approval can only be of what the person
@@ -41,10 +43,15 @@ export function OperationsApprovalControls({ id, contentHash, enabled, mode, rec
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const confirmButton = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+
+  // Keyboard focus stays inside the open dialog and returns to the button
+  // that opened it, as the browser's own confirm box did.
+  useFocusTrap({ active: Boolean(pending), container: dialog, initial: confirmButton, returnTo: opener });
 
   useEffect(() => {
     if (!pending) return;
-    confirmButton.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !busy) setPending(null);
     };
@@ -98,6 +105,7 @@ export function OperationsApprovalControls({ id, contentHash, enabled, mode, rec
         {mode === "decide" ? (
           <>
             <button
+              ref={opener}
               type="button"
               disabled={busy}
               onClick={() =>
@@ -121,6 +129,7 @@ export function OperationsApprovalControls({ id, contentHash, enabled, mode, rec
         ) : (
           <>
             <button
+              ref={opener}
               type="button"
               disabled={busy}
               onClick={() =>
@@ -158,6 +167,7 @@ export function OperationsApprovalControls({ id, contentHash, enabled, mode, rec
           onClick={() => (busy ? null : setPending(null))}
         >
           <div
+            ref={dialog}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby={`confirm-${id}-title`}
