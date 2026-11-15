@@ -13,13 +13,16 @@ export async function markReleaseSeen(): Promise<void> {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) return;
-  if (data.user.user_metadata?.last_seen_release === CURRENT_VERSION) return;
-  const { error } = await supabase.auth.updateUser({
-    data: { ...data.user.user_metadata, last_seen_release: CURRENT_VERSION },
-  });
-  if (error) {
-    console.error("could not record release seen", { message: error.message });
-    return;
+  // Already acknowledged (on another device, say): nothing to write, but this
+  // session's token may still carry the old value, so refresh it either way.
+  if (data.user.user_metadata?.last_seen_release !== CURRENT_VERSION) {
+    const { error } = await supabase.auth.updateUser({
+      data: { ...data.user.user_metadata, last_seen_release: CURRENT_VERSION },
+    });
+    if (error) {
+      console.error("could not record release seen", { message: error.message });
+      return;
+    }
   }
   // So the next page reads the new value from a fresh token, not the old one.
   await supabase.auth.refreshSession();

@@ -26,8 +26,9 @@ export function WhatsNewDialog({ version, title, highlights, fixes, moreHref }: 
   const okay = useRef<HTMLButtonElement>(null);
 
   // Not over the public pages a business shares with customers (booking,
-  // contracts, invoices) or the changelog itself.
-  const shown = open && !isPublicPath(pathname) && pathname !== "/changelog";
+  // contracts, invoices) or the changelog itself. "/" is public only for
+  // visitors; signed in (the only time this renders) it is the dashboard.
+  const shown = open && (pathname === "/" || !isPublicPath(pathname)) && pathname !== "/changelog";
   useFocusTrap({ active: shown, container: dialog, initial: okay });
 
   if (!shown) return null;
