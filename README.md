@@ -108,3 +108,5 @@ The customer booking page is available at `/book/[organization-slug]`. Public vi
 Open `/files` to preview the standard folder system and check cloud connection readiness. Supabase remains the private source of truth; Google Drive mirrors only the folders and files created by the app or explicitly shared with it.
 
 The Drive activation checklist and OAuth callback URLs are documented in `docs/document-storage-and-sync.md`.
+
+Optional: how to use Claude Code's experimental Code Mode on this repo is in `docs/code-mode.md`.
