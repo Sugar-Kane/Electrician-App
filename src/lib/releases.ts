@@ -9,6 +9,9 @@
  *
  * To post an update: add a release at the top (or add to the newest one
  * before it ships), bump `version` in package.json to match, and merge.
+ * Signed-in people see a one-time pop-up for the newest release
+ * (whats-new-gate.tsx): its first three new or improved changes, each with
+ * its `brief`, and a count of fixes. Put the most important changes first.
  * Versions are major.minor.patch: minor for new features, patch for fixes.
  *
  * Import-free, so the page, the menu and the ChatGPT tool can all read it.
@@ -19,6 +22,8 @@ export type ChangeKind = "new" | "improved" | "fixed";
 export type Change = {
   kind: ChangeKind;
   title: string;
+  /** One short line for the sign-in pop-up. Without it, the pop-up shows the title alone. */
+  brief?: string;
   detail: string;
 };
 
@@ -42,24 +47,28 @@ export const RELEASES: Release[] = [
       {
         kind: "new",
         title: "AI approval inbox",
+        brief: "Review and approve what the AI suggests, word for word.",
         detail:
           "AI operations shows every AI proposal with its exact wording, recipient, amount and history. Approve or reject it there; done, failed and rejected items have their own tabs.",
       },
       {
         kind: "new",
         title: "Decide from ChatGPT",
+        brief: "Approve or reject proposals right in ChatGPT.",
         detail:
           "ChatGPT can propose actions and list, review, approve or reject proposals (propose_action, list_proposals, get_proposal, approve_proposal, reject_proposal). Contracts, estimates, purchases, refunds, price changes and cancellations are approved in Volteira only.",
       },
       {
         kind: "new",
         title: "Automatic follow-ups",
+        brief: "Leads, signed contracts and unbilled jobs get follow-ups on their own.",
         detail:
           "New website requests, signed contracts and finished jobs with no invoice add a follow-up to the job or customer. Overdue invoices and low stock put a proposal in the inbox.",
       },
       {
         kind: "new",
         title: "Approved customer texts go out on their own",
+        brief: "Texts you approve are sent and tracked automatically.",
         detail:
           "Once approved, a text is sent within seconds, checked first for the customer's texting consent, an unchanged number and quiet hours. Delivery shows in Messages.",
       },
@@ -90,6 +99,7 @@ export const RELEASES: Release[] = [
       {
         kind: "fixed",
         title: "Paid bookings become confirmed jobs",
+        brief: "Online diagnostic payments land on the schedule.",
         detail: "A customer who pays the diagnostic fee online now gets a confirmed job on the schedule, a confirmation and a receipt.",
       },
       {
@@ -100,6 +110,7 @@ export const RELEASES: Release[] = [
       {
         kind: "new",
         title: "Refund diagnostic fees",
+        brief: "Refund from the job page; see refunds on Invoices.",
         detail: "Refund a diagnostic fee from the job page. Refunds appear in the pay tracker, and Invoices has a Refunded tab.",
       },
       {
@@ -110,6 +121,7 @@ export const RELEASES: Release[] = [
       {
         kind: "new",
         title: "Delivery status for contract and refund texts",
+        brief: "See whether contract and refund texts arrived.",
         detail: "Contract signing links, signed-contract thank-yous and refund notices are saved in Messages with delivered, undelivered or failed.",
       },
       {

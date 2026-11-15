@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import "./globals.css";
 
 import { ImpersonationBanner } from "@/components/impersonation-banner";
+import { WhatsNewGate } from "@/components/whats-new-gate";
 
 export const metadata: Metadata = {
   title: "Volteira | Electrical Business Operations",
@@ -68,6 +69,8 @@ export default async function RootLayout({
         </a>
         <ImpersonationBanner />
         {children}
+        {/* Once per release, for anyone signed in. */}
+        <WhatsNewGate />
       </body>
     </html>
   );
