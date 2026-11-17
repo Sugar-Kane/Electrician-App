@@ -6,6 +6,9 @@ import { documentFolderId } from "@/lib/document-folders";
 import { InvoiceDocument, invoiceFileName } from "@/lib/pdf/invoice-document";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
 import { formatCents } from "@/lib/job-lines";
+import { signedCents } from "@/lib/change-order-math";
+import { invoiceChangeOrders } from "@/lib/invoice-adjustments-server";
+import { discountFromRow, discountLabel } from "@/lib/invoice-math";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { invoiceLabel } from "@/lib/invoice-label";
 
@@ -68,7 +71,8 @@ export async function generateInvoicePdf(input: {
     .from("invoices")
     .select(
       `id, invoice_number, number_label, status, subtotal_cents, diagnostic_credit_cents, tax_cents,
-       total_cents, balance_due_cents, due_at, created_at,
+       total_cents, balance_due_cents, due_at, created_at, discount_type, discount_value, discount_cents,
+       revision_number, last_sent_at,
        jobs (
          id, job_number, scheduled_start, technician_notes, customer_description,
          customers ( first_name, last_name, company_name, phone, email, address_line_1, address_line_2, city, state, postal_code, business_address_line_1, business_address_line_2, business_city, business_state, business_postal_code, bill_to ),
@@ -90,7 +94,7 @@ export async function generateInvoicePdf(input: {
 
   const jobId = str(job?.id);
 
-  const [{ data: lineRows }, business, { data: organization }] = await Promise.all([
+  const [{ data: lineRows }, business, { data: organization }, changeOrders] = await Promise.all([
     // The lines this invoice billed, not every line on the job. A part added
     // after the invoice went out is on the invoice that billed it; listed here
     // too, this copy would print a different bill from the one the customer
@@ -107,6 +111,9 @@ export async function generateInvoicePdf(input: {
       .select("payment_terms")
       .eq("id", input.organizationId)
       .maybeSingle(),
+    // What each approved change order added, so the customer can see the
+    // original work and every change to it.
+    invoiceChangeOrders(input.database, input.organizationId, input.invoiceId),
   ]);
 
   const addressLines = [
@@ -134,6 +141,12 @@ export async function generateInvoicePdf(input: {
   const paidCents = Math.max(0, totalCents - balanceCents);
 
   const invoiceNumber = invoiceLabel(invoice);
+  const subtotalCents = num(invoice.subtotal_cents);
+  const discountCents = num(invoice.discount_cents);
+  const changeOrderCents = changeOrders.reduce((sum, entry) => sum + entry.amountCents, 0);
+  // Updated after the customer was first sent it: said on the document, so the
+  // copy in their hands and this one cannot be mistaken for each other.
+  const revised = num(invoice.revision_number) > 0 && Boolean(str(invoice.last_sent_at));
 
   return storeGeneratedPdf({
     database: input.database,
@@ -168,7 +181,11 @@ export async function generateInvoicePdf(input: {
         unit_price_cents: num(row.unit_price_cents),
       })),
       totals: {
-        subtotal_cents: num(invoice.subtotal_cents),
+        subtotal_cents: subtotalCents,
+        discount_cents: discountCents,
+        discount_type: str(invoice.discount_type) || null,
+        discount_value: invoice.discount_value ?? null,
+        change_orders: changeOrders,
         diagnostic_credit_cents: creditCents,
         tax_cents: taxCents,
         total_cents: totalCents,
@@ -185,6 +202,7 @@ export async function generateInvoicePdf(input: {
         issuedLabel: dateLabel(invoice.created_at, input.timeZone),
         dueLabel: dateLabel(invoice.due_at, input.timeZone) || "On receipt",
         statusLabel: STATUS_WORDS[str(invoice.status)] ?? "Awaiting payment",
+        revisedLabel: revised ? `Updated (revision ${num(invoice.revision_number)})` : "",
         customer: {
           name: customerName,
           addressLines: party.attention ? [`Attn: ${party.attention}`, ...party.addressLines] : party.addressLines,
@@ -199,7 +217,17 @@ export async function generateInvoicePdf(input: {
         },
         workSummary: str(job?.customer_description),
         totals: {
-          subtotalLabel: formatCents(num(invoice.subtotal_cents)),
+          subtotalLabel: formatCents(subtotalCents),
+          // Only when change orders added to this invoice: otherwise the work
+          // is the one line it always was.
+          originalWorkLabel: changeOrders.length > 0 ? formatCents(subtotalCents - changeOrderCents) : "",
+          changeOrders: changeOrders.map((entry) => ({
+            label: `Change order #${entry.number}`,
+            value: signedCents(entry.amountCents, formatCents),
+          })),
+          // Only when there is one. No "Discount $0.00", ever.
+          discountName: discountCents > 0 ? discountLabel(discountFromRow(invoice)) : "",
+          discountLabel: discountCents > 0 ? `-${formatCents(discountCents)}` : "",
           diagnosticCreditLabel: creditCents > 0 ? `-${formatCents(creditCents)}` : "",
           taxLabel: taxCents > 0 ? formatCents(taxCents) : "",
           totalLabel: formatCents(totalCents),

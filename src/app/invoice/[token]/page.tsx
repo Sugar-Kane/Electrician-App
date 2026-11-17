@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CheckCircle2, Clock, Download, Eye, FileText, Landmark, Phone, ReceiptText } from "lucide-react";
 
 import { invoiceForPayment, type InvoiceForPayment } from "@/lib/invoice-online-pay";
+import { discountFromRow, discountLabel } from "@/lib/invoice-math";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -44,6 +45,15 @@ type InvoiceByLink = {
   time_zone: string | null;
 };
 
+/** The discount and change orders on the invoice (get_invoice_adjustments_by_link). */
+type InvoiceAdjustments = {
+  discount_type: string | null;
+  discount_value: number | null;
+  discount_cents: number | null;
+  revision_number: number | null;
+  change_orders: { number: number; amount_cents: number }[] | null;
+};
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const money = (cents: number) =>
@@ -67,15 +77,19 @@ export default async function InvoiceByLinkPage({
   const query = await searchParams;
 
   let invoice: InvoiceByLink | null = null;
+  let adjustments: InvoiceAdjustments | null = null;
   if (UUID.test(token)) {
     const client = createPublicClient();
-    const [{ data }, { data: label }] = await Promise.all([
+    const [{ data }, { data: label }, { data: adjusted }] = await Promise.all([
       client.rpc("get_invoice_by_link", { p_token: token }),
       // The number after the job (INV-24); absent until that migration runs.
       client.rpc("get_invoice_label_by_link", { p_token: token }),
+      // The discount and change orders; absent until that migration runs.
+      client.rpc("get_invoice_adjustments_by_link", { p_token: token }),
     ]);
     invoice = Array.isArray(data) && data.length > 0 ? (data[0] as InvoiceByLink) : null;
     if (invoice && typeof label === "string" && label.trim()) invoice = { ...invoice, number_label: label.trim() };
+    adjustments = adjusted && typeof adjusted === "object" ? (adjusted as InvoiceAdjustments) : null;
   }
 
   if (!invoice) {
@@ -103,6 +117,16 @@ export default async function InvoiceByLinkPage({
 
   // Paying online: only a sent, unpaid bill, and only once the business has
   // its own Stripe account set up to take it.
+  const subtotal = invoice.subtotal_cents ?? total;
+  const changeOrders = Array.isArray(adjustments?.change_orders) ? adjustments.change_orders : [];
+  const changeOrderCents = changeOrders.reduce((sum, entry) => sum + (entry.amount_cents ?? 0), 0);
+  const discountCents = adjustments?.discount_cents ?? 0;
+  const discountName = discountLabel(
+    discountFromRow({ discount_type: adjustments?.discount_type, discount_value: adjustments?.discount_value }),
+  );
+  // Changed after it was first sent: the customer is told this is the current version.
+  const revised = (adjustments?.revision_number ?? 0) > 0 && Boolean(invoice.last_sent_at) && !preview;
+
   const online: InvoiceForPayment | null = !paid && !preview ? await invoiceForPayment(token) : null;
   const canPay = Boolean(online?.check.ok);
   const processingCents = online && !online.check.ok && online.check.reason === "processing" ? online.check.processingCents ?? 0 : 0;
@@ -132,6 +156,12 @@ export default async function InvoiceByLinkPage({
           {invoice.customer_name ? ` · for ${invoice.customer_name}` : ""}
         </p>
 
+        {revised ? (
+          <p className="mt-5 rounded-control border border-info/40 bg-info-bg/40 p-3 text-sm leading-6">
+            This invoice was updated after the work changed. It replaces any earlier copy you were sent.
+          </p>
+        ) : null}
+
         {preview ? (
           <p className="mt-5 rounded-control border border-info/40 bg-info-bg/40 p-3 text-sm leading-6">
             This is a preview, not a bill. Nothing is due yet: the final invoice will be sent when the work is complete.
@@ -146,13 +176,35 @@ export default async function InvoiceByLinkPage({
             electrician keeps the line items, and the customer sees the total. */}
         <div className="mt-5 flex items-start justify-between gap-3 border-y border-line py-3 text-sm">
           <span className="min-w-0">
-            <span className="block font-semibold">Electrical work</span>
+            <span className="block font-semibold">{changeOrders.length > 0 ? "Original work" : "Electrical work"}</span>
             <span className="text-xs text-ink-faint">Labor and materials</span>
           </span>
-          <span className="shrink-0 font-semibold">{money(invoice.subtotal_cents ?? total)}</span>
+          <span className="shrink-0 font-semibold">{money(subtotal - changeOrderCents)}</span>
         </div>
+        {/* Each change the customer approved, so the price can be followed from what was first agreed. */}
+        {changeOrders.map((entry) => (
+          <div key={entry.number} className="flex items-start justify-between gap-3 border-b border-line py-3 text-sm">
+            <span className="min-w-0 font-semibold">Change order #{entry.number}</span>
+            <span className="shrink-0 font-semibold">
+              {entry.amount_cents < 0 ? `−${money(-entry.amount_cents)}` : `+${money(entry.amount_cents)}`}
+            </span>
+          </div>
+        ))}
 
         <dl className="mt-4 space-y-1.5 text-sm">
+          {changeOrders.length > 0 || discountCents > 0 ? (
+            <div className="flex justify-between text-ink-muted">
+              <dt>Subtotal</dt>
+              <dd>{money(subtotal)}</dd>
+            </div>
+          ) : null}
+          {/* Only when there is one: no discount means no discount line at all. */}
+          {discountCents > 0 ? (
+            <div className="flex justify-between text-ink-muted">
+              <dt>{discountName}</dt>
+              <dd>−{money(discountCents)}</dd>
+            </div>
+          ) : null}
           {invoice.diagnostic_credit_cents ? (
             <div className="flex justify-between text-ink-muted">
               <dt>Diagnostic fee already paid</dt>

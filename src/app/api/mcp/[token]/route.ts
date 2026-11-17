@@ -10,6 +10,7 @@ import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type His
 import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
 import { isSupervisedTool, runSupervisedTool, SUPERVISED_MCP_TOOLS, supervisedMcpEnabled } from "@/lib/mcp-supervised-tools";
 import { isReleaseTool, RELEASE_MCP_TOOLS, runReleaseTool } from "@/lib/mcp-release-tools";
+import { CHANGE_ORDER_MCP_TOOLS, isChangeOrderTool, runChangeOrderTool } from "@/lib/mcp-change-order-tools";
 import { organizationTimeZone } from "@/lib/job-billing-server";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { logMcpCall } from "@/lib/mcp-log";
@@ -18,7 +19,7 @@ import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session"
 import { connectionHolderAllowed } from "@/lib/mcp-session-token";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.15.0";
+const SERVER_VERSION = "1.16.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -122,7 +123,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   // Phase 2 supervised actions: offered only where VOLTEIRA_PHASE2_MCP_ENABLED is on.
   const supervised = business && supervisedMcpEnabled();
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...RELEASE_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CHANGE_ORDER_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...RELEASE_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
   const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
   const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
@@ -149,6 +150,18 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         ? await runWorkdayMcpTool({ database, session, name, args })
         : business && businessNames.has(name)
         ? await runBusinessMcpTool({ database, session, name, args })
+        : business && isChangeOrderTool(name)
+        ? await runChangeOrderTool({
+            name,
+            args,
+            // Billing permission is the connected owner's own, checked again
+            // in the database for anything that moves money.
+            context: await (await import("@/lib/mcp-change-order-services")).changeOrderToolContext({
+              database: asFlexibleClient(database),
+              organizationId: session.organizationId,
+              actorUserId: await connectionUserId(database, session.organizationId, connectedBy),
+            }),
+          })
         : business && isCustomerTool(name)
         ? await runCustomerTool({ database: asFlexibleClient(database), organizationId: session.organizationId, name, args })
         : business && isPaidInvoiceTool(name)

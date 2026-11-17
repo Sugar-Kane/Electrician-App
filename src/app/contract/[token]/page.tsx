@@ -3,6 +3,9 @@ import { ArrowDown, CheckCircle2, FileSignature, FileX2, MessageSquare, PenLine,
 
 import { ContractPdfPages } from "@/app/contract/[token]/contract-pdf";
 import { ContractSigning } from "@/app/contract/[token]/contract-signing";
+import { ChangeOrderDecline } from "@/app/contract/[token]/change-order-decline";
+import { describeChange } from "@/lib/change-order-document";
+import { changeOrderSummary, signedCents, type ChangeOrderItem } from "@/lib/change-order-math";
 import { ContractPaper } from "@/components/contract-paper";
 import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
 import { unsignableBecause } from "@/lib/contract-signing";
@@ -242,6 +245,136 @@ function Summary({
   );
 }
 
+type PublicChangeOrder = {
+  number: number;
+  status: string;
+  description: string;
+  originalContractCents: number | null;
+  netCents: number;
+  items: ChangeOrderItem[];
+  rejectionReason: string;
+};
+
+/**
+ * The change order this document asks the customer to approve, read with the
+ * service role for exactly the contract the token resolved to.
+ */
+async function changeOrderFor(contract: PublicContract): Promise<PublicChangeOrder | null> {
+  try {
+    const { data } = await asFlexibleClient(getSupabaseAdmin())
+      .from("change_orders")
+      .select(
+        "number, status, description, original_contract_cents, net_cents, rejection_reason, change_order_items ( action, kind, description, quantity, unit, unit_price_cents, original_description, original_quantity, original_unit, original_unit_price_cents, created_at )",
+      )
+      .eq("organization_id", contract.organization_id)
+      .eq("document_contract_id", contract.contract_id)
+      .maybeSingle();
+    if (!data) return null;
+    const row = data as Record<string, unknown>;
+    const items = (Array.isArray(row.change_order_items) ? (row.change_order_items as Record<string, unknown>[]) : [])
+      .slice()
+      .sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
+      .map((item, index): ChangeOrderItem => ({
+        id: String(index),
+        action: item.action === "modify" || item.action === "remove" ? item.action : "add",
+        kind: item.kind === "labor" ? "labor" : "material",
+        description: String(item.description ?? ""),
+        quantity: Number(item.quantity ?? 0),
+        unit: String(item.unit ?? "each"),
+        unitPriceCents: item.unit_price_cents === null || item.unit_price_cents === undefined ? null : Number(item.unit_price_cents),
+        lineId: null,
+        original:
+          item.original_quantity === null || item.original_quantity === undefined
+            ? null
+            : {
+                description: String(item.original_description ?? ""),
+                quantity: Number(item.original_quantity),
+                unit: String(item.original_unit ?? "each"),
+                unitPriceCents: Number(item.original_unit_price_cents ?? 0),
+              },
+      }));
+    return {
+      number: Number(row.number ?? 0),
+      status: String(row.status ?? ""),
+      description: String(row.description ?? ""),
+      originalContractCents: typeof row.original_contract_cents === "number" ? row.original_contract_cents : null,
+      netCents: Number(row.net_cents ?? 0),
+      items,
+      rejectionReason: String(row.rejection_reason ?? ""),
+    };
+  } catch (error) {
+    console.error("contract page: could not load the change order", error);
+    return null;
+  }
+}
+
+/**
+ * What a change order asks, before its words: what is added, changed and taken
+ * out, and what that does to the price already agreed.
+ */
+function ChangeOrderSummaryCard({ order }: { order: PublicChangeOrder }) {
+  const summary = changeOrderSummary(order.items);
+  const groups: [string, ChangeOrderItem[]][] = [
+    ["Added", order.items.filter((item) => item.action === "add")],
+    ["Changed", order.items.filter((item) => item.action === "modify")],
+    ["Removed", order.items.filter((item) => item.action === "remove")],
+  ];
+  const money = (cents: number) => signedCents(cents, formatCents);
+  const rows: [string, number][] = [
+    ["Added materials", summary.addedMaterialsCents],
+    ["Added labor", summary.addedLaborCents],
+    ["Changed work", summary.modifiedCents],
+    ["Removed work", summary.removedCents],
+  ];
+  return (
+    <section aria-labelledby="summary-heading" className="mt-6 rounded-panel border border-line bg-[#081925] p-5 sm:p-6">
+      <h2 id="summary-heading" className="text-lg font-semibold">
+        Change order #{order.number}
+      </h2>
+      {order.description ? <p className="mt-2 whitespace-pre-line text-sm leading-6 text-ink">{order.description}</p> : null}
+      {groups
+        .filter(([, list]) => list.length > 0)
+        .map(([heading, list]) => (
+          <div key={heading} className="mt-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-faint">{heading}</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm leading-6">
+              {list.map((item) => (
+                <li key={item.id}>{describeChange(item)}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      <dl className="mt-4 space-y-1.5 border-t border-line pt-3 text-sm">
+        {order.originalContractCents !== null ? (
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-ink-muted">Contract amount before this change</dt>
+            <dd className="shrink-0 font-semibold">{formatCents(order.originalContractCents)}</dd>
+          </div>
+        ) : null}
+        {rows
+          .filter(([, cents]) => cents !== 0)
+          .map(([label, cents]) => (
+            <div key={label} className="flex items-baseline justify-between gap-3">
+              <dt className="text-ink-muted">{label}</dt>
+              <dd className="shrink-0">{money(cents)}</dd>
+            </div>
+          ))}
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="font-semibold">This change order</dt>
+          <dd className="shrink-0 font-semibold">{money(order.netCents)}</dd>
+        </div>
+        {order.originalContractCents !== null ? (
+          <div className="flex items-baseline justify-between gap-3 border-t border-line pt-2 text-base">
+            <dt className="font-semibold">Revised contract total</dt>
+            <dd className="shrink-0 font-bold text-brand">{formatCents(Math.max(0, order.originalContractCents + order.netCents))}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <p className="mt-3 text-xs text-ink-faint">Everything else you agreed stays the same. The full change order is below.</p>
+    </section>
+  );
+}
+
 /** The body as paragraphs, split where the template left a blank line. */
 function Body({ text }: { text: string }) {
   const paragraphs = text.split(/\n\s*\n/).filter((block) => block.trim());
@@ -284,10 +417,11 @@ export default async function ContractPage({ params }: { params: Promise<{ token
   }
 
   const timeZone = contract.time_zone || "America/Los_Angeles";
-  const [copy, document, terms] = await Promise.all([
+  const [copy, document, terms, changeOrder] = await Promise.all([
     contractCopy(contract, timeZone),
     contractDocument(contract, timeZone),
     contractTerms(contract),
+    changeOrderFor(contract),
   ]);
   const blocked = unsignableBecause({
     status: contract.status,
@@ -320,7 +454,16 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           ) : null}
         </header>
 
-        {signable ? (
+        {signable && changeOrder ? <ChangeOrderSummaryCard order={changeOrder} /> : null}
+
+        {changeOrder?.status === "rejected" ? (
+          <section role="status" className="mt-6 rounded-panel border border-line bg-[#081925] p-4 text-sm leading-6 text-ink-muted">
+            You declined this change order. Nothing changed on your job.
+            {changeOrder.rejectionReason ? ` You said: “${changeOrder.rejectionReason}”` : ""}
+          </section>
+        ) : null}
+
+        {signable && !changeOrder ? (
           <Summary
             summary={terms.summary}
             scope={terms.scope}
@@ -355,7 +498,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
               </p>
             </div>
           </section>
-        ) : blocked ? (
+        ) : blocked && changeOrder?.status !== "rejected" ? (
           <section role="status" className="mt-6 rounded-panel border border-caution/40 bg-caution-bg p-4 text-sm leading-6 text-caution">
             {blocked}
           </section>
@@ -389,6 +532,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
                 kind={copy?.document.kind}
               />
             </div>
+            {changeOrder && changeOrder.status === "pending_approval" ? <ChangeOrderDecline token={token} /> : null}
           </section>
         ) : null}
 

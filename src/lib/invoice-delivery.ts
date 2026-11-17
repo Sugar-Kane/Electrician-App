@@ -9,6 +9,8 @@ import {
   invoiceSms,
   paidInvoiceEmail,
   paidInvoiceSms,
+  revisedInvoiceEmail,
+  revisedInvoiceSms,
   invoiceViewUrl,
   type DeliveryAttempt,
   type DeliveryChannel,
@@ -44,7 +46,7 @@ export async function deliverInvoice(input: {
    * The bill, or a preview of it. A preview never makes the invoice sent: it
    * records only that the customer has seen what they will be billed.
    */
-  kind?: "invoice" | "preview" | "paid";
+  kind?: "invoice" | "preview" | "paid" | "revised";
   /**
    * Whose invoice it is, when the caller already knows. Found from the
    * invoice otherwise, so sendSms can check STOP whoever started it.
@@ -54,6 +56,8 @@ export async function deliverInvoice(input: {
   const preview = input.kind === "preview";
   // A paid invoice is the customer's record, never a bill: no pay link, and it never changes the invoice's status.
   const paidCopy = input.kind === "paid";
+  // An invoice the customer already holds, sent again because what they owe changed.
+  const revised = input.kind === "revised";
   const database = getSupabaseAdmin();
 
   // Read off the invoice itself, so the link and the customer for the STOP check do not depend
@@ -118,7 +122,7 @@ export async function deliverInvoice(input: {
         organizationId: input.organizationId,
         customerId: found.id,
         to: input.customerPhone,
-        body: paidCopy ? paidInvoiceSms(facts) : preview ? invoicePreviewSms(facts) : invoiceSms(facts),
+        body: paidCopy ? paidInvoiceSms(facts) : preview ? invoicePreviewSms(facts) : revised ? revisedInvoiceSms(facts) : invoiceSms(facts),
         messagingServiceSid,
       });
       note({
@@ -147,7 +151,13 @@ export async function deliverInvoice(input: {
       const pdf = preview ? null : await invoicePdf(input.organizationId, input.invoiceId).catch(() => null);
       const attachable = pdf && pdf.bytes.byteLength <= 10 * 1024 * 1024 ? pdf : null;
       const withPdf = { ...facts, pdfAttached: Boolean(attachable) };
-      const mail = paidCopy ? paidInvoiceEmail(withPdf) : preview ? invoicePreviewEmail(withPdf) : invoiceEmail(withPdf);
+      const mail = paidCopy
+        ? paidInvoiceEmail(withPdf)
+        : preview
+          ? invoicePreviewEmail(withPdf)
+          : revised
+            ? revisedInvoiceEmail(withPdf)
+            : invoiceEmail(withPdf);
       const sent = await sendEmail({
         organizationId: input.organizationId,
         contactButtons: true,
@@ -185,7 +195,9 @@ export async function deliverInvoice(input: {
     // the status at draft, so the job said Draft about a bill the customer
     // had in hand. Any later status (part paid, paid) is left as it is.
     const nowSent = !preview && succeeded && existing?.status === "draft";
-    const recorded = attempts.map((attempt) => (preview ? { ...attempt, kind: "preview" } : paidCopy ? { ...attempt, kind: "paid" } : attempt));
+    const recorded = attempts.map((attempt) =>
+      preview ? { ...attempt, kind: "preview" } : paidCopy ? { ...attempt, kind: "paid" } : revised ? { ...attempt, kind: "revised" } : attempt,
+    );
     await database
       .from("invoices")
       .update({

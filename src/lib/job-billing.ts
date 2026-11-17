@@ -179,10 +179,12 @@ export type AgreementChanges<T> = {
  * you signed on Monday" is a fact, where a difference between two figures is
  * an argument.
  */
-export function agreementChanges<T extends Pick<BillableLine, "createdAt" | "quantity" | "unitPriceCents">>(
-  lines: readonly T[],
-  contracts: readonly ContractStanding[],
-): AgreementChanges<T> {
+export function agreementChanges<
+  T extends Pick<BillableLine, "createdAt" | "quantity" | "unitPriceCents"> & { changeOrderId?: string | null },
+>(lines: readonly T[], contracts: readonly ContractStanding[]): AgreementChanges<T> {
+  // A line a change order the customer approved added or changed is agreed to
+  // in writing already: it is not an unsigned addition, however recent.
+  lines = lines.filter((line) => !line.changeOrderId);
   const live = newestFirst(contracts.filter((contract) => contract.status !== "void"));
   const newest = live[0] ?? null;
   const signed = live.find((contract) => Boolean(contract.signedAt)) ?? null;

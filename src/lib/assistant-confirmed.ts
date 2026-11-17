@@ -11,7 +11,7 @@ import {
   spliceScope,
 } from "@/lib/document-edit";
 import { adjustmentTo, isMovementReason, signedQuantity } from "@/lib/inventory-movement";
-import { invoiceTotals } from "@/lib/invoice-math";
+import { discountFromRow, invoiceTotals } from "@/lib/invoice-math";
 import { claimUnbilledLines, jobInvoices, returnStock } from "@/lib/job-billing-server";
 import { parseCostToCents } from "@/lib/new-job-input";
 import { currentContext } from "@/lib/request-context";
@@ -375,6 +375,7 @@ export async function runConfirmedTool(
           job_id: jobId,
           status: "draft",
           subtotal_cents: totals.subtotalCents,
+          discount_cents: totals.discountCents,
           diagnostic_credit_cents: totals.diagnosticCreditCents,
           tax_cents: totals.taxCents,
           total_cents: totals.totalCents,
@@ -505,7 +506,7 @@ export async function runConfirmedTool(
       const { data: found } = await supabase
         .from("invoices")
         .select(
-          "id, job_id, status, last_sent_at, paid_at, diagnostic_credit_cents, tax_cents",
+          "id, job_id, status, last_sent_at, paid_at, diagnostic_credit_cents, tax_cents, discount_type, discount_value",
         )
         .eq("organization_id", organizationId)
         .eq("number_label", number)
@@ -527,6 +528,7 @@ export async function runConfirmedTool(
       const totals = recomputeInvoice(lines, {
         diagnosticCreditCents: Number(invoice.diagnostic_credit_cents ?? 0),
         taxCents: Number(invoice.tax_cents ?? 0),
+        discount: discountFromRow(invoice),
       });
 
       // The list replaces this invoice's lines — not the job's. A part added
@@ -579,6 +581,7 @@ export async function runConfirmedTool(
         .from("invoices")
         .update({
           subtotal_cents: totals.subtotalCents,
+          discount_cents: totals.discountCents,
           diagnostic_credit_cents: totals.diagnosticCreditCents,
           tax_cents: totals.taxCents,
           total_cents: totals.totalCents,

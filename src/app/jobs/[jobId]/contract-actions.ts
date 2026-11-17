@@ -19,7 +19,7 @@ import {
 } from "@/lib/contract-template";
 import { creditSource } from "@/lib/follow-up-jobs";
 import { formatMoney } from "@/lib/invoice-messages";
-import { agreementChanges, changeOrderBody, unbilledLines, type ContractStanding } from "@/lib/job-billing";
+import { unbilledLines } from "@/lib/job-billing";
 import { lineTotalCents } from "@/lib/job-lines";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -443,150 +443,66 @@ export async function generateContract(
  * A change order for what was added after the customer signed.
  *
  * A signed agreement is amended in writing, not edited. Everything written on
- * the job after the newest signed contract or change order was drawn up is
- * listed and priced in a document of its own, signed the same way the contract
- * was — the texted link, or the pad on the job page. The contract it adds to is
- * left exactly as the customer signed it.
+ * the job since the customer last signed is swept into a change order of its
+ * own — the same structured change order the Change orders card makes, so
+ * there is one list of them and one contract total — and its document is
+ * drawn up for the customer to sign the way the contract was: the texted link,
+ * or the pad on the job page. The contract it adds to is left exactly as the
+ * customer signed it.
  */
 export async function generateChangeOrder(
   _previous: ContractState,
   formData: FormData,
 ): Promise<ContractState> {
   const jobNumber = String(formData.get("jobNumber") ?? "").trim();
-  const numeric = Number(jobNumber);
-  if (!Number.isFinite(numeric)) return { error: "That job could not be found." };
+  if (!Number.isFinite(Number(jobNumber))) return { error: "That job could not be found." };
 
+  const { billingRefusal } = await import("@/lib/billing-permission-server");
+  const blocked = await billingRefusal();
+  if (blocked) return { error: blocked };
+
+  const { currentContext } = await import("@/lib/request-context");
+  const context = await currentContext();
+  if (!context) return { error: "You are not signed in." };
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth.user?.id ?? "";
-  if (!userId) return { error: "You are not signed in." };
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
-
-  const organizationId = text(membership?.organization_id);
-  if (!organizationId) return { error: "You are not a member of a business." };
-
-  const { data: job } = await supabase
-    .from("jobs")
-    .select(
-      `id, job_number,
-       customers ( first_name, last_name, company_name, bill_to, address_line_1, city, state, postal_code ),
-       properties ( address_line_1, city, state, postal_code ),
-       organizations ( name, phone, timezone ),
-       contracts ( id, kind, status, created_at, signed_at ),
-       job_line_items ( kind, description, quantity, unit, unit_price_cents, created_at )`,
-    )
-    .eq("organization_id", organizationId)
-    .eq("job_number", numeric)
-    .maybeSingle();
-
-  if (!job) return { error: "That job could not be found." };
-
-  const row = job as Record<string, unknown>;
-  const customer = (row.customers ?? null) as Record<string, unknown> | null;
-  const property = (row.properties ?? null) as Record<string, unknown> | null;
-  const organization = (row.organizations ?? null) as Record<string, unknown> | null;
-
-  const contracts: ContractStanding[] = (Array.isArray(row.contracts) ? (row.contracts as Record<string, unknown>[]) : []).map(
-    (contract) => ({
-      id: text(contract.id),
-      kind: contract.kind === "change_order" ? "change_order" : "agreement",
-      status: text(contract.status) || "draft",
-      createdAt: text(contract.created_at),
-      signedAt: text(contract.signed_at) || null,
-    }),
-  );
-  const lines = (Array.isArray(row.job_line_items) ? (row.job_line_items as Record<string, unknown>[]) : []).map(
-    (line) => ({
-      kind: text(line.kind),
-      description: text(line.description),
-      // numeric arrives as a string over PostgREST.
-      quantity: Number(line.quantity ?? 0),
-      unit: text(line.unit),
-      unitPriceCents: Number(line.unit_price_cents ?? 0),
-      createdAt: text(line.created_at),
-    }),
-  );
-
-  const changes = agreementChanges(lines, contracts);
-  if (!changes.signed) {
+  const { loadJobChangeOrders, createChangeOrder, requestChangeOrderApproval } = await import("@/lib/change-orders-server");
+  const loaded = await loadJobChangeOrders(supabase, context.organizationId, { jobNumber });
+  if (!loaded) return { error: "That job could not be found." };
+  if (!loaded.agreement?.signed) {
     return { error: "Nothing on this job has been signed yet, so there is nothing to change. Generate the contract instead." };
   }
-  if (changes.added.length === 0) return { error: "Nothing has been added since the customer signed." };
-  if (changes.waiting) {
-    return { error: "", notice: "A change order for these is already waiting to be signed.", contractId: changes.waiting.id };
+  const waiting = loaded.changeOrders.find((order) => order.status === "pending_approval");
+  if (waiting) {
+    return { error: "", notice: `Change order #${waiting.number} is already waiting to be signed.`, contractId: waiting.documentContractId ?? undefined };
   }
 
-  const timeZone = text(organization?.timezone) || "America/Los_Angeles";
-  const formatDate = (iso: string, weekday: boolean) =>
-    iso
-      ? new Intl.DateTimeFormat("en-US", {
-          timeZone,
-          ...(weekday ? { weekday: "short" as const } : {}),
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }).format(new Date(iso))
-      : "";
-
-  const filled = changeOrderBody({
-    facts: {
-      business_name: text(organization?.name),
-      business_phone: text(organization?.phone),
-      customer_name: billingParty(customer, null).name,
-      service_address: serviceAddress(property, customer),
-      job_number: String(row.job_number ?? jobNumber),
-      today: formatDate(new Date().toISOString(), true),
-    },
-    signedOn: formatDate(changes.signed.signedAt ?? "", false),
-    lines: changes.added,
+  const created = await createChangeOrder(supabase, {
+    organizationId: context.organizationId,
+    job: { jobNumber },
+    userId: context.userId,
+    description: "Work added since the contract was signed",
   });
+  if (!created.ok) return { error: created.error };
+  if (created.swept === 0) {
+    const { cancelChangeOrder } = await import("@/lib/change-orders-server");
+    await cancelChangeOrder(supabase, { organizationId: context.organizationId, changeOrderId: created.changeOrderId, userId: context.userId });
+    return { error: "Nothing has been added since the customer signed." };
+  }
 
-  const { data: created, error } = await supabase
-    .from("contracts")
-    .insert({
-      organization_id: organizationId,
-      job_id: text(row.id),
-      kind: "change_order",
-      body: filled.body,
-      // A change order has no drafted passage: it is the list of additions,
-      // written from the lines themselves.
-      scope: "",
-      unfilled: filled.unfilled,
-      status: "draft",
-      // A change order asks for what was added, and nothing else.
-      total_cents: changes.addedCents,
-      deposit_cents: 0,
-      deposit_paid: false,
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (error || !created) return { error: "That change order could not be saved." };
-
-  const contractId = text(created.id);
-  const { generateContractPdf } = await import("@/lib/pdf/contract-data");
-  const document = await generateContractPdf({
-    database: supabase,
-    organizationId,
-    contractId,
-    timeZone,
-    uploadedBy: userId,
+  const requested = await requestChangeOrderApproval(supabase, {
+    organizationId: context.organizationId,
+    changeOrderId: created.changeOrderId,
+    userId: context.userId,
   });
-
   revalidatePath(`/jobs/${jobNumber}`);
+  if (!requested.ok) return { error: requested.error };
 
-  const count = changes.added.length;
-  const said = `Change order drafted for ${count} ${count === 1 ? "addition" : "additions"} (${formatMoney(changes.addedCents / 100)}). Read it, then have the customer sign it.`;
+  const said = `Change order #${created.number} drafted for ${created.swept} ${created.swept === 1 ? "addition" : "additions"} (${formatMoney(requested.netCents / 100)}). Read it, then have the customer sign it.`;
   return {
     error: "",
-    contractId,
-    notice: document.error ? `${said} The PDF could not be produced — open the draft to try again.` : said,
+    contractId: requested.contractId,
+    notice: requested.pdfError ? `${said} The PDF could not be produced — open the draft to try again.` : said,
   };
 }
 

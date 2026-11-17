@@ -677,3 +677,80 @@ export async function sendRefundReceiptAction(_previous: InvoiceActionState, for
     ? { error: "", notice: `Refund receipt sent by ${by.join(" and ")}.` }
     : { error: `Not sent. Email: ${told.email}. Text: ${told.sms}.` };
 }
+
+/**
+ * Set, replace or take off the invoice's discount (invoice-adjustments-server.ts).
+ *
+ * Billing permission, the same rule as every invoice change: owners and admins
+ * always, other roles unless the owner turned billing off for technicians. The
+ * database checks it again. One discount at a time: setting one replaces any
+ * other, and "none" takes it off so no discount line is printed at all.
+ */
+export async function setInvoiceDiscountAction(
+  _previous: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return { error: "That invoice could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+
+  const supabase = asFlexibleClient(await createClient());
+  const { setInvoiceDiscount } = await import("@/lib/invoice-adjustments-server");
+  const result = await setInvoiceDiscount(supabase, {
+    organizationId: context.organizationId,
+    invoiceId,
+    type: String(formData.get("discountType") ?? "none"),
+    value: String(formData.get("discountValue") ?? ""),
+    reason: String(formData.get("discountReason") ?? ""),
+    tax: formData.has("tax") ? String(formData.get("tax") ?? "") : null,
+    actorUserId: context.userId,
+  });
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
+  if (result.summary.jobNumber) revalidatePath(`/jobs/${result.summary.jobNumber}`);
+  return { error: "", notice: result.message };
+}
+
+/**
+ * Send the customer an updated invoice a change order left waiting, or whose
+ * automatic send failed. Sent once: a second tap finds it already claimed.
+ */
+export async function resendInvoiceRevisionAction(
+  _previous: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const revisionId = String(formData.get("revisionId") ?? "").trim();
+  if (!revisionId) return { error: "That update could not be found." };
+  const billingBlocked = await billingRefusal();
+  if (billingBlocked) return { error: billingBlocked };
+  const context = await currentContext();
+  if (!context) return { error: "Sign in first." };
+
+  // Read through the person's own session first, so only this business's update is sent.
+  const supabase = asFlexibleClient(await createClient());
+  const { data: visible } = await supabase
+    .from("invoice_revisions")
+    .select("id, invoice_id, invoices ( jobs ( job_number ) )")
+    .eq("organization_id", context.organizationId)
+    .eq("id", revisionId)
+    .maybeSingle();
+  if (!visible) return { error: "That update could not be found." };
+
+  const { resendInvoiceRevision } = await import("@/lib/invoice-revision-server");
+  const report = await resendInvoiceRevision(asFlexibleClient(getSupabaseAdmin()), {
+    organizationId: context.organizationId,
+    revisionId,
+  });
+  const invoice = ((visible as Record<string, unknown>).invoices ?? null) as Record<string, unknown> | null;
+  const job = (invoice?.jobs ?? null) as Record<string, unknown> | null;
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${text((visible as Record<string, unknown>).invoice_id)}`);
+  if (job?.job_number) revalidatePath(`/jobs/${String(job.job_number)}`);
+  if (!report) return { error: "", notice: "Nothing to send: it has already gone, or a later update replaced it." };
+  return report.ok ? { error: "", notice: `Updated INV-${report.invoiceNumber} sent. ${report.message}` } : { error: report.message };
+}

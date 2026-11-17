@@ -757,7 +757,7 @@ async function billJob(database: Database, organizationId: string, args: Record<
   let proposedCredit = 0;
   let what: string;
   if (step.kind === "add_to_draft" && draft) {
-    const totals = invoiceTotals({ subtotalCents: draft.subtotalCents + step.cents, taxCents: draft.taxCents, diagnosticPaidCents: credit });
+    const totals = invoiceTotals({ subtotalCents: draft.subtotalCents + step.cents, discount: draft.discount, taxCents: draft.taxCents, diagnosticPaidCents: credit });
     proposedTotal = totals.totalCents;
     proposedCredit = totals.diagnosticCreditCents;
     what = `Add ${money(step.cents)} to draft INV-${draft.number}, which then comes to ${money(proposedTotal)}`;

@@ -37,6 +37,10 @@ export type InvoiceFacts = {
   paidHow?: string;
   /** Whether the invoice PDF is attached to the email. */
   pdfAttached?: boolean;
+  /** For an updated invoice: what the customer was asked for before, in dollars. */
+  previousAmount?: number;
+  /** For an updated invoice: why it changed, e.g. "Change order #2, approved Nov 17". */
+  revisionNote?: string;
 };
 
 /** Two SMS segments. Beyond this carriers split the message and may reorder. */
@@ -221,6 +225,83 @@ export function invoicePreviewEmail(facts: InvoiceFacts): Mail {
     "<p><strong>Nothing is due yet.</strong> We will send the final invoice when the work is complete.</p>",
     ...(facts.viewUrl ? [`<p>${emailButton(facts.viewUrl, "See the preview")}</p>`] : []),
     `<p>Questions? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
+    `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
+  ]);
+
+  return { subject, text, html };
+}
+
+/**
+ * An invoice the customer already has, sent again because what they owe
+ * changed — an approved change order, usually.
+ *
+ * It must say it replaces the copy they hold, before it asks for anything:
+ * two bills for one job, with no word of which counts, is how a customer pays
+ * twice or not at all. Same link, same invoice number, so there is still only
+ * one thing to pay.
+ */
+export function revisedInvoiceSms(facts: InvoiceFacts): string {
+  const name = firstName(facts.contactName);
+  const opening = name ? `${name}: your` : "Your";
+  const was = typeof facts.previousAmount === "number" ? ` (was ${formatMoney(facts.previousAmount)})` : "";
+  const why = facts.revisionNote ? ` ${facts.revisionNote}.` : "";
+  const settle = facts.payUrl
+    ? ` Pay: ${facts.payUrl}`
+    : ` Call ${facts.businessPhone} to pay.${facts.viewUrl ? ` View it: ${facts.viewUrl}` : ""}`;
+  return clamp(
+    `${opening} ${facts.businessName} invoice ${facts.invoiceNumber} has been updated: ${formatMoney(facts.amountDue)} due${was}.${why} It replaces the earlier copy.${settle}`,
+    SMS_LIMIT,
+  );
+}
+
+export function revisedInvoiceEmail(facts: InvoiceFacts): Mail {
+  const name = firstName(facts.contactName);
+  const greeting = name ? `Hi ${name},` : "Hello,";
+  const amount = formatMoney(facts.amountDue);
+  const was = typeof facts.previousAmount === "number" ? formatMoney(facts.previousAmount) : "";
+  const why = facts.revisionNote?.trim() ?? "";
+  const due = facts.dueLabel ? `Due ${facts.dueLabel}.` : "";
+  const subject = `${facts.businessName}: updated invoice ${facts.invoiceNumber}, now ${amount}`;
+
+  const text = [
+    greeting,
+    "",
+    `Your invoice from ${facts.businessName} has been updated. This replaces the copy you were sent before.`,
+    "",
+    `Invoice: ${facts.invoiceNumber} (updated)`,
+    `Amount due now: ${amount}`,
+    ...(was ? [`Previously: ${was}`] : []),
+    ...(why ? [`Why: ${why}`] : []),
+    ...(due ? [due] : []),
+    ...(facts.pdfAttached ? ["", "The updated invoice is attached as a PDF."] : []),
+    "",
+    facts.payUrl ? `Pay online: ${facts.payUrl}` : `To pay, call ${facts.businessPhone}.`,
+    ...(facts.viewUrl && facts.viewUrl !== facts.payUrl ? ["", `View your invoice: ${facts.viewUrl}`] : []),
+    "",
+    `Questions about this change? Call ${facts.businessPhone}.`,
+    "",
+    facts.businessName,
+  ].join("\n");
+
+  const telHref = facts.businessPhone.replace(/[^\d+]/g, "");
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 24px 4px 0;color:#475569">${escapeHtml(label)}</td><td style="padding:4px 0">${value}</td></tr>`;
+  const html = wrap([
+    `<p>${escapeHtml(greeting)}</p>`,
+    `<p>Your invoice from <strong>${escapeHtml(facts.businessName)}</strong> has been <strong>updated</strong>. This replaces the copy you were sent before.</p>`,
+    '<table style="border-collapse:collapse;margin:16px 0">',
+    row("Invoice", `<strong>${escapeHtml(facts.invoiceNumber)}</strong> (updated)`),
+    row("Amount due now", `<strong>${escapeHtml(amount)}</strong>`),
+    ...(was ? [row("Previously", escapeHtml(was))] : []),
+    ...(why ? [row("Why", escapeHtml(why))] : []),
+    ...(facts.dueLabel ? [row("Due", escapeHtml(facts.dueLabel))] : []),
+    "</table>",
+    ...(facts.pdfAttached ? ["<p>The updated invoice is attached as a PDF.</p>"] : []),
+    facts.payUrl
+      ? `<p>${emailButton(facts.payUrl, `Pay ${amount}`)}</p>`
+      : `<p>To pay, call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
+    ...(facts.viewUrl && facts.viewUrl !== facts.payUrl ? [`<p><a href="${escapeHtml(facts.viewUrl)}">View your invoice</a></p>`] : []),
+    `<p>Questions about this change? Call <a href="tel:${escapeHtml(telHref)}">${escapeHtml(facts.businessPhone)}</a>.</p>`,
     `<p style="color:#475569">${escapeHtml(facts.businessName)}</p>`,
   ]);
 
