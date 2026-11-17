@@ -208,6 +208,28 @@ select {
   accent-color: var(--color-brand);
 }
 
+/*
+ * Autofill. When Safari or Chrome fills a saved email or password they paint
+ * the input a pale yellow with black text, which the browser forces and no
+ * background utility can override. Inside a rounded field box that came out as
+ * a bright rectangle that ignored the box's corners. An inset shadow in the
+ * field colour covers the fill (and follows the input's own radius when it has
+ * one), the text stays the app's ink, and the long transition stops the
+ * browser's colour from ever fading in underneath.
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill,
+input:autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-raised) inset;
+  box-shadow: 0 0 0 1000px var(--color-raised) inset;
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  transition: background-color 9999s ease-out 0s;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
