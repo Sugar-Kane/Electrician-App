@@ -1,7 +1,7 @@
 import "server-only";
 
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
-import { invoiceTotals } from "@/lib/invoice-math";
+import { discountFromRow, invoiceTotals, type InvoiceDiscount } from "@/lib/invoice-math";
 import { lineTotalCents } from "@/lib/job-lines";
 import type { InvoiceStanding } from "@/lib/job-billing";
 import {
@@ -35,6 +35,12 @@ export type InvoiceFigures = InvoiceStanding & {
   subtotalCents: number;
   taxCents: number;
   diagnosticCreditCents: number;
+  /** The invoice's discount, carried through every recount. Null with none. */
+  discount: InvoiceDiscount | null;
+  discountCents: number;
+  balanceDueCents: number;
+  stripeInvoiceId: string | null;
+  revisionNumber: number;
 };
 
 /** A job's invoices, newest first, with the figures a recount needs. */
@@ -46,7 +52,7 @@ export async function jobInvoices(
   const { data } = await database
     .from("invoices")
     .select(
-      "id, invoice_number, number_label, status, subtotal_cents, tax_cents, diagnostic_credit_cents, total_cents, last_sent_at, paid_at, created_at",
+      "id, invoice_number, number_label, status, subtotal_cents, tax_cents, diagnostic_credit_cents, total_cents, balance_due_cents, discount_type, discount_value, discount_cents, stripe_invoice_id, revision_number, last_sent_at, paid_at, created_at",
     )
     .eq("organization_id", organizationId)
     .eq("job_id", jobId)
@@ -60,6 +66,11 @@ export async function jobInvoices(
     subtotalCents: Number(row.subtotal_cents ?? 0),
     taxCents: Number(row.tax_cents ?? 0),
     diagnosticCreditCents: Number(row.diagnostic_credit_cents ?? 0),
+    discount: discountFromRow(row),
+    discountCents: Number(row.discount_cents ?? 0),
+    balanceDueCents: Number(row.balance_due_cents ?? row.total_cents ?? 0),
+    stripeInvoiceId: text(row.stripe_invoice_id) || null,
+    revisionNumber: Number(row.revision_number ?? 0),
     lastSentAt: text(row.last_sent_at) || null,
     paidAt: text(row.paid_at) || null,
     createdAt: text(row.created_at),
@@ -104,6 +115,14 @@ export async function claimUnbilledLines(
   }
 
   const rows = results.flatMap((result) => (result.data ?? []) as Record<string, unknown>[]);
+
+  // Changes an approved change order left for the next invoice are this one's:
+  // recorded on its items, so the invoice can say what each change order added.
+  if (rows.length > 0) {
+    const { error: attributed } = await database.rpc("attribute_change_orders_to_invoice", { p_invoice_id: input.invoiceId });
+    if (attributed) console.error("billing: change orders could not be attributed to the invoice", attributed);
+  }
+
   return {
     count: rows.length,
     // numeric arrives as a string over PostgREST, so it is read as a number
@@ -135,7 +154,7 @@ export async function retotalInvoice(
   database: FlexibleSupabaseClient,
   input: {
     organizationId: string;
-    invoice: Pick<InvoiceFigures, "id" | "taxCents" | "diagnosticCreditCents">;
+    invoice: Pick<InvoiceFigures, "id" | "taxCents" | "diagnosticCreditCents"> & { discount?: InvoiceDiscount | null };
     job: BilledJob;
     subtotalCents: number;
   },
@@ -143,6 +162,8 @@ export async function retotalInvoice(
   const left = await diagnosticCreditLeft(database, input.organizationId, input.job);
   const totals = invoiceTotals({
     subtotalCents: Math.max(0, input.subtotalCents),
+    // A percentage discount follows the new subtotal; a fixed one stays.
+    discount: input.invoice.discount ?? null,
     taxCents: input.invoice.taxCents,
     diagnosticPaidCents: left + Math.max(0, input.invoice.diagnosticCreditCents),
   });
@@ -151,6 +172,7 @@ export async function retotalInvoice(
     .from("invoices")
     .update({
       subtotal_cents: totals.subtotalCents,
+      discount_cents: totals.discountCents,
       diagnostic_credit_cents: totals.diagnosticCreditCents,
       tax_cents: totals.taxCents,
       total_cents: totals.totalCents,

@@ -23,12 +23,15 @@ import {
   signForBusiness,
   type ContractState,
 } from "@/app/jobs/[jobId]/contract-actions";
+import { JobChangeOrders } from "@/components/job-change-orders";
 import { PdfViewer } from "@/components/pdf-viewer";
 import { SignaturePad } from "@/components/signature-pad";
 import { FormMessage } from "@/components/ui/field";
 import { CONTRACT_ANCHOR, revealContract } from "@/lib/contract-anchor";
 import { formatForDisplay } from "@/lib/phone-format";
+import type { JobChangeOrders as JobChangeOrdersData } from "@/lib/change-orders-server";
 import type { JobContract as JobContractRecord } from "@/lib/job-data";
+import type { StockOption } from "@/lib/job-line-data";
 import { formatCents } from "@/lib/job-lines";
 
 /**
@@ -627,9 +630,15 @@ export function JobContract({
   customerName = "",
   customerPhone = "",
   changes,
+  changeOrders = null,
+  stock = [],
 }: {
   jobNumber: string;
   contracts: JobContractRecord[];
+  /** The job's change orders and the contract total, when the person is signed in. */
+  changeOrders?: (JobChangeOrdersData & { canSetPrices: boolean }) | null;
+  /** The business's stock, for picking change order materials. */
+  stock?: StockOption[];
   /** Pre-fills the name on the signing pad. The customer can correct it. */
   customerName?: string;
   /** Where the signing link is texted, shown before it is. */
@@ -775,6 +784,9 @@ export function JobContract({
           </ul>
         </details>
       )}
+
+      {/* Optional: a job whose contract never changes sees only the button. */}
+      {changeOrders ? <JobChangeOrders data={changeOrders} stock={stock} /> : null}
     </section>
   );
 }

@@ -29,6 +29,8 @@ export type InvoiceDocumentData = {
   issuedLabel: string;
   dueLabel: string;
   statusLabel: string;
+  /** "Updated (revision 2)" once it changed after the customer was sent it. Empty otherwise. */
+  revisedLabel?: string;
   customer: { name: string; addressLines: string[]; phone: string; email: string };
   job: { number: string; addressLines: string[]; serviceDateLabel: string; technician: string };
   /**
@@ -39,6 +41,14 @@ export type InvoiceDocumentData = {
   workSummary: string;
   totals: {
     subtotalLabel: string;
+    /** The work before change orders. Empty when no change order added to this invoice. */
+    originalWorkLabel?: string;
+    /** Each approved change order on this invoice, signed: "+$300.00", "−$100.00". */
+    changeOrders?: { label: string; value: string }[];
+    /** "Discount (10%)". Empty when there is no discount, and then no line is printed. */
+    discountName?: string;
+    /** "-$220.00". Empty when there is no discount. */
+    discountLabel?: string;
     /** Already-paid diagnostic taken off the repair. Empty when there was none. */
     diagnosticCreditLabel: string;
     taxLabel: string;
@@ -117,6 +127,7 @@ export function InvoiceDocument({ data }: { data: InvoiceDocumentData }) {
               ["Invoice date", data.issuedLabel],
               ["Due", data.dueLabel],
               ["Status", data.statusLabel],
+              ...(data.revisedLabel ? [["Revised", data.revisedLabel]] : []),
             ].map(([label, value]) => (
               <View key={label} style={[sheet.row, { justifyContent: "space-between" }]}>
                 <Text style={sheet.muted}>{label}</Text>
@@ -167,15 +178,33 @@ export function InvoiceDocument({ data }: { data: InvoiceDocumentData }) {
           wrap={false}
         >
           <View style={{ width: COLUMNS.description, paddingRight: 8 }}>
-            <Text style={{ fontWeight: "bold" }}>Electrical work (labor and materials)</Text>
+            <Text style={{ fontWeight: "bold" }}>
+              {totals.originalWorkLabel ? "Original work (labor and materials)" : "Electrical work (labor and materials)"}
+            </Text>
             {data.workSummary ? <Text style={sheet.muted}>{data.workSummary}</Text> : null}
           </View>
-          <Text style={{ width: COLUMNS.amount, textAlign: "right" }}>{totals.subtotalLabel}</Text>
+          <Text style={{ width: COLUMNS.amount, textAlign: "right" }}>{totals.originalWorkLabel || totals.subtotalLabel}</Text>
         </View>
+
+        {/* Each approved change order, as its own line, so the customer can see
+            how the price moved from what was first agreed. */}
+        {(totals.changeOrders ?? []).map((entry) => (
+          <View
+            key={entry.label}
+            style={[sheet.row, { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: RULE }]}
+            wrap={false}
+          >
+            <Text style={{ width: COLUMNS.description, paddingRight: 8 }}>{entry.label}</Text>
+            <Text style={{ width: COLUMNS.amount, textAlign: "right" }}>{entry.value}</Text>
+          </View>
+        ))}
 
         <View style={[sheet.row, { justifyContent: "flex-end", marginTop: 14 }]} wrap={false}>
           <View style={{ width: "50%" }}>
             <TotalRow label="Subtotal" value={totals.subtotalLabel} />
+            {/* Only when there is one: an invoice with no discount has no
+                discount line at all, not one that says $0.00. */}
+            {totals.discountLabel ? <TotalRow label={totals.discountName || "Discount"} value={totals.discountLabel} /> : null}
             {/* Only when there was one. A "Diagnostic credit $0.00" line on a
                 first invoice is a line that says nothing. */}
             {totals.diagnosticCreditLabel ? (

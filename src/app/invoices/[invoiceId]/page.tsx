@@ -7,6 +7,9 @@ import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
 import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
 import { InvoiceSendPanel } from "@/components/invoice-send";
 import { InvoicePayments } from "@/components/invoice-refunds";
+import { InvoiceBreakdown, InvoiceDiscountForm } from "@/components/invoice-adjustments";
+import { billingRefusal } from "@/lib/billing-permission-server";
+import { invoiceSummary } from "@/lib/invoice-adjustments-server";
 import { getInvoicePayments, withCardReferences } from "@/lib/invoice-refund-server";
 import { INVOICE_STATE_LABELS, invoiceState } from "@/lib/dashboard-metrics";
 import { currentDocument } from "@/lib/pdf/store";
@@ -82,12 +85,25 @@ export default async function InvoicePage({
   // Card refunds carry their tracking number from Stripe, when it has one.
   const payments = await withCardReferences(context.organizationId, await getInvoicePayments(database, invoiceId));
 
-  const document = await currentDocument({
-    database,
-    organizationId: context.organizationId,
-    invoiceId,
-    timeZone: context.timeZone,
-  });
+  const [document, summary, billingBlocked] = await Promise.all([
+    currentDocument({
+      database,
+      organizationId: context.organizationId,
+      invoiceId,
+      timeZone: context.timeZone,
+    }),
+    // The same figures ChatGPT and the PDF read: change orders, discount, tax, payments.
+    invoiceSummary(database, context.organizationId, invoiceId).catch(() => null),
+    billingRefusal(),
+  ]);
+  const discountLocked =
+    str(invoice.status) === "void"
+      ? "This invoice is void."
+      : str(invoice.status) === "paid" || str(invoice.paid_at)
+        ? "This invoice is paid, so its discount cannot change. Refund the customer if they are owed money."
+        : str(invoice.stripe_invoice_id)
+          ? "This invoice is collected through Stripe, so it cannot be discounted here."
+          : "";
 
   const jobNumber = String(job?.job_number ?? "");
   const state = invoiceState({
@@ -131,6 +147,31 @@ export default async function InvoicePage({
           ) : null}
         </div>
       </section>
+
+      {summary ? (
+        <section className="mt-3 rounded-panel border border-line bg-surface p-4 sm:p-5" aria-labelledby="invoice-figures-heading">
+          <h2 id="invoice-figures-heading" className="text-sm font-semibold">
+            Amount
+          </h2>
+          {summary.changedSinceSent ? (
+            <p className="mt-2 rounded-control border border-caution/30 bg-caution-bg p-3 text-sm">
+              These figures changed after the customer was sent this invoice. Send it again below so they have the current one.
+            </p>
+          ) : null}
+          <div className="mt-3">
+            <InvoiceBreakdown summary={summary} />
+          </div>
+          <details className="group mt-3 border-t border-line pt-3">
+            <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+              <span>{summary.discountCents > 0 ? `${summary.discountLabel}: −${money(summary.discountCents)}` : "Discount"}</span>
+              <span className="text-xs font-semibold text-brand">{summary.discountCents > 0 ? "Change" : "Add"}</span>
+            </summary>
+            <div className="mt-2">
+              <InvoiceDiscountForm summary={summary} canEdit={!billingBlocked} lockedBecause={discountLocked} />
+            </div>
+          </details>
+        </section>
+      ) : null}
 
       {(() => {
         const status = str(invoice.status);

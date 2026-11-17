@@ -38,6 +38,8 @@ export type JobLine = {
   notes?: string;
   /** Admin fee included in unitPriceCents, per unit. For the business only. */
   adminFeeCents?: number | null;
+  /** The approved change order that added or last changed it. Null for ordinary lines. */
+  changeOrderId?: string | null;
 };
 
 export type JobLineTotals = {

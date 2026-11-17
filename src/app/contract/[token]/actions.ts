@@ -140,6 +140,35 @@ export async function signContract(
     console.error("signed contract PDF failed", { signedId, error });
   }
 
+  /*
+   * A change order is approved by this signature, in the same transaction
+   * (the database records it). Its changes go onto the job and its invoices
+   * now — an invoice the customer already has is updated and sent again.
+   * Only for the change order this signature approved, found from the signed
+   * contract's own id. A failure here never undoes the signature: the job
+   * page offers to finish it.
+   */
+  try {
+    const admin = asFlexibleClient(getSupabaseAdmin());
+    const { data: approved } = await admin
+      .from("change_orders")
+      .select("id")
+      .eq("organization_id", contract.organization_id)
+      .eq("document_contract_id", signedId)
+      .eq("status", "approved")
+      .maybeSingle();
+    if (approved?.id) {
+      const { applyApprovedChangeOrder } = await import("@/lib/change-orders-server");
+      const applied = await applyApprovedChangeOrder(admin, {
+        organizationId: contract.organization_id,
+        changeOrderId: String(approved.id),
+      });
+      if (!applied.ok) console.error("signed change order not applied", { signedId, message: applied.message });
+    }
+  } catch (error) {
+    console.error("signed change order not applied", { signedId, error });
+  }
+
   // The customer's own copy: emailed with the PDF, texted as a link when they
   // have texting consent. After the PDF above, so the link shows the signed one.
   try {
@@ -163,4 +192,50 @@ export async function signContract(
 
   revalidatePath(`/contract/${token}`);
   return { error: "", signed: true };
+}
+
+export type DeclineState = { error: string; declined?: boolean };
+
+/**
+ * The customer turning a change order down from their link.
+ *
+ * As with signing, the token is the whole of the authority, and the database
+ * function decides: only a change order still waiting, only the job's newest
+ * document. Nothing on the job changes. The business sees the answer, and the
+ * reason if one was given, on the job.
+ */
+export async function declineChangeOrder(token: string, _previous: DeclineState, form: FormData): Promise<DeclineState> {
+  if (!UUID.test(token)) return { error: "That link is not valid." };
+  const contract = await loadContract(token);
+  if (!contract) return { error: "We could not find that change order." };
+  const reason = String(form.get("reason") ?? "").trim().slice(0, 1000);
+
+  const { data: declinedId } = await createPublicClient().rpc("decline_change_order", { p_token: token, p_reason: reason });
+  if (typeof declinedId !== "string" || !declinedId) {
+    const now = await loadContract(token);
+    return { error: (now && reasonFor(now)) || "That change order can no longer be declined. It may already have been answered." };
+  }
+
+  try {
+    const { recordActivity } = await import("@/lib/activity");
+    const admin = asFlexibleClient(getSupabaseAdmin());
+    const { data: order } = await admin
+      .from("change_orders")
+      .select("job_id, number")
+      .eq("organization_id", contract.organization_id)
+      .eq("id", declinedId)
+      .maybeSingle();
+    await recordActivity(admin, {
+      organizationId: contract.organization_id,
+      eventType: "change_order.rejected",
+      label: `Change order #${order?.number ?? ""} declined by the customer`,
+      jobId: typeof order?.job_id === "string" ? order.job_id : null,
+      metadata: { change_order_id: declinedId, ...(reason ? { reason } : {}) },
+    });
+  } catch (error) {
+    console.error("declined change order not recorded in history", { declinedId, error });
+  }
+
+  revalidatePath(`/contract/${token}`);
+  return { error: "", declined: true };
 }

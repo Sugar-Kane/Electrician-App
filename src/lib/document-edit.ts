@@ -1,4 +1,4 @@
-import { invoiceTotals, type InvoiceTotals } from "./invoice-math.ts";
+import { invoiceTotals, type InvoiceDiscount, type InvoiceTotals } from "./invoice-math.ts";
 
 /**
  * Changing a document the app produced.
@@ -257,10 +257,12 @@ export function linesSubtotalCents(lines: InvoiceLine[]): number {
  */
 export function recomputeInvoice(
   lines: InvoiceLine[],
-  carried: { diagnosticCreditCents: number; taxCents: number },
+  carried: { diagnosticCreditCents: number; taxCents: number; discount?: InvoiceDiscount | null },
 ): InvoiceTotals {
   return invoiceTotals({
     subtotalCents: linesSubtotalCents(lines),
+    // The invoice's discount carries across: a percentage follows the new lines.
+    discount: carried.discount ?? null,
     diagnosticPaidCents: carried.diagnosticCreditCents,
     taxCents: carried.taxCents,
   });

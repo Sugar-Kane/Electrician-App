@@ -49,6 +49,7 @@ import { JobMaterialChat } from "@/components/job-material-chat";
 import { MaterialsSteps } from "@/components/job-progress";
 import { EndVisitForReturn } from "@/components/job-visits";
 import { getJobVisitsByNumber } from "@/lib/job-visits-server";
+import { getJobChangeOrders } from "@/lib/change-order-data";
 
 /**
  * One job, in the order somebody standing outside a house needs it.
@@ -125,6 +126,7 @@ export default async function JobDetailPage({
     messaging,
     history,
     lastEstimate,
+    changeOrders,
   ] = await Promise.all([
     getJob(jobId),
     getJobVisitsByNumber(jobId).catch(() => []),
@@ -139,6 +141,7 @@ export default async function JobDetailPage({
     getMessagingContext(),
     getJobHistory(jobId),
     getJobLatestEstimate(jobId).catch(() => ""),
+    getJobChangeOrders(jobId).catch(() => null),
   ]);
   if (!job) notFound();
 
@@ -154,7 +157,12 @@ export default async function JobDetailPage({
   // What has been written on the job since the customer last signed, for the
   // contract card to offer a change order for.
   const changes = agreementChanges(
-    lines.map((line) => ({ createdAt: line.createdAt ?? "", quantity: line.quantity, unitPriceCents: line.unitPriceCents })),
+    lines.map((line) => ({
+      createdAt: line.createdAt ?? "",
+      quantity: line.quantity,
+      unitPriceCents: line.unitPriceCents,
+      changeOrderId: line.changeOrderId ?? null,
+    })),
     contracts.map((contract) => ({
       id: contract.id,
       kind: contract.kind,
@@ -1212,6 +1220,8 @@ export default async function JobDetailPage({
               customerName={job.contactName || job.customer}
               customerPhone={job.phone}
               changes={agreement}
+              changeOrders={changeOrders}
+              stock={stock}
             />
           </StepCard>
 
@@ -1315,6 +1325,8 @@ export default async function JobDetailPage({
             customerName={job.contactName || job.customer}
             customerPhone={job.phone}
             changes={agreement}
+            changeOrders={changeOrders}
+            stock={stock}
           />
         </SectionRow>
       ) : null}
@@ -1334,6 +1346,8 @@ export default async function JobDetailPage({
               customerName={job.contactName || job.customer}
               customerPhone={job.phone}
               changes={agreement}
+              changeOrders={changeOrders}
+              stock={stock}
             />
           </div>
         ) : null}

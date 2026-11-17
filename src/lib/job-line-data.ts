@@ -86,7 +86,7 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
   const { data, error } = await context.database
     .from("job_line_items")
     .select(
-      "id, kind, description, quantity, unit, unit_price_cents, unit_cost_cents, pack_size, pack_unit, inventory_item_id, invoice_id, created_at, notes, admin_fee_cents",
+      "id, kind, description, quantity, unit, unit_price_cents, unit_cost_cents, pack_size, pack_unit, inventory_item_id, invoice_id, created_at, notes, admin_fee_cents, change_order_id",
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -113,6 +113,7 @@ export async function getJobLines(jobNumber: string): Promise<JobLinesResult> {
     createdAt: str(row.created_at),
     notes: str(row.notes),
     adminFeeCents: num(row.admin_fee_cents),
+    changeOrderId: str(row.change_order_id) || null,
   }));
 
   return { jobId, lines, totals: jobLineTotals(lines) };
