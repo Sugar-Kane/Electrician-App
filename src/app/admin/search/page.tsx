@@ -67,7 +67,7 @@ export default async function AdminSearchPage({ searchParams }: { searchParams: 
             defaultValue={query}
             autoFocus={!query}
             placeholder="Business, email, job #, invoice #, phone or id"
-            className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
+            className="field-inset min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
           />
         </label>
         <button className="tap-target shrink-0 rounded-control bg-brand px-5 text-sm font-bold text-on-brand">Search</button>

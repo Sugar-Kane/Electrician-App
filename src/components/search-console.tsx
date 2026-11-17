@@ -111,7 +111,7 @@ export function SearchConsole({ jobs }: { jobs: PilotJob[] }) {
             autoComplete="off"
             enterKeyHint="search"
             placeholder="Name, number, address — or ask a question"
-            className="min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint"
+            className="field-inset min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint"
           />
           {searching ? (
             <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-ink-faint" aria-hidden />

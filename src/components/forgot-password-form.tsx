@@ -72,7 +72,7 @@ export function ForgotPasswordForm({ initialError }: { initialError?: string }) 
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@company.com"
-              className="min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint"
+              className="field-inset min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint"
             />
           </span>
         </label>

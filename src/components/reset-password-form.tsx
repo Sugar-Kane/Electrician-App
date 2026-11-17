@@ -16,7 +16,7 @@ export function ResetPasswordForm({ email }: { email: string }) {
   const box =
     "flex min-h-13 items-center gap-3 rounded-control border border-line bg-raised px-4 focus-within:border-brand/60";
   const input =
-    "min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint";
+    "field-inset min-w-0 flex-1 bg-transparent py-3 text-base text-white outline-none placeholder:text-ink-faint";
 
   return (
     <form action={action} className="space-y-4">

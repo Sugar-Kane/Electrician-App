@@ -156,7 +156,7 @@ export default async function BookingHistoryPage({
               name="q"
               defaultValue={filter.q}
               placeholder="e.g. Garcia, 0142, breaker"
-              className="min-h-11 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+              className="field-inset min-h-11 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
             />
           </span>
         </label>

@@ -238,7 +238,7 @@ export default async function JobsPage({
               name="q"
               defaultValue={query}
               placeholder="Customer, address or job number"
-              className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
+              className="field-inset min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
             />
           </label>
           <button className="tap-target shrink-0 rounded-control border border-line px-4 text-sm font-semibold">

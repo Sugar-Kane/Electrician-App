@@ -263,6 +263,39 @@ summary:focus-visible,
   outline-offset: 2px;
 }
 
+/*
+ * A borderless input sitting inside a rounded field box (an icon, the input,
+ * maybe a show-password button). Ringing the input itself draws a square
+ * inside the rounded box, so the box wears the ring instead and it matches
+ * the shape people see.
+ */
+/*
+ * Icon buttons and text links usually have no rounding, so their ring came out
+ * as a hard square next to the app's rounded shapes. They get a soft corner
+ * while focused. This sits in `@layer base` so any `rounded-*` class (also
+ * `rounded-none`) still wins and a pill or card keeps its own shape.
+ */
+@layer base {
+  :is(button, a, summary, [role="button"], [role="tab"], [role="link"]):focus-visible {
+    border-radius: 8px;
+  }
+}
+
+.field-inset:focus-visible {
+  outline: none;
+}
+
+:has(> .field-inset:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* A button inside the same box (show password): ring inside its edge so it
+   doesn't run into the box's own border. */
+:has(> .field-inset) > button:focus-visible {
+  outline-offset: -2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
