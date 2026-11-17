@@ -41,7 +41,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
               name="q"
               defaultValue={query}
               placeholder="Name, phone, email or address"
-              className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
+              className="field-inset min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
             />
           </label>
           <button className="tap-target shrink-0 rounded-control border border-line px-4 text-sm font-semibold">

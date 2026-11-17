@@ -208,7 +208,7 @@ function VanStock({
             name="query"
             defaultValue={query}
             placeholder="Search stock…"
-            className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
+            className="field-inset min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-ink-faint"
           />
         </label>
         <button className="tap-target inline-flex h-12 shrink-0 items-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand">

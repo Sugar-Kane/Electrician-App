@@ -213,7 +213,7 @@ export function OnboardingForm({
                 max={100}
                 defaultValue={50}
                 required
-                className="min-w-0 flex-1 bg-transparent text-base text-white outline-none"
+                className="field-inset min-w-0 flex-1 bg-transparent text-base text-white outline-none"
               />
               <span className="text-sm text-ink-muted">miles</span>
             </span>
