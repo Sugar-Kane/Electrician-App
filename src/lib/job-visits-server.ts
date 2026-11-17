@@ -3,6 +3,7 @@ import "server-only";
 import { recordActivity } from "@/lib/activity";
 import { changeJob, type ChangeJob } from "@/lib/job-changes-server";
 import { jobStatusFor, workflowStateOf } from "@/lib/job-workflow";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * A job's visits: the ones it has had, and ending today's with the job still
@@ -176,7 +177,7 @@ export async function getJobVisitsByNumber(jobNumber: string): Promise<PastVisit
   const supabase = asFlexibleClient(await createClient());
   const numeric = Number(jobNumber);
   if (!Number.isFinite(numeric)) return [];
-  const { data: membership } = await supabase.from("organization_members").select("organization_id").limit(1).maybeSingle();
+  const { data: membership } = await activeMembership();
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return [];
   const { data: job } = await supabase

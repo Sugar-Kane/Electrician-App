@@ -2,6 +2,7 @@ import "server-only";
 
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 export type OwnTenantLegalPage = {
   organizationId: string;
@@ -35,12 +36,7 @@ export async function getOwnTenantLegalPage(): Promise<OwnTenantLegalPage | null
   if (!authData.user) return null;
 
   const database = asFlexibleClient(supabase);
-  const { data: membership } = await database
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", authData.user.id)
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return null;

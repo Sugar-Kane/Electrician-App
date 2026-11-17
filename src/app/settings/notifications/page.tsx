@@ -5,6 +5,7 @@ import { OwnerNotificationForm } from "@/components/owner-notification-form";
 import { formatForDisplay } from "@/lib/phone-format";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 export const metadata: Metadata = { title: "Job alerts | Volteira" };
 
@@ -22,11 +23,7 @@ function text(value: unknown) {
 export default async function BookingAlertsSettingsPage() {
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
 

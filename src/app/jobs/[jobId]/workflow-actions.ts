@@ -7,6 +7,7 @@ import { advanceVisit } from "@/lib/job-changes-server";
 import { isWorkflowState, type WorkflowState } from "@/lib/job-workflow";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Moving a job to its next state, and remembering when.
@@ -55,11 +56,7 @@ async function loadJob(jobNumber: string) {
   const userId = auth.user?.id ?? "";
   if (!userId) return null;
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = str(membership?.organization_id);
   if (!organizationId) return null;

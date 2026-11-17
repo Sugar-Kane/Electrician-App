@@ -9,6 +9,7 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { checkBookingHostname } from "@/lib/tenant-domain";
 import { addDomain, removeDomain, domainStatus } from "@/lib/vercel-domains";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * The booking page an electrician hands to their customers.
@@ -30,11 +31,7 @@ async function adminContext() {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user?.id) return null;
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id, role")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return null;

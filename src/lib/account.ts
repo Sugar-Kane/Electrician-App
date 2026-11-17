@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
+import { isOwnedObjectPath } from "@/lib/tenant-storage-path";
+import { activeMembership } from "@/lib/request-context";
 
 export type AccountSnapshot = {
   source: "demo" | "supabase";
@@ -141,12 +143,7 @@ export async function getAccountSnapshot(): Promise<AccountSnapshot> {
   if (!user) return { ...demoAccount, source: "supabase", requiresLogin: true };
 
   const database = asFlexibleClient(supabase);
-  const membershipResult = await database
-    .from("organization_members")
-    .select("organization_id,role")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+  const membershipResult = await activeMembership();
   const membership = membershipResult.data;
   const organizationId = text(membership?.organization_id) || null;
   const role = text(membership?.role, "member");
@@ -200,7 +197,8 @@ export async function getAccountSnapshot(): Promise<AccountSnapshot> {
   const organizationName = text(organization?.name, "Your business");
   let avatarUrl = text(profile?.avatar_url) || null;
   const avatarPath = text(profile?.avatar_path);
-  if (avatarPath) {
+  // Signed with the service role: only a photo under this person's own prefix.
+  if (avatarPath && isOwnedObjectPath(avatarPath, user.id)) {
     try {
       const signedAvatar = await getSupabaseAdmin().storage
         .from("profile-avatars")

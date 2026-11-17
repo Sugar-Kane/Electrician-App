@@ -11,6 +11,7 @@ import {
 } from "@/lib/messaging-rules";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 export type ConversationSummary = {
   id: string;
@@ -103,12 +104,7 @@ export async function getMessagingContext(): Promise<MessagingContext | null> {
   if (!authData.user) return null;
 
   const database = asFlexibleClient(supabase);
-  const { data: membership } = await database
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", authData.user.id)
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return null;

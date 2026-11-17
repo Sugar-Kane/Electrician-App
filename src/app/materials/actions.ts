@@ -6,6 +6,7 @@ import { isBuyStatus } from "@/lib/buy-list";
 import { parseQuantity } from "@/lib/job-lines";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Adding to the buy list, moving a line along it, and clearing it.
@@ -23,7 +24,7 @@ function field(formData: FormData, name: string): string {
 
 async function callerContext() {
   const supabase = asFlexibleClient(await createClient());
-  const { data } = await supabase.from("organization_members").select("organization_id").limit(1).maybeSingle();
+  const { data } = await activeMembership();
   const organizationId = typeof data?.organization_id === "string" ? data.organization_id : "";
   if (!organizationId) return null;
   return { supabase, organizationId };

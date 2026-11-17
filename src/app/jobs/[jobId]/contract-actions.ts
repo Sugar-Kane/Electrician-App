@@ -23,6 +23,7 @@ import { unbilledLines } from "@/lib/job-billing";
 import { lineTotalCents } from "@/lib/job-lines";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Turning a job into the contract the customer signs.
@@ -196,11 +197,7 @@ export async function generateContract(
   const userId = auth.user?.id ?? "";
   if (!userId) return { error: "You are not signed in." };
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return { error: "You are not a member of a business." };
@@ -528,11 +525,7 @@ export async function rebuildContractPdf(
   const userId = auth.user?.id ?? "";
   if (!userId) return { error: "You are not signed in." };
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return { error: "You are not a member of a business." };

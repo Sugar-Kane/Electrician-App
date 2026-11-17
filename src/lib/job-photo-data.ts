@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 import { currentContext } from "@/lib/request-context";
+import { ownedObjectPaths, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * A job's photos, with URLs that work for an hour.
@@ -64,7 +65,13 @@ export async function getJobPhotos(jobNumber: string): Promise<JobPhoto[]> {
     return [];
   }
 
-  const paths = data.map((row: Record<string, unknown>) => String(row.storage_path ?? ""));
+  const owned = ownedObjectPaths(
+    data.map((row: Record<string, unknown>) => row.storage_path),
+    context.organizationId,
+    { minSegments: 3 },
+  );
+  reportRefusedPaths("job photos", owned.refused);
+  const paths = owned.paths;
   const { data: signed } = await admin.storage
     .from(DOCUMENTS_BUCKET)
     .createSignedUrls(paths, SIGNED_URL_SECONDS);

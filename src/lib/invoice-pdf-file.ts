@@ -3,6 +3,7 @@ import "server-only";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { isOwnedObjectPath, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * The invoice PDF itself, as bytes: for the customer's download from their
@@ -52,7 +53,13 @@ export async function invoicePdf(organizationId: string, invoiceId: string): Pro
     document = await newestDocument(organizationId, invoiceId);
     if (!document) return null;
   }
-  const { data: file, error } = await admin.storage.from(DOCUMENTS_BUCKET).download(text(document.storage_path));
+  // Downloaded with the service role and attached to an email: only a file
+  // under this business's own prefix.
+  if (!isOwnedObjectPath(document.storage_path, organizationId, { minSegments: 3 })) {
+    reportRefusedPaths("invoice PDF", 1);
+    return null;
+  }
+  const { data: file, error } = await admin.storage.from(DOCUMENTS_BUCKET).download(document.storage_path);
   if (error || !file) return null;
   return { bytes: new Uint8Array(await file.arrayBuffer()), fileName: text(document.file_name) || "invoice.pdf" };
 }

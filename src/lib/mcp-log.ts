@@ -1,5 +1,6 @@
 import "server-only";
 
+import { MAX_LOGGED_RESULT, redactLogArguments, scrubLogText } from "@/lib/mcp-log-redaction";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -33,10 +34,10 @@ export async function logMcpCall(database: Database, entry: McpLogEntry): Promis
       organization_id: entry.organizationId,
       method: entry.method.slice(0, 120),
       tool_name: entry.toolName?.slice(0, 120) ?? null,
-      arguments: entry.arguments ?? {},
-      // Long enough for the whole slot list, which is the longest thing a tool
-      // ever says back.
-      result_text: entry.resultText?.slice(0, 4000) ?? null,
+      // Ids, numbers and states for tracing; never a person's details or a
+      // link that works on its own (mcp-log-redaction.ts).
+      arguments: redactLogArguments(entry.arguments),
+      result_text: entry.resultText ? scrubLogText(entry.resultText, MAX_LOGGED_RESULT) : null,
       is_error: entry.isError === true,
       http_status: entry.httpStatus ?? null,
       duration_ms: entry.durationMs ?? null,

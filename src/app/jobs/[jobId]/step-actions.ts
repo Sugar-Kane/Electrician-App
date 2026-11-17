@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { recordActivity } from "@/lib/activity";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * The job steps that are finished with one tap rather than in a section of
@@ -28,11 +29,7 @@ export async function setMaterialsReady(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "You are not signed in." };
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
   const organizationId = String(membership?.organization_id ?? "");
   if (!organizationId) return { error: "You are not a member of a business." };
 
@@ -68,11 +65,7 @@ export async function setMaterialsBought(
   const bought = String(formData.get("bought") ?? "true") !== "false";
 
   const supabase = asFlexibleClient(await createClient());
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
   const organizationId = String(membership?.organization_id ?? "");
   if (!organizationId) return { error: "You are not a member of a business." };
 

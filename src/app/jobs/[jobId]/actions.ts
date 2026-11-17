@@ -7,6 +7,7 @@ import { callOffJob, changeJob, loadChangeJob } from "@/lib/job-changes-server";
 import { readAccessNotes, readStreetAddress, readUnit } from "@/lib/property-details";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Editing and calling off a job.
@@ -28,11 +29,7 @@ function text(value: unknown): string {
 async function loadJob(jobNumber: string) {
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   return loadChangeJob(supabase, text(membership?.organization_id), jobNumber);
 }
@@ -310,7 +307,7 @@ export async function setJobDiagnosticFee(
   if (blocked) return { error: blocked };
 
   const supabase = asFlexibleClient(await createClient());
-  const { data: membership } = await supabase.from("organization_members").select("organization_id").limit(1).maybeSingle();
+  const { data: membership } = await activeMembership();
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return { error: "You are not signed in." };
 

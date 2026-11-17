@@ -10,6 +10,8 @@ import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnedObjectPath } from "@/lib/tenant-storage-path";
+import { activeMembership } from "@/lib/request-context";
 
 type AccountContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
@@ -45,12 +47,7 @@ async function getAccountContext(): Promise<AccountContext | null> {
   if (!authData.user) return null;
 
   const database = asFlexibleClient(supabase);
-  const { data: membership } = await database
-    .from("organization_members")
-    .select("organization_id,role")
-    .eq("user_id", authData.user.id)
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   return {
     supabase,
@@ -203,7 +200,8 @@ export async function uploadAvatar(formData: FormData) {
     redirect(accountUrl("profile", "error", "The profile photo could not be attached to your account."));
   }
 
-  if (typeof existing.data?.avatar_path === "string") {
+  // The old photo is deleted with the service role: only if it is this person's own.
+  if (isOwnedObjectPath(existing.data?.avatar_path, context.user.id)) {
     await admin.storage.from(bucketName).remove([existing.data.avatar_path]);
   }
 
@@ -229,7 +227,7 @@ export async function removeAvatar() {
     redirect(accountUrl("profile", "error", "The profile photo could not be removed."));
   }
 
-  if (typeof existing.data?.avatar_path === "string") {
+  if (isOwnedObjectPath(existing.data?.avatar_path, context.user.id)) {
     try {
       await getSupabaseAdmin().storage
         .from("profile-avatars")
@@ -475,4 +473,29 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+/**
+ * Choose which of your businesses this browser acts for.
+ *
+ * Only a business you belong to: the id is checked against your own
+ * memberships here, and again on every request (currentContext ignores a
+ * cookie naming a business you are not in). The page then reloads from
+ * scratch, so nothing shown for the other business stays on screen.
+ */
+export async function switchBusiness(organizationId: string): Promise<{ ok: boolean; error?: string }> {
+  const { currentBusinesses, BUSINESS_COOKIE } = await import("@/lib/request-context");
+  const businesses = await currentBusinesses();
+  const chosen = businesses.find((business) => business.id === organizationId);
+  if (!chosen) return { ok: false, error: "You are not a member of that business." };
+  const { cookies } = await import("next/headers");
+  (await cookies()).set(BUSINESS_COOKIE, chosen.id, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

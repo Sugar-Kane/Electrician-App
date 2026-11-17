@@ -6,6 +6,7 @@ import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
 import { weekdayOfIso } from "@/lib/date-hours";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 import {
   describeWeek,
   friendlyTime,
@@ -42,11 +43,7 @@ async function ownerContext() {
   const userId = auth.user?.id ?? "";
   if (!userId) return null;
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id, role")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) return null;

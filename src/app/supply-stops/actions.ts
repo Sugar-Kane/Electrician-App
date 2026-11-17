@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { isSupplyStopKind } from "@/lib/supply-stops";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Where this business stops on the way to a job.
@@ -30,11 +31,7 @@ async function callerContext() {
   const { data: authData } = await supabase.auth.getUser();
   const userId = authData.user?.id ?? "";
 
-  const { data } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data } = await activeMembership();
 
   const organizationId =
     typeof data?.organization_id === "string" ? data.organization_id : "";

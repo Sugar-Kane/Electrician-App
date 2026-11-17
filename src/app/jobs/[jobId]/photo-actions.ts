@@ -9,6 +9,8 @@ import { jobFolderKey } from "@/lib/document-folders";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnedObjectPath } from "@/lib/tenant-storage-path";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Photographing a job, before and after.
@@ -86,11 +88,7 @@ async function callerContext() {
   const userId = authData.user?.id ?? "";
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data } = await activeMembership();
 
   const organizationId =
     typeof data?.organization_id === "string" ? data.organization_id : "";
@@ -264,8 +262,9 @@ export async function recordJobPhoto(input: {
   const jobId = await resolveJob(context.supabase, context.organizationId, input.jobNumber);
   if (!jobId) return { error: "That job could not be found." };
 
-  const expectedPrefix = documentStoragePath(context.organizationId, `jobs/${jobId}`, "");
-  if (!input.path || !input.path.startsWith(expectedPrefix)) {
+  // Canonical and inside this business's own folder: a prefix match alone
+  // would let ".." walk out of it into another business's files.
+  if (!isOwnedObjectPath(input.path, context.organizationId, { folder: `jobs/${jobId}` })) {
     return { error: "That photo could not be attached to the job." };
   }
 
@@ -359,7 +358,12 @@ export async function removeJobPhoto(
   }
 
   try {
-    await getSupabaseAdmin().storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
+    // Deleted with the service role: only a file under this business's prefix.
+    if (isOwnedObjectPath(storagePath, context.organizationId, { minSegments: 3 })) {
+      await getSupabaseAdmin().storage.from(DOCUMENTS_BUCKET).remove([storagePath]);
+    } else {
+      console.error("job photo: refused to delete a file outside this business");
+    }
   } catch {
     // The row is gone, which is what the screen reflects. A file left in the
     // bucket is wasted space, not a correctness problem worth failing over.

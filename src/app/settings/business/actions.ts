@@ -7,6 +7,7 @@ import { readMarkupPercent } from "@/lib/store-price-rules";
 import { isSupportedTimezone } from "@/lib/timezones";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Editing the business's own details.
@@ -56,11 +57,7 @@ export async function saveBusinessDetails(
 
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id, role")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId =
     typeof membership?.organization_id === "string" ? membership.organization_id : "";
