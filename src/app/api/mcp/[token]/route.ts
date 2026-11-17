@@ -16,7 +16,7 @@ import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { logMcpCall } from "@/lib/mcp-log";
 import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
-import { connectionHolderAllowed } from "@/lib/mcp-session-token";
+import { authorizeBusinessMcpConnection } from "@/lib/mcp-business-authorization";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SERVER_VERSION = "1.16.0";
@@ -81,35 +81,47 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   // The person who made this connection link, from Volteira's own record of it.
   let connectedBy = "";
   if (business) {
-    if (!session.credentialId) return rpcError(401, -32001, "Reconnect ChatGPT from Volteira: Settings → Use in ChatGPT or Claude");
-    const { data: credential } = await database
-      .from("mcp_business_credentials")
-      .select("id, created_by")
-      .eq("id", session.credentialId)
-      .eq("organization_id", session.organizationId)
-      .is("revoked_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-    if (!credential) return rpcError(401, -32001, "This ChatGPT connection has been revoked or expired");
-    connectedBy = typeof credential.created_by === "string" ? credential.created_by : "";
-    // The connection acts for the whole business, so it lasts only while the
-    // person who made it is still an owner there. Removed or demoted, their
-    // link stops working at once rather than at its expiry.
-    const { data: holder } = connectedBy
-      ? await database
+    // One decision, tested on its own (mcp-business-authorization.ts): a live
+    // credential of this same business, made by someone still an owner here.
+    const verdict = await authorizeBusinessMcpConnection(session, {
+      credential: async (credentialId, organizationId) => {
+        const { data } = await database
+          .from("mcp_business_credentials")
+          .select("created_by, revoked_at, expires_at")
+          .eq("id", credentialId)
+          .eq("organization_id", organizationId)
+          .maybeSingle();
+        const row = (data ?? null) as Record<string, unknown> | null;
+        return row
+          ? {
+              createdBy: typeof row.created_by === "string" ? row.created_by : "",
+              revokedAt: typeof row.revoked_at === "string" ? row.revoked_at : null,
+              expiresAt: typeof row.expires_at === "string" ? row.expires_at : null,
+            }
+          : null;
+      },
+      memberRole: async (organizationId, userId) => {
+        const { data } = await database
           .from("organization_members")
           .select("role")
-          .eq("organization_id", session.organizationId)
-          .eq("user_id", connectedBy)
-          .maybeSingle()
-      : { data: null };
-    if (!connectionHolderAllowed(holder?.role)) {
-      return rpcError(401, -32001, "The owner who connected ChatGPT is no longer an owner here. Reconnect from Volteira: Settings → Use in ChatGPT or Claude");
-    }
+          .eq("organization_id", organizationId)
+          .eq("user_id", userId)
+          .maybeSingle();
+        return typeof data?.role === "string" ? data.role : null;
+      },
+    });
+    if (!verdict.ok) return rpcError(verdict.status, -32001, verdict.message);
+    connectedBy = verdict.connectedBy;
     // A query only runs once awaited, and `after` keeps it off the reply's path.
-    const credentialId = session.credentialId;
+    // Scoped by business as well as id, like every other write here.
+    const credentialId = session.credentialId ?? "";
+    const organizationId = session.organizationId;
     after(async () => {
-      await database.from("mcp_business_credentials").update({ last_used_at: new Date().toISOString() }).eq("id", credentialId);
+      await database
+        .from("mcp_business_credentials")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("id", credentialId)
+        .eq("organization_id", organizationId);
     });
   }
 

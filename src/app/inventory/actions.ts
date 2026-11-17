@@ -21,6 +21,8 @@ import { parseCostToCents } from "@/lib/new-job-input";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnedObjectPath } from "@/lib/tenant-storage-path";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * The stock list, edited by the person who owns it.
@@ -71,11 +73,7 @@ async function callerContext() {
   const { data: authData } = await supabase.auth.getUser();
   const userId = authData.user?.id ?? "";
 
-  const { data } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data } = await activeMembership();
 
   const organizationId = text(data?.organization_id);
   if (!organizationId) return null;
@@ -109,6 +107,14 @@ export async function saveInventoryItem(
   if (!context) return { error: "You are not a member of a business." };
   const { supabase, organizationId } = context;
 
+  // A photo path from the form is only ever one this business uploaded to its
+  // own stock folder: anything else would have the server sign another
+  // business's file later.
+  const photoPath = field(formData, "photoPath");
+  if (photoPath && !isOwnedObjectPath(photoPath, organizationId, { folder: PHOTO_FOLDER })) {
+    return { error: "That photo could not be attached." };
+  }
+
   const details = {
     organization_id: organizationId,
     name,
@@ -119,7 +125,7 @@ export async function saveInventoryItem(
     location: field(formData, "location") || null,
     notes: field(formData, "notes") || null,
     // Empty means "leave the photo alone"; the upload sets it separately.
-    ...(field(formData, "photoPath") ? { photo_path: field(formData, "photoPath") } : {}),
+    ...(photoPath ? { photo_path: photoPath } : {}),
   };
 
   if (id) {
@@ -368,8 +374,9 @@ export async function attachStockPhoto(input: {
   const context = await callerContext();
   if (!context) return { error: "You are not a member of a business." };
 
-  const expectedPrefix = documentStoragePath(context.organizationId, PHOTO_FOLDER, "");
-  if (!input.path || !input.path.startsWith(expectedPrefix)) {
+  // Canonical and inside this business's stock folder: a prefix match alone
+  // would let ".." walk out of it.
+  if (!isOwnedObjectPath(input.path, context.organizationId, { folder: PHOTO_FOLDER })) {
     return { error: "That photo could not be attached." };
   }
 

@@ -4,6 +4,7 @@ import { attachmentKind, MAX_ATTACHMENTS, type Reading } from "@/lib/attachment-
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { isOwnedObjectPath, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * Turning files somebody attached into something the model can look at.
@@ -66,6 +67,12 @@ async function readRows(
     const fileName = typeof row.file_name === "string" ? row.file_name : "";
     const mimeType = typeof row.mime_type === "string" ? row.mime_type : "";
     if (!id || !storagePath) continue;
+    // The file is read with the service role and handed to the AI: only one
+    // under this business's own prefix, whatever the row says.
+    if (!isOwnedObjectPath(storagePath, organizationId, { minSegments: 3 })) {
+      reportRefusedPaths("assistant attachment", 1);
+      continue;
+    }
 
     const kind = attachmentKind(mimeType, fileName);
     if (!kind) continue;

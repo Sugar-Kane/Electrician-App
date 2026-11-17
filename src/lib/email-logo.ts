@@ -5,6 +5,7 @@ import sharp from "sharp";
 
 import { BRANDING_BUCKET, logoUrl } from "@/lib/branding-storage";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { isOwnedObjectPath } from "@/lib/tenant-storage-path";
 
 /**
  * The business's logo as it heads an email: a navy badge with the mark on it.
@@ -94,7 +95,8 @@ export async function emailLogoUrl(organizationId: string | undefined): Promise<
     const database = getSupabaseAdmin();
     const { data } = await database.from("organizations").select("logo_path").eq("id", organizationId).maybeSingle();
     const source = ((data as { logo_path?: string | null } | null)?.logo_path ?? "").trim().replace(/^\/+/, "");
-    if (!source) return "";
+    // Read with the service role: only this business's own logo.
+    if (!source || !isOwnedObjectPath(source, organizationId)) return "";
 
     const bucket = database.storage.from(BRANDING_BUCKET);
     // A replaced logo is uploaded over the same name (upsert), so the path

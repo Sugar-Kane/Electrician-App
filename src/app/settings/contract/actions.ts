@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { readSignature, readSignerTitle } from "@/lib/contract-signing";
 import { unknownPlaceholders } from "@/lib/contract-template";
-import { currentContext } from "@/lib/request-context";
+import { activeMembership, currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,11 +29,7 @@ export async function saveContractTemplate(
 
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId =
     typeof membership?.organization_id === "string" ? membership.organization_id : "";

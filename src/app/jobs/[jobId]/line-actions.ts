@@ -15,6 +15,7 @@ import { lineTotalCents, parseQuantity, readPrice } from "@/lib/job-lines";
 import { PACK_CONTENTS, PACK_UNITS, PART_UNITS } from "@/lib/stock-reservation";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Adding and removing what a job is made of, and what the technician wrote.
@@ -35,11 +36,7 @@ function text(formData: FormData, key: string): string {
 async function callerContext() {
   const supabase = asFlexibleClient(await createClient());
 
-  const { data } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data } = await activeMembership();
 
   const organizationId =
     typeof data?.organization_id === "string" ? data.organization_id : "";

@@ -9,6 +9,7 @@ import { DOCUMENTS_BUCKET, documentStoragePath, ensureDocumentsBucket } from "@/
 import type { BusinessLetterhead, LetterheadLogo } from "@/lib/pdf/letterhead";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
+import { isOwnedObjectPath, ownedObjectPaths, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * Turning a document into a file, and keeping the file with its record.
@@ -46,10 +47,15 @@ const MAX_LOGO_BYTES = 2 * 1024 * 1024;
  * only: those are what the PDF renderer draws. A logo saved as SVG or WebP
  * (the booking page takes both) is left off rather than printed broken.
  */
-async function letterheadLogo(path: string): Promise<LetterheadLogo | null> {
+async function letterheadLogo(path: string, organizationId: string): Promise<LetterheadLogo | null> {
   const clean = path.trim().replace(/^\/+/, "");
   const format = /\.png$/i.test(clean) ? "png" : /\.jpe?g$/i.test(clean) ? "jpg" : null;
   if (!clean || !format) return null;
+  // Read with the service role: only this business's own logo.
+  if (!isOwnedObjectPath(clean, organizationId)) {
+    reportRefusedPaths("letterhead logo", 1);
+    return null;
+  }
   try {
     const { data, error } = await getSupabaseAdmin().storage.from(BRANDING_BUCKET).download(clean);
     if (error || !data || data.size === 0 || data.size > MAX_LOGO_BYTES) return null;
@@ -84,7 +90,7 @@ export async function businessLetterhead(
     state: str(row.base_state),
     postalCode: str(row.base_postal_code),
     licenseNumber: str(row.license_number),
-    logo: await letterheadLogo(str(row.logo_path)),
+    logo: await letterheadLogo(str(row.logo_path), organizationId),
     logoUrl: /\.(png|jpe?g)$/i.test(str(row.logo_path)) ? logoUrl(str(row.logo_path)) : "",
   };
 }
@@ -288,8 +294,15 @@ export async function currentDocuments(input: {
     return found;
   }
 
-  const paths = [...newest.values()].map((row) => str(row.storage_path));
-  const signed = await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS);
+  // Signed with the service role: only this business's own files get a link.
+  const owned = ownedObjectPaths(
+    [...newest.values()].map((row) => row.storage_path),
+    input.organizationId,
+    { minSegments: 3 },
+  );
+  reportRefusedPaths("documents", owned.refused);
+  if (owned.paths.length === 0) return found;
+  const signed = await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrls(owned.paths, SIGNED_URL_SECONDS);
   if (signed.error || !signed.data) return found;
 
   const urls = new Map(
@@ -362,9 +375,13 @@ export async function currentDocument(input: {
     return null;
   }
 
+  if (!isOwnedObjectPath(row.storage_path, input.organizationId, { minSegments: 3 })) {
+    reportRefusedPaths("document", 1);
+    return null;
+  }
   const signed = await admin.storage
     .from(DOCUMENTS_BUCKET)
-    .createSignedUrl(str(row.storage_path), SIGNED_URL_SECONDS);
+    .createSignedUrl(row.storage_path, SIGNED_URL_SECONDS);
 
   if (signed.error || !signed.data?.signedUrl) return null;
 

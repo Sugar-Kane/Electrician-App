@@ -5,6 +5,7 @@ import { CheckCircle2, LockKeyhole, Zap } from "lucide-react";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 export const metadata: Metadata = { title: "Set up your business | Volteira" };
 
@@ -14,12 +15,7 @@ export default async function OnboardingPage() {
 
   if (!authData.user) redirect("/login?next=/onboarding");
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", authData.user.id)
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   if (membership) redirect("/");
 

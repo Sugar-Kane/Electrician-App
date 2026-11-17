@@ -7,6 +7,7 @@ import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml, invoiceViewUrl } from "@/lib/invoice-messages";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { ownedObjectPaths, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * Telling the customer the work is done, the way the person finishing chose:
@@ -63,10 +64,13 @@ export async function sendWorkCompleteNotice(jobId: string, notice: CompletionNo
       const list = ((rows ?? []) as Record<string, unknown>[])
         .sort((a, b) => (a.document_type === b.document_type ? 0 : a.document_type === "photo_after" ? -1 : 1))
         .slice(0, 12);
-      if (list.length > 0) {
+      // Only this business's own files are signed into a customer's message.
+      const owned = ownedObjectPaths(list.map((row) => row.storage_path), organizationId, { minSegments: 3 });
+      reportRefusedPaths("work complete notice", owned.refused);
+      if (owned.paths.length > 0) {
         const { data: signed } = await database.storage
           .from(DOCUMENTS_BUCKET)
-          .createSignedUrls(list.map((row) => text(row.storage_path)), PHOTO_LINK_SECONDS);
+          .createSignedUrls(owned.paths, PHOTO_LINK_SECONDS);
         const byPath = new Map((signed ?? []).filter((entry) => entry.path && entry.signedUrl).map((entry) => [entry.path as string, entry.signedUrl]));
         photos = list
           .map((row) => ({ url: byPath.get(text(row.storage_path)) ?? "", stage: row.document_type === "photo_after" ? "After" : "Before" }))

@@ -5,6 +5,7 @@ import { TeamManager, type Invitation, type Member } from "@/components/team-man
 import { setTechnicianBilling } from "@/app/settings/team/actions";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 export const metadata: Metadata = { title: "Team | Volteira" };
 
@@ -22,11 +23,7 @@ function text(value: unknown) {
 export default async function TeamSettingsPage() {
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id, role")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   const canManage = ["owner", "admin"].includes(text(membership?.role));

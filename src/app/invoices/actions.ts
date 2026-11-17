@@ -17,9 +17,10 @@ import { getInvoicePayments, refundInvoicePayment } from "@/lib/invoice-refund-s
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
-import { currentContext } from "@/lib/request-context";
+import { activeMembership, currentContext } from "@/lib/request-context";
 import { billingRefusal } from "@/lib/billing-permission-server";
 import { invoiceLabel } from "@/lib/invoice-label";
+import { ownedObjectPaths, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * Sending an invoice to the customer.
@@ -334,11 +335,7 @@ async function callerContext() {
   const userId = auth.user?.id ?? "";
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data } = await activeMembership();
 
   const organizationId = text(data?.organization_id);
   if (!organizationId) return null;
@@ -396,9 +393,14 @@ export async function deleteInvoice(
     .eq("organization_id", context.organizationId)
     .eq("invoice_id", invoiceId);
 
-  const paths = ((documents ?? []) as Record<string, unknown>[])
-    .map((document) => text(document.storage_path))
-    .filter(Boolean);
+  // Deleted with the service role below: only files under this business's prefix.
+  const owned = ownedObjectPaths(
+    ((documents ?? []) as Record<string, unknown>[]).map((document) => document.storage_path),
+    context.organizationId,
+    { minSegments: 3 },
+  );
+  reportRefusedPaths("invoice delete", owned.refused);
+  const paths = owned.paths;
 
   const { data: deleted, error } = await context.supabase
     .from("invoices")

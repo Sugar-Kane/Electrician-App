@@ -7,7 +7,7 @@ import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
 import { claimUnbilledLines } from "@/lib/job-billing-server";
 import { recordManualSmsConsent } from "@/lib/manual-sms-consent";
-import { currentContext } from "@/lib/request-context";
+import { activeMembership, currentContext } from "@/lib/request-context";
 import {
   kindOfWork,
   parseNewJob,
@@ -131,11 +131,7 @@ export async function createJob(
 
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = text(membership?.organization_id);
   if (!organizationId) {

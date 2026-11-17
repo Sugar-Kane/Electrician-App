@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { IntentLink } from "@/components/intent-link";
-import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { Building2, Check, ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
-import { signOut } from "@/app/account/actions";
+import { signOut, switchBusiness } from "@/app/account/actions";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { NavIcon } from "@/components/ui/nav-icon";
 import { ACCOUNT_MENU_ITEMS } from "@/lib/navigation";
@@ -36,6 +36,8 @@ type AccountSummary = {
   initials: string;
   avatarUrl: string | null;
   isPlatformAdmin?: boolean;
+  /** Listed only for someone in more than one business. */
+  businesses?: { id: string; name: string; current: boolean }[];
 };
 
 /**
@@ -81,6 +83,17 @@ export function AccountMenu() {
       active = false;
     };
   }, []);
+
+  const [switching, setSwitching] = useState("");
+  const chooseBusiness = async (id: string) => {
+    setSwitching(id);
+    const result = await switchBusiness(id);
+    // A full reload, not a client navigation: nothing from the business being
+    // left (pages, cached data, this menu's summary) survives the switch.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full reload is the point
+    if (result.ok) window.location.assign("/");
+    else setSwitching("");
+  };
 
   const avatarStyle = summary.avatarUrl
     ? { backgroundImage: `url(${JSON.stringify(summary.avatarUrl).slice(1, -1)})` }
@@ -134,6 +147,31 @@ export function AccountMenu() {
           </IntentLink>
         ))}
       </div>
+
+      {summary.businesses && summary.businesses.length > 1 ? (
+        <>
+          <MenuSeparator />
+          <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Your businesses</p>
+          <div className="space-y-1">
+            {summary.businesses.map((business) => (
+              <button
+                key={business.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={business.current}
+                disabled={business.current || Boolean(switching)}
+                onClick={() => chooseBusiness(business.id)}
+                className="tap-row flex min-h-12 w-full items-center gap-3 rounded-chip px-3 text-left text-sm font-semibold hover:bg-white/[0.05] disabled:cursor-default"
+              >
+                <Building2 className="h-[18px] w-[18px] shrink-0 text-ink-muted" aria-hidden />
+                <span className="min-w-0 flex-1 truncate">{business.name}</span>
+                {business.current ? <Check className="h-4 w-4 shrink-0 text-brand" aria-label="Current" /> : null}
+                {switching === business.id ? <span className="text-xs text-ink-muted">Switching…</span> : null}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
 
       {summary.isPlatformAdmin ? (
         <>

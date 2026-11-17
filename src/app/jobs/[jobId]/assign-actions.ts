@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { activeMembership } from "@/lib/request-context";
 
 /**
  * Putting somebody on a job.
@@ -37,11 +38,7 @@ export type CrewMember = { id: string; name: string; isActive: boolean };
 export async function listCrew(): Promise<CrewMember[]> {
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = str(membership?.organization_id);
   if (!organizationId) return [];
@@ -79,11 +76,7 @@ export async function assignTechnician(
 
   const supabase = asFlexibleClient(await createClient());
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .limit(1)
-    .maybeSingle();
+  const { data: membership } = await activeMembership();
 
   const organizationId = str(membership?.organization_id);
   if (!organizationId) return { error: "You are not a member of a business." };

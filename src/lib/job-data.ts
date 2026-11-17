@@ -19,7 +19,7 @@ import { followUpPrefill } from "@/lib/follow-up-jobs";
 import { jobCategoryLabel, kindOfWork, type KindOfWork, type NewJobRaw } from "@/lib/new-job-input";
 import { jobStatusLabel } from "@/lib/job-stage";
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
-import { currentContext } from "@/lib/request-context";
+import { currentContext, activeMembership } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isoToZonedWallClock, zonedWallClockToIso } from "@/lib/schedule-labels";
 import { DEFAULT_TIMEZONE } from "@/lib/timezones";
@@ -37,6 +37,7 @@ import {
   type PilotJob,
 } from "@/lib/pilot-data";
 import { invoiceLabel } from "@/lib/invoice-label";
+import { ownedObjectPaths, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 /**
  * Live job and invoice data from Supabase, returned in the same shapes the
@@ -860,11 +861,9 @@ export async function getTechnicianWorkloads(): Promise<CrewRoster> {
         .eq("organization_id", context.organizationId)
         .order("display_name"),
       getJobs(),
-      context.database
-        .from("organization_members")
-        .select("role")
-        .limit(1)
-        .maybeSingle(),
+      // The caller's own role in this business: the policy lets members see
+      // each other's rows, so an unfiltered first row could be anyone's.
+      activeMembership(),
       context.database
         .from("technician_hours")
         .select("technician_id, weekday, starts_at, ends_at")
@@ -1455,6 +1454,7 @@ export async function getInventory(): Promise<
    */
   const photos = await signStockPhotos(
     rows.map((row) => (typeof row.photo_path === "string" ? row.photo_path : "")),
+    context.organizationId,
   );
 
   return rows.map((row) => ({
@@ -1548,9 +1548,10 @@ export async function getInventoryItem(id: string): Promise<StockItemDetail | nu
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const photos = await signStockPhotos([
-    typeof row.photo_path === "string" ? row.photo_path : "",
-  ]);
+  const photos = await signStockPhotos(
+    [typeof row.photo_path === "string" ? row.photo_path : ""],
+    context.organizationId,
+  );
   const held = (await reservedStock(context.database, context.organizationId)).get(String(row.id));
 
   const movements = ((history ?? []) as Record<string, unknown>[]).map((entry) => {
@@ -1616,8 +1617,11 @@ const STOCK_PHOTO_SECONDS = 60 * 60;
  * of parts, so they go in a batch and anything that fails comes back missing
  * rather than breaking the list.
  */
-async function signStockPhotos(paths: string[]): Promise<Map<string, string>> {
-  const wanted = [...new Set(paths.filter(Boolean))];
+async function signStockPhotos(paths: string[], organizationId: string): Promise<Map<string, string>> {
+  // Signed with the service role: only photos under this business's own prefix.
+  const owned = ownedObjectPaths([...new Set(paths.filter(Boolean))], organizationId, { minSegments: 3 });
+  reportRefusedPaths("stock photos", owned.refused);
+  const wanted = owned.paths;
   const signed = new Map<string, string>();
   if (wanted.length === 0) return signed;
 

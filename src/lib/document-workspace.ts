@@ -3,10 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { DOCUMENTS_BUCKET } from "@/lib/document-storage";
-import { currentContext } from "@/lib/request-context";
+import { currentContext, activeMembership } from "@/lib/request-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
+import { ownedObjectPaths, reportRefusedPaths } from "@/lib/tenant-storage-path";
 
 export type DocumentFolderNode = {
   id: string;
@@ -215,12 +216,18 @@ export async function getDocumentWorkspace(): Promise<DocumentWorkspace> {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return fallback;
 
-    const { data: membership } = await supabase
-      .from("organization_members")
-      .select("organization_id, organizations(name)")
-      .eq("user_id", authData.user.id)
-      .limit(1)
-      .maybeSingle();
+    // The business this request acts for, the same one every page uses, not
+    // whichever membership row happens to come back first.
+    const { data: active } = await activeMembership();
+    const { data: membership } = active
+      ? await supabase
+          .from("organization_members")
+          .select("organization_id, organizations(name)")
+          .eq("user_id", authData.user.id)
+          .eq("organization_id", active.organization_id)
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
 
     if (!membership) return fallback;
     const organizationId = membership.organization_id;
@@ -469,9 +476,15 @@ export async function getFolderContents(folderId: string): Promise<FolderContent
   if (documents.length > 0) {
     try {
       const admin = getSupabaseAdmin();
-      const paths = documents
-        .map((row) => (typeof row.storage_path === "string" ? row.storage_path : ""))
-        .filter(Boolean);
+      // Signed with the service role, so only paths under this business's own
+      // prefix: a row edited to name another business's file gets no link.
+      const owned = ownedObjectPaths(
+        documents.map((row) => row.storage_path),
+        organizationId,
+        { minSegments: 3 },
+      );
+      reportRefusedPaths("files list", owned.refused);
+      const paths = owned.paths;
 
       const { data, error } = await admin.storage
         .from(DOCUMENTS_BUCKET)

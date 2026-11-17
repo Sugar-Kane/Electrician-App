@@ -4,9 +4,11 @@
  * The database returns the paths of the documents it removed, but files are
  * deleted by the server with full storage access. So the server deletes only
  * paths inside the business's own folder (`<business id>/...`), never one that
- * climbs out of it, and each path once. Kept free of imports so the rule can
- * be tested on its own.
+ * climbs out of it, and each path once. Only the shared path rule is imported,
+ * so this can be tested on its own.
  */
+import { isOwnedObjectPath } from "./tenant-storage-path.ts";
+
 export function filesInBusinessFolder(organizationId: string, paths: unknown): string[] {
   if (!/^[0-9a-f-]{36}$/i.test(organizationId) || !Array.isArray(paths)) return [];
   const prefix = `${organizationId.toLowerCase()}/`;
@@ -17,6 +19,8 @@ export function filesInBusinessFolder(organizationId: string, paths: unknown): s
     if (!clean.toLowerCase().startsWith(prefix)) continue;
     if (clean.length <= prefix.length) continue;
     if (clean.split("/").some((part) => part === ".." || part === ".")) continue;
+    // The same canonical shape every other service-role storage call requires.
+    if (!isOwnedObjectPath(clean, organizationId)) continue;
     kept.add(clean);
   }
   return [...kept];
