@@ -7,6 +7,7 @@ import {
   rescheduleSms,
   type JobChangeFacts,
 } from "@/lib/job-change-messages";
+import { appointmentEmail, appointmentIcs, type AppointmentFacts } from "@/lib/appointment-email";
 import { emailSender, looksLikeEmail } from "@/lib/booking-confirmation";
 import { sendEmail } from "@/lib/email";
 import { recordActivity } from "@/lib/activity";
@@ -39,6 +40,13 @@ export async function notifyJobChange(input: {
   facts: JobChangeFacts;
   customerPhone: string;
   customerEmail: string;
+  /**
+   * The visit as it now stands, for a time being set or moved. A first booking
+   * is emailed as "Job scheduled", and either way the email carries a calendar
+   * invite with the job's fixed UID, so a move updates the event the customer
+   * already added.
+   */
+  appointment?: AppointmentFacts;
 }): Promise<ChangeAttempt[]> {
   const database = getSupabaseAdmin();
   const attempts: ChangeAttempt[] = [];
@@ -47,7 +55,13 @@ export async function notifyJobChange(input: {
 
   const canceled = input.kind === "canceled";
   const smsBody = canceled ? cancellationSms(input.facts) : rescheduleSms(input.facts);
-  const mail = canceled ? cancellationEmail(input.facts) : rescheduleEmail(input.facts);
+  const nowIso = new Date().toISOString();
+  const firstBooking = !canceled && !input.facts.slotLabel && Boolean(input.appointment);
+  const mail =
+    canceled ? cancellationEmail(input.facts)
+    : firstBooking && input.appointment ? appointmentEmail(input.appointment, nowIso)
+    : rescheduleEmail(input.facts);
+  const invite = !canceled && input.appointment ? appointmentIcs(input.appointment, nowIso) : "";
 
   const { data: settings } = await database
     .from("messaging_settings")
@@ -106,6 +120,7 @@ export async function notifyJobChange(input: {
       text: mail.text,
       html: mail.html,
       from: emailSender(input.facts.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+      ...(invite ? { attachments: [inviteAttachment(invite)] } : {}),
     });
     note({
       channel: "email",
@@ -115,6 +130,36 @@ export async function notifyJobChange(input: {
     });
   }
 
+  await recordAttempts({
+    jobId: input.jobId,
+    organizationId: input.organizationId,
+    attempts,
+    note: canceled ? "Canceled" : firstBooking ? "Scheduled" : "Rescheduled",
+  });
+
+  return attempts;
+}
+
+function inviteAttachment(ics: string) {
+  return {
+    filename: "appointment.ics",
+    content: Buffer.from(ics, "utf8").toString("base64"),
+    contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+  };
+}
+
+/**
+ * Onto the job (customer_notifications) and its history: told by which
+ * channel, or not told and why. Never throws.
+ */
+async function recordAttempts(input: {
+  jobId: string;
+  organizationId: string;
+  attempts: ChangeAttempt[];
+  note: string;
+}): Promise<void> {
+  const database = getSupabaseAdmin();
+  const { attempts } = input;
   // Appended rather than replaced: a job can be moved twice and then called
   // off, and the earlier attempts are the record of what the customer was
   // previously promised.
@@ -123,6 +168,7 @@ export async function notifyJobChange(input: {
       .from("jobs")
       .select("customer_notifications")
       .eq("id", input.jobId)
+      .eq("organization_id", input.organizationId)
       .maybeSingle();
 
     const previous = Array.isArray(existing?.customer_notifications)
@@ -132,7 +178,8 @@ export async function notifyJobChange(input: {
     await database
       .from("jobs")
       .update({ customer_notifications: [...previous, ...attempts] })
-      .eq("id", input.jobId);
+      .eq("id", input.jobId)
+      .eq("organization_id", input.organizationId);
   } catch {
     // Deliberately silent. The messages are already sent; losing the record of
     // them is bad, but undoing the change would be worse.
@@ -144,7 +191,10 @@ export async function notifyJobChange(input: {
   await recordActivity(asFlexibleClient(database), {
     organizationId: input.organizationId,
     eventType: reached.length > 0 ? "customer.notified" : "customer.notify_failed",
-    label: reached.length > 0 ? "Customer told about the change" : "Customer not told about the change",
+    label:
+      input.note === "Scheduled"
+        ? reached.length > 0 ? "Customer sent the appointment" : "Customer not sent the appointment"
+        : reached.length > 0 ? "Customer told about the change" : "Customer not told about the change",
     jobId: input.jobId,
     metadata:
       reached.length > 0
@@ -152,13 +202,66 @@ export async function notifyJobChange(input: {
             // One channel reads through the timeline's own words ("by text");
             // both are said together.
             via: reached.length === 1 ? reached[0]!.channel : "by text and email",
-            note: canceled ? "Canceled" : "Rescheduled",
+            note: input.note,
           }
         : {
-            note: canceled ? "Canceled" : "Rescheduled",
+            note: input.note,
             reason: attempts.map((attempt) => attempt.detail).filter(Boolean).join(" "),
           },
   });
+}
 
-  return attempts;
+/**
+ * "Job scheduled" by email alone, for a job booked from the New job form with
+ * "Email the customer" ticked. That form promises no text, so none is sent.
+ *
+ * The idempotency key is the job and its start: a retried save sends one email,
+ * and a visit booked again at another time is a new one.
+ */
+export async function emailJobScheduled(input: {
+  organizationId: string;
+  customerEmail: string;
+  appointment: AppointmentFacts;
+}): Promise<ChangeAttempt> {
+  const at = new Date().toISOString();
+  const to = input.customerEmail.trim();
+  let attempt: ChangeAttempt;
+
+  if (!looksLikeEmail(to)) {
+    attempt = {
+      channel: "email",
+      to,
+      ok: false,
+      detail: to ? "That address is not one mail can be sent to." : "No email address on this customer.",
+      at,
+    };
+  } else {
+    const mail = appointmentEmail(input.appointment, at);
+    const sent = await sendEmail({
+      organizationId: input.organizationId,
+      contactButtons: true,
+      to,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
+      from: emailSender(input.appointment.businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+      attachments: [inviteAttachment(mail.ics)],
+      idempotencyKey: `job-scheduled:${input.appointment.jobId}:${input.appointment.start}`,
+    });
+    attempt = {
+      channel: "email",
+      to,
+      ok: sent.ok,
+      detail: sent.ok ? sent.id : `${sent.errorCode}: ${sent.errorDetail}`,
+      at,
+    };
+  }
+
+  await recordAttempts({
+    jobId: input.appointment.jobId,
+    organizationId: input.organizationId,
+    attempts: [attempt],
+    note: "Scheduled",
+  });
+  return attempt;
 }

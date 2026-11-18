@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { invoiceTotals } from "@/lib/invoice-math";
+import { emailJobScheduled } from "@/lib/job-notifications";
 import { claimUnbilledLines } from "@/lib/job-billing-server";
 import { recordManualSmsConsent } from "@/lib/manual-sms-consent";
 import { activeMembership, currentContext } from "@/lib/request-context";
@@ -140,7 +142,7 @@ export async function createJob(
 
   const { data: organization } = await supabase
     .from("organizations")
-    .select("timezone")
+    .select("timezone, name, phone")
     .eq("id", organizationId)
     .maybeSingle();
 
@@ -342,6 +344,7 @@ export async function createJob(
   const end = start
     ? new Date(new Date(start).getTime() + job.durationMinutes * 60_000).toISOString()
     : "";
+  const arrivalEnd = start && job.arrivalEndLocal ? zonedWallClockToIso(job.arrivalEndLocal, timeZone) : end;
 
   const { data: createdJob, error: jobError } = await supabase
     .from("jobs")
@@ -362,7 +365,7 @@ export async function createJob(
       ...(end ? { scheduled_end: end } : {}),
       // The arrival window the customer is told: from the start to the end
       // the electrician gave, which is required with a start.
-      ...(start ? { arrival_window_end: job.arrivalEndLocal ? zonedWallClockToIso(job.arrivalEndLocal, timeZone) : end } : {}),
+      ...(start ? { arrival_window_end: arrivalEnd } : {}),
       // A follow-up has no diagnostic fee of its own. The one the customer
       // paid belongs to the visit it follows, and is credited from there.
       ...(followed ? { follow_up_of: followed.id, diagnostic_fee_cents: 0 } : {}),
@@ -501,6 +504,43 @@ export async function createJob(
         invoiceId: text(invoice.id),
         voidInvoiceIds: [],
       });
+    }
+  }
+
+  /*
+   * "Job scheduled" to the customer, when the box was left ticked: only for a
+   * job that is actually booked (a time, not a draft) and a customer with an
+   * email on file. After the response, so a slow mail provider never holds up
+   * the save; the outcome lands on the job's history either way.
+   */
+  if (!draft && start && arrivalEnd && field(formData, "emailCustomer") === "on") {
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("first_name, last_name, company_name, email")
+      .eq("organization_id", organizationId)
+      .eq("id", customerId)
+      .maybeSingle();
+    const customerEmail = text(customer?.email) || job.email;
+    if (customerEmail) {
+      const contactName =
+        text(customer?.company_name).trim() ||
+        [text(customer?.first_name), text(customer?.last_name)].filter(Boolean).join(" ").trim() ||
+        job.customerName;
+      const place = job.address;
+      const stateZip = place ? [place.state, place.postalCode].filter(Boolean).join(" ") : "";
+      const appointment = {
+        jobId: text(createdJob.id),
+        businessName: text(organization?.name) || "Your electrician",
+        businessPhone: text(organization?.phone),
+        contactName,
+        start,
+        end: arrivalEnd,
+        timeZone,
+        address: place
+          ? [place.line1, place.line2, place.city, stateZip].map((part) => part.trim()).filter(Boolean).join(", ")
+          : "",
+      };
+      after(() => emailJobScheduled({ organizationId, customerEmail, appointment }));
     }
   }
 

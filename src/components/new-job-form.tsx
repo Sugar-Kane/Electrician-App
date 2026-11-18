@@ -456,6 +456,23 @@ export function NewJobForm({
                 />
               </Field>
             </div>
+            {start ? (
+              <label className="mt-4 flex min-h-12 cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  name="emailCustomer"
+                  defaultChecked
+                  className="h-5 w-5 shrink-0 accent-[color:var(--color-brand)]"
+                />
+                <span className="text-sm">
+                  Email the customer their appointment
+                  <span className="mt-0.5 block text-xs text-ink-muted">
+                    If they have an email on file: the time, the address, and buttons to add it to their
+                    calendar and get directions. Not sent for a draft.
+                  </span>
+                </span>
+              </label>
+            ) : null}
           </Optional>
 
           <Optional
@@ -540,9 +557,9 @@ export function NewJobForm({
       </div>
 
       <p className="text-xs leading-5 text-ink-faint">
-        Neither button texts or emails the customer: messages go only when you send them from the
-        job. A draft can be missing details and stays unconfirmed, even with a time, until you
-        finish it.
+        Nothing is texted from here. A scheduled job emails the customer their appointment only if
+        you leave that box ticked. A draft can be missing details and stays unconfirmed, even with a
+        time, and sends nothing until you finish it.
       </p>
     </form>
   );
