@@ -58,7 +58,7 @@ export async function loadChangeJob(
     .select(
       `id, status, property_id, customer_id, technician_id, scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        organization_id, customers ( first_name, last_name, company_name, phone, email ),
-       organizations ( name, phone, timezone )`,
+       organizations ( name, phone, timezone ), properties ( address_line_1, address_line_2, city, state, postal_code )`,
     )
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
@@ -71,6 +71,8 @@ export async function loadChangeJob(
   const row = data as Record<string, unknown>;
   const customer = (row.customers ?? null) as Record<string, unknown> | null;
   const organization = (row.organizations ?? null) as Record<string, unknown> | null;
+  const property = (row.properties ?? null) as Record<string, unknown> | null;
+  const stateZip = [text(property?.state), text(property?.postal_code)].filter(Boolean).join(" ");
 
   return {
     supabase,
@@ -88,6 +90,10 @@ export async function loadChangeJob(
     contactName: name(customer),
     customerPhone: text(customer?.phone),
     customerEmail: text(customer?.email),
+    address: [text(property?.address_line_1), text(property?.address_line_2), text(property?.city), stateZip]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(", "),
   };
 }
 
@@ -227,9 +233,24 @@ export async function changeJob(
     },
     customerPhone: job.customerPhone,
     customerEmail: job.customerEmail,
+    ...(start && end
+      ? {
+          appointment: {
+            jobId: job.id,
+            businessName: job.businessName,
+            businessPhone: job.businessPhone,
+            contactName: job.contactName,
+            start,
+            end,
+            timeZone: job.timeZone,
+            address: job.address,
+          },
+        }
+      : {}),
   });
 
-  return { error: "", notice: `Job moved. ${describeAttempts(attempts)}`, partsUsed };
+  const booked = !(job.start && job.end);
+  return { error: "", notice: `${booked ? "Job scheduled" : "Job moved"}. ${describeAttempts(attempts)}`, partsUsed };
 }
 
 /**
