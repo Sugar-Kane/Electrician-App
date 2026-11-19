@@ -41,7 +41,19 @@ export default async function PayLinkPage({
 }) {
   const { token } = await params;
   const query = await searchParams;
-  const view = UUID.test(token) ? await payLinkView(token) : null;
+  const found = UUID.test(token) ? await payLinkView(token) : null;
+
+  if (found && "unavailable" in found) {
+    return (
+      <main id="main-content" className="grid min-h-screen place-items-center bg-canvas px-4 py-10 text-white">
+        <section className="w-full max-w-lg rounded-[28px] border border-line bg-[#081925] p-6 text-center sm:p-8">
+          <h1 className="text-2xl font-semibold">This page can&apos;t load right now</h1>
+          <p className="mt-3 text-sm leading-6 text-ink-muted">Try again in a few minutes. Nothing has been charged.</p>
+        </section>
+      </main>
+    );
+  }
+  const view = found;
 
   if (!view) {
     return (

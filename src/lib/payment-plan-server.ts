@@ -43,11 +43,12 @@ export type JobPaymentPlan = {
 
 /** What the job's work and parts come to, before any invoice credits. */
 async function jobTotalCents(database: FlexibleSupabaseClient, organizationId: string, jobId: string): Promise<number> {
-  const { data } = await database
+  const { data, error } = await database
     .from("job_line_items")
     .select("quantity, unit_price_cents")
     .eq("organization_id", organizationId)
     .eq("job_id", jobId);
+  if (error) throw new Error(`job total could not be read: ${error.message}`);
   return ((data ?? []) as Row[]).reduce(
     (sum, line) => sum + lineTotalCents({ quantity: num(line.quantity), unitPriceCents: num(line.unit_price_cents) }),
     0,
@@ -69,7 +70,9 @@ export async function loadJobPaymentPlan(
   database: FlexibleSupabaseClient,
   input: { organizationId: string; jobId: string },
 ): Promise<JobPaymentPlan> {
-  const [totalCents, { data: itemRows }, { data: prepaidRows }] = await Promise.all([
+  // Throws on any failed read: a balance worked out from missing rows (no
+  // prepayments read as none paid) would ask for money already paid.
+  const [totalCents, { data: itemRows, error: itemError }, { data: prepaidRows, error: prepaidError }] = await Promise.all([
     jobTotalCents(database, input.organizationId, input.jobId),
     database
       .from("job_payment_plan_items")
@@ -84,6 +87,8 @@ export async function loadJobPaymentPlan(
       .eq("job_id", input.jobId)
       .order("received_at", { ascending: true }),
   ]);
+  if (itemError) throw new Error(`payment plan could not be read: ${itemError.message}`);
+  if (prepaidError) throw new Error(`prepayments could not be read: ${prepaidError.message}`);
   const rows = (itemRows ?? []) as Row[];
   const items = rows.map(toItem);
   const planned = items.length > 0 ? planAmounts(totalCents, items) : null;
@@ -124,7 +129,13 @@ export async function saveJobPaymentPlan(
 ): Promise<{ ok: true; payments: PlannedPayment[] | null } | { ok: false; error: string }> {
   let payments: PlannedPayment[] | null = null;
   if (input.items.length > 0) {
-    const total = await jobTotalCents(database, input.organizationId, input.jobId);
+    let total: number;
+    try {
+      total = await jobTotalCents(database, input.organizationId, input.jobId);
+    } catch (error) {
+      console.error("payment plan: job total could not be read", error);
+      return { ok: false, error: "The job's price could not be read. Try again." };
+    }
     const planned = planAmounts(total, input.items);
     if (!planned.ok) return { ok: false, error: planned.reason };
     payments = planned.payments;

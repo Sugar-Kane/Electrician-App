@@ -376,7 +376,14 @@ export async function generateContract(
   const scope = baseScope || continuation ? withContinuation(baseScope ?? "", continuation) : null;
 
   // The job's payment plan (deposit and installments), when it has one.
-  const plan = await loadJobPaymentPlan(supabase, { organizationId, jobId: text(row.id) });
+  let plan: Awaited<ReturnType<typeof loadJobPaymentPlan>>;
+  try {
+    plan = await loadJobPaymentPlan(supabase, { organizationId, jobId: text(row.id) });
+  } catch (error) {
+    // A contract drafted without its payment schedule would misstate the terms.
+    console.error("contract: payment plan could not be read", error);
+    return { error: "The job's payment plan could not be read, so the contract wasn't drafted. Try again." };
+  }
   const planTerms = contractPaymentTerms(plan.payments, (isoDate) =>
     isoDate
       ? new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }).format(new Date(`${isoDate}T12:00:00Z`))

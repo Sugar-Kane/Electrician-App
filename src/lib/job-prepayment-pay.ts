@@ -114,13 +114,16 @@ export async function loadPlanPayment(
   database: Database = getSupabaseAdmin(),
 ): Promise<PlanPayment | null> {
   const query = database.from("job_payment_plan_items").select("id, organization_id, job_id, pay_token, requested_at");
-  const { data: itemRow } = await ("token" in by ? query.eq("pay_token", by.token) : query.eq("id", by.itemId)).maybeSingle();
+  const { data: itemRow, error: itemError } = await ("token" in by ? query.eq("pay_token", by.token) : query.eq("id", by.itemId)).maybeSingle();
+  if (itemError) throw new Error(`pay link lookup failed: ${itemError.message}`);
   if (!itemRow) return null;
   const item = itemRow as Row;
   const organizationId = text(item.organization_id);
   const jobId = text(item.job_id);
 
-  const [plan, { data: jobRow }, { data: invoiceRow }, { data: signedRow }] = await Promise.all([
+  // Every read must succeed: a missing invoice or contract read as "none"
+  // would ask for money the invoice already asks for. Throws otherwise.
+  const [plan, { data: jobRow, error: jobError }, { data: invoiceRow, error: invoiceError }, { data: signedRow, error: signedError }] = await Promise.all([
     loadJobPaymentPlan(asFlexibleClient(database), { organizationId, jobId }),
     database
       .from("jobs")
@@ -147,6 +150,8 @@ export async function loadPlanPayment(
       .limit(1)
       .maybeSingle(),
   ]);
+  const failed = jobError ?? invoiceError ?? signedError;
+  if (failed) throw new Error(`pay link details could not be read: ${failed.message}`);
   if (!jobRow || !plan.payments) return null;
   const index = plan.saved.findIndex((saved) => saved.id === text(item.id));
   const payment = plan.payments[index];
@@ -278,10 +283,16 @@ export type PayLinkView = {
   canPay: boolean;
 };
 
-/** What the customer's pay link shows. Null for a link that leads nowhere. */
-export async function payLinkView(token: string): Promise<PayLinkView | null> {
+/** What the customer's pay link shows. Null for a link that leads nowhere; `unavailable` when it can't be read right now. */
+export async function payLinkView(token: string): Promise<PayLinkView | { unavailable: true } | null> {
   const database = getSupabaseAdmin();
-  const payment = await loadPlanPayment({ token }, database);
+  let payment: PlanPayment | null;
+  try {
+    payment = await loadPlanPayment({ token }, database);
+  } catch (error) {
+    console.error("pay link could not be read", { message: String(error).slice(0, 200) });
+    return { unavailable: true };
+  }
   if (!payment) return null;
   let processingCents = 0;
   let known = true;
@@ -318,7 +329,14 @@ export async function startPlanCheckout(input: { token: string; origin: string }
   const stripe = getStripe();
   if (!stripe || !input.origin) return { error: "unavailable" };
   const database = getSupabaseAdmin();
-  const payment = await loadPlanPayment({ token: input.token }, database);
+  let payment: PlanPayment | null;
+  try {
+    payment = await loadPlanPayment({ token: input.token }, database);
+  } catch (error) {
+    // Not known what has been paid, so nothing is charged.
+    console.error("pay link checkout: payment could not be read", { message: String(error).slice(0, 200) });
+    return { error: "unavailable" };
+  }
   if (!payment) return { error: "unavailable" };
   if (payment.invoiceToken) return { error: "invoice" };
   const stripeAccount = payment.stripeAccount;
@@ -639,6 +657,17 @@ async function deliver(
   return outcome;
 }
 
+/**
+ * Whether a send that reached nobody failed for a reason a retry could fix:
+ * the email or text provider erred. Not when there is no address or number,
+ * or the customer stopped texts.
+ */
+export function transientDeliveryFailure(outcome: { email: string; sms: string }): boolean {
+  const emailFailed = outcome.email !== "sent" && outcome.email !== "no email on file";
+  const smsFailed = outcome.sms.startsWith("SEND_FAILED") && outcome.sms !== "replied STOP";
+  return emailFailed || smsFailed;
+}
+
 export type PaymentRequestResult = { ok: true; email: string; sms: string } | { ok: false; message: string };
 
 /**
@@ -649,7 +678,13 @@ export type PaymentRequestResult = { ok: true; email: string; sms: string } | { 
  */
 export async function sendPaymentRequest(itemId: string, options: { byHand: boolean }): Promise<PaymentRequestResult> {
   const database = getSupabaseAdmin();
-  const payment = await loadPlanPayment({ itemId }, database);
+  let payment: PlanPayment | null;
+  try {
+    payment = await loadPlanPayment({ itemId }, database);
+  } catch (error) {
+    console.error("payment request: payment could not be read", { message: String(error).slice(0, 200) });
+    return { ok: false, message: "Couldn't read what has been paid on this job. Try again in a minute." };
+  }
   if (!payment) return { ok: false, message: "That payment is no longer in the job's plan." };
   if (payment.invoiceToken) return { ok: false, message: "The invoice has been sent, and it asks for what is owed." };
   if (!payment.stripeAccount) return { ok: false, message: "Online payments aren't set up yet. Connect Stripe in Settings first." };
@@ -708,6 +743,23 @@ export async function sendPaymentRequest(itemId: string, options: { byHand: bool
     ].join(""),
     sms: `${payment.businessName}: your ${what} is ${when}. Pay by bank or card: ${link}`,
   });
+
+  if (outcome.email !== "sent" && outcome.sms !== "sent") {
+    // Nothing reached the customer, so it doesn't count as asked. By hand: put
+    // back when it was last asked. Automatically: let it be tried again on the
+    // next pass if a provider failed (an outage), but not when there is simply
+    // no way to reach them (no email, no number, texting stopped), which a
+    // retry every few minutes wouldn't change.
+    const transient = transientDeliveryFailure(outcome);
+    if (options.byHand || transient) {
+      await database
+        .from("job_payment_plan_items")
+        .update({ requested_at: options.byHand ? payment.requestedAt : null })
+        .eq("id", payment.itemId)
+        .eq("requested_at", now);
+    }
+    return { ok: true, ...outcome };
+  }
 
   await recordActivity(asFlexibleClient(database), {
     organizationId: payment.organizationId,
