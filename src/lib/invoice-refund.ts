@@ -134,3 +134,34 @@ export function refundReceiptAllowed(input: {
   }
   return { ok: true };
 }
+
+/**
+ * What a refund notice says: what it was for, and when the money arrives.
+ *
+ * An invoice refund names the invoice; a diagnostic fee refund (paid online
+ * when the customer booked) names the fee and the job, and never an invoice the
+ * customer was not sent. Money going back to a card says 5 to 10 business days;
+ * money handed back in person is a confirmation.
+ */
+export function refundNoticeWording(input: {
+  businessName: string;
+  amount: string;
+  invoiceLabel: string;
+  jobNumber: string;
+  diagnosticFee: boolean;
+  toCard: boolean;
+}): { forWhat: string; when: string; sms: string } {
+  const job = input.jobNumber ? ` for job #${input.jobNumber}` : "";
+  const forWhat = input.diagnosticFee
+    ? ` for your diagnostic visit fee${job}`
+    : input.invoiceLabel
+      ? ` for invoice INV-${input.invoiceLabel}`
+      : job;
+  const when = input.toCard
+    ? "It is on its way back to the card you paid with and usually shows within 5 to 10 business days."
+    : "This is your confirmation of the money we returned to you.";
+  const sms = input.toCard
+    ? `${input.businessName}: we've refunded ${input.amount}${forWhat}. It usually reaches your card in 5-10 business days.`
+    : `${input.businessName}: this confirms the ${input.amount} refund${forWhat}.`;
+  return { forWhat, when, sms };
+}
