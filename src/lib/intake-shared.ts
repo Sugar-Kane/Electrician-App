@@ -256,8 +256,8 @@ export async function loadIntakeContext(input: {
          * database round trip.
          */
         labels: {
-          en: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso, localeFor("en")),
-          es: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso, localeFor("es")),
+          en: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso, localeFor("en"), true),
+          es: slotLabel(slot.slot_start, slot.slot_end, timeZone, nowIso, localeFor("es"), true),
         },
       }));
   }

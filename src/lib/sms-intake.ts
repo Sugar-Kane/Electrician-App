@@ -676,7 +676,7 @@ function languageName(language: LanguageCode): string {
 /** The instructions the model runs under. Built per conversation. */
 export function buildIntakeSystemPrompt(context: IntakeContext): string {
   const slots = context.offeredSlots.length
-    ? context.offeredSlots.map((slot) => `- ${slot.label} (slot_start: ${slot.start})`).join("\n")
+    ? context.offeredSlots.map((slot) => `- ${slot.labels?.en ?? slot.label} (slot_start: ${slot.start})`).join("\n")
     : "- none available";
 
   return [

@@ -149,8 +149,8 @@ export async function handleInboundText(input: {
       context.existingVisit = {
         state: visit.state,
         labels: {
-          en: slotLabel(visit.start, visit.end, timeZone, nowIso, localeFor("en")),
-          es: slotLabel(visit.start, visit.end, timeZone, nowIso, localeFor("es")),
+          en: slotLabel(visit.start, visit.end, timeZone, nowIso, localeFor("en"), true),
+          es: slotLabel(visit.start, visit.end, timeZone, nowIso, localeFor("es"), true),
         },
       };
     }
@@ -234,6 +234,7 @@ export async function handleInboundText(input: {
             timeZone,
             new Date().toISOString(),
             localeFor(action.language),
+            true,
           );
           return alreadyHeld.state === "held"
             ? phrases.alreadyHeld(context.businessName, label, context.businessPhone)
@@ -257,6 +258,7 @@ export async function handleInboundText(input: {
               timeZone,
               new Date().toISOString(),
               localeFor(action.language),
+              true,
             ),
             feeCents: recorded.feeCents,
             payUrl: recorded.payUrl,
