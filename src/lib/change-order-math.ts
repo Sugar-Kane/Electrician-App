@@ -225,6 +225,15 @@ export function canCancelChangeOrder(status: string): boolean {
 }
 
 /**
+ * Whether a change order can be deleted outright: a draft nobody was asked
+ * about, or one withdrawn or declined. One with the customer is withdrawn
+ * first; an approved one changed the contract and the invoice, and stays.
+ */
+export function canDeleteChangeOrder(status: string): boolean {
+  return status === "draft" || status === "canceled" || status === "rejected";
+}
+
+/**
  * Why the items cannot go to the customer yet, or "" when they can.
  *
  * Every addition and change priced, at least one item, no line changed twice

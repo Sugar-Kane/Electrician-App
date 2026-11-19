@@ -186,3 +186,12 @@ test("an item edit replaces what it sends and keeps the saved cost and part", as
   // No price sent: none is invented.
   assert.equal(filled.unitPrice, undefined);
 });
+
+test("only drafts and withdrawn or declined change orders can be deleted", async () => {
+  const { canDeleteChangeOrder } = await import("./change-order-math.ts");
+  assert.equal(canDeleteChangeOrder("draft"), true);
+  assert.equal(canDeleteChangeOrder("canceled"), true);
+  assert.equal(canDeleteChangeOrder("rejected"), true);
+  assert.equal(canDeleteChangeOrder("pending_approval"), false);
+  assert.equal(canDeleteChangeOrder("approved"), false);
+});

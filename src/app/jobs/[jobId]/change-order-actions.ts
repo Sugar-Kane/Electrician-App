@@ -8,6 +8,7 @@ import {
   addChangeOrderItem,
   applyApprovedChangeOrder,
   cancelChangeOrder,
+  deleteChangeOrder,
   createChangeOrder,
   foldIntoContract,
   removeChangeOrderItem,
@@ -341,4 +342,18 @@ export async function sendChangeOrderLinkAction(
     return { error: `${sent.error}${sent.needsSignature ? " Add your signature in Settings, then send it again." : ""}` };
   }
   return { error: "", notice: sent.notice ?? "Signing link sent." };
+}
+
+/** Delete a draft, or one withdrawn or declined. Never one approved or with the customer. */
+export async function deleteChangeOrderAction(jobNumber: string, changeOrderId: string): Promise<ChangeOrderActionState> {
+  const who = await caller();
+  if (!who) return { error: "Sign in first." };
+  const deleted = await deleteChangeOrder(who.database, asFlexibleClient(getSupabaseAdmin()), {
+    organizationId: who.context.organizationId,
+    changeOrderId,
+    userId: who.context.userId,
+  });
+  if (!deleted.ok) return { error: deleted.error };
+  refresh(jobNumber);
+  return { error: "", notice: `Change order #${deleted.number} deleted.` };
 }
