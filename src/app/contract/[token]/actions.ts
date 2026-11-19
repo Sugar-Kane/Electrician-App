@@ -184,6 +184,27 @@ export async function signContract(
     console.error("signed contract copy failed", { signedId, error });
   }
 
+  // A deposit due on signing: the customer is sent its pay link now, after the
+  // reply so signing never waits on it. Only for a contract that showed the
+  // payment schedule, and once (the request is claimed).
+  after(async () => {
+    try {
+      const { data: signed } = await getSupabaseAdmin()
+        .from("contracts")
+        .select("job_id, payment_schedule")
+        .eq("id", signedId)
+        .eq("organization_id", contract.organization_id)
+        .maybeSingle();
+      const jobId = typeof signed?.job_id === "string" ? signed.job_id : "";
+      if (jobId && signed?.payment_schedule) {
+        const { sendDuePaymentRequests } = await import("@/lib/job-prepayment-pay");
+        await sendDuePaymentRequests({ jobId, organizationId: contract.organization_id });
+      }
+    } catch (error) {
+      console.error("deposit request after signing failed", { signedId, error });
+    }
+  });
+
   // Phase 2 automation (off unless VOLTEIRA_PHASE2_TRIGGERS_ENABLED): after the reply.
   after(async () => {
     const { emitContractSigned } = await import("@/lib/automation-triggers-server");

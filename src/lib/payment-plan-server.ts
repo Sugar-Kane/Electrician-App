@@ -1,7 +1,7 @@
 import "server-only";
 
 import { lineTotalCents } from "@/lib/job-lines";
-import { planAmounts, type PlanItemInput, type PlannedPayment } from "@/lib/payment-plan";
+import { paymentsOwed, planAmounts, type PlanItemInput, type PlannedPayment } from "@/lib/payment-plan";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
 /**
@@ -23,7 +23,12 @@ function num(value: unknown): number {
 
 export type Prepayment = { id: string; amountCents: number; method: string; receivedAt: string; applied: boolean; note: string };
 
+/** A saved payment as the customer is asked for it: its pay link, when it was asked for, and what is still owed on it. */
+export type SavedPayment = { id: string; payToken: string; requestedAt: string | null; owedCents: number; paid: boolean };
+
 export type JobPaymentPlan = {
+  /** One a payment, aligned with `payments`, when the saved plan fits the total. */
+  saved: SavedPayment[];
   /** The job's priced total today: what a percentage is of. */
   totalCents: number;
   /** As saved; empty means payment in full on completion. */
@@ -38,11 +43,12 @@ export type JobPaymentPlan = {
 
 /** What the job's work and parts come to, before any invoice credits. */
 async function jobTotalCents(database: FlexibleSupabaseClient, organizationId: string, jobId: string): Promise<number> {
-  const { data } = await database
+  const { data, error } = await database
     .from("job_line_items")
     .select("quantity, unit_price_cents")
     .eq("organization_id", organizationId)
     .eq("job_id", jobId);
+  if (error) throw new Error(`job total could not be read: ${error.message}`);
   return ((data ?? []) as Row[]).reduce(
     (sum, line) => sum + lineTotalCents({ quantity: num(line.quantity), unitPriceCents: num(line.unit_price_cents) }),
     0,
@@ -64,11 +70,13 @@ export async function loadJobPaymentPlan(
   database: FlexibleSupabaseClient,
   input: { organizationId: string; jobId: string },
 ): Promise<JobPaymentPlan> {
-  const [totalCents, { data: itemRows }, { data: prepaidRows }] = await Promise.all([
+  // Throws on any failed read: a balance worked out from missing rows (no
+  // prepayments read as none paid) would ask for money already paid.
+  const [totalCents, { data: itemRows, error: itemError }, { data: prepaidRows, error: prepaidError }] = await Promise.all([
     jobTotalCents(database, input.organizationId, input.jobId),
     database
       .from("job_payment_plan_items")
-      .select("kind, amount_type, amount_cents, percent_bps, due, due_date, position")
+      .select("id, pay_token, requested_at, kind, amount_type, amount_cents, percent_bps, due, due_date, position")
       .eq("organization_id", input.organizationId)
       .eq("job_id", input.jobId)
       .order("position", { ascending: true }),
@@ -79,7 +87,10 @@ export async function loadJobPaymentPlan(
       .eq("job_id", input.jobId)
       .order("received_at", { ascending: true }),
   ]);
-  const items = ((itemRows ?? []) as Row[]).map(toItem);
+  if (itemError) throw new Error(`payment plan could not be read: ${itemError.message}`);
+  if (prepaidError) throw new Error(`prepayments could not be read: ${prepaidError.message}`);
+  const rows = (itemRows ?? []) as Row[];
+  const items = rows.map(toItem);
   const planned = items.length > 0 ? planAmounts(totalCents, items) : null;
   const prepayments = ((prepaidRows ?? []) as Row[]).map((row) => ({
     id: text(row.id),
@@ -89,13 +100,22 @@ export async function loadJobPaymentPlan(
     applied: Boolean(text(row.applied_at)),
     note: text(row.note),
   }));
+  const prepaidCents = prepayments.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const owed = planned && planned.ok ? paymentsOwed(planned.payments, prepaidCents) : [];
   return {
+    saved: owed.map((each, index) => ({
+      id: text(rows[index]?.id),
+      payToken: text(rows[index]?.pay_token),
+      requestedAt: text(rows[index]?.requested_at) || null,
+      owedCents: each.owedCents,
+      paid: each.paid,
+    })),
     totalCents,
     items,
     payments: planned && planned.ok ? planned.payments : null,
     problem: planned && !planned.ok ? planned.reason : "",
     prepayments,
-    prepaidCents: prepayments.reduce((sum, payment) => sum + payment.amountCents, 0),
+    prepaidCents,
   };
 }
 
@@ -109,36 +129,66 @@ export async function saveJobPaymentPlan(
 ): Promise<{ ok: true; payments: PlannedPayment[] | null } | { ok: false; error: string }> {
   let payments: PlannedPayment[] | null = null;
   if (input.items.length > 0) {
-    const total = await jobTotalCents(database, input.organizationId, input.jobId);
+    let total: number;
+    try {
+      total = await jobTotalCents(database, input.organizationId, input.jobId);
+    } catch (error) {
+      console.error("payment plan: job total could not be read", error);
+      return { ok: false, error: "The job's price could not be read. Try again." };
+    }
     const planned = planAmounts(total, input.items);
     if (!planned.ok) return { ok: false, error: planned.reason };
     payments = planned.payments;
   }
 
+  // Payments are kept by their place in the plan, so a pay link already sent
+  // keeps working when the plan is saved again. Places past the new plan's end
+  // go; the rest are updated in place.
+  const { data: existingRows, error: readError } = await database
+    .from("job_payment_plan_items")
+    .select("position, kind, due, due_date, requested_at")
+    .eq("organization_id", input.organizationId)
+    .eq("job_id", input.jobId);
+  if (readError) {
+    console.error("payment plan: could not be read before saving", readError);
+    return { ok: false, error: "The payment plan could not be saved. Try again." };
+  }
+  const existing = new Map(((existingRows ?? []) as Row[]).map((row) => [num(row.position), row]));
+
   const { error: clearError } = await database
     .from("job_payment_plan_items")
     .delete()
     .eq("organization_id", input.organizationId)
-    .eq("job_id", input.jobId);
+    .eq("job_id", input.jobId)
+    .gte("position", payments?.length ?? 0);
   if (clearError) {
     console.error("payment plan: could not be cleared", clearError);
     return { ok: false, error: "The payment plan could not be saved. Your business may limit billing changes to the owner." };
   }
   if (!payments) return { ok: true, payments: null };
 
-  const { error } = await database.from("job_payment_plan_items").insert(
-    payments.map((payment, position) => ({
-      organization_id: input.organizationId,
-      job_id: input.jobId,
-      position,
-      kind: payment.kind,
-      amount_type: payment.kind === "final" ? "fixed" : payment.amountType,
-      // The balance is worked out from the total each time; it is not stored as a figure.
-      amount_cents: payment.kind === "final" ? null : payment.amountType === "fixed" ? payment.cents : null,
-      percent_bps: payment.kind !== "final" && payment.amountType === "percent" ? payment.percentBps : null,
-      due: payment.due,
-      due_date: payment.due === "on_date" ? payment.dueDate : null,
-    })),
+  const { error } = await database.from("job_payment_plan_items").upsert(
+    payments.map((payment, position) => {
+      const before = existing.get(position);
+      const dueDate = payment.due === "on_date" ? payment.dueDate ?? null : null;
+      // Asked for already, and still the same payment: not asked for again.
+      const same =
+        before && text(before.kind) === payment.kind && text(before.due) === payment.due && (text(before.due_date) || null) === dueDate;
+      return {
+        organization_id: input.organizationId,
+        job_id: input.jobId,
+        position,
+        kind: payment.kind,
+        amount_type: payment.kind === "final" ? "fixed" : payment.amountType,
+        // The balance is worked out from the total each time; it is not stored as a figure.
+        amount_cents: payment.kind === "final" ? null : payment.amountType === "fixed" ? payment.cents : null,
+        percent_bps: payment.kind !== "final" && payment.amountType === "percent" ? payment.percentBps : null,
+        due: payment.due,
+        due_date: dueDate,
+        requested_at: same ? text(before.requested_at) || null : null,
+      };
+    }),
+    { onConflict: "job_id,position" },
   );
   if (error) {
     console.error("payment plan: could not be saved", error);

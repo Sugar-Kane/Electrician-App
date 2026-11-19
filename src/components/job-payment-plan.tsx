@@ -2,13 +2,18 @@
 
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, LoaderCircle, Plus, Trash2, Wallet } from "lucide-react";
+import { Check, Link2, LoaderCircle, Plus, Send, Trash2, Wallet } from "lucide-react";
 
-import { recordPrepaymentAction, savePaymentPlanAction, type PaymentPlanState } from "@/app/jobs/[jobId]/payment-plan-actions";
+import {
+  recordPrepaymentAction,
+  savePaymentPlanAction,
+  sendPayLinkAction,
+  type PaymentPlanState,
+} from "@/app/jobs/[jobId]/payment-plan-actions";
 import { FormMessage, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import { formatCents } from "@/lib/job-lines";
-import { maxDownPaymentCents, planAmounts, type PlanDue, type PlanItemInput } from "@/lib/payment-plan";
+import { maxDownPaymentCents, paymentLabel, planAmounts, type PlanDue, type PlanItemInput } from "@/lib/payment-plan";
 import type { JobPaymentPlan as Plan } from "@/lib/payment-plan-server";
 
 /**
@@ -93,6 +98,97 @@ function PrepaymentForm({ jobNumber }: { jobNumber: string }) {
       </button>
       <FormMessage error={state.error} notice={state.notice} />
     </form>
+  );
+}
+
+/**
+ * Each saved payment's pay link: whether it is paid, when the customer was
+ * asked, and a button to text and email it now (or copy it). Deposits due on
+ * signing go out by themselves once the contract is signed, and dated payments
+ * on their date; the balance due on completion is asked for by the invoice.
+ */
+function PayLinks({ jobNumber, plan }: { jobNumber: string; plan: Plan & { canEdit: boolean } }) {
+  const router = useRouter();
+  const [sending, startSending] = useTransition();
+  const [busy, setBusy] = useState("");
+  const [result, setResult] = useState<PaymentPlanState & { id?: string }>({ error: "" });
+  const [copied, setCopied] = useState("");
+  const payments = plan.payments ?? [];
+  if (payments.length <= 1 || plan.saved.length !== payments.length) return null;
+
+  const send = (id: string) => {
+    setBusy(id);
+    startSending(async () => {
+      const outcome = await sendPayLinkAction(jobNumber, id);
+      setResult({ ...outcome, id });
+      setBusy("");
+      if (!outcome.error) router.refresh();
+    });
+  };
+  const copy = async (id: string, token: string) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/pay/${token}`);
+      setCopied(id);
+    } catch {
+      setResult({ error: "Couldn't copy the link on this device.", id });
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      <p className="text-xs font-semibold text-ink-muted">Pay links</p>
+      <p className="mt-1 text-xs leading-5 text-ink-faint">
+        A deposit due on signing is sent when the customer signs, and a dated payment on its date. The balance on completion is on the invoice.
+      </p>
+      <ul className="mt-2 space-y-2">
+        {payments.map((payment, index) => {
+          const saved = plan.saved[index];
+          if (!saved) return null;
+          const byInvoice = payment.kind === "final" && payment.due === "on_completion";
+          return (
+            <li key={saved.id} className="rounded-control border border-line p-2">
+              <div className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="font-semibold">{paymentLabel(payment, index)}</span>
+                <span className="font-semibold">{formatCents(payment.cents)}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-ink-muted" suppressHydrationWarning>
+                {saved.paid
+                  ? "Paid"
+                  : `${saved.owedCents < payment.cents ? `${formatCents(saved.owedCents)} left · ` : ""}${
+                      saved.requestedAt
+                        ? `Asked for ${new Date(saved.requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                        : byInvoice
+                          ? "Asked for by the invoice"
+                          : "Not asked for yet"
+                    }`}
+              </p>
+              {plan.canEdit && !saved.paid && !byInvoice ? (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => send(saved.id)}
+                    className="tap-target inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-brand px-3 text-sm font-semibold text-on-brand disabled:opacity-60"
+                  >
+                    {busy === saved.id ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+                    {saved.requestedAt ? "Send again" : "Send pay link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copy(saved.id, saved.payToken)}
+                    className="tap-target inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control border border-line px-3 text-sm font-semibold"
+                  >
+                    {copied === saved.id ? <Check className="h-4 w-4" aria-hidden /> : <Link2 className="h-4 w-4" aria-hidden />}
+                    {copied === saved.id ? "Copied" : "Copy link"}
+                  </button>
+                </div>
+              ) : null}
+              {result.id === saved.id ? <FormMessage error={result.error} notice={result.notice} /> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -271,6 +367,8 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
         </button>
       ) : null}
       <FormMessage error={state.error} notice={state.notice} />
+
+      <PayLinks jobNumber={jobNumber} plan={plan} />
 
       <div className="mt-3 border-t border-line pt-3">
         <p className="text-xs font-semibold text-ink-muted">Paid before the invoice</p>

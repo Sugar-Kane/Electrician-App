@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 
 import { handleInvoiceCheckoutEvent } from "@/lib/invoice-online-pay";
 import { handleRefundEvent } from "@/lib/invoice-refund-server";
+import { handlePlanCheckoutEvent } from "@/lib/job-prepayment-pay";
 import { fulfillPaidBooking, releaseExpiredBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
 import { syncPaymentAccount } from "@/lib/stripe-connect";
@@ -75,6 +76,10 @@ export async function POST(request: Request) {
   ) {
     try {
       if (await handleInvoiceCheckoutEvent(event.type, event.data.object, connectedAccount)) {
+        return Response.json({ received: true });
+      }
+      // A deposit or installment paid from its pay link (job-prepayment-pay.ts).
+      if (await handlePlanCheckoutEvent(event.type, event.data.object, connectedAccount)) {
         return Response.json({ received: true });
       }
     } catch (error) {

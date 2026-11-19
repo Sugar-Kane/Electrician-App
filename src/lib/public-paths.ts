@@ -22,7 +22,8 @@
 // "invoice" (singular) is the customer's link to read one invoice by its
 // token. "invoices" (plural) is the business's list and stays signed in.
 // "estimate" is the same for an estimate: the customer's link by its token.
-const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "estimate", "invite", "invoice", "journal", "legal"];
+// "pay" is the customer's link to pay a deposit or installment, by its token.
+const PUBLIC_SECTIONS = ["api", "auth", "book", "booking", "contract", "estimate", "invite", "invoice", "journal", "legal", "pay"];
 
 /**
  * Single public pages and files.

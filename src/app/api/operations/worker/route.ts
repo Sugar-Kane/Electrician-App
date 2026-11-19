@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { scanScheduledAutomationEvents } from "@/lib/automation-triggers-server";
+import { sendDuePaymentRequests } from "@/lib/job-prepayment-pay";
 import { sendMissedRefundNotices } from "@/lib/refund-notice";
 import { runSupervisedWorker } from "@/lib/supervised-executor";
 
@@ -41,5 +42,11 @@ export async function POST(request: Request) {
     console.error("worker: missed refund notices failed", error);
     return 0;
   });
-  return NextResponse.json({ ...report, scanned, refundReceipts });
+  // Deposits and installments that have come due: the customer is sent the
+  // pay link, once each.
+  const paymentRequests = await sendDuePaymentRequests({ limit: 25 }).catch((error) => {
+    console.error("worker: payment requests failed", error);
+    return 0;
+  });
+  return NextResponse.json({ ...report, scanned, refundReceipts, paymentRequests });
 }
