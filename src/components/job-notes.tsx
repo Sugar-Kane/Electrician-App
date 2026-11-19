@@ -28,7 +28,16 @@ const QUIET_MS = 1000;
 
 type SaveState = "clean" | "saving" | "saved" | "failed";
 
-export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: string }) {
+export function JobNotes({
+  jobNumber,
+  notes,
+  onSubmitted,
+}: {
+  jobNumber: string;
+  notes: string;
+  /** Called once Submit has saved the notes: the Work card folds to "submitted". */
+  onSubmitted?: (notes: string) => void;
+}) {
   const [value, setValue] = useState(notes);
   const [saveState, setSaveState] = useState<SaveState>("clean");
   const [error, setError] = useState("");
@@ -39,8 +48,8 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const save = useCallback(
-    async (text: string) => {
-      if (text === saved.current) return;
+    async (text: string): Promise<boolean> => {
+      if (text === saved.current) return true;
 
       setSaveState("saving");
       const data = new FormData();
@@ -52,12 +61,13 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
       if (result.error) {
         setError(result.error);
         setSaveState("failed");
-        return;
+        return false;
       }
 
       saved.current = text;
       setError("");
       setSaveState("saved");
+      return true;
     },
     [jobNumber],
   );
@@ -74,6 +84,14 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
   function flush() {
     if (timer.current) clearTimeout(timer.current);
     void save(value);
+  }
+
+  // Submit: saved now, then the card says so. A blur may already have saved
+  // it; either way this waits for the notes to be on the server.
+  async function submit() {
+    if (timer.current) clearTimeout(timer.current);
+    const ok = await save(value);
+    if (ok) onSubmitted?.(value);
   }
 
   useEffect(() => {
@@ -127,7 +145,7 @@ export function JobNotes({ jobNumber, notes }: { jobNumber: string; notes: strin
         {/* Notes save themselves too; this is the clear "done" for what was written. */}
         <button
           type="button"
-          onClick={flush}
+          onClick={() => void submit()}
           disabled={saveState === "saving" || (!value.trim() && saveState !== "failed")}
           className="tap-target inline-flex min-h-11 items-center gap-1.5 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-50"
         >
