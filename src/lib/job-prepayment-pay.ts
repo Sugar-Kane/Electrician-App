@@ -392,6 +392,31 @@ export async function startPlanCheckout(input: { token: string; origin: string }
   const checkoutId = text((claimed as Row).id);
   const release = () => database.from("job_prepayment_checkouts").update({ status: "failed" }).eq("id", checkoutId).eq("status", "creating");
 
+  // The balance read above may be stale: a payment recorded since then freed
+  // the slot this request just claimed. The webhook records a payment before
+  // freeing the slot, so reading again now, holding the slot, is current.
+  let current: PlanPayment | null;
+  try {
+    current = await loadPlanPayment({ token: input.token }, database);
+  } catch (error) {
+    console.error("pay link checkout: balance could not be read again", { message: String(error).slice(0, 200) });
+    await release();
+    return { error: "unavailable" };
+  }
+  if (!current || current.invoiceToken || current.itemId !== payment.itemId) {
+    await release();
+    return { error: current?.invoiceToken ? "invoice" : "unavailable" };
+  }
+  const currentCents = payLinkCents(current.payments, current.index, { prepaidCents: current.prepaidCents });
+  if (currentCents < MIN_ONLINE_CENTS) {
+    await release();
+    return { error: "paid" };
+  }
+  if (currentCents !== amountCents) {
+    await release();
+    return { error: "busy" };
+  }
+
   const back = `${input.origin}/pay/${encodeURIComponent(input.token)}`;
   const metadata = {
     purpose: PURPOSE,
@@ -457,14 +482,18 @@ export async function startPlanCheckout(input: { token: string; origin: string }
     }
   }
 
-  const { error: openError } = await database
+  const { data: opened, error: openError } = await database
     .from("job_prepayment_checkouts")
     .update({ status: "open", checkout_session_id: session.id, checkout_url: session.url ?? null })
     .eq("id", checkoutId)
-    .eq("status", "creating");
-  // A checkout the slot doesn't hold is money nobody can account for, so it is closed rather than shown.
-  if (openError || !session.url) {
-    console.error("pay link checkout not recorded", { checkoutId, code: openError?.code });
+    .eq("status", "creating")
+    .select("id")
+    .maybeSingle();
+  // A checkout the slot doesn't hold (Stripe was slow and the claim was let
+  // go, perhaps taken by another tap) is money nobody can account for, so it
+  // is closed rather than shown.
+  if (openError || !opened || !session.url) {
+    console.error("pay link checkout not recorded", { checkoutId, code: openError?.code, held: Boolean(opened) });
     await stripe.checkout.sessions.expire(session.id, undefined, onAccount).catch(() => undefined);
     await release();
     return { error: "unavailable" };
