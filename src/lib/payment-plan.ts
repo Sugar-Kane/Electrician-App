@@ -1,0 +1,173 @@
+/**
+ * A job's payment plan: a deposit, installments, and the balance.
+ *
+ * The plan is what the contract tells the customer and what they are asked to
+ * pay, when. All of it in integer cents. A percentage is of the contract
+ * total; the last payment is always "the balance", whatever is left, so the
+ * plan adds up to the total exactly and rounding never charges a cent more or
+ * less. A plan that would ask for more than the total is refused.
+ *
+ * Import-free, so the rules are tested without a database.
+ */
+
+export type PlanItemKind = "deposit" | "installment" | "final";
+export type PlanDue = "on_signing" | "on_date" | "on_completion";
+
+export type PlanItemInput = {
+  kind: PlanItemKind;
+  amountType: "fixed" | "percent";
+  /** For a fixed amount, in cents. */
+  amountCents?: number | null;
+  /** For a percentage, in basis points: 2500 is 25%. */
+  percentBps?: number | null;
+  due: PlanDue;
+  /** "2026-12-01", for a payment due on a date. */
+  dueDate?: string | null;
+};
+
+export type PlannedPayment = PlanItemInput & { cents: number };
+
+export type PlanResult = { ok: true; payments: PlannedPayment[] } | { ok: false; reason: string };
+
+function whole(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+}
+
+/**
+ * What each payment comes to, for a contract total.
+ *
+ * The final payment (added when missing) is the balance. Every payment must
+ * come to more than nothing, a date payment needs its date, and the payments
+ * before the balance cannot reach the total.
+ */
+export function planAmounts(totalCents: number, items: PlanItemInput[]): PlanResult {
+  const total = Math.max(0, whole(totalCents));
+  if (total <= 0) return { ok: false, reason: "Price the job first. A payment plan splits the contract total." };
+
+  const before = items.filter((item) => item.kind !== "final");
+  const final = items.find((item) => item.kind === "final") ?? { kind: "final" as const, amountType: "fixed" as const, due: "on_completion" as const };
+
+  const payments: PlannedPayment[] = [];
+  let sum = 0;
+  for (const item of before) {
+    const cents =
+      item.amountType === "percent"
+        ? Math.round((total * Math.max(0, whole(item.percentBps))) / 10_000)
+        : Math.max(0, whole(item.amountCents));
+    if (cents <= 0) return { ok: false, reason: "Every payment needs an amount or a percentage more than zero." };
+    if (item.due === "on_date" && !/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate ?? "")) {
+      return { ok: false, reason: "Give each dated payment its date." };
+    }
+    sum += cents;
+    payments.push({ ...item, cents });
+  }
+
+  const balance = total - sum;
+  if (balance <= 0) {
+    return { ok: false, reason: "The payments before the balance come to the whole total or more. Lower one of them." };
+  }
+  if (final.due === "on_date" && !/^\d{4}-\d{2}-\d{2}$/.test(final.dueDate ?? "")) {
+    return { ok: false, reason: "Give the balance its date, or make it due on completion." };
+  }
+  payments.push({ ...final, kind: "final", amountType: "fixed", amountCents: balance, percentBps: null, cents: balance });
+  return { ok: true, payments };
+}
+
+/** Whether a payment is due yet: on signing once signed, on a date once it comes, on completion once done. */
+export function paymentIsDue(
+  payment: Pick<PlanItemInput, "due" | "dueDate">,
+  state: { today: string; signed: boolean; completed: boolean },
+): boolean {
+  if (payment.due === "on_signing") return state.signed;
+  if (payment.due === "on_completion") return state.completed;
+  return Boolean(payment.dueDate) && (payment.dueDate as string) <= state.today;
+}
+
+/**
+ * What to ask the customer for now: everything due so far, less what they
+ * have already paid. Never below zero, never above what is left on the total.
+ */
+export function amountDueNow(
+  payments: PlannedPayment[],
+  state: { paidCents: number; today: string; signed: boolean; completed: boolean },
+): number {
+  const total = payments.reduce((sum, payment) => sum + payment.cents, 0);
+  const dueSoFar = payments.filter((payment) => paymentIsDue(payment, state)).reduce((sum, payment) => sum + payment.cents, 0);
+  const paid = Math.max(0, whole(state.paidCents));
+  return Math.max(0, Math.min(dueSoFar - paid, total - paid));
+}
+
+function dollars(cents: number): string {
+  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
+/**
+ * The payment terms in plain words, one line a payment, for the contract.
+ * `formatDate` turns "2026-12-01" into "Dec 1, 2026".
+ */
+export function planSummaryLines(payments: PlannedPayment[], formatDate: (isoDate: string) => string): string[] {
+  if (payments.length <= 1) return ["Payment in full is due on completion of the work."];
+  return payments.map((payment, index) => {
+    const when =
+      payment.due === "on_signing"
+        ? "due on signing"
+        : payment.due === "on_completion"
+          ? "due on completion of the work"
+          : `due ${formatDate(payment.dueDate ?? "")}`;
+    const share = payment.amountType === "percent" && payment.percentBps ? ` (${(payment.percentBps / 100).toLocaleString("en-US")}%)` : "";
+    const label = payment.kind === "deposit" ? "Deposit" : payment.kind === "final" ? "Balance" : `Payment ${index + 1}`;
+    return `${label} ${dollars(payment.cents)}${share} ${when}.`;
+  });
+}
+
+/** The deposit to state on the contract: the first payment when it is a deposit, else none. */
+export function planDepositCents(payments: PlannedPayment[]): number {
+  const first = payments[0];
+  return payments.length > 1 && first?.kind === "deposit" ? first.cents : 0;
+}
+
+/**
+ * The payment terms as the contract states them: a "PAYMENT SCHEDULE" block,
+ * and the deposit figure. Empty when the job has no plan (payment in full on
+ * completion, as the template already says).
+ */
+export function contractPaymentTerms(
+  payments: PlannedPayment[] | null,
+  formatDate: (isoDate: string) => string,
+): { block: string; depositCents: number; snapshot: { lines: string[]; payments: { kind: string; cents: number; due: string; dueDate: string | null }[] } | null } {
+  if (!payments || payments.length <= 1) return { block: "", depositCents: 0, snapshot: null };
+  const lines = planSummaryLines(payments, formatDate);
+  return {
+    block: ["PAYMENT SCHEDULE", ...lines.map((line, index) => `${index + 1}. ${line}`)].join("\n"),
+    depositCents: planDepositCents(payments),
+    snapshot: {
+      lines,
+      payments: payments.map((payment) => ({ kind: payment.kind, cents: payment.cents, due: payment.due, dueDate: payment.dueDate ?? null })),
+    },
+  };
+}
+
+/**
+ * Put the payment schedule into a filled contract body: in place of
+ * {{payment_terms}} when the template has it, otherwise straight after the
+ * PRICE section's deposit line (or at the end), and the "balance is due on
+ * completion" sentence pointed at the schedule instead.
+ */
+export function withPaymentSchedule(body: string, block: string): string {
+  if (!block) return body.replace(/\{\{\s*payment_terms\s*\}\}/g, "Payment in full is due on completion of the work.");
+  let next = body;
+  if (/\{\{\s*payment_terms\s*\}\}/.test(next)) {
+    next = next.replace(/\{\{\s*payment_terms\s*\}\}/g, block);
+  } else {
+    const lines = next.split("\n");
+    const deposit = lines.findIndex((line) => /deposit due before work begins/i.test(line));
+    if (deposit >= 0) lines.splice(deposit + 1, 0, "", block);
+    else lines.push("", block);
+    next = lines.join("\n");
+  }
+  return next.replace(
+    /The balance is due on completion of the work described above\./g,
+    "Payments are due as set out in the payment schedule.",
+  );
+}
