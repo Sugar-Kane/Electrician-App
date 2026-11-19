@@ -8,7 +8,14 @@ import { sendCustomerText } from "@/lib/customer-text";
 import { sendEmail } from "@/lib/email";
 import { emailButton } from "@/lib/email-layout";
 import { MIN_ONLINE_CENTS, methodFromStripeType, onlineEventAction } from "@/lib/invoice-online-payment";
-import { payLinkCents, paymentLabel, shouldRequestPayment, type PlannedPayment } from "@/lib/payment-plan";
+import {
+  matchesSignedSchedule,
+  payLinkCents,
+  paymentLabel,
+  shouldRequestPayment,
+  type PlannedPayment,
+  type SignedSchedulePayment,
+} from "@/lib/payment-plan";
 import { loadJobPaymentPlan } from "@/lib/payment-plan-server";
 import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor, readyPaymentAccount, volteiraFeeCents } from "@/lib/stripe-connect";
@@ -106,7 +113,19 @@ export type PlanPayment = {
   stripeAccount: string | null;
   /** A signed contract for the job showed the payment schedule. */
   signed: boolean;
+  /** The payments as the newest signed contract set them out. */
+  signedSchedule: SignedSchedulePayment[] | null;
 };
+
+/** The payments in a signed contract's payment_schedule snapshot, or null when it can't be read. */
+function readSignedSchedule(value: unknown): SignedSchedulePayment[] | null {
+  const payments = (value as { payments?: unknown } | null)?.payments;
+  if (!Array.isArray(payments)) return null;
+  return payments.map((entry) => {
+    const row = (entry ?? {}) as Row;
+    return { kind: text(row.kind), cents: Number(row.cents) || 0, due: text(row.due), dueDate: text(row.dueDate) || null };
+  });
+}
 
 /** A payment of a job's plan, by its pay link or its id, with everything needed to ask for or take it. */
 export async function loadPlanPayment(
@@ -142,11 +161,13 @@ export async function loadPlanPayment(
       .maybeSingle(),
     database
       .from("contracts")
-      .select("id")
+      .select("id, payment_schedule")
       .eq("organization_id", organizationId)
       .eq("job_id", jobId)
       .not("signed_at", "is", null)
       .not("payment_schedule", "is", null)
+      // The newest signed schedule is the one in force.
+      .order("signed_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
   ]);
@@ -183,6 +204,7 @@ export async function loadPlanPayment(
     invoiceToken: text((invoiceRow as Row | null)?.preview_token) || null,
     stripeAccount: account?.accountId ?? null,
     signed: Boolean(signedRow),
+    signedSchedule: readSignedSchedule((signedRow as Row | null)?.payment_schedule),
   };
 }
 
@@ -918,8 +940,10 @@ export async function sendDuePaymentRequests(options: { jobId?: string; organiza
         signed: payment.signed,
         invoiceSent: Boolean(payment.invoiceToken),
       });
-      // Only what a signed contract set out is asked for.
-      if (!due || !payment.signed) continue;
+      // Only what the signed contract set out is asked for automatically: the
+      // same payment, amount and date. A plan changed since is sent by hand,
+      // or once the new contract is signed.
+      if (!due || !matchesSignedSchedule(payment.payment, payment.index, payment.signedSchedule)) continue;
       const result = await sendPaymentRequest(payment.itemId, { byHand: false });
       if (result.ok && (result.email === "sent" || result.sms === "sent")) sent += 1;
     } catch (failure) {

@@ -119,6 +119,24 @@ test("a payment is asked for automatically once, when due, and never after the i
   assert.equal(shouldRequestPayment({ kind: "final", due: "on_completion", dueDate: null }, base), false);
 });
 
+test("only a payment the customer signed for is asked for automatically", async () => {
+  const { matchesSignedSchedule } = await import("./payment-plan.ts");
+  const dated = { kind: "installment" as const, cents: 200_000, due: "on_date" as const, dueDate: "2026-12-01" };
+  const signed = [
+    { kind: "deposit", cents: 50_000, due: "on_signing", dueDate: null },
+    { kind: "installment", cents: 200_000, due: "on_date", dueDate: "2026-12-01" },
+  ];
+  assert.equal(matchesSignedSchedule(dated, 1, signed), true);
+  // The date moved after signing.
+  assert.equal(matchesSignedSchedule({ ...dated, dueDate: "2026-11-25" }, 1, signed), false);
+  // The amount changed after signing.
+  assert.equal(matchesSignedSchedule({ ...dated, cents: 250_000 }, 1, signed), false);
+  // An installment added after signing.
+  assert.equal(matchesSignedSchedule(dated, 2, signed), false);
+  // No signed schedule at all.
+  assert.equal(matchesSignedSchedule(dated, 1, null), false);
+});
+
 test("the contract says each payment in plain words", () => {
   const plan = planAmounts(100_000, [{ kind: "deposit", amountType: "percent", percentBps: 1000, due: "on_signing" }]);
   assert.equal(plan.ok, true);

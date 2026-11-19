@@ -175,6 +175,30 @@ export function shouldRequestPayment(
   return paymentIsDue(payment, { today: state.today, signed: state.signed, completed: false });
 }
 
+/** A payment as a signed contract's schedule recorded it (contracts.payment_schedule). */
+export type SignedSchedulePayment = { kind: string; cents: number; due: string; dueDate: string | null };
+
+/**
+ * Whether a payment is one the customer signed for: the same place in the
+ * schedule, the same kind, amount and due date as the signed contract says.
+ * Only such a payment is asked for automatically; a plan changed after
+ * signing is asked for by hand, or after the new contract is signed.
+ */
+export function matchesSignedSchedule(
+  payment: Pick<PlannedPayment, "kind" | "cents" | "due" | "dueDate">,
+  index: number,
+  signed: SignedSchedulePayment[] | null,
+): boolean {
+  const entry = signed?.[index];
+  if (!entry) return false;
+  return (
+    entry.kind === payment.kind &&
+    whole(entry.cents) === payment.cents &&
+    entry.due === payment.due &&
+    (entry.dueDate ?? null) === (payment.due === "on_date" ? payment.dueDate ?? null : null)
+  );
+}
+
 function dollars(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
