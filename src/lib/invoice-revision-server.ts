@@ -57,7 +57,7 @@ function channelsFor(deliveries: unknown, customer: Row | null): DeliveryChannel
 
 const INVOICE_COLUMNS = `id, organization_id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at,
   stripe_hosted_invoice_url, preview_token, deliveries, revision_number,
-  jobs ( id, job_number, customer_description, customers ( id, first_name, last_name, company_name, phone, email ) ),
+  jobs ( id, job_number, customer_description, scope_of_work, customers ( id, first_name, last_name, company_name, phone, email ) ),
   organizations ( name, phone, timezone )`;
 
 function dueLabel(iso: string, timeZone: string): string {
@@ -172,7 +172,7 @@ export async function resendInvoiceRevision(
       revisionNote,
       dueLabel: dueLabel(text(invoice.due_at), timeZone),
       payUrl: text(invoice.stripe_hosted_invoice_url) || undefined,
-      workSummary: text(job?.customer_description) || undefined,
+      workSummary: text(job?.scope_of_work).trim() || text(job?.customer_description) || undefined,
       viewUrl: invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", text(invoice.preview_token)),
     },
   });

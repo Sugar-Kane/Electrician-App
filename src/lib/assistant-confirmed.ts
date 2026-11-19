@@ -60,7 +60,7 @@ export async function runConfirmedTool(
         .from("invoices")
         .select(
           `id, invoice_number, number_label, status, total_cents, due_at, stripe_hosted_invoice_url,
-           jobs ( customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
+           jobs ( customer_description, scope_of_work, customers ( first_name, last_name, company_name, phone, email ) ),
            organizations ( name, phone, timezone )`,
         )
         .eq("organization_id", organizationId)
@@ -91,7 +91,7 @@ export async function runConfirmedTool(
           amountDue: amount,
           dueLabel: "",
           payUrl: text(row.stripe_hosted_invoice_url) || undefined,
-          workSummary: text(job?.customer_description) || undefined,
+          workSummary: text(job?.scope_of_work).trim() || text(job?.customer_description) || undefined,
         },
       });
 

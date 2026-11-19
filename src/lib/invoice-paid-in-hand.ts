@@ -126,7 +126,7 @@ export async function sendPaidInvoice(
     .from("invoices")
     .select(
       `id, invoice_number, number_label, status, total_cents, paid_at, preview_token,
-       jobs ( id, job_number, customer_id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
+       jobs ( id, job_number, customer_id, customer_description, scope_of_work, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
     )
     .eq("organization_id", input.organizationId)
@@ -160,7 +160,7 @@ export async function sendPaidInvoice(
     invoiceNumber: `INV-${invoiceLabel(row)}`,
     amountDue: Number(row.total_cents ?? 0) / 100,
     dueLabel: "",
-    workSummary: text(job?.customer_description) || undefined,
+    workSummary: text(job?.scope_of_work).trim() || text(job?.customer_description) || undefined,
     viewUrl: invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", text(row.preview_token)),
     paidLabel: paidAt ? new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" }).format(new Date(paidAt)) : undefined,
     paidHow: paymentMethodLabel(text((payment as Row | null)?.method)) || undefined,

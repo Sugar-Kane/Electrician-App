@@ -74,7 +74,7 @@ export async function generateInvoicePdf(input: {
        total_cents, balance_due_cents, due_at, created_at, discount_type, discount_value, discount_cents,
        revision_number, last_sent_at,
        jobs (
-         id, job_number, scheduled_start, technician_notes, customer_description,
+         id, job_number, scheduled_start, technician_notes, customer_description, scope_of_work,
          customers ( first_name, last_name, company_name, phone, email, address_line_1, address_line_2, city, state, postal_code, business_address_line_1, business_address_line_2, business_city, business_state, business_postal_code, bill_to ),
          properties ( address_line_1, address_line_2, city, state, postal_code ),
          technicians ( display_name )
@@ -215,7 +215,8 @@ export async function generateInvoicePdf(input: {
           serviceDateLabel: dateLabel(job?.scheduled_start, input.timeZone),
           technician: str(technician?.display_name),
         },
-        workSummary: str(job?.customer_description),
+        // The scope written on the Estimate card, else what the customer asked for.
+        workSummary: str(job?.scope_of_work).trim() || str(job?.customer_description),
         totals: {
           subtotalLabel: formatCents(subtotalCents),
           // Only when change orders added to this invoice: otherwise the work
