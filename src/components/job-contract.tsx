@@ -629,6 +629,7 @@ export function JobContract({
   contracts,
   customerName = "",
   customerPhone = "",
+  customerEmail = "",
   changes,
   changeOrders = null,
   stock = [],
@@ -643,6 +644,8 @@ export function JobContract({
   customerName?: string;
   /** Where the signing link is texted, shown before it is. */
   customerPhone?: string;
+  /** Where a change order's signing link can be emailed. */
+  customerEmail?: string;
   /** What has been written on the job since the customer last signed. */
   changes?: AgreementChangeSummary;
 }) {
@@ -786,7 +789,7 @@ export function JobContract({
       )}
 
       {/* Optional: a job whose contract never changes sees only the button. */}
-      {changeOrders ? <JobChangeOrders data={changeOrders} stock={stock} /> : null}
+      {changeOrders ? <JobChangeOrders data={changeOrders} stock={stock} hasPhone={Boolean(customerPhone)} hasEmail={Boolean(customerEmail)} /> : null}
     </section>
   );
 }

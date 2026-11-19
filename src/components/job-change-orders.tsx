@@ -297,6 +297,14 @@ function Summary({ order, contractBefore }: { order: ChangeOrderRecord; contract
 
 type Mode = "material" | "labor" | "custom" | "modify" | "remove";
 
+const MODE_BUTTONS = [
+  ["material", "Material", Package],
+  ["labor", "Labor", Wrench],
+  ["custom", "Custom item", Plus],
+  ["modify", "Change item", Pencil],
+  ["remove", "Remove item", Minus],
+] as const;
+
 /** One form for each way the work can change. */
 function AddChange({
   mode,
@@ -590,15 +598,24 @@ function Editor({
   stock,
   canSetPrices,
   onClose,
+  initialMode = null,
+  hasPhone,
+  hasEmail,
 }: {
   order: ChangeOrderRecord;
   data: JobChangeOrdersData;
   stock: StockOption[];
   canSetPrices: boolean;
   onClose: () => void;
+  /** Opened from the first screen's Material, Labor… button: that form, open. */
+  initialMode?: Mode | null;
+  hasPhone: boolean;
+  hasEmail: boolean;
 }) {
   const { pending, state, run, setState } = useAction();
-  const [mode, setMode] = useState<Mode | null>(null);
+  const [mode, setMode] = useState<Mode | null>(initialMode);
+  const [bySms, setBySms] = useState(hasPhone);
+  const [byEmail, setByEmail] = useState(hasEmail);
   const [description, setDescription] = useState(order.description);
   const [reason, setReason] = useState(order.reason);
   const panel = useRef<HTMLDivElement>(null);
@@ -683,15 +700,7 @@ function Editor({
         />
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {(
-            [
-              ["material", "Material", Package],
-              ["labor", "Labor", Wrench],
-              ["custom", "Custom item", Plus],
-              ["modify", "Change item", Pencil],
-              ["remove", "Remove item", Minus],
-            ] as const
-          ).map(([value, label, Icon]) => (
+          {MODE_BUTTONS.map(([value, label, Icon]) => (
             <button
               key={value}
               type="button"
@@ -712,15 +721,36 @@ function Editor({
 
       <div className="space-y-2">
         {agreementSigned ? (
-          <button
-            type="button"
-            disabled={pending || !ready}
-            onClick={() => run(() => requestChangeOrderApprovalAction(job, order.id, order.version), (result) => !result.error && onClose())}
-            className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
-          >
-            {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
-            Request customer approval
-          </button>
+          <>
+            {/* The customer signs the change order from the link, like the contract. */}
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              <label className="inline-flex min-h-11 items-center gap-2">
+                <input type="checkbox" checked={bySms} onChange={(event) => setBySms(event.target.checked)} disabled={!hasPhone} className="h-4 w-4" />
+                Text{hasPhone ? "" : " (no phone)"}
+              </label>
+              <label className="inline-flex min-h-11 items-center gap-2">
+                <input type="checkbox" checked={byEmail} onChange={(event) => setByEmail(event.target.checked)} disabled={!hasEmail} className="h-4 w-4" />
+                Email{hasEmail ? "" : " (no email)"}
+              </label>
+            </div>
+            <button
+              type="button"
+              disabled={pending || !ready || (!bySms && !byEmail)}
+              onClick={() =>
+                run(
+                  () => requestChangeOrderApprovalAction(job, order.id, order.version, { sms: bySms, email: byEmail }),
+                  (result) => !result.error && onClose(),
+                )
+              }
+              className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
+            >
+              {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+              Send to customer to sign
+            </button>
+            <p className="text-xs text-ink-muted">
+              They get a link to read the change order and sign it. Nothing changes on the job until they do.
+            </p>
+          </>
         ) : (
           <>
             <button
@@ -952,8 +982,16 @@ function OrderRow({
   );
 }
 
-function CreateForm({ jobNumber, onCreated, onCancel }: { jobNumber: string; onCreated: (id: string) => void; onCancel: () => void }) {
-  const { pending, state, run } = useAction();
+function CreateForm({
+  jobNumber,
+  onCreated,
+  onCancel,
+}: {
+  jobNumber: string;
+  onCreated: (id: string, mode: Mode) => void;
+  onCancel: () => void;
+}) {
+  const { pending, state, run, setState } = useAction();
   const [description, setDescription] = useState("");
   const [reason, setReason] = useState("");
   return (
@@ -974,25 +1012,33 @@ function CreateForm({ jobNumber, onCreated, onCancel }: { jobNumber: string; onC
         <span className="text-xs font-semibold text-ink-muted">Why (optional)</span>
         <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} placeholder="Customer request" className={`mt-1 ${inputClass}`} />
       </label>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          disabled={pending || !description.trim()}
-          onClick={() =>
-            run(
-              () => createChangeOrderAction(jobNumber, { description, reason }),
-              (result) => result.changeOrderId && onCreated(result.changeOrderId),
-            )
-          }
-          className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
-        >
-          {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          Start
-        </button>
-        <button type="button" onClick={onCancel} className="tap-target min-h-12 rounded-control border border-line px-4 text-sm font-semibold">
-          Cancel
-        </button>
+      <p className="text-xs font-semibold text-ink-muted">Add what is changing</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {MODE_BUTTONS.map(([value, label, Icon]) => (
+          <button
+            key={value}
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (!description.trim()) {
+                setState({ error: "Say what is changing first, like \"Customer wants two more outlets in the garage\"." });
+                return;
+              }
+              run(
+                () => createChangeOrderAction(jobNumber, { description, reason }),
+                (result) => result.changeOrderId && onCreated(result.changeOrderId, value),
+              );
+            }}
+            className="tap-target inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line px-3 text-sm font-semibold disabled:opacity-60"
+          >
+            {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Icon className="h-4 w-4" aria-hidden />}
+            {label}
+          </button>
+        ))}
       </div>
+      <button type="button" onClick={onCancel} className="tap-target min-h-12 w-full rounded-control border border-line px-4 text-sm font-semibold">
+        Cancel
+      </button>
       <FormMessage error={state.error} notice={state.notice} />
     </div>
   );
@@ -1001,12 +1047,17 @@ function CreateForm({ jobNumber, onCreated, onCancel }: { jobNumber: string; onC
 export function JobChangeOrders({
   data,
   stock,
+  hasPhone = true,
+  hasEmail = false,
 }: {
   data: JobChangeOrdersData & { canSetPrices: boolean };
   stock: StockOption[];
+  hasPhone?: boolean;
+  hasEmail?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [startMode, setStartMode] = useState<Mode | null>(null);
   const editing = editingId ? data.changeOrders.find((order) => order.id === editingId && order.status === "draft") ?? null : null;
   // The one open in the editor is shown there, not a second time in the list.
   const active = data.changeOrders.filter((order) => order.status !== "canceled" && order.id !== editing?.id);
@@ -1041,8 +1092,9 @@ export function JobChangeOrders({
       {creating ? (
         <CreateForm
           jobNumber={data.jobNumber}
-          onCreated={(id) => {
+          onCreated={(id, mode) => {
             setCreating(false);
+            setStartMode(mode);
             setEditingId(id);
           }}
           onCancel={() => setCreating(false)}
@@ -1050,7 +1102,20 @@ export function JobChangeOrders({
       ) : null}
 
       {editing ? (
-        <Editor key={editing.id} order={editing} data={data} stock={stock} canSetPrices={data.canSetPrices} onClose={() => setEditingId(null)} />
+        <Editor
+          key={editing.id}
+          order={editing}
+          data={data}
+          stock={stock}
+          canSetPrices={data.canSetPrices}
+          initialMode={startMode}
+          hasPhone={hasPhone}
+          hasEmail={hasEmail}
+          onClose={() => {
+            setEditingId(null);
+            setStartMode(null);
+          }}
+        />
       ) : null}
 
       {active.length > 0 ? (
