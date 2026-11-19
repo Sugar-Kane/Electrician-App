@@ -74,6 +74,35 @@ export async function savePaymentPlanAction(jobNumber: string, rawItems: unknown
   };
 }
 
+/**
+ * Text and email the customer a payment's pay link, now. Asking for money is a
+ * billing change. The payment must be one of this job's, read through the
+ * person's own session (row security), before the link goes out.
+ */
+export async function sendPayLinkAction(jobNumber: string, itemId: string): Promise<PaymentPlanState> {
+  const blocked = await billingRefusal();
+  if (blocked) return { error: blocked };
+  const found = await findJob(jobNumber);
+  if (!found) return { error: "That job could not be found." };
+  const { data: item } = await found.database
+    .from("job_payment_plan_items")
+    .select("id")
+    .eq("organization_id", found.context.organizationId)
+    .eq("job_id", found.jobId)
+    .eq("id", itemId)
+    .maybeSingle();
+  if (!item) return { error: "That payment is no longer in the plan. Refresh the page." };
+
+  const { sendPaymentRequest } = await import("@/lib/job-prepayment-pay");
+  const sent = await sendPaymentRequest(String(item.id), { byHand: true });
+  if (!sent.ok) return { error: sent.message };
+  revalidatePath(`/jobs/${jobNumber}`);
+  const went = [sent.sms === "sent" ? "texted" : "", sent.email === "sent" ? "emailed" : ""].filter(Boolean);
+  if (went.length === 0) return { error: `The pay link didn't go out. Text: ${sent.sms}. Email: ${sent.email}.` };
+  const missed = [sent.sms !== "sent" ? `text ${sent.sms}` : "", sent.email !== "sent" ? `email ${sent.email}` : ""].filter(Boolean);
+  return { error: "", notice: `Pay link ${went.join(" and ")} to the customer.${missed.length ? ` (Not sent: ${missed.join("; ")}.)` : ""}` };
+}
+
 export async function recordPrepaymentAction(_previous: PaymentPlanState, formData: FormData): Promise<PaymentPlanState> {
   const blocked = await billingRefusal();
   if (blocked) return { error: blocked };

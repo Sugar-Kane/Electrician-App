@@ -126,6 +126,55 @@ export function amountDueNow(
   return Math.max(0, Math.min(dueSoFar - paid, total - paid));
 }
 
+/**
+ * What has been paid toward each payment, oldest first. Money received counts
+ * against the plan in order (the deposit, then each payment, then the
+ * balance), however it came in: a pay link, cash, a check. So a plan saved
+ * again, or a payment made on the wrong link, never makes anything look unpaid
+ * or paid twice.
+ */
+export function paymentsOwed(payments: PlannedPayment[], prepaidCents: number): { cents: number; owedCents: number; paid: boolean }[] {
+  let left = Math.max(0, whole(prepaidCents));
+  return payments.map((payment) => {
+    const covered = Math.min(left, payment.cents);
+    left -= covered;
+    const owedCents = payment.cents - covered;
+    return { cents: payment.cents, owedCents, paid: owedCents === 0 };
+  });
+}
+
+/**
+ * What a payment's pay link asks for: everything in the plan up to and
+ * including it, less what has been paid and what is already on its way by
+ * bank. A deposit still owed is part of the next payment's link rather than
+ * forgotten; a payment already covered asks for nothing.
+ */
+export function payLinkCents(
+  payments: PlannedPayment[],
+  index: number,
+  state: { prepaidCents: number; processingCents?: number },
+): number {
+  if (index < 0 || index >= payments.length) return 0;
+  const through = payments.slice(0, index + 1).reduce((sum, payment) => sum + payment.cents, 0);
+  const paid = Math.max(0, whole(state.prepaidCents)) + Math.max(0, whole(state.processingCents ?? 0));
+  return Math.max(0, through - paid);
+}
+
+/**
+ * Whether the customer is asked for a payment automatically now: one due on
+ * signing once signed, one due on a date once that date comes, and only once
+ * (`requestedAt`). The balance due on completion is asked for by the invoice,
+ * not a pay link, and nothing is asked for once the invoice is out.
+ */
+export function shouldRequestPayment(
+  payment: Pick<PlannedPayment, "kind" | "due" | "dueDate">,
+  state: { requestedAt: string | null; owedCents: number; today: string; signed: boolean; invoiceSent: boolean },
+): boolean {
+  if (state.requestedAt || state.invoiceSent || state.owedCents <= 0) return false;
+  if (payment.due === "on_completion") return false;
+  return paymentIsDue(payment, { today: state.today, signed: state.signed, completed: false });
+}
+
 function dollars(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
@@ -144,9 +193,13 @@ export function planSummaryLines(payments: PlannedPayment[], formatDate: (isoDat
           ? "due on completion of the work"
           : `due ${formatDate(payment.dueDate ?? "")}`;
     const share = payment.amountType === "percent" && payment.percentBps ? ` (${(payment.percentBps / 100).toLocaleString("en-US")}%)` : "";
-    const label = payment.kind === "deposit" ? "Deposit" : payment.kind === "final" ? "Balance" : `Payment ${index + 1}`;
-    return `${label} ${dollars(payment.cents)}${share} ${when}.`;
+    return `${paymentLabel(payment, index)} ${dollars(payment.cents)}${share} ${when}.`;
   });
+}
+
+/** "Deposit", "Payment 2", "Balance": the name a payment goes by on the contract and its pay link. */
+export function paymentLabel(payment: Pick<PlanItemInput, "kind">, index: number): string {
+  return payment.kind === "deposit" ? "Deposit" : payment.kind === "final" ? "Balance" : `Payment ${index + 1}`;
 }
 
 /** The deposit to state on the contract: the first payment when it is a deposit, else none. */

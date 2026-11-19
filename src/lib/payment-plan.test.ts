@@ -79,6 +79,46 @@ test("what is due now: what has come due, less what was paid, never negative", (
   assert.equal(amountDueNow(plan.payments, { ...base, signed: true, paidCents: 90_000 }), 0);
 });
 
+test("money received pays the plan in order, and a pay link asks only for what is left", async () => {
+  const { paymentsOwed, payLinkCents } = await import("./payment-plan.ts");
+  const plan = planAmounts(500_000, [
+    { kind: "deposit", amountType: "fixed", amountCents: 50_000, due: "on_signing" },
+    { kind: "installment", amountType: "fixed", amountCents: 200_000, due: "on_date", dueDate: "2026-12-01" },
+  ]);
+  assert.equal(plan.ok, true);
+  if (!plan.ok) return;
+  // Nothing paid: the deposit link asks for the deposit.
+  assert.equal(payLinkCents(plan.payments, 0, { prepaidCents: 0 }), 50_000);
+  // Deposit paid in cash: its link asks for nothing, the next for the installment alone.
+  assert.deepEqual(paymentsOwed(plan.payments, 50_000).map((each) => each.owedCents), [0, 200_000, 250_000]);
+  assert.equal(payLinkCents(plan.payments, 0, { prepaidCents: 50_000 }), 0);
+  assert.equal(payLinkCents(plan.payments, 1, { prepaidCents: 50_000 }), 200_000);
+  // Deposit never paid: the installment's link includes it, never more than the plan.
+  assert.equal(payLinkCents(plan.payments, 1, { prepaidCents: 0 }), 250_000);
+  // A bank payment on its way counts, so it is not asked for twice.
+  assert.equal(payLinkCents(plan.payments, 0, { prepaidCents: 0, processingCents: 50_000 }), 0);
+  // Paid more than the plan: nothing is owed anywhere, never negative.
+  assert.deepEqual(paymentsOwed(plan.payments, 900_000).map((each) => each.owedCents), [0, 0, 0]);
+  assert.equal(payLinkCents(plan.payments, 2, { prepaidCents: 900_000 }), 0);
+  assert.equal(payLinkCents(plan.payments, 7, { prepaidCents: 0 }), 0);
+});
+
+test("a payment is asked for automatically once, when due, and never after the invoice", async () => {
+  const { shouldRequestPayment } = await import("./payment-plan.ts");
+  const deposit = { kind: "deposit" as const, due: "on_signing" as const, dueDate: null };
+  const dated = { kind: "installment" as const, due: "on_date" as const, dueDate: "2026-12-01" };
+  const base = { requestedAt: null, owedCents: 50_000, today: "2026-11-20", signed: true, invoiceSent: false };
+  assert.equal(shouldRequestPayment(deposit, base), true);
+  assert.equal(shouldRequestPayment(deposit, { ...base, signed: false }), false);
+  assert.equal(shouldRequestPayment(deposit, { ...base, requestedAt: "2026-11-19T10:00:00Z" }), false);
+  assert.equal(shouldRequestPayment(deposit, { ...base, owedCents: 0 }), false);
+  assert.equal(shouldRequestPayment(deposit, { ...base, invoiceSent: true }), false);
+  assert.equal(shouldRequestPayment(dated, base), false);
+  assert.equal(shouldRequestPayment(dated, { ...base, today: "2026-12-01" }), true);
+  // The balance on completion is the invoice's job.
+  assert.equal(shouldRequestPayment({ kind: "final", due: "on_completion", dueDate: null }, base), false);
+});
+
 test("the contract says each payment in plain words", () => {
   const plan = planAmounts(100_000, [{ kind: "deposit", amountType: "percent", percentBps: 1000, due: "on_signing" }]);
   assert.equal(plan.ok, true);
