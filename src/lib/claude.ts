@@ -161,12 +161,15 @@ export async function draftScope(input: {
   description: string;
   workType: string;
   visitOnly?: boolean;
+  /** The job's labour and material lines: "Labour: Replace receptacles (3 hr)", "Material: 15A outlet x4". */
+  workItems?: string[];
 }): Promise<string | null> {
   const anthropic = getClient();
   if (!anthropic) return null;
 
   const described = input.description.trim();
-  if (!described) return null;
+  const items = (input.workItems ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 40);
+  if (!described && items.length === 0) return null;
 
   try {
     const response = await anthropic.messages.create({
@@ -185,7 +188,8 @@ export async function draftScope(input: {
               : []),
             "",
             "What the customer described:",
-            described.slice(0, 2000),
+            described.slice(0, 2000) || "(nothing)",
+            ...(items.length > 0 ? ["", "Labour and materials listed for the job:", ...items.map((item) => `- ${item.slice(0, 200)}`)] : []),
           ].join("\n"),
         },
       ],

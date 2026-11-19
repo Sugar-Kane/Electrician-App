@@ -232,7 +232,8 @@ export function scopePrompt(): string {
   return [
     "You write the scope-of-work paragraph of an electrical contracting agreement.",
     "",
-    "You are given what the customer described and the kind of work booked. Write one short paragraph, three sentences at most, stating the work to be performed.",
+    "You are given what the customer described, the kind of work booked, and the labour and materials the electrician has listed for the job. Write one short paragraph, three sentences at most, stating the work to be performed.",
+    "When labour and materials are listed, describe the work they add up to (for example, replacing four receptacles and their cover plates). Do not list part numbers or repeat every line.",
     "",
     "Rules:",
     "- Never state a price, a discount, or a payment term. Those are filled in elsewhere and yours would contradict them.",

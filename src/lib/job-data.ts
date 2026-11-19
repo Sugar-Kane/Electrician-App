@@ -682,6 +682,8 @@ export async function getJobControls(jobNumber: string): Promise<{
   customerPhone: string;
   customerEmail: string;
   technicianNotes: string;
+  /** The scope of work written on the Estimate card; the contract and estimate use it. */
+  scopeOfWork: string;
   /** When the parts were marked gathered and ready, or null. */
   materialsReadyAt: string | null;
   /** When the parts were marked bought; picked up is `materialsReadyAt`. */
@@ -712,7 +714,7 @@ export async function getJobControls(jobNumber: string): Promise<{
   const { data } = await context.database
     .from("jobs")
     .select(
-      `job_number, status, canceled_at, cancellation_reason, technician_notes, materials_ready_at, materials_bought_at,
+      `job_number, status, canceled_at, cancellation_reason, technician_notes, scope_of_work, materials_ready_at, materials_bought_at,
        diagnostic_fee_cents, diagnostic_paid, follow_up_of,
        scheduled_start, scheduled_end, arrival_window_start, arrival_window_end,
        customers ( phone, email ),
@@ -744,6 +746,7 @@ export async function getJobControls(jobNumber: string): Promise<{
     customerPhone: str(customer?.phone),
     customerEmail: str(customer?.email),
     technicianNotes: str(row.technician_notes),
+    scopeOfWork: str(row.scope_of_work),
     materialsReadyAt: str(row.materials_ready_at) || null,
     materialsBoughtAt: str(row.materials_bought_at) || null,
     diagnostic: {

@@ -7,6 +7,7 @@ import { recordActivity } from "@/lib/activity";
 
 import { takeAiUse } from "@/lib/ai-allowance";
 import { draftScope } from "@/lib/claude";
+import { workItemLabel } from "@/lib/job-scope";
 import {
   completeDraftFields,
   placeholdersUsed,
@@ -205,13 +206,13 @@ export async function generateContract(
   const { data: job } = await supabase
     .from("jobs")
     .select(
-      `id, job_number, category, customer_description, scheduled_start, diagnostic_fee_cents,
+      `id, job_number, category, customer_description, scope_of_work, scheduled_start, diagnostic_fee_cents,
        diagnostic_paid, follow_up_of,
        customers ( first_name, last_name, company_name, bill_to, address_line_1, city, state, postal_code ),
        properties ( address_line_1, city, state, postal_code ),
        organizations ( name, phone, timezone ),
        invoices ( id, status, total_cents, diagnostic_credit_cents ),
-       job_line_items ( kind, description, quantity, unit_price_cents, invoice_id )`,
+       job_line_items ( kind, description, quantity, unit, unit_price_cents, invoice_id )`,
     )
     .eq("organization_id", organizationId)
     .eq("job_number", numeric)
@@ -337,16 +338,24 @@ export async function generateContract(
   // Best effort. A model outage, or a business past this month's built-in AI,
   // leaves {{scope}} standing in the draft, which is visible and fixable; a
   // paragraph invented to fill the gap is neither.
-  const aiScope = (await takeAiUse(organizationId, "contract_scope")).ok
-    ? await draftScope({
-        description,
-        workType,
-        visitOnly: money.source === "diagnostic",
-      })
-    : null;
+  // The scope written on the job's Estimate card comes first: the
+  // electrician's own words, already read. Otherwise a draft from the request
+  // and the work and materials lines.
+  const writtenScope = text(row.scope_of_work).replace(/\s+/g, " ").trim();
+  const aiScope = writtenScope
+    ? null
+    : (await takeAiUse(organizationId, "contract_scope")).ok
+      ? await draftScope({
+          description,
+          workType,
+          visitOnly: money.source === "diagnostic",
+          workItems: lines.map(workItemLabel),
+        })
+      : null;
   // Without the AI, a plain paragraph from what the job itself says: the
   // request and the work written on it. Still a draft, read before sending.
   const scope =
+    writtenScope ||
     aiScope ||
     plainScope({
       workType,

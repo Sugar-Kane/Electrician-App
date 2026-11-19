@@ -11,6 +11,7 @@ import { DiagnosticFeeCard } from "@/components/diagnostic-fee-card";
 import { JobFollowUps } from "@/components/job-follow-ups";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobBilling, JobLinesPanel } from "@/components/job-lines-panel";
+import { JobScope } from "@/components/job-scope";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobPhotos } from "@/components/job-photos";
@@ -1165,6 +1166,13 @@ export default async function JobDetailPage({
 
           <StepCard id="estimate" number={2} title="Estimate" state={stepState("estimate")} open={askedCard === "estimate"} summary={totals.subtotalCents > 0 ? `Estimate ${formatCents(totals.subtotalCents)}` : "Not priced yet"}>
             {listItems.length > 0 && state !== "completed" ? <AddMaterialsToEstimate count={listItems.length} /> : null}
+            <JobScope
+              key={controls.scopeOfWork}
+              jobNumber={controls.jobNumber}
+              scope={controls.scopeOfWork}
+              hasLines={lines.length > 0}
+              locked={state === "completed" || state === "canceled"}
+            />
             <JobLinesPanel
               jobNumber={controls.jobNumber}
               lines={lines}
