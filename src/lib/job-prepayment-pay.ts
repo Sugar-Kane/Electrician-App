@@ -33,8 +33,10 @@ import { STOPPED_ERROR, sendSms } from "@/lib/twilio";
  * nothing is billed twice. Once the invoice is out the invoice asks for what
  * is owed, and a pay link sends the customer there instead.
  *
- * There is no table of checkouts for a pay link: what is open, or on its way
- * by bank, is read back from Stripe, where the checkouts live.
+ * Each checkout is kept in job_prepayment_checkouts, one at a time per job
+ * (a unique index), claimed before Stripe is asked. So two taps can't open two
+ * chargeable checkouts, and money submitted but not yet recorded (a bank
+ * payment clearing, a webhook still on its way) counts as paid.
  */
 
 const PURPOSE = "job_prepayment";
@@ -186,34 +188,85 @@ export function dueWords(payment: Pick<PlannedPayment, "due" | "dueDate">, timeZ
   return `due ${formatDay(payment.dueDate ?? "", timeZone)}`;
 }
 
-type JobCheckouts = { processingCents: number; open: { id: string; url: string; amountCents: number; itemId: string }[] };
+type ActiveCheckout = {
+  id: string;
+  planItemId: string;
+  amountCents: number;
+  sessionId: string;
+  url: string;
+  status: "creating" | "open" | "processing";
+  createdAt: string;
+};
 
 /**
- * The job's pay-link checkouts in Stripe from the last month: those still
- * open, and bank payments submitted but not yet cleared. Throws when Stripe
- * can't be read, so a checkout is never opened on a guess.
+ * The job's checkout slot (job_prepayment_checkouts): the one checkout being
+ * made, open, or clearing, brought up to date with Stripe.
+ *
+ * - `pendingCents`: money submitted but not yet recorded as a prepayment (a
+ *   bank payment clearing, or a payment Stripe has taken whose webhook hasn't
+ *   arrived). It is counted as paid, so it is never asked for again.
+ * - `active`: the checkout holding the slot, if it can still be paid.
+ *
+ * Throws when Stripe can't be read, so nothing is charged or asked for on a
+ * guess.
  */
-async function jobCheckouts(stripe: Stripe, stripeAccount: string, jobId: string): Promise<JobCheckouts> {
-  const found: JobCheckouts = { processingCents: 0, open: [] };
-  const since = Math.floor(Date.now() / 1_000) - 30 * 86_400;
-  let seen = 0;
-  for await (const session of stripe.checkout.sessions.list(
-    { created: { gte: since }, limit: 100, expand: ["data.payment_intent"] },
-    { stripeAccount },
-  )) {
-    seen += 1;
-    if (seen > 500) break;
-    if (session.metadata?.purpose !== PURPOSE || session.metadata?.job_id !== jobId) continue;
-    if (session.status === "open" && session.url) {
-      found.open.push({ id: session.id, url: session.url, amountCents: session.amount_total ?? 0, itemId: session.metadata?.plan_item_id ?? "" });
-      continue;
-    }
-    const intent = session.payment_intent && typeof session.payment_intent === "object" ? session.payment_intent : null;
-    if (session.status === "complete" && session.payment_status === "unpaid" && intent?.status === "processing") {
-      found.processingCents += session.amount_total ?? 0;
-    }
+async function checkoutSlot(
+  database: Database,
+  stripe: Stripe | null,
+  stripeAccount: string | null,
+  jobId: string,
+): Promise<{ pendingCents: number; active: ActiveCheckout | null }> {
+  const { data, error } = await database
+    .from("job_prepayment_checkouts")
+    .select("id, plan_item_id, amount_cents, checkout_session_id, checkout_url, status, created_at")
+    .eq("job_id", jobId)
+    .in("status", ["creating", "open", "processing"])
+    .maybeSingle();
+  if (error) throw new Error(`pay link checkout lookup failed: ${error.message}`);
+  if (!data) return { pendingCents: 0, active: null };
+  const row = data as Row;
+  const active: ActiveCheckout = {
+    id: text(row.id),
+    planItemId: text(row.plan_item_id),
+    amountCents: Number(row.amount_cents) || 0,
+    sessionId: text(row.checkout_session_id),
+    url: text(row.checkout_url),
+    status: text(row.status) as ActiveCheckout["status"],
+    createdAt: text(row.created_at),
+  };
+  const mark = (status: "expired" | "processing", from: string) =>
+    database.from("job_prepayment_checkouts").update({ status }).eq("id", active.id).eq("status", from);
+
+  // A bank payment clearing: Stripe's webhook settles or fails it.
+  if (active.status === "processing") return { pendingCents: active.amountCents, active: null };
+
+  if (active.status === "creating") {
+    // Being made now by another tap. One left behind by a request that died
+    // before Stripe answered never reached the customer, so it is let go.
+    if (Date.now() - new Date(active.createdAt).getTime() < 2 * 60_000) return { pendingCents: 0, active };
+    await mark("expired", "creating");
+    return { pendingCents: 0, active: null };
   }
-  return found;
+
+  // Open: ask Stripe how it stands, since its webhook may be late.
+  if (!stripe || !stripeAccount || !active.sessionId) throw new Error("pay link checkout can't be checked");
+  const session = await stripe.checkout.sessions.retrieve(active.sessionId, { expand: ["payment_intent"] }, { stripeAccount });
+  if (session.status === "expired") {
+    await mark("expired", "open");
+    return { pendingCents: 0, active: null };
+  }
+  if (session.status === "complete") {
+    // Paid, or a bank payment submitted: counted until the webhook records it.
+    const intent = session.payment_intent && typeof session.payment_intent === "object" ? session.payment_intent : null;
+    if (session.payment_status === "paid" || intent?.status === "processing" || intent?.status === "succeeded") {
+      if (session.payment_status !== "paid") await mark("processing", "open");
+      return { pendingCents: active.amountCents, active: null };
+    }
+    // Completed but the bank payment failed: the slot is free again.
+    await mark("expired", "open");
+    return { pendingCents: 0, active: null };
+  }
+  return { pendingCents: 0, active };
 }
 
 export type PayLinkView = {
@@ -227,15 +280,18 @@ export type PayLinkView = {
 
 /** What the customer's pay link shows. Null for a link that leads nowhere. */
 export async function payLinkView(token: string): Promise<PayLinkView | null> {
-  const payment = await loadPlanPayment({ token });
+  const database = getSupabaseAdmin();
+  const payment = await loadPlanPayment({ token }, database);
   if (!payment) return null;
   let processingCents = 0;
-  const stripe = getStripe();
-  if (stripe && payment.stripeAccount && !payment.invoiceToken) {
+  let known = true;
+  if (payment.stripeAccount && !payment.invoiceToken) {
     try {
-      processingCents = (await jobCheckouts(stripe, payment.stripeAccount, payment.jobId)).processingCents;
+      processingCents = (await checkoutSlot(database, getStripe(), payment.stripeAccount, payment.jobId)).pendingCents;
     } catch (error) {
-      console.error("pay link: checkouts could not be read", { message: String(error).slice(0, 200) });
+      // Not known what is on its way, so no Pay button; the checkout would refuse anyway.
+      known = false;
+      console.error("pay link: checkout could not be checked", { message: String(error).slice(0, 200) });
     }
   }
   const amountCents = payLinkCents(payment.payments, payment.index, { prepaidCents: payment.prepaidCents, processingCents });
@@ -243,47 +299,89 @@ export async function payLinkView(token: string): Promise<PayLinkView | null> {
     payment,
     amountCents,
     processingCents,
-    canPay: !payment.invoiceToken && Boolean(payment.stripeAccount) && amountCents >= MIN_ONLINE_CENTS,
+    canPay: known && !payment.invoiceToken && Boolean(payment.stripeAccount) && amountCents >= MIN_ONLINE_CENTS,
   };
 }
 
-export type PlanCheckoutResult = { url: string } | { error: "unavailable" | "not_payable" | "processing" | "paid" | "invoice" };
+export type PlanCheckoutResult = { url: string } | { error: "unavailable" | "not_payable" | "processing" | "paid" | "invoice" | "busy" };
 
-/** A Stripe checkout for what this pay link asks for now, offering bank (ACH) and card. */
+/**
+ * A Stripe checkout for what this pay link asks for now, offering bank (ACH)
+ * and card.
+ *
+ * The job's checkout slot is claimed in the database before Stripe is asked,
+ * so only one chargeable checkout exists for a job at a time: a second tap
+ * gets the same checkout back, another link closes the open one first, and
+ * money submitted but not yet recorded counts as paid.
+ */
 export async function startPlanCheckout(input: { token: string; origin: string }): Promise<PlanCheckoutResult> {
   const stripe = getStripe();
   if (!stripe || !input.origin) return { error: "unavailable" };
-  const payment = await loadPlanPayment({ token: input.token });
+  const database = getSupabaseAdmin();
+  const payment = await loadPlanPayment({ token: input.token }, database);
   if (!payment) return { error: "unavailable" };
   if (payment.invoiceToken) return { error: "invoice" };
   const stripeAccount = payment.stripeAccount;
   if (!stripeAccount) return { error: "not_payable" };
   const onAccount = { stripeAccount };
 
-  let checkouts: JobCheckouts;
+  let slot: Awaited<ReturnType<typeof checkoutSlot>>;
   try {
-    checkouts = await jobCheckouts(stripe, stripeAccount, payment.jobId);
+    slot = await checkoutSlot(database, stripe, stripeAccount, payment.jobId);
   } catch (error) {
-    console.error("pay link checkout: checkouts could not be read", { message: String(error).slice(0, 200) });
+    console.error("pay link checkout: slot could not be checked", { message: String(error).slice(0, 200) });
     return { error: "unavailable" };
   }
-  const amountCents = payLinkCents(payment.payments, payment.index, {
-    prepaidCents: payment.prepaidCents,
-    processingCents: checkouts.processingCents,
-  });
-  if (amountCents < MIN_ONLINE_CENTS) return { error: checkouts.processingCents > 0 ? "processing" : "paid" };
+  if (slot.pendingCents > 0) return { error: "processing" };
+  const amountCents = payLinkCents(payment.payments, payment.index, { prepaidCents: payment.prepaidCents });
+  if (amountCents < MIN_ONLINE_CENTS) return { error: "paid" };
 
-  // A second tap returns to the checkout already open for this payment and
-  // amount. Any other open checkout for the job is closed, so the customer
-  // can't pay an old amount as well.
-  const reuse = checkouts.open.find((open) => open.itemId === payment.itemId && open.amountCents === amountCents);
-  for (const open of checkouts.open) {
-    if (open.id !== reuse?.id) await stripe.checkout.sessions.expire(open.id, undefined, onAccount).catch(() => undefined);
+  if (slot.active) {
+    if (slot.active.status === "creating") return { error: "busy" };
+    // A second tap: the checkout already open for this payment and amount.
+    if (slot.active.planItemId === payment.itemId && slot.active.amountCents === amountCents && slot.active.url) {
+      return { url: slot.active.url };
+    }
+    // Open for another payment or an old amount: closed first, so the
+    // customer can't pay both. If Stripe won't close it, it may have just
+    // been paid, so nothing new is opened.
+    try {
+      const closed = await stripe.checkout.sessions.expire(slot.active.sessionId, undefined, onAccount);
+      if (closed.status !== "expired") return { error: "busy" };
+    } catch {
+      return { error: "busy" };
+    }
+    await database.from("job_prepayment_checkouts").update({ status: "expired" }).eq("id", slot.active.id).eq("status", "open");
   }
-  if (reuse) return { url: reuse.url };
+
+  // Claim the slot. A tap racing this one finds it taken and is told to wait.
+  const { data: claimed, error: claimError } = await database
+    .from("job_prepayment_checkouts")
+    .insert({
+      organization_id: payment.organizationId,
+      job_id: payment.jobId,
+      plan_item_id: payment.itemId,
+      amount_cents: amountCents,
+      status: "creating",
+    })
+    .select("id")
+    .single();
+  if (claimError || !claimed) {
+    if (claimError?.code === "23505") return { error: "busy" };
+    console.error("pay link checkout: slot not claimed", { code: claimError?.code });
+    return { error: "unavailable" };
+  }
+  const checkoutId = text((claimed as Row).id);
+  const release = () => database.from("job_prepayment_checkouts").update({ status: "failed" }).eq("id", checkoutId).eq("status", "creating");
 
   const back = `${input.origin}/pay/${encodeURIComponent(input.token)}`;
-  const metadata = { purpose: PURPOSE, plan_item_id: payment.itemId, job_id: payment.jobId, organization_id: payment.organizationId };
+  const metadata = {
+    purpose: PURPOSE,
+    checkout_id: checkoutId,
+    plan_item_id: payment.itemId,
+    job_id: payment.jobId,
+    organization_id: payment.organizationId,
+  };
   const name = `${payment.label}${payment.jobNumber ? ` for job #${payment.jobNumber}` : ""}`;
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
@@ -319,23 +417,41 @@ export async function startPlanCheckout(input: { token: string; origin: string }
     cancel_url: back,
   };
 
+  let session: Stripe.Checkout.Session;
   try {
-    const session = await stripe.checkout.sessions.create(params, onAccount);
-    return session.url ? { url: session.url } : { error: "unavailable" };
+    session = await stripe.checkout.sessions.create(params, { ...onAccount, idempotencyKey: `pay-link-${checkoutId}` });
   } catch (error) {
     const message = String((error as { message?: unknown })?.message ?? error);
     if (!/us_bank_account/i.test(message)) {
       console.error("pay link checkout failed", { itemId: payment.itemId, message: message.slice(0, 300) });
+      await release();
       return { error: "unavailable" };
     }
     try {
-      const session = await stripe.checkout.sessions.create({ ...params, payment_method_types: ["card"], payment_method_options: undefined }, onAccount);
-      return session.url ? { url: session.url } : { error: "unavailable" };
+      session = await stripe.checkout.sessions.create(
+        { ...params, payment_method_types: ["card"], payment_method_options: undefined },
+        { ...onAccount, idempotencyKey: `pay-link-${checkoutId}-card` },
+      );
     } catch (retry) {
       console.error("pay link checkout failed", { itemId: payment.itemId, message: String(retry).slice(0, 300) });
+      await release();
       return { error: "unavailable" };
     }
   }
+
+  const { error: openError } = await database
+    .from("job_prepayment_checkouts")
+    .update({ status: "open", checkout_session_id: session.id, checkout_url: session.url ?? null })
+    .eq("id", checkoutId)
+    .eq("status", "creating");
+  // A checkout the slot doesn't hold is money nobody can account for, so it is closed rather than shown.
+  if (openError || !session.url) {
+    console.error("pay link checkout not recorded", { checkoutId, code: openError?.code });
+    await stripe.checkout.sessions.expire(session.id, undefined, onAccount).catch(() => undefined);
+    await release();
+    return { error: "unavailable" };
+  }
+  return { url: session.url };
 }
 
 /**
@@ -347,7 +463,7 @@ export async function startPlanCheckout(input: { token: string; origin: string }
 export async function handlePlanCheckoutEvent(eventType: string, session: Stripe.Checkout.Session, account?: string): Promise<boolean> {
   if (session.metadata?.purpose !== PURPOSE || session.mode !== "payment") return false;
   const action = onlineEventAction(eventType, session.payment_status);
-  if (action === "ignore" || action === "expired") return true;
+  if (action === "ignore") return true;
 
   const organizationId = session.metadata?.organization_id ?? "";
   const jobId = session.metadata?.job_id ?? "";
@@ -356,6 +472,21 @@ export async function handlePlanCheckoutEvent(eventType: string, session: Stripe
   const connected = organizationId ? await paymentAccountFor(organizationId, database) : null;
   if (!account || !connected || connected.accountId !== account) {
     console.error("pay link event from an account that isn't the business's", { session: session.id, eventType });
+    return true;
+  }
+
+  // The checkout's row in the job's slot, found by the checkout Stripe signed.
+  const moveCheckout = async (status: "open" | "processing" | "succeeded" | "failed" | "expired", from: string[], method?: "ach" | "card") => {
+    const { error: moveError } = await database
+      .from("job_prepayment_checkouts")
+      .update({ status, ...(method ? { method } : {}) })
+      .eq("checkout_session_id", session.id)
+      .eq("organization_id", organizationId)
+      .in("status", from);
+    if (moveError) throw new Error(`pay link checkout update failed: ${moveError.message}`);
+  };
+  if (action === "expired") {
+    await moveCheckout("expired", ["creating", "open"]);
     return true;
   }
   const { data: job, error: jobError } = await database.from("jobs").select("id").eq("id", jobId).eq("organization_id", organizationId).maybeSingle();
@@ -383,6 +514,7 @@ export async function handlePlanCheckoutEvent(eventType: string, session: Stripe
   const activity = asFlexibleClient(database);
 
   if (action === "processing") {
+    await moveCheckout("processing", ["creating", "open"], method);
     await recordActivity(activity, {
       organizationId,
       eventType: "job.prepayment_processing",
@@ -393,6 +525,7 @@ export async function handlePlanCheckoutEvent(eventType: string, session: Stripe
     return true;
   }
   if (action === "failed") {
+    await moveCheckout("failed", ["creating", "open", "processing"], method);
     await recordActivity(activity, {
       organizationId,
       eventType: "job.prepayment_failed",
@@ -418,11 +551,12 @@ export async function handlePlanCheckoutEvent(eventType: string, session: Stripe
     note: "Paid online from a pay link",
     received_at: new Date().toISOString(),
   });
-  if (error) {
-    // Recorded already: Stripe sent the event again.
-    if (error.code === "23505") return true;
-    throw new Error(`pay link payment not recorded: ${error.message}`);
-  }
+  if (error && error.code !== "23505") throw new Error(`pay link payment not recorded: ${error.message}`);
+  // Recorded: the job's checkout slot is free. Done after the prepayment, so
+  // money taken is never neither recorded nor holding the slot.
+  await moveCheckout("succeeded", ["creating", "open", "processing", "failed", "expired"], method);
+  // Recorded already: Stripe sent the event again.
+  if (error) return true;
 
   await recordActivity(activity, {
     organizationId,
@@ -521,8 +655,18 @@ export async function sendPaymentRequest(itemId: string, options: { byHand: bool
   if (!payment.stripeAccount) return { ok: false, message: "Online payments aren't set up yet. Connect Stripe in Settings first." };
   const origin = appOrigin();
   if (!origin) return { ok: false, message: "Pay links can't be sent right now." };
-  const amountCents = payLinkCents(payment.payments, payment.index, { prepaidCents: payment.prepaidCents });
-  if (amountCents < MIN_ONLINE_CENTS) return { ok: false, message: "Nothing is owed on this payment." };
+  // Money on its way by bank, or paid and not yet recorded, is not asked for again.
+  let pendingCents: number;
+  try {
+    pendingCents = (await checkoutSlot(database, getStripe(), payment.stripeAccount, payment.jobId)).pendingCents;
+  } catch (error) {
+    console.error("payment request: checkout could not be checked", { message: String(error).slice(0, 200) });
+    return { ok: false, message: "Couldn't check for a payment already on its way. Try again in a minute." };
+  }
+  const amountCents = payLinkCents(payment.payments, payment.index, { prepaidCents: payment.prepaidCents, processingCents: pendingCents });
+  if (amountCents < MIN_ONLINE_CENTS) {
+    return { ok: false, message: pendingCents > 0 ? "A payment for this job is already on its way." : "Nothing is owed on this payment." };
+  }
 
   const now = new Date().toISOString();
   const claim = database.from("job_payment_plan_items").update({ requested_at: now }).eq("id", payment.itemId);
@@ -646,27 +790,42 @@ async function sendPrepaymentReceipt(input: { organizationId: string; jobId: str
  */
 export async function sendDuePaymentRequests(options: { jobId?: string; organizationId?: string; limit?: number } = {}): Promise<number> {
   const database = getSupabaseAdmin();
-  // Dated payments up to tomorrow (the business's own day is checked for each
-  // one below), and payments due on signing from plans of the last two months:
-  // a job never signed doesn't hold up the rest for ever.
+  // Dated payments from the last three months up to tomorrow (the business's
+  // own day is checked for each one below), and payments due on signing from
+  // plans of the last two months.
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const oldestDate = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
   const recent = new Date(Date.now() - 60 * 86_400_000).toISOString();
-  let query = database
-    .from("job_payment_plan_items")
-    .select("id, organization_id, job_id")
-    .is("requested_at", null)
-    .or(`and(due.eq.on_signing,updated_at.gte."${recent}"),and(due.eq.on_date,due_date.lte.${tomorrow})`)
-    .order("updated_at", { ascending: false })
-    .limit(options.limit ?? 25);
-  if (options.jobId && options.organizationId) query = query.eq("job_id", options.jobId).eq("organization_id", options.organizationId);
-  const { data, error } = await query;
-  if (error) {
-    console.error("payment requests: could not be read", error);
-    return 0;
+  const limit = options.limit ?? 25;
+
+  // Candidates a page at a time, in a fixed order, so ones that can't be sent
+  // yet (unsigned, nothing owed, no Stripe) never stop the ones behind them.
+  const candidates: Row[] = [];
+  let after = "";
+  for (let page = 0; page < 8; page += 1) {
+    let query = database
+      .from("job_payment_plan_items")
+      .select("id, organization_id, job_id")
+      .is("requested_at", null)
+      .or(`and(due.eq.on_signing,updated_at.gte."${recent}"),and(due.eq.on_date,due_date.lte.${tomorrow},due_date.gte.${oldestDate})`)
+      .order("id", { ascending: true })
+      .limit(50);
+    if (after) query = query.gt("id", after);
+    if (options.jobId && options.organizationId) query = query.eq("job_id", options.jobId).eq("organization_id", options.organizationId);
+    const { data, error } = await query;
+    if (error) {
+      console.error("payment requests: could not be read", error);
+      break;
+    }
+    const rows = (data ?? []) as Row[];
+    candidates.push(...rows);
+    if (rows.length < 50) break;
+    after = text(rows[rows.length - 1]?.id);
   }
 
   let sent = 0;
-  for (const row of (data ?? []) as Row[]) {
+  for (const row of candidates) {
+    if (sent >= limit) break;
     try {
       const payment = await loadPlanPayment({ itemId: text(row.id) }, database);
       if (!payment || !payment.stripeAccount) continue;

@@ -27,6 +27,7 @@ const money = (cents: number) => new Intl.NumberFormat("en-US", { style: "curren
 const PAY_PROBLEMS: Record<string, string> = {
   processing: "A bank payment for this job is already on its way, so there is nothing to pay right now.",
   paid: "Nothing is owed on this payment. Thank you.",
+  busy: "A payment for this job was just started. Wait a minute, then refresh this page to see where it stands.",
   not_payable: "This payment can't be made online right now. Call the business and they will help.",
   unavailable: "Online payment isn't working right now. Try again in a few minutes, or call the business.",
 };
