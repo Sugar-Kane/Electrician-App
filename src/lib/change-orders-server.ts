@@ -12,6 +12,7 @@ import {
   canEditChangeOrder,
   changeOrderSummary,
   contractTotals,
+  fillItemEdit,
   itemNetCents,
   itemsNotReadyBecause,
   lineMatchesOriginal,
@@ -886,7 +887,7 @@ export async function updateChangeOrderItem(
   if (!order.ok) return order;
   const { data: existing } = await database
     .from("change_order_items")
-    .select("id, action, kind, line_id, existing_line, unit_price_cents")
+    .select("id, action, kind, line_id, existing_line, unit_price_cents, admin_fee_cents, description, quantity, unit, unit_cost_cents, inventory_item_id, notes")
     .eq("change_order_id", input.changeOrderId)
     .eq("id", input.itemId)
     .maybeSingle();
@@ -902,14 +903,25 @@ export async function updateChangeOrderItem(
     jobId: order.jobId,
     adminFeeBps: order.adminFeeBps,
     actor: input.actor,
-    item: { ...input.item, action: text(row.action) as ChangeOrderAction, lineId: text(row.line_id) || input.item.lineId, kind: input.item.kind ?? text(row.kind) },
+    item: {
+      ...input.item,
+      // What the edit leaves out keeps its saved value (Set price sends only a price).
+      ...fillItemEdit(row, input.item),
+      action: text(row.action) as ChangeOrderAction,
+      lineId: text(row.line_id) || input.item.lineId,
+      kind: input.item.kind ?? text(row.kind),
+    },
     editingItemId: input.itemId,
   });
   if (!built.ok) return built;
-  // Someone who may not set prices can still change a quantity; the price they
-  // could not have set stays as it was.
-  if (!input.actor.canSetPrices && text(row.action) === "add") {
-    built.row.unit_price_cents = maybeNum(row.unit_price_cents);
+  // An addition edited without a new price (a quantity, a description), or by
+  // someone who may not set prices, keeps the price it had, and is worth what
+  // that price now comes to.
+  if (text(row.action) === "add" && (!input.actor.canSetPrices || (input.item.unitPrice ?? "").trim() === "")) {
+    const keptPrice = maybeNum(row.unit_price_cents);
+    built.row.unit_price_cents = keptPrice;
+    built.row.admin_fee_cents = maybeNum(row.admin_fee_cents);
+    built.row.net_cents = itemNetCents({ action: "add", quantity: num(built.row.quantity), unitPriceCents: keptPrice, original: null });
   }
 
   if (!(await touchVersion(database, input.organizationId, input.changeOrderId, num(order.row.version), input.item.expectedVersion))) {

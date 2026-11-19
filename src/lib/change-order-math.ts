@@ -282,3 +282,53 @@ export function signedCents(cents: number, format: (cents: number) => string): s
   if (value < 0) return `−${format(-value)}`;
   return format(0);
 }
+
+/** What an item editor may send, as typed. Mirrors ItemInput's text fields. */
+export type ItemEditPatch = {
+  description?: string;
+  quantity?: string;
+  unit?: string;
+  unitPrice?: string;
+  unitCost?: string;
+  inventoryItemId?: string;
+  notes?: string;
+};
+
+/**
+ * An edit to one item, filled in from the item as saved.
+ *
+ * Saving an edit rebuilds the whole item, so an edit that sends only the new
+ * price (the "Set price" box) used to arrive with no description and was
+ * refused as "What is the work?". Whatever the edit leaves out keeps its saved
+ * value; what it sends replaces it. The price is the exception the other way:
+ * left out, it stays out, which for an addition keeps the saved price (the
+ * caller restores it) and for a change means "unchanged".
+ */
+export function fillItemEdit(
+  saved: {
+    description?: unknown;
+    quantity?: unknown;
+    unit?: unknown;
+    unit_cost_cents?: unknown;
+    inventory_item_id?: unknown;
+    notes?: unknown;
+  },
+  patch: ItemEditPatch,
+): ItemEditPatch {
+  const savedText = (value: unknown) => (typeof value === "string" ? value : "");
+  const savedNumber = (value: unknown) => {
+    const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const quantity = savedNumber(saved.quantity);
+  const cost = savedNumber(saved.unit_cost_cents);
+  return {
+    description: patch.description ?? savedText(saved.description),
+    quantity: patch.quantity ?? (quantity === null ? undefined : String(quantity)),
+    unit: patch.unit ?? (savedText(saved.unit) || undefined),
+    unitPrice: patch.unitPrice,
+    unitCost: patch.unitCost ?? (cost === null ? undefined : (cost / 100).toFixed(2)),
+    inventoryItemId: patch.inventoryItemId ?? (savedText(saved.inventory_item_id) || undefined),
+    notes: patch.notes ?? (savedText(saved.notes) || undefined),
+  };
+}

@@ -1226,6 +1226,7 @@ export default async function JobDetailPage({
               contracts={contracts}
               customerName={job.contactName || job.customer}
               customerPhone={job.phone}
+              customerEmail={job.email}
               changes={agreement}
               changeOrders={changeOrders}
               stock={stock}
@@ -1331,6 +1332,7 @@ export default async function JobDetailPage({
             contracts={contracts}
             customerName={job.contactName || job.customer}
             customerPhone={job.phone}
+            customerEmail={job.email}
             changes={agreement}
             changeOrders={changeOrders}
             stock={stock}
@@ -1352,6 +1354,7 @@ export default async function JobDetailPage({
               contracts={contracts}
               customerName={job.contactName || job.customer}
               customerPhone={job.phone}
+              customerEmail={job.email}
               changes={agreement}
               changeOrders={changeOrders}
               stock={stock}

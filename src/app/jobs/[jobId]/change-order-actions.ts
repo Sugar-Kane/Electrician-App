@@ -162,9 +162,12 @@ export async function requestChangeOrderApprovalAction(
   jobNumber: string,
   changeOrderId: string,
   expectedVersion?: number,
+  /** How to send the signing link; text only when not said. */
+  send: { sms: boolean; email: boolean } = { sms: true, email: false },
 ): Promise<ChangeOrderActionState> {
   const who = await caller();
   if (!who) return { error: "Sign in first." };
+  if (!send.sms && !send.email) return { error: "Tick text, email or both to send it." };
   // Asking the customer to agree to a price is a billing change.
   const blocked = await billingRefusal();
   if (blocked) return { error: blocked };
@@ -182,6 +185,9 @@ export async function requestChangeOrderApprovalAction(
   const form = new FormData();
   form.set("contractId", requested.contractId);
   form.set("jobNumber", jobNumber);
+  form.set("channels", "chosen");
+  if (send.sms) form.set("sendSms", "on");
+  if (send.email) form.set("sendEmail", "on");
   const { sendSigningLink } = await import("@/app/jobs/[jobId]/contract-actions");
   const sent = await sendSigningLink({ error: "" }, form);
   refresh(jobNumber);
@@ -191,7 +197,7 @@ export async function requestChangeOrderApprovalAction(
     // The change order is written and waiting; only the text did not go. Said
     // as an error so the sheet stays open and the reason is read.
     return {
-      error: `The change order is ready to sign, but the link was not texted: ${sent.error}${
+      error: `The change order is ready to sign, but the link was not sent: ${sent.error}${
         sent.needsSignature ? " Add your signature in Settings, then send it from the contract above." : " Send it, or have them sign here, from the contract above."
       }`,
       contractId: requested.contractId,
@@ -298,4 +304,41 @@ export async function finishChangeOrderAction(jobNumber: string, changeOrderId: 
   });
   refresh(jobNumber);
   return outcome.ok ? { error: "", notice: outcome.message } : { error: outcome.message };
+}
+
+/**
+ * Send, or send again, the signing link for a change order already with the
+ * customer, by text, email or both. The same send the contract uses.
+ */
+export async function sendChangeOrderLinkAction(
+  jobNumber: string,
+  changeOrderId: string,
+  send: { sms: boolean; email: boolean },
+): Promise<ChangeOrderActionState> {
+  const who = await caller();
+  if (!who) return { error: "Sign in first." };
+  if (!send.sms && !send.email) return { error: "Tick text, email or both to send it." };
+  const { data } = await who.database
+    .from("change_orders")
+    .select("status, document_contract_id")
+    .eq("organization_id", who.context.organizationId)
+    .eq("id", changeOrderId)
+    .maybeSingle();
+  const row = (data ?? null) as Record<string, unknown> | null;
+  const contractId = typeof row?.document_contract_id === "string" ? row.document_contract_id : "";
+  if (!row || row.status !== "pending_approval" || !contractId) return { error: "That change order is not waiting for the customer." };
+
+  const form = new FormData();
+  form.set("contractId", contractId);
+  form.set("jobNumber", jobNumber);
+  form.set("channels", "chosen");
+  if (send.sms) form.set("sendSms", "on");
+  if (send.email) form.set("sendEmail", "on");
+  const { sendSigningLink } = await import("@/app/jobs/[jobId]/contract-actions");
+  const sent = await sendSigningLink({ error: "" }, form);
+  refresh(jobNumber);
+  if (sent.error) {
+    return { error: `${sent.error}${sent.needsSignature ? " Add your signature in Settings, then send it again." : ""}` };
+  }
+  return { error: "", notice: sent.notice ?? "Signing link sent." };
 }

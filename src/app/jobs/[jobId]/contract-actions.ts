@@ -76,7 +76,7 @@ async function loadSignable(supabase: FlexibleSupabaseClient, contractId: string
   const { data } = await supabase
     .from("contracts")
     .select(
-      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, signature_sent_at, organizations ( name, timezone ), jobs ( job_number, customers ( id, phone ) )",
+      "id, organization_id, job_id, kind, status, unfilled, public_token, signed_at, signature_provider, signature_sent_at, organizations ( name, timezone ), jobs ( job_number, customers ( id, phone, email ) )",
     )
     .eq("id", contractId)
     .maybeSingle();
@@ -625,17 +625,19 @@ export async function sendSigningLink(
   }
 
   const { signingLinkMessage } = await import("@/lib/contract-signing");
+  const { emailSender, looksLikeEmail } = await import("@/lib/booking-confirmation");
+
+  // How to send it. The contract card texts, as it always has; a change order
+  // sent from its own sheet says which of text and email were ticked.
+  const chosen = formData.get("channels") === "chosen";
+  const wantText = chosen ? formData.get("sendSms") === "on" : true;
+  const wantEmail = chosen ? formData.get("sendEmail") === "on" : false;
+  if (!wantText && !wantEmail) return { error: "Tick text, email or both to send it." };
 
   const { toE164 } = await import("@/lib/phone-format");
-  const phone = toE164(text(customer?.phone));
-  if (!phone) {
-    await noteApprovalSend(supabase, contract, jobId, { ok: false, reason: "No mobile number on the customer" });
-    if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
-    return {
-      error:
-        "This customer has no mobile number we can text. Add one to the customer, or have them sign here in person.",
-    };
-  }
+  const phone = wantText ? toE164(text(customer?.phone)) : "";
+  const email = wantEmail ? text(customer?.email).trim() : "";
+  const emailOk = wantEmail && looksLikeEmail(email);
 
   const origin = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
   const token = text(contract.public_token);
@@ -643,16 +645,31 @@ export async function sendSigningLink(
   const link = `${origin}/contract/${token}`;
 
   const organizationId = text(contract.organization_id);
-  const { data: messaging } = await supabase
-    .from("messaging_settings")
-    .select("messaging_service_sid")
-    .eq("organization_id", organizationId)
-    .maybeSingle();
-  const messagingServiceSid = text(messaging?.messaging_service_sid);
-  if (!messagingServiceSid) {
-    await noteApprovalSend(supabase, contract, jobId, { ok: false, reason: "Texting is not set up for this business" });
+  let messagingServiceSid = "";
+  if (wantText && phone) {
+    const { data: messaging } = await supabase
+      .from("messaging_settings")
+      .select("messaging_service_sid")
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    messagingServiceSid = text(messaging?.messaging_service_sid);
+  }
+  const textOk = wantText && Boolean(phone) && Boolean(messagingServiceSid);
+
+  // Why a channel that was asked for cannot be used, said when nothing can go.
+  const textProblem = !wantText
+    ? ""
+    : !phone
+      ? "This customer has no mobile number we can text."
+      : !messagingServiceSid
+        ? "Texting is not set up for this business yet."
+        : "";
+  const emailProblem = !wantEmail ? "" : emailOk ? "" : "This customer has no email address on file.";
+  if (!textOk && !emailOk) {
+    const reason = [textProblem, emailProblem].filter(Boolean).join(" ");
+    await noteApprovalSend(supabase, contract, jobId, { ok: false, reason: reason || "Nothing to send it by" });
     if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
-    return { error: "Texting is not set up for this business yet, so the link could not be sent." };
+    return { error: `${reason} Add it to the customer, or have them sign here in person.` };
   }
 
   // The business signs before the customer is asked to: the contract they open
@@ -685,15 +702,9 @@ export async function sendSigningLink(
       .neq("id", contractId);
   }
 
-  // The claim. Another contract on this job still out for signature is refused
-  // here by the unique index, before anybody is texted — and a claim that
-  // matched no row, because it was signed a moment ago, texts nobody either.
-  //
-  // It also stamps the send. A link texted under a minute ago is not texted
-  // again; otherwise the update only matches if the last-sent time is still
-  // the one read above. Two taps at once — a double tap, or two phones — read
-  // the same time, and only the first update finds it: the other matches no
-  // row and texts nobody, so the customer is not sent the same link twice.
+  // The claim: refused when another contract on this job is out for signature,
+  // and matched only once by two taps at the same moment, before anybody is
+  // sent anything.
   const previousStatus = text(contract.status) || "draft";
   const previousProvider = text(contract.signature_provider) || null;
   const previousSentAt = text(contract.signature_sent_at) || null;
@@ -721,49 +732,85 @@ export async function sendSigningLink(
     };
   }
 
-  // Sent the way the inbox sends: saved in the customer's conversation first,
-  // with Twilio reporting back whether it was delivered, so "did they get the
-  // link?" has an answer on the job and in Messages. The assistant is not
-  // paused: this is an automatic text, not a person taking over the thread.
-  const { sendSms } = await import("@/lib/twilio");
-  const { sendCustomerText } = await import("@/lib/customer-text");
-  const outcome = await sendCustomerText(supabase, {
-    organizationId,
-    customerId: text(customer?.id),
-    to: phone,
-    body: signingLinkMessage({
-      businessName: text(business?.name),
-      jobNumber: job?.job_number,
-      link,
-      kind: contract.kind,
-    }),
-    send: sendSms,
-    pauseAssistant: false,
+  const message = signingLinkMessage({
+    businessName: text(business?.name),
+    jobNumber: job?.job_number,
+    link,
+    kind: contract.kind,
   });
-  const sent = outcome.ok
-    ? ({ ok: true } as const)
-    : ({ ok: false, errorCode: outcome.code, errorDetail: outcome.message } as const);
+  const failures: string[] = [];
+  let texted = false;
+  let emailed = false;
 
-  if (!sent.ok) {
+  // The text goes the way the inbox sends: saved in the customer's
+  // conversation first, with Twilio reporting back whether it arrived.
+  if (textOk) {
+    const { sendSms } = await import("@/lib/twilio");
+    const { sendCustomerText } = await import("@/lib/customer-text");
+    const outcome = await sendCustomerText(supabase, {
+      organizationId,
+      customerId: text(customer?.id),
+      to: phone,
+      body: message,
+      send: sendSms,
+      pauseAssistant: false,
+    });
+    if (outcome.ok) texted = true;
+    else failures.push(`the text could not be sent (${outcome.message || outcome.code})`);
+  }
+
+  if (emailOk) {
+    const { sendEmail } = await import("@/lib/email");
+    const businessName = text(business?.name) || "Your electrician";
+    const what = contract.kind === "change_order" ? "change order" : "contract";
+    const jobLabel = job?.job_number ? ` for job #${String(job.job_number)}` : "";
+    const escape = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const sent = await sendEmail({
+      organizationId,
+      contactButtons: true,
+      to: email,
+      subject: `Please sign: ${what}${jobLabel} from ${businessName}`,
+      text: `${message}\n\n${businessName}`,
+      html: [
+        `<p>${escape(businessName)} has sent you a ${what}${escape(jobLabel)} to read and sign.</p>`,
+        `<p><a href="${escape(link)}" style="display:inline-block;padding:12px 20px;border-radius:10px;background:#f5c542;color:#111827;font-weight:700;text-decoration:none">Read and sign the ${what}</a></p>`,
+        `<p style="font-size:13px;color:#475569">Or open this link: ${escape(link)}</p>`,
+        `<p style="color:#475569">${escape(businessName)}</p>`,
+      ].join(""),
+      from: emailSender(businessName, process.env.BOOKING_EMAIL_FROM ?? ""),
+      idempotencyKey: `signing-${contractId}-${sentAt.getTime()}`,
+    });
+    if (sent.ok) emailed = true;
+    else failures.push(`the email could not be sent (${sent.errorDetail || sent.errorCode})`);
+  }
+
+  if (!texted && !emailed) {
     // Released, so the contract does not read as sent when nothing was.
     await supabase
       .from("contracts")
       .update({ status: previousStatus, signature_provider: previousProvider, signature_sent_at: previousSentAt })
       .eq("id", contractId)
       .is("signed_at", null);
-    await noteApprovalSend(supabase, contract, jobId, {
-      ok: false,
-      reason: `The text could not be sent (${sent.errorDetail || sent.errorCode})`,
-    });
+    const reason = failures.join("; ") || "nothing could be sent";
+    await noteApprovalSend(supabase, contract, jobId, { ok: false, reason });
     if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
-    return { error: `The text could not be sent (${sent.errorDetail || sent.errorCode}).` };
+    return { error: `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.` };
   }
 
   await noteApprovalSend(supabase, contract, jobId, { ok: true });
   if (jobNumber) revalidatePath(`/jobs/${jobNumber}`);
 
   const { formatForDisplay } = await import("@/lib/phone-format");
-  return { error: "", contractId, notice: `Signing link texted to ${formatForDisplay(phone)}.` };
+  const said = [texted ? `texted to ${formatForDisplay(phone)}` : "", emailed ? `emailed to ${email}` : ""].filter(Boolean).join(" and ");
+  const missed = [
+    wantText && !texted ? textProblem || "the text did not go" : "",
+    wantEmail && !emailed ? emailProblem || "the email did not go" : "",
+  ].filter(Boolean);
+  return {
+    error: "",
+    contractId,
+    notice: `Signing link ${said}.${missed.length ? ` Not sent: ${missed.join(" ")}` : ""}`,
+  };
 }
 
 /** How long after a signing link is texted before the same one can be texted again. */
