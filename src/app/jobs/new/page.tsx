@@ -28,12 +28,18 @@ import { isoToZonedWallClock } from "@/lib/schedule-labels";
  * right now (an hour's window from the next quarter hour), `estimate` starts
  * it as a quote with no time, `return` books it for a time still to pick.
  */
+/** The next quarter hour from now: "Repair now" starts then. */
+function nextQuarterHour(): Date {
+  const quarter = 15 * 60_000;
+  return new Date(Math.ceil(Date.now() / quarter) * quarter);
+}
+
 export default async function NewJobPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; plan?: string }>;
+  searchParams: Promise<{ from?: string; plan?: string; next?: string; start?: string; end?: string }>;
 }) {
-  const [{ from, plan }, timeZone, customers, stock] = await Promise.all([
+  const [{ from, plan, next, start: startParam, end: endParam }, timeZone, customers, stock] = await Promise.all([
     searchParams,
     getOrganizationTimezone(),
     getCustomerChoices(),
@@ -43,8 +49,7 @@ export default async function NewJobPage({
   const intent = plan === "estimate" ? ("quote" as const) : ("agreed" as const);
   let values = followUp?.values;
   if (followUp && values && plan === "now") {
-    const quarter = 15 * 60_000;
-    const start = new Date(Math.ceil(Date.now() / quarter) * quarter);
+    const start = nextQuarterHour();
     values = {
       ...values,
       startLocal: isoToZonedWallClock(start.toISOString(), timeZone),
@@ -53,14 +58,28 @@ export default async function NewJobPage({
   } else if (followUp && values && plan) {
     values = { ...values, startLocal: "", arrivalEndLocal: "" };
   }
+  // A follow-up set up from a job's "Need to come back" panel: what the next
+  // job is for and when, as typed there. Wall-clock values only.
+  const wallClock = (value?: string) => (value && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? value : "");
+  if (followUp && values && !followUp.fromDiagnostic) {
+    values = {
+      ...values,
+      description: (next ?? "").slice(0, 2000),
+      startLocal: wallClock(startParam),
+      arrivalEndLocal: wallClock(startParam) ? wallClock(endParam) : "",
+    };
+  }
+  const followUpTitle = followUp && !followUp.fromDiagnostic ? "Follow-up job" : null;
 
   return (
     <FieldPageShell
-      title={followUp ? (plan === "estimate" ? "Repair estimate" : plan === "now" ? "Repair now" : plan === "return" ? "Schedule the bigger job" : "Book work order") : "New job"}
-      eyebrow={followUp ? `From diagnostic #${followUp.jobNumber}` : "Add work"}
+      title={followUpTitle ?? (followUp ? (plan === "estimate" ? "Repair estimate" : plan === "now" ? "Repair now" : plan === "return" ? "Schedule the bigger job" : "Book work order") : "New job")}
+      eyebrow={followUp ? `From ${followUp.fromDiagnostic ? "diagnostic" : "job"} #${followUp.jobNumber}` : "Add work"}
       description={
         followUp
-          ? `${followUp.customer} · the work diagnostic #${followUp.jobNumber} found.`
+          ? followUp.fromDiagnostic
+            ? `${followUp.customer} · the work diagnostic #${followUp.jobNumber} found.`
+            : `${followUp.customer} · more work after job #${followUp.jobNumber}, as a new job with its own estimate, contract and invoice.`
           : "For work booked any way other than through the phone line."
       }
       backHref={followUp ? `/jobs/${followUp.jobNumber}` : "/jobs"}
@@ -77,6 +96,7 @@ export default async function NewJobPage({
                 values: values ?? followUp.values,
                 intent,
                 creditCents: followUp.creditCents,
+                fromDiagnostic: followUp.fromDiagnostic,
               }
             : undefined
         }
