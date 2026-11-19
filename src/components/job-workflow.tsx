@@ -151,7 +151,6 @@ export type JobWorkflowProps = {
   customerEnRouteNotified: boolean;
   customerArrivalNotified: boolean;
   customerEnRouteMessages: boolean;
-  customerArrivalMessages: boolean;
   customerReachable: boolean;
   navigateUrl: string;
   phone: string;
@@ -269,7 +268,6 @@ export function JobWorkflow({
   customerEnRouteNotified,
   customerArrivalNotified,
   customerEnRouteMessages,
-  customerArrivalMessages,
   customerReachable,
   navigateUrl,
   phone,
@@ -471,13 +469,9 @@ export function JobWorkflow({
   const expectedTexts =
     !customerReachable
       ? ""
-      : customerEnRouteMessages && customerArrivalMessages
-        ? "The customer gets a text when you set off and when you arrive."
-        : customerEnRouteMessages
-          ? "The customer gets a text when you set off."
-          : customerArrivalMessages
-            ? "The customer gets a text when you arrive."
-            : "";
+      : customerEnRouteMessages
+        ? "The customer gets a text when you set off."
+        : "";
 
   // Said rather than stored: an address nobody has geocoded and a browser with
   // no location API are both facts about this render, and a promise of

@@ -37,9 +37,8 @@ export type JobWorkflow = {
   customerEnRouteNotified: boolean;
   /** Whether the customer has already been texted about this arrival. */
   customerArrivalNotified: boolean;
-  /** Which of the two messages this business sends at all. */
+  /** Whether this business sends the on-the-way text at all. */
   customerEnRouteMessages: boolean;
-  customerArrivalMessages: boolean;
   /** Whether there is a number to text, so the screen can stop promising one. */
   customerReachable: boolean;
 };
@@ -165,7 +164,6 @@ export async function getJobWorkflow(jobNumber: string): Promise<JobWorkflow | n
     customerEnRouteNotified: Boolean(progressRow?.customer_en_route_notified_at),
     customerArrivalNotified: Boolean(progressRow?.customer_arrival_notified_at),
     customerEnRouteMessages: active.has("job_en_route"),
-    customerArrivalMessages: active.has("job_arrived"),
     customerReachable: str(customer?.phone) !== "",
   };
 }

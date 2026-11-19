@@ -479,7 +479,6 @@ export default async function JobDetailPage({
           customerEnRouteNotified={workflow.customerEnRouteNotified}
           customerArrivalNotified={workflow.customerArrivalNotified}
           customerEnRouteMessages={workflow.customerEnRouteMessages}
-          customerArrivalMessages={workflow.customerArrivalMessages}
           customerReachable={workflow.customerReachable}
           // Empty without an address: Navigate then says so instead of
           // opening Google Maps on a lone comma.

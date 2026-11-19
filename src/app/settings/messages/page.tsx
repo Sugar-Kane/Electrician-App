@@ -21,7 +21,6 @@ const TRIGGER_COPY: Record<string, { label: string; description: string }> = {
     label: "Technician on the way",
     description: "When the technician sets off.",
   },
-  job_arrived: { label: "Technician arrived", description: "On arrival at the property." },
   job_completed: { label: "Work complete", description: "When the job is finished." },
   job_rescheduled: { label: "Appointment moved", description: "When the time changes." },
   job_canceled: { label: "Appointment canceled", description: "When a visit is called off." },
@@ -34,6 +33,9 @@ const TRIGGER_COPY: Record<string, { label: string; description: string }> = {
   invoice_overdue: { label: "Invoice overdue", description: "When payment is late." },
   review_request: { label: "Review request", description: "After the work is done." },
 };
+
+/** No longer sent: a customer does not need a text that the technician arrived. */
+const RETIRED = new Set<string>(["job_arrived"]);
 
 export default async function AutomaticMessagesPage() {
   const context = await getMessagingContext();
@@ -89,7 +91,7 @@ export default async function AutomaticMessagesPage() {
         </section>
       ) : (
         <div className="space-y-3">
-          {TEMPLATE_TRIGGERS.filter((trigger) => templates.has(trigger)).map((trigger) => {
+          {TEMPLATE_TRIGGERS.filter((trigger) => templates.has(trigger) && !RETIRED.has(trigger)).map((trigger) => {
             const template = templates.get(trigger);
             const copy = TRIGGER_COPY[trigger] ?? { label: trigger, description: "" };
             return (

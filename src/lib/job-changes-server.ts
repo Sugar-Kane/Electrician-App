@@ -549,17 +549,12 @@ export async function advanceVisit(
     };
   }
 
-  // Setting off and turning up are the two moments the customer is waiting on,
-  // so they are the two that are worth a text. Nothing else in the workflow
-  // sends anything: starting work and finishing are the business's own
-  // business, and a status tap that quietly texted somebody would be a surprise
-  // nobody asked for.
+  // Setting off is the moment the customer is waiting on, so it is the one
+  // worth a text. Arriving is not: they can see the van. Nothing else in the
+  // workflow sends anything: a status tap that quietly texted somebody would be
+  // a surprise nobody asked for.
   if (requested === "en_route" && patch.trip_started_at) {
     return { error: "", state: requested, notice: await tellCustomer(job, "en_route") };
-  }
-
-  if (recordsArrival) {
-    return { error: "", state: requested, notice: await tellCustomer(job, "arrived") };
   }
 
   return { error: "", state: requested };
@@ -571,11 +566,6 @@ const NOTICES = {
     stamp: "customer_en_route_notified_at",
     trigger: "job_en_route",
     said: "Customer told you are on the way.",
-  },
-  arrived: {
-    stamp: "customer_arrival_notified_at",
-    trigger: "job_arrived",
-    said: "Customer told you have arrived.",
   },
 } as const;
 
