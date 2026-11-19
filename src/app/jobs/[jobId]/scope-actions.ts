@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { takeAiUse } from "@/lib/ai-allowance";
 import { draftScope } from "@/lib/claude";
-import { canEditContract, spliceScope } from "@/lib/document-edit";
-import { cleanScope, workItemLabel } from "@/lib/job-scope";
+import { cleanScope } from "@/lib/job-scope";
+import { saveJobScope, scopeWorkItems } from "@/lib/job-scope-server";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -47,9 +47,7 @@ export async function draftJobScopeAction(_previous: ScopeState, formData: FormD
   if (!loaded) return { error: "That job could not be found." };
   const { context, job } = loaded;
 
-  const items = (Array.isArray(job.job_line_items) ? (job.job_line_items as Record<string, unknown>[]) : [])
-    .map(workItemLabel)
-    .filter(Boolean);
+  const items = scopeWorkItems(job.job_line_items);
   const description = text(job.customer_description).trim();
   if (items.length === 0 && description.length < 10) {
     return { error: "Add the work and materials first, or type the scope yourself." };
@@ -69,65 +67,19 @@ export async function draftJobScopeAction(_previous: ScopeState, formData: FormD
 
 export async function saveJobScopeAction(_previous: ScopeState, formData: FormData): Promise<ScopeState> {
   const jobNumber = text(formData.get("jobNumber"));
-  const raw = text(formData.get("scope"));
-  if (raw.trim().length > 2000) return { error: "That is longer than the scope holds. Trim it a little." };
-  const scope = cleanScope(raw);
-
   const loaded = await loadJob(jobNumber);
   if (!loaded) return { error: "That job could not be found." };
   const { context, supabase, job } = loaded;
 
-  const { error } = await supabase
-    .from("jobs")
-    .update({ scope_of_work: scope || null })
-    .eq("id", text(job.id))
-    .eq("organization_id", context.organizationId);
-  if (error) {
-    console.error("job scope save failed", error);
-    return { error: "The scope could not be saved. Try again." };
-  }
-
-  // The newest contract, while it can still be edited: the new scope replaces
-  // its scope paragraph and the PDF is rebuilt. A signed or sent one is left
-  // as the customer has it.
-  let contractNote = "";
-  if (scope) {
-    const { data: found } = await supabase
-      .from("contracts")
-      .select("id, body, scope, status, kind")
-      .eq("organization_id", context.organizationId)
-      .eq("job_id", text(job.id))
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const contract = (found ?? null) as Record<string, unknown> | null;
-    const flat = scope.replace(/\s+/g, " ");
-    if (contract && text(contract.kind) !== "change_order" && canEditContract({ status: text(contract.status) || "draft" }).ok) {
-      const current = text(contract.scope);
-      const body = current ? spliceScope(text(contract.body), current, flat) : null;
-      if (body && current !== flat) {
-        const { error: contractError } = await supabase
-          .from("contracts")
-          .update({ body, scope: flat, updated_at: new Date().toISOString() })
-          .eq("id", text(contract.id))
-          .eq("organization_id", context.organizationId);
-        if (!contractError) {
-          const { generateContractPdf } = await import("@/lib/pdf/contract-data");
-          const rebuilt = await generateContractPdf({
-            database: supabase,
-            organizationId: context.organizationId,
-            contractId: text(contract.id),
-            timeZone: context.timeZone,
-            uploadedBy: context.userId ?? "",
-          });
-          contractNote = rebuilt.error ? " The draft contract's wording is updated; rebuild its PDF from the contract." : " The draft contract is updated too.";
-        }
-      } else if (!body && current !== flat) {
-        contractNote = " Draft the contract again to use it.";
-      }
-    }
-  }
+  const saved = await saveJobScope(supabase, {
+    organizationId: context.organizationId,
+    jobId: text(job.id),
+    scope: text(formData.get("scope")),
+    timeZone: context.timeZone,
+    uploadedBy: context.userId ?? "",
+  });
+  if (!saved.ok) return { error: saved.message };
 
   revalidatePath(`/jobs/${jobNumber}`);
-  return { error: "", notice: scope ? `Saved.${contractNote}` : "Scope cleared." };
+  return { error: "", notice: saved.scope ? `Saved.${saved.contractNote}` : "Scope cleared." };
 }

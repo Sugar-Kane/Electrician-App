@@ -1,6 +1,8 @@
 import "server-only";
 
 import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
+import { cleanScope } from "@/lib/job-scope";
+import { saveJobScope, scopeWorkItems } from "@/lib/job-scope-server";
 import { completeDraftFields, fillTemplate, placeholdersUsed, scopePrompt, serviceAddress, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { sendJobEstimate } from "@/lib/estimate-server";
@@ -198,6 +200,23 @@ export const BUSINESS_MCP_TOOLS: McpTool[] = [
       properties: {
         job_number: str("The existing job number."),
         scope: str("The scope-of-work paragraph you wrote, following the rules the first call returns. Leave empty to get them."),
+        confirmed,
+      },
+      required: ["job_number", "confirmed"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "save_job_scope",
+    title: "Save a job's scope of work",
+    description:
+      "Save the scope of work on a job, the paragraph the job page's Estimate card holds: the job's contract uses it as its scope (an unsigned draft contract is updated and its PDF rebuilt), and the estimate the customer gets shows it. Call once with only job_number to get the job's request, its work and materials lines, the current scope and the rules for writing one; then write a short paragraph summarizing the work (or use the electrician's own words) and call again with scope and confirmed true. An empty scope with clear true removes it. Explicit owner approval is required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        job_number: str("The job number."),
+        scope: str("The scope-of-work paragraph: plain sentences, no prices, no dates. Leave empty to get the job's details and the rules."),
+        clear: { type: "boolean", description: "True to remove the saved scope." },
         confirmed,
       },
       required: ["job_number", "confirmed"],
@@ -708,12 +727,80 @@ export async function runBusinessMcpTool(input: {
       return { isError: true, text: `${displayCustomer(found.row)}: ${outcome.message}` };
     }
 
+    case "save_job_scope": {
+      const jobNumber = Number(text(args.job_number));
+      if (!Number.isInteger(jobNumber) || jobNumber <= 0) return { isError: true, text: "That job number could not be read." };
+      const { data: found } = await database
+        .from("jobs")
+        .select("id, job_number, category, customer_description, scope_of_work, job_line_items ( kind, description, quantity, unit ), organizations ( timezone, created_by )")
+        .eq("organization_id", organizationId)
+        .eq("job_number", jobNumber)
+        .maybeSingle();
+      if (!found) return { isError: true, text: `Job #${jobNumber} was not found. Nothing was changed.` };
+      const job = found as Record<string, unknown>;
+      const written = cleanScope(text(args.scope));
+      const clearing = args.clear === true && !written;
+      if (!written && !clearing) {
+        const items = scopeWorkItems(job.job_line_items);
+        return {
+          text: [
+            "Nothing has been saved yet. Write the scope (or use the electrician's words), show it to them, then call save_job_scope again with scope and confirmed true.",
+            "",
+            `JOB #${jobNumber}, KIND OF WORK: ${text(job.category).replace(/_/g, " ") || "not given"}`,
+            `WHAT THE CUSTOMER ASKED FOR: ${text(job.customer_description).slice(0, 2000) || "nothing written"}`,
+            `CURRENT SCOPE: ${text(job.scope_of_work) || "none yet"}`,
+            "WORK AND MATERIALS:",
+            ...(items.length > 0 ? items.map((item) => `- ${item}`) : ["- none listed yet"]),
+            "",
+            "RULES",
+            scopePrompt(),
+          ].join("\n"),
+        };
+      }
+      const gate = requireConfirmation(
+        args,
+        clearing ? `Remove the scope of work from job #${jobNumber}.` : `Save this scope of work on job #${jobNumber}: "${written}"`,
+      );
+      if (gate) return gate;
+      let uploadedBy = "";
+      if (session.credentialId) {
+        const { data: credential } = await database.from("mcp_business_credentials").select("created_by").eq("id", session.credentialId).maybeSingle();
+        uploadedBy = text(credential?.created_by);
+      }
+      const organization = record(job.organizations);
+      const saved = await saveJobScope(asFlexibleClient(database), {
+        organizationId,
+        jobId: text(job.id),
+        scope: written,
+        timeZone: text(organization.timezone) || "America/Los_Angeles",
+        uploadedBy: uploadedBy || text(organization.created_by),
+      });
+      if (!saved.ok) return { isError: true, text: saved.message, record: { jobId: text(job.id) } };
+      return {
+        text: saved.scope
+          ? `Scope saved on job #${jobNumber}. The contract and estimate will use it.${saved.contractNote}`
+          : `Scope removed from job #${jobNumber}.`,
+        record: { jobId: text(job.id) },
+      };
+    }
+
     case "draft_contract": {
       const jobNumber = Number(text(args.job_number));
       // The scope is written by the assistant the electrician is talking to,
       // on their own plan, rather than by Volteira's built-in AI. One plain
       // paragraph, so nothing it sends can become a heading or a new clause.
-      const written = text(args.scope).replace(/\s+/g, " ").trim().slice(0, 1200);
+      let written = text(args.scope).replace(/\s+/g, " ").trim().slice(0, 1200);
+      // The scope saved on the job (Estimate card or save_job_scope) is used
+      // when none is given.
+      if (!written && Number.isFinite(jobNumber)) {
+        const { data: saved } = await database
+          .from("jobs")
+          .select("scope_of_work")
+          .eq("organization_id", organizationId)
+          .eq("job_number", jobNumber)
+          .maybeSingle();
+        written = text(saved?.scope_of_work).replace(/\s+/g, " ").trim().slice(0, 1200);
+      }
       if (!written) {
         if (!Number.isFinite(jobNumber)) return { isError: true, text: "That job number could not be read." };
         const { data: described } = await database
@@ -725,7 +812,7 @@ export async function runBusinessMcpTool(input: {
         if (!described) return { isError: true, text: `Job #${jobNumber} was not found.` };
         return {
           text: [
-            "Nothing has been created yet. Write the scope-of-work paragraph, then call draft_contract again with it as scope.",
+            "Nothing has been created yet. Write the scope-of-work paragraph, then call draft_contract again with it as scope (or save it on the job first with save_job_scope).",
             "",
             `KIND OF WORK: ${text(described.category).replace(/_/g, " ") || "not given"}`,
             `WHAT THE CUSTOMER DESCRIBED: ${text(described.customer_description).slice(0, 2000) || "nothing yet; ask the electrician"}`,
@@ -782,7 +869,7 @@ export async function runBusinessMcpTool(input: {
       const filled = fillTemplate(body, facts);
       const { data: created, error } = await database
         .from("contracts")
-        .insert({ organization_id: organizationId, job_id: text(row.id), body: filled.body, unfilled: filled.unfilled, status: "draft" })
+        .insert({ organization_id: organizationId, job_id: text(row.id), body: filled.body, scope, unfilled: filled.unfilled, status: "draft" })
         .select("id")
         .maybeSingle();
       if (error || !created) return { isError: true, text: "The contract could not be saved." };
