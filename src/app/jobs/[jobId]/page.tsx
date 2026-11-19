@@ -479,7 +479,6 @@ export default async function JobDetailPage({
           customerEnRouteNotified={workflow.customerEnRouteNotified}
           customerArrivalNotified={workflow.customerArrivalNotified}
           customerEnRouteMessages={workflow.customerEnRouteMessages}
-          customerArrivalMessages={workflow.customerArrivalMessages}
           customerReachable={workflow.customerReachable}
           // Empty without an address: Navigate then says so instead of
           // opening Google Maps on a lone comma.
@@ -800,7 +799,7 @@ export default async function JobDetailPage({
           </ol>
           {state === "arrived" || state === "working" || state === "review" ? (
             <div className="mt-4 border-t border-line pt-4">
-              <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
+              <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} />
             </div>
           ) : null}
         </SectionRow>
@@ -1051,7 +1050,7 @@ export default async function JobDetailPage({
                 ) : null}
                 {state === "arrived" || state === "working" || state === "review" ? (
                   <div className="pt-4">
-                    <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
+                    <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} />
                   </div>
                 ) : null}
               </div>
@@ -1246,7 +1245,7 @@ export default async function JobDetailPage({
                   </div>
                   {state === "arrived" || state === "working" || state === "review" ? (
                     <div className="pt-4">
-                      <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} canText={Boolean(job.phone)} />
+                      <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} />
                     </div>
                   ) : null}
                 </>

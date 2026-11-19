@@ -1813,13 +1813,18 @@ export type FollowUpStart = {
   values: NewJobRaw;
   /** What will come off the work order's first invoice, in cents. */
   creditCents: number;
+  /**
+   * Booked from a diagnostic (linked to it, its fee credited), or a follow-up
+   * to any other job: a new job of its own, started from that job's customer
+   * and address, with its own estimate, contract and invoice.
+   */
+  fromDiagnostic: boolean;
 };
 
 /**
- * Booking the work a diagnostic found.
+ * Booking the work a diagnostic found, or a follow-up job to any other job.
  *
- * Null for anything that is not a diagnostic this business can see, and for
- * one that was called off: there is nothing it found to book.
+ * Null for a job this business cannot see, and for one that was called off.
  */
 export async function getFollowUpStart(jobNumber: string): Promise<FollowUpStart | null> {
   const context = await resolveContext();
@@ -1842,9 +1847,8 @@ export async function getFollowUpStart(jobNumber: string): Promise<FollowUpStart
     .maybeSingle();
 
   const row = data as Record<string, unknown> | null;
-  if (!row || row.status === "canceled" || kindOfWork(textOf(row.category)) !== "Diagnostic") {
-    return null;
-  }
+  if (!row || row.status === "canceled") return null;
+  const fromDiagnostic = kindOfWork(textOf(row.category)) === "Diagnostic";
 
   const customer = (row.customers ?? {}) as Record<string, unknown>;
   const property = (row.properties ?? {}) as Record<string, unknown>;
@@ -1865,15 +1869,20 @@ export async function getFollowUpStart(jobNumber: string): Promise<FollowUpStart
       state: textOf(property.state),
       postalCode: textOf(property.postal_code),
       accessNotes: textOf(property.access_notes),
-      technicianNotes: textOf(row.technician_notes),
-      customerDescription: textOf(row.customer_description),
+      // A diagnostic's findings are what the work order is for; another
+      // job's notes are about that job, so the follow-up starts blank.
+      technicianNotes: fromDiagnostic ? textOf(row.technician_notes) : "",
+      customerDescription: fromDiagnostic ? textOf(row.customer_description) : "",
     }),
-    creditCents: await diagnosticCreditLeft(context.database, context.organizationId, {
-      id: textOf(row.id),
-      followUpOf: textOf(row.follow_up_of) || null,
-      diagnosticPaid: row.diagnostic_paid === true,
-      diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
-    }),
+    creditCents: fromDiagnostic
+      ? await diagnosticCreditLeft(context.database, context.organizationId, {
+          id: textOf(row.id),
+          followUpOf: textOf(row.follow_up_of) || null,
+          diagnosticPaid: row.diagnostic_paid === true,
+          diagnosticFeeCents: Number(row.diagnostic_fee_cents ?? 0),
+        })
+      : 0,
+    fromDiagnostic,
   };
 }
 

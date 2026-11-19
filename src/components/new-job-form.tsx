@@ -129,7 +129,7 @@ export function NewJobForm({
    * Booking the work a diagnostic found: where the form starts, and the
    * diagnostic it is linked back to.
    */
-  followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number; intent?: NewJobIntent };
+  followUp?: { jobNumber: string; values: NewJobRaw; creditCents: number; intent?: NewJobIntent; fromDiagnostic?: boolean };
   /** The business's customers, at each address, for Returning customer. */
   customers?: CustomerChoice[];
   /** What is on the shelf, so a work order's parts can be picked from it. */
@@ -227,7 +227,23 @@ export function NewJobForm({
       <input type="hidden" name="intent" value={intent} />
       <input type="hidden" name="category" value={category} />
 
-      {followUp ? (
+      {followUp && followUp.fromDiagnostic === false ? (
+        // A follow-up to a job that was not a diagnostic: a job of its own,
+        // started from that one's customer and address. Not linked for a
+        // credit: there is no diagnostic fee to carry over.
+        <p className="flex items-start gap-3 rounded-panel border border-brand/30 bg-brand/[0.06] p-4 text-sm leading-6">
+          <Link2 className="mt-1 h-4 w-4 shrink-0 text-brand" aria-hidden />
+          <span>
+            Follow-up to job{" "}
+            <Link href={`/jobs/${followUp.jobNumber}`} className="font-semibold text-brand">
+              #{followUp.jobNumber}
+            </Link>
+            . The customer and address are filled in from it. This is a new job, with its own estimate, contract and
+            invoice.
+          </span>
+        </p>
+      ) : null}
+      {followUp && followUp.fromDiagnostic !== false ? (
         <>
           <input type="hidden" name="followUpOf" value={followUp.jobNumber} />
           {/* Says what the link does, once, above the form it changes. */}

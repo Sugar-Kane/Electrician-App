@@ -216,7 +216,7 @@ export const WORKDAY_MCP_TOOLS: McpTool[] = [
     name: "update_job_status",
     title: "Update job status",
     description:
-      "Move a job through the visit: on_the_way (texts the customer that you are on the way, if that message is switched on), arrived (texts that you have arrived), working, finished (parts reserved for it come off the stock count; then bill it with bill_job), or no_show. Explicit approval is required.",
+      "Move a job through the visit: on_the_way (texts the customer that you are on the way, if that message is switched on), arrived (records the arrival; nothing is texted), working, finished (parts reserved for it come off the stock count; then bill it with bill_job), or no_show. Explicit approval is required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -899,7 +899,7 @@ const STEP_STATES = {
 
 const STEP_SAYS = {
   on_the_way: "on the way (the customer is texted that you are on the way, if that message is switched on)",
-  arrived: "arrived (the customer is texted that you have arrived, if that message is switched on)",
+  arrived: "arrived",
   working: "working",
   finished: "finished (parts reserved for it come off the stock count)",
   no_show: "no show",

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Clock, LoaderCircle, Lock, Package, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { Clock, LoaderCircle, Lock, Package, Percent, Plus, ReceiptText, Trash2 } from "lucide-react";
 
 import {
   addJobLine,
@@ -469,6 +469,16 @@ function BillingSection({
                   {formatCents(invoice.totalCents)} · {invoice.statusLabel}
                 </span>
               </Link>
+              {/* A discount is set on the invoice itself; this opens it there, ready. */}
+              {invoice.status !== "paid" && invoice.status !== "void" ? (
+                <Link
+                  href={`/invoices/${invoice.id}?discount=1#discount`}
+                  className="tap-target mt-1 inline-flex min-h-11 items-center gap-1.5 px-1 text-sm font-semibold text-brand"
+                >
+                  <Percent className="h-4 w-4" aria-hidden />
+                  Add a discount
+                </Link>
+              ) : null}
             </li>
           ))}
         </ul>

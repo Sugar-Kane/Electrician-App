@@ -66,9 +66,10 @@ export type InvoiceSummary = {
   lastSentAt: string | null;
 };
 
-const SUMMARY_COLUMNS = `id, invoice_number, number_label, status, subtotal_cents, discount_type, discount_value, discount_cents,
+const INVOICE_COLUMNS = `id, invoice_number, number_label, status, subtotal_cents, discount_type, discount_value, discount_cents,
   discount_reason, diagnostic_credit_cents, tax_cents, total_cents, balance_due_cents, revision_number, last_sent_at,
-  paid_at, stripe_invoice_id, job_id, jobs ( job_number )`;
+  paid_at, stripe_invoice_id, job_id`;
+const SUMMARY_COLUMNS = `${INVOICE_COLUMNS}, jobs ( job_number )`;
 
 /** What each approved change order added to this invoice. */
 export async function invoiceChangeOrders(
@@ -212,7 +213,7 @@ export async function setInvoiceDiscount(
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const { data } = await database
       .from("invoices")
-      .select(`${SUMMARY_COLUMNS}, jobs ( id, job_number, diagnostic_paid, diagnostic_fee_cents, follow_up_of )`)
+      .select(`${INVOICE_COLUMNS}, jobs ( id, job_number, diagnostic_paid, diagnostic_fee_cents, follow_up_of )`)
       .eq("organization_id", input.organizationId)
       .eq("id", input.invoiceId)
       .maybeSingle();

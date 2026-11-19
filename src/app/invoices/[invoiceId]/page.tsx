@@ -4,6 +4,7 @@ import { ArrowUpRight, FileWarning } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
+import { freshInvoiceDocument } from "@/lib/invoice-pdf-file";
 import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
 import { InvoiceSendPanel } from "@/components/invoice-send";
 import { InvoicePayments } from "@/components/invoice-refunds";
@@ -40,10 +41,12 @@ function money(cents: unknown): string {
 
 export default async function InvoicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ invoiceId: string }>;
+  searchParams: Promise<{ discount?: string }>;
 }) {
-  const { invoiceId } = await params;
+  const [{ invoiceId }, { discount: openDiscount }] = await Promise.all([params, searchParams]);
   const context = await currentContext();
 
   if (!context) {
@@ -85,6 +88,9 @@ export default async function InvoicePage({
   // Card refunds carry their tracking number from Stripe, when it has one.
   const payments = await withCardReferences(context.organizationId, await getInvoicePayments(database, invoiceId));
 
+  // A PDF built before the invoice last changed (a payment, a refund) is built
+  // again first, so the one shown here matches the invoice.
+  await freshInvoiceDocument(context.organizationId, invoiceId).catch(() => null);
   const [document, summary, billingBlocked] = await Promise.all([
     currentDocument({
       database,
@@ -161,7 +167,8 @@ export default async function InvoicePage({
           <div className="mt-3">
             <InvoiceBreakdown summary={summary} />
           </div>
-          <details className="group mt-3 border-t border-line pt-3">
+          {/* Opened straight away when the job's "Add a discount" link brought them here. */}
+          <details id="discount" open={openDiscount === "1"} className="group mt-3 scroll-mt-24 border-t border-line pt-3">
             <summary className="tap-target flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
               <span>{summary.discountCents > 0 ? `${summary.discountLabel}: −${money(summary.discountCents)}` : "Discount"}</span>
               <span className="text-xs font-semibold text-brand">{summary.discountCents > 0 ? "Change" : "Add"}</span>
