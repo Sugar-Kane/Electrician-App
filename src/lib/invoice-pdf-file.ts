@@ -49,13 +49,18 @@ export async function freshInvoiceDocument(organizationId: string, invoiceId: st
   if (document) {
     const { data: invoice } = await admin
       .from("invoices")
-      .select("updated_at")
+      .select("updated_at, jobs ( updated_at )")
       .eq("organization_id", organizationId)
       .eq("id", invoiceId)
       .maybeSingle();
-    const changed = Date.parse(text((invoice as Row | null)?.updated_at));
+    // The job too: its scope of work is the invoice's description.
+    const job = ((invoice as Row | null)?.jobs ?? null) as Row | null;
+    const changed = Math.max(
+      Date.parse(text((invoice as Row | null)?.updated_at)) || 0,
+      Date.parse(text(job?.updated_at)) || 0,
+    );
     const built = Date.parse(text(document.created_at));
-    if (Number.isFinite(changed) && Number.isFinite(built) && changed > built) document = null;
+    if (changed > 0 && Number.isFinite(built) && changed > built) document = null;
   }
   if (document) return document;
   const { data: organization } = await admin.from("organizations").select("timezone").eq("id", organizationId).maybeSingle();

@@ -4,11 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { LoaderCircle, RotateCcw } from "lucide-react";
 
-import {
-  refundDiagnosticFeeAction,
-  sendDiagnosticRefundNoticeAction,
-  type DiagnosticRefundState,
-} from "@/app/jobs/[jobId]/diagnostic-refund-actions";
+import { refundDiagnosticFeeAction, type DiagnosticRefundState } from "@/app/jobs/[jobId]/diagnostic-refund-actions";
 import { inputClass } from "@/components/ui/field";
 import { refundableCents } from "@/lib/invoice-refund";
 import { formatCents } from "@/lib/job-lines";
@@ -45,41 +41,6 @@ function RefundButton() {
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
       {pending ? "Refunding…" : "Refund to card"}
     </button>
-  );
-}
-
-/** Inside the form, so it knows when the form is sending. */
-function TellButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" disabled={pending} className="tap-target inline-flex min-h-11 items-center text-sm font-semibold text-brand disabled:opacity-60">
-      {pending ? "Sending…" : "Tell the customer"}
-    </button>
-  );
-}
-
-/** Tell the customer about a refund that went through without a notice. */
-function TellCustomer({ jobNumber, refundId }: { jobNumber: string; refundId: string }) {
-  const [state, action] = useActionState(sendDiagnosticRefundNoticeAction, initial);
-  if (state.notice) {
-    return (
-      <p className="text-xs text-positive" role="status">
-        {state.notice}
-      </p>
-    );
-  }
-  return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="jobNumber" value={jobNumber} />
-      <input type="hidden" name="refundId" value={refundId} />
-      <span className="text-xs text-ink-muted">The customer wasn&apos;t told yet.</span>
-      <TellButton />
-      {state.error ? (
-        <span className="basis-full text-xs text-critical" role="alert">
-          {state.error}
-        </span>
-      ) : null}
-    </form>
   );
 }
 
@@ -130,16 +91,10 @@ export function DiagnosticFeeRefund({
                   {STATUS_LABELS[refund.status]} · {day(refund.createdAt)}
                   {refund.reason ? ` · ${refund.reason}` : ""}
                   {refund.failure ? ` · ${refund.failure}` : ""}
-                  {refund.customerNotice === "sent" ? " · customer told" : ""}
+                  {refund.customerNotice === "sent" ? " · receipt sent to customer" : ""}
                 </span>
                 <span className="text-ink-muted">−{formatCents(refund.amountCents)}</span>
               </div>
-              {canRefund &&
-              (refund.status === "succeeded" || refund.status === "pending") &&
-              refund.customerNotice !== "sent" &&
-              refund.customerNotice !== "sending" ? (
-                <TellCustomer jobNumber={jobNumber} refundId={refund.id} />
-              ) : null}
             </li>
           ))}
         </ul>
@@ -182,10 +137,9 @@ export function DiagnosticFeeRefund({
               maxLength={300}
               className={`${inputClass} mt-2`}
             />
-            <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
-              <input type="checkbox" name="notifyCustomer" defaultChecked className="h-4 w-4" />
-              Tell the customer (email, and text if they agreed to texts)
-            </label>
+            <p className="mt-3 text-xs leading-5 text-ink-muted">
+              The customer is sent a refund receipt automatically (email, and text if they agreed to texts).
+            </p>
             <RefundButton />
             {state.error ? (
               <p className="mt-2 text-sm text-critical" role="alert">

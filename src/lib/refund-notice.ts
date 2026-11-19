@@ -56,7 +56,7 @@ export async function skipRefundNotice(refundId: string, kind: RefundKind = "inv
 
 /** A diagnostic fee refund: no invoice, always back to the card it was paid with. */
 const BOOKING_REFUND_COLUMNS =
-  "organization_id, amount_cents, jobs ( job_number, customer_id, customers ( first_name, email, phone ) ), organizations ( name, phone )";
+  "organization_id, amount_cents, payment_id, payments ( amount_cents ), jobs ( job_number, customer_id, customers ( first_name, email, phone ) ), organizations ( name, phone )";
 
 /** Tell the customer their diagnostic fee was refunded. Claimed, so sent once. */
 export async function sendBookingRefundNotice(refundId: string): Promise<{ email: string; sms: string }> {
@@ -125,9 +125,20 @@ export async function sendRefundNotice(
     const amount = dollars(Number(row.amount_cents ?? 0));
     const label = kind === "invoice" ? invoiceLabel(invoice) : "";
 
-    // The receipt: what was paid on the invoice, refunded from it, and kept.
+    // Every notice is a receipt: what was paid, what was refunded from it, and
+    // what was kept.
     let totals: { paid: number; refunded: number } | null = null;
-    if (receipt && text(row.invoice_id)) {
+    if (kind === "booking" && text(row.payment_id)) {
+      const { data: refunds } = await database
+        .from("booking_payment_refunds")
+        .select("amount_cents, status")
+        .eq("payment_id", text(row.payment_id));
+      const summary = refundSummary(
+        [{ amountCents: Number(one(row.payments).amount_cents ?? 0) }],
+        ((refunds ?? []) as Row[]).map((each) => ({ amountCents: Number(each.amount_cents ?? 0), status: refundStatusFromStripe(text(each.status)) })),
+      );
+      totals = { paid: summary.paidCents, refunded: summary.refundedCents + summary.pendingCents };
+    } else if (kind === "invoice" && text(row.invoice_id)) {
       const [{ data: payments }, { data: refunds }] = await Promise.all([
         database.from("invoice_payments").select("amount_cents").eq("invoice_id", text(row.invoice_id)),
         database.from("invoice_refunds").select("amount_cents, status").eq("invoice_id", text(row.invoice_id)),
@@ -183,7 +194,7 @@ export async function sendRefundNotice(
         organizationId: organizationId,
         contactButtons: true,
         to: email,
-        subject: receipt ? `Refund receipt: ${amount} from ${businessName}` : `Your refund of ${amount} from ${businessName}`,
+        subject: `Refund receipt: ${amount} from ${businessName}`,
         text: lines.join("\n"),
         html: [
           `<p>${escapeHtml(firstName ? `Hi ${firstName},` : "Hello,")}</p>`,
@@ -193,7 +204,7 @@ export async function sendRefundNotice(
           `<p>${escapeHtml(when)}</p>`,
           totals
             ? `<table role="presentation" style="border-collapse:collapse;margin:8px 0 16px;width:100%;max-width:360px">${[
-                ["Invoice", label ? `INV-${label}` : ""],
+                kind === "booking" ? ["For", `Diagnostic fee${job.job_number ? `, job #${String(job.job_number)}` : ""}`] : ["Invoice", label ? `INV-${label}` : ""],
                 ["Paid", dollars(totals.paid)],
                 ["Refunded", `−${dollars(totals.refunded)}`],
                 ["Kept", dollars(Math.max(totals.paid - totals.refunded, 0))],
@@ -267,4 +278,37 @@ export async function sendRefundNotice(
     console.error("refund notice failed", { refundId, error });
   }
   return outcome;
+}
+
+/**
+ * Send the refund receipts that have not gone out yet: a refund given before
+ * notices were automatic, one recorded by Stripe's webhook while the notice
+ * could not be claimed, or one whose sender stopped part way. Run by the
+ * background worker every few minutes. Each is still claimed, so one sent a
+ * moment ago by the refund itself is not sent again; a notice that failed or
+ * was skipped is left alone rather than retried into a customer's inbox.
+ */
+export async function sendMissedRefundNotices(limit = 10): Promise<number> {
+  const database = getSupabaseAdmin();
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60_000).toISOString();
+  // A couple of minutes' grace, so a refund that is sending its own notice is
+  // not raced.
+  const before = new Date(Date.now() - 2 * 60_000).toISOString();
+  let sent = 0;
+  for (const kind of ["invoice", "booking"] as const) {
+    const { data } = await database
+      .from(refundTable(kind))
+      .select("id")
+      .is("customer_notice", null)
+      .in("status", ["succeeded", "pending"])
+      .gte("created_at", since)
+      .lte("created_at", before)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+    for (const row of (data ?? []) as Row[]) {
+      const outcome = await sendRefundNotice(text(row.id), { kind });
+      if (outcome.email === "sent" || outcome.sms === "sent") sent += 1;
+    }
+  }
+  return sent;
 }

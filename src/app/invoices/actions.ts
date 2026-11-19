@@ -68,7 +68,7 @@ async function loadInvoiceForCustomer(
     .select(
       `id, invoice_number, number_label, status, total_cents, balance_due_cents, due_at, last_sent_at,
        stripe_hosted_invoice_url, organization_id, preview_token,
-       jobs ( id, job_number, customer_id, customer_description, customers ( first_name, last_name, company_name, phone, email ) ),
+       jobs ( id, job_number, customer_id, customer_description, scope_of_work, customers ( first_name, last_name, company_name, phone, email ) ),
        organizations ( name, phone, timezone )`,
     )
     .eq("id", invoiceId)
@@ -106,7 +106,7 @@ async function loadInvoiceForCustomer(
           }).format(new Date(dueAt))
         : "",
       payUrl: text(row.stripe_hosted_invoice_url) || undefined,
-      workSummary: text(job?.customer_description) || undefined,
+      workSummary: text(job?.scope_of_work).trim() || text(job?.customer_description) || undefined,
       viewUrl: invoiceViewUrl(process.env.NEXT_PUBLIC_APP_URL ?? "", text(row.preview_token)),
     },
   };
@@ -593,7 +593,6 @@ export async function refundPaymentAction(_previous: InvoiceActionState, formDat
     amountCents: check.amountCents,
     reason: String(formData.get("reason") ?? "").trim().slice(0, 300),
     jobId: text(job?.id) || null,
-    notifyCustomer: formData.get("notifyCustomer") === "on",
   });
 
   revalidatePath(`/invoices/${invoiceId}`);

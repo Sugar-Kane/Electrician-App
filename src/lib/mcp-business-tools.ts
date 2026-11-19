@@ -672,7 +672,7 @@ export async function runBusinessMcpTool(input: {
       const { data } = await database
         .from("invoices")
         .select(
-          "id,invoice_number, number_label,status,total_cents,due_at,stripe_hosted_invoice_url,jobs(customer_description,customers(first_name,last_name,company_name,phone,email)),organizations(name,phone,timezone)",
+          "id,invoice_number, number_label,status,total_cents,due_at,stripe_hosted_invoice_url,jobs(customer_description,scope_of_work,customers(first_name,last_name,company_name,phone,email)),organizations(name,phone,timezone)",
         )
         .eq("organization_id", organizationId)
         .eq("number_label", rawNumber)
@@ -701,7 +701,7 @@ export async function runBusinessMcpTool(input: {
           amountDue: Number(row.total_cents ?? 0) / 100,
           dueLabel: "",
           payUrl: text(row.stripe_hosted_invoice_url) || undefined,
-          workSummary: text(job.customer_description) || undefined,
+          workSummary: text(job.scope_of_work).trim() || text(job.customer_description) || undefined,
         },
       });
       const result = describeDelivery(attempts);
