@@ -162,13 +162,19 @@ export function MobileAppChrome({
      * Keep the box being typed in where it can be seen: above the keyboard
      * and below the top bar. The browser's own nudge often leaves it under
      * the keyboard, or hidden behind the fixed header, on a long form.
-     * Checked once the keyboard has finished opening (the visual viewport
-     * shrinks), and again whenever it resizes while the box has focus.
+     * Done once per box, when the keyboard has finished opening. Never again
+     * while it keeps focus: scrolling on a phone resizes the visual viewport
+     * (the browser's bars collapse), and re-revealing then dragged the page
+     * back up to the box a second after the person scrolled away from it.
+     * A touch or wheel also cancels a reveal still waiting to run.
      */
     let revealing: number | undefined;
+    let revealed: Element | null = null;
     function reveal() {
       const field = document.activeElement;
       if (!isTypingTarget(field) || !(field instanceof HTMLElement)) return;
+      if (revealed === field) return;
+      revealed = field;
       const view = window.visualViewport;
       const visibleBottom = view ? view.offsetTop + view.height : window.innerHeight;
       const visibleTop = (view?.offsetTop ?? 0) + 72;
@@ -181,8 +187,18 @@ export function MobileAppChrome({
       window.clearTimeout(revealing);
       revealing = window.setTimeout(reveal, 320);
     }
+    function onViewportResize() {
+      // Only while the focused box has not been revealed yet (the keyboard opening).
+      if (document.activeElement !== revealed) scheduleReveal();
+    }
+    function cancelReveal() {
+      window.clearTimeout(revealing);
+      // The person is moving the page themselves: leave it where they put it.
+      if (isTypingTarget(document.activeElement)) revealed = document.activeElement;
+    }
     function onFocusIn(event: FocusEvent) {
       if (!isTypingTarget(event.target)) return;
+      revealed = null;
       window.clearTimeout(showing);
       root.dataset.typing = "true";
       scheduleReveal();
@@ -203,11 +219,15 @@ export function MobileAppChrome({
     }
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
-    window.visualViewport?.addEventListener("resize", scheduleReveal);
+    window.visualViewport?.addEventListener("resize", onViewportResize);
+    window.addEventListener("touchmove", cancelReveal, { passive: true });
+    window.addEventListener("wheel", cancelReveal, { passive: true });
     return () => {
       window.clearTimeout(showing);
       window.clearTimeout(revealing);
-      window.visualViewport?.removeEventListener("resize", scheduleReveal);
+      window.visualViewport?.removeEventListener("resize", onViewportResize);
+      window.removeEventListener("touchmove", cancelReveal);
+      window.removeEventListener("wheel", cancelReveal);
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
       delete root.dataset.typing;

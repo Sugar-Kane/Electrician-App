@@ -91,6 +91,7 @@ export async function searchCustomers(query: string): Promise<CustomerMatch[]> {
       )
       .eq("organization_id", context.organizationId)
       .is("archived_at", null)
+      .eq("pending_review", false)
       .or(terms.join(","))
       .limit(40),
     // The address is on the property, so a search for "Main Street" cannot come

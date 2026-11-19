@@ -107,6 +107,8 @@ export async function POST(request: Request) {
         phone: from,
         preferred_contact: "sms",
         notes: "Created from an inbound text message.",
+        // Waits for the owner to keep or delete it, so spam never becomes a customer.
+        pending_review: true,
       })
       .select("id")
       .single();

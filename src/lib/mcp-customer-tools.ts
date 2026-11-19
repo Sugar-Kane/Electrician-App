@@ -96,7 +96,7 @@ async function findCustomer(db: FlexibleSupabaseClient, organizationId: string, 
   const query = text(args.customer).toLowerCase();
   if (!query) return { problem: "Say which customer (customer_id, or their name, phone or email)." };
   const digits = query.replace(/\D/g, "");
-  const { data } = await db.from("customers").select(CUSTOMER_DETAIL_COLUMNS).eq("organization_id", organizationId).is("archived_at", null).limit(500);
+  const { data } = await db.from("customers").select(CUSTOMER_DETAIL_COLUMNS).eq("organization_id", organizationId).is("archived_at", null).eq("pending_review", false).limit(500);
   const matches = ((data ?? []) as Row[]).filter((row) => {
     const haystack = `${label(row)} ${personName(row)} ${text(row.email)}`.toLowerCase();
     return haystack.includes(query) || (digits.length >= 7 && text(row.phone).replace(/\D/g, "").endsWith(digits.slice(-10)));

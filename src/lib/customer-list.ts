@@ -41,6 +41,9 @@ export async function getCustomerList(): Promise<CustomerListItem[]> {
        jobs ( job_number, scheduled_start, created_at, archived_at )`,
     )
     .eq("organization_id", context.organizationId)
+    .is("archived_at", null)
+    // New calls and texts wait under "New contacts" until the owner keeps them.
+    .eq("pending_review", false)
     .order("created_at", { ascending: false })
     .limit(1000);
   if (error) return [];
@@ -84,6 +87,91 @@ export async function getCustomerList(): Promise<CustomerListItem[]> {
           }
         : null,
       jobCount: jobs.length,
+    };
+  });
+}
+
+/**
+ * Numbers that called or texted on their own and are waiting for the owner:
+ * Keep makes them a customer, Delete archives them. Spam lives here instead
+ * of in the Customers list. Each shows what they last texted, so the owner
+ * can tell a person from a robot without opening the conversation.
+ */
+export type PendingContact = {
+  id: string;
+  name: string;
+  phone: string;
+  /** "Texted" or "Called", from how the contact was first saved. */
+  how: string;
+  when: string;
+  lastText: string;
+  conversationId: string;
+};
+
+export async function getPendingContacts(): Promise<PendingContact[]> {
+  const context = await currentContext();
+  if (!context) return [];
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, first_name, last_name, company_name, phone, notes, created_at, conversations ( id, last_message_at, archived_at )")
+    .eq("organization_id", context.organizationId)
+    .is("archived_at", null)
+    .eq("pending_review", true)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error || !data) return [];
+
+  const rows = data as Record<string, unknown>[];
+  const conversationOf = new Map<string, string>();
+  for (const row of rows) {
+    const open = ((row.conversations ?? []) as Record<string, unknown>[])
+      .filter((conversation) => !conversation.archived_at)
+      .sort((a, b) => text(b.last_message_at).localeCompare(text(a.last_message_at)))[0];
+    if (open) conversationOf.set(text(row.id), text(open.id));
+  }
+
+  const lastText = new Map<string, string>();
+  const ids = [...conversationOf.values()];
+  if (ids.length > 0) {
+    const { data: messages } = await supabase
+      .from("messages")
+      .select("conversation_id, body, created_at")
+      .eq("organization_id", context.organizationId)
+      .eq("direction", "inbound")
+      .in("conversation_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    for (const message of (messages ?? []) as Record<string, unknown>[]) {
+      const id = text(message.conversation_id);
+      if (!lastText.has(id)) lastText.set(id, text(message.body));
+    }
+  }
+
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: context.timeZone,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return rows.map((row) => {
+    const id = text(row.id);
+    const conversationId = conversationOf.get(id) ?? "";
+    const createdAt = text(row.created_at);
+    return {
+      id,
+      name:
+        text(row.company_name) ||
+        [text(row.first_name), text(row.last_name)].filter(Boolean).join(" ") ||
+        "Unknown",
+      phone: text(row.phone),
+      how: /text message/i.test(text(row.notes)) ? "Texted" : "Called",
+      when: createdAt ? day.format(new Date(createdAt)) : "",
+      lastText: (conversationId ? lastText.get(conversationId) : "") ?? "",
+      conversationId,
     };
   });
 }

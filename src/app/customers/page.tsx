@@ -3,7 +3,10 @@ import { ChevronRight, MapPin, Phone, Search } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { SpanishBadge } from "@/components/language-badge";
-import { getCustomerList } from "@/lib/customer-list";
+import { PendingContacts } from "@/components/pending-contacts";
+import { getCustomerList, getPendingContacts } from "@/lib/customer-list";
+import { mayReviewContacts } from "@/lib/pending-contacts";
+import { currentContext } from "@/lib/request-context";
 import { matchScore } from "@/lib/customer-search";
 import { formatForDisplay } from "@/lib/phone-format";
 
@@ -19,7 +22,8 @@ export const dynamic = "force-dynamic";
  * coming back from a customer lands on the same results.
  */
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const [{ q = "" }, customers] = await Promise.all([searchParams, getCustomerList()]);
+  const [{ q = "" }, customers, context] = await Promise.all([searchParams, getCustomerList(), currentContext()]);
+  const pending = context && mayReviewContacts(context.role) ? await getPendingContacts() : [];
   const query = q.slice(0, 80);
 
   const shown = query
@@ -32,6 +36,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
 
   return (
     <FieldPageShell title="Customers" eyebrow="Work" compact>
+      <PendingContacts contacts={pending} />
       <section className="rounded-panel border border-line bg-surface p-3 sm:p-5">
         <form action="/customers" className="flex gap-2">
           <label className="flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-control border border-line bg-raised px-4">

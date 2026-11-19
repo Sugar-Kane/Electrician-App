@@ -1897,6 +1897,7 @@ export async function getCustomerChoices(): Promise<CustomerChoice[]> {
     )
     .eq("organization_id", context.organizationId)
     .is("archived_at", null)
+    .eq("pending_review", false)
     .order("updated_at", { ascending: false })
     .limit(300);
 
