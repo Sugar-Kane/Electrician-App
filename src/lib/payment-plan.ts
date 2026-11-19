@@ -41,6 +41,21 @@ function whole(value: unknown): number {
  * come to more than nothing, a date payment needs its date, and the payments
  * before the balance cannot reach the total.
  */
+/**
+ * The most a California home improvement contract may take as a down payment:
+ * 10% of the contract price or $1,000, whichever is less (Business and
+ * Professions Code §7159.5).
+ */
+export const DOWN_PAYMENT_CAP_CENTS = 100_000;
+
+export function maxDownPaymentCents(totalCents: number): number {
+  const total = Math.max(0, whole(totalCents));
+  return Math.min(Math.floor(total / 10), DOWN_PAYMENT_CAP_CENTS);
+}
+
+/** The statutory notice a contract with a down payment carries. */
+export const DOWN_PAYMENT_NOTICE = "THE DOWN PAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.";
+
 export function planAmounts(totalCents: number, items: PlanItemInput[]): PlanResult {
   const total = Math.max(0, whole(totalCents));
   if (total <= 0) return { ok: false, reason: "Price the job first. A payment plan splits the contract total." };
@@ -61,6 +76,19 @@ export function planAmounts(totalCents: number, items: PlanItemInput[]): PlanRes
     }
     sum += cents;
     payments.push({ ...item, cents });
+  }
+
+  // The down payment: the deposit and anything else due on signing, before
+  // any work. California caps it.
+  const down = payments
+    .filter((payment) => payment.kind === "deposit" || payment.due === "on_signing")
+    .reduce((acc, payment) => acc + payment.cents, 0);
+  const cap = maxDownPaymentCents(total);
+  if (down > cap) {
+    return {
+      ok: false,
+      reason: `California limits the down payment to 10% of the price or $1,000, whichever is less: at most ${(cap / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })} for this job.`,
+    };
   }
 
   const balance = total - sum;
@@ -139,7 +167,12 @@ export function contractPaymentTerms(
   if (!payments || payments.length <= 1) return { block: "", depositCents: 0, snapshot: null };
   const lines = planSummaryLines(payments, formatDate);
   return {
-    block: ["PAYMENT SCHEDULE", ...lines.map((line, index) => `${index + 1}. ${line}`)].join("\n"),
+    block: [
+      "PAYMENT SCHEDULE",
+      ...lines.map((line, index) => `${index + 1}. ${line}`),
+      "Progress payments are for work performed or materials delivered.",
+      ...(planDepositCents(payments) > 0 ? ["", DOWN_PAYMENT_NOTICE] : []),
+    ].join("\n"),
     depositCents: planDepositCents(payments),
     snapshot: {
       lines,

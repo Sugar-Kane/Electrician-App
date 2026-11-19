@@ -8,7 +8,7 @@ import { recordPrepaymentAction, savePaymentPlanAction, type PaymentPlanState } 
 import { FormMessage, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import { formatCents } from "@/lib/job-lines";
-import { planAmounts, type PlanDue, type PlanItemInput } from "@/lib/payment-plan";
+import { maxDownPaymentCents, planAmounts, type PlanDue, type PlanItemInput } from "@/lib/payment-plan";
 import type { JobPaymentPlan as Plan } from "@/lib/payment-plan-server";
 
 /**
@@ -108,6 +108,9 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
   const items = useMemo(() => toItems(rows, finalDue, finalDate), [rows, finalDue, finalDate]);
   const preview = useMemo(() => (items.length > 0 ? planAmounts(plan.totalCents, items) : null), [items, plan.totalCents]);
   const editable = plan.canEdit && !locked;
+  // California: a down payment of no more than 10% of the price or $1,000.
+  const maxDown = maxDownPaymentCents(plan.totalCents);
+  const legalDeposit = (maxDown / 100).toFixed(2);
 
   const preset = (kind: "full" | "deposit" | "installments") => {
     setState({ error: "" });
@@ -115,12 +118,12 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
       setRows([]);
       setFinalDue("on_completion");
     } else if (kind === "deposit") {
-      setRows([{ kind: "deposit", amountType: "percent", value: "25", due: "on_signing", dueDate: "" }]);
+      setRows([{ kind: "deposit", amountType: "fixed", value: legalDeposit, due: "on_signing", dueDate: "" }]);
       setFinalDue("on_completion");
     } else {
       setRows([
-        { kind: "deposit", amountType: "percent", value: "25", due: "on_signing", dueDate: "" },
-        { kind: "installment", amountType: "percent", value: "25", due: "on_date", dueDate: "" },
+        { kind: "deposit", amountType: "fixed", value: legalDeposit, due: "on_signing", dueDate: "" },
+        { kind: "installment", amountType: "percent", value: "40", due: "on_date", dueDate: "" },
       ]);
       setFinalDue("on_date");
     }
@@ -167,7 +170,12 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
           {rows.map((row, index) => (
             <li key={index} className="space-y-2 rounded-control border border-line p-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold">{row.kind === "deposit" ? "Deposit" : `Payment ${index + 1}`}</span>
+                <span className="text-sm font-semibold">
+                  {row.kind === "deposit" ? "Deposit" : `Payment ${index + 1}`}
+                  {row.kind === "deposit" || row.due === "on_signing" ? (
+                    <span className="block text-xs font-normal text-ink-muted">Max {formatCents(maxDown)} by California law</span>
+                  ) : null}
+                </span>
                 <span className="text-sm font-semibold">{preview?.ok ? formatCents(preview.payments[index]?.cents ?? 0) : ""}</span>
               </div>
               {editable ? (
