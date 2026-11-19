@@ -30,6 +30,7 @@ import {
   recordChangeOrderDeclinedAction,
   removeChangeOrderItemAction,
   requestChangeOrderApprovalAction,
+  sendChangeOrderLinkAction,
   updateChangeOrderAction,
   updateChangeOrderItemAction,
   type ChangeOrderActionState,
@@ -72,6 +73,23 @@ function dateLabel(iso: string | null): string {
 }
 
 /** Runs a server action, shows what it said, and reloads the page's data when it worked. */
+/**
+ * A result message that scrolls itself into view: the change order sheet is
+ * long, and an error shown below the fold (a price refused, a send that did not
+ * go) reads as a button that did nothing.
+ */
+function ActionMessage({ error, notice }: { error: string; notice?: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error || notice) box.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [error, notice]);
+  return (
+    <div ref={box} className="scroll-mb-28">
+      <FormMessage error={error} notice={notice} />
+    </div>
+  );
+}
+
 function useAction() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -788,7 +806,7 @@ function Editor({
           </button>
         </div>
         {!ready && order.items.length > 0 ? <p className="text-xs text-caution">Price every item before asking the customer.</p> : null}
-        <FormMessage error={state.error} notice={state.notice} />
+        <ActionMessage error={state.error} notice={state.notice} />
       </div>
     </div>
   );
@@ -799,13 +817,19 @@ function OrderRow({
   data,
   canSetPrices,
   onEdit,
+  hasPhone,
+  hasEmail,
 }: {
   order: ChangeOrderRecord;
   data: JobChangeOrdersData;
   canSetPrices: boolean;
   onEdit: () => void;
+  hasPhone: boolean;
+  hasEmail: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [bySms, setBySms] = useState(hasPhone);
+  const [byEmail, setByEmail] = useState(hasEmail);
   const { pending, state, run } = useAction();
   const [declining, setDeclining] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -826,7 +850,7 @@ function OrderRow({
       : order.status === "pending_approval"
         ? order.documentSentAt
           ? `Signing link texted · ${dateLabel(order.documentSentAt)}`
-          : "Ready to sign · not sent yet. Send it, or have them sign here, from the contract above."
+          : "Ready to sign · not sent yet"
         : order.status === "rejected"
           ? `Declined · ${dateLabel(order.rejectedAt)}`
           : order.status === "canceled"
@@ -928,8 +952,27 @@ function OrderRow({
           {order.status === "pending_approval" ? (
             <div className="space-y-2">
               <p className="text-sm text-ink-muted">
-                The customer signs it from the contract card above — by text, or on this phone. It changes nothing until they do.
+                The customer signs it from the link, or on this phone from the contract card above. It changes nothing until they do.
               </p>
+              <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+                <label className="inline-flex min-h-11 items-center gap-2">
+                  <input type="checkbox" checked={bySms} onChange={(event) => setBySms(event.target.checked)} disabled={!hasPhone} className="h-4 w-4" />
+                  Text{hasPhone ? "" : " (no phone)"}
+                </label>
+                <label className="inline-flex min-h-11 items-center gap-2">
+                  <input type="checkbox" checked={byEmail} onChange={(event) => setByEmail(event.target.checked)} disabled={!hasEmail} className="h-4 w-4" />
+                  Email{hasEmail ? "" : " (no email)"}
+                </label>
+              </div>
+              <button
+                type="button"
+                disabled={pending || (!bySms && !byEmail)}
+                onClick={() => run(() => sendChangeOrderLinkAction(job, order.id, { sms: bySms, email: byEmail }))}
+                className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand disabled:opacity-60"
+              >
+                {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+                {order.documentSentAt ? "Send to customer again" : "Send to customer to sign"}
+              </button>
               {declining ? (
                 <div className="space-y-2 rounded-control border border-line p-3">
                   <label className="block">
@@ -971,11 +1014,11 @@ function OrderRow({
               )}
             </div>
           ) : null}
-          <FormMessage error={state.error || resendState.error} notice={state.notice || resendState.notice} />
+          <ActionMessage error={state.error || resendState.error} notice={state.notice || resendState.notice} />
         </div>
       ) : state.error || state.notice || resendState.error || resendState.notice ? (
         <div className="px-3 pb-3">
-          <FormMessage error={state.error || resendState.error} notice={state.notice || resendState.notice} />
+          <ActionMessage error={state.error || resendState.error} notice={state.notice || resendState.notice} />
         </div>
       ) : null}
     </li>
@@ -1039,7 +1082,7 @@ function CreateForm({
       <button type="button" onClick={onCancel} className="tap-target min-h-12 w-full rounded-control border border-line px-4 text-sm font-semibold">
         Cancel
       </button>
-      <FormMessage error={state.error} notice={state.notice} />
+      <ActionMessage error={state.error} notice={state.notice} />
     </div>
   );
 }
@@ -1121,7 +1164,7 @@ export function JobChangeOrders({
       {active.length > 0 ? (
         <ul className="mt-3 space-y-2">
           {active.map((order) => (
-            <OrderRow key={order.id} order={order} data={data} canSetPrices={data.canSetPrices} onEdit={() => setEditingId(order.id)} />
+            <OrderRow key={order.id} order={order} data={data} canSetPrices={data.canSetPrices} hasPhone={hasPhone} hasEmail={hasEmail} onEdit={() => setEditingId(order.id)} />
           ))}
         </ul>
       ) : null}
@@ -1133,7 +1176,7 @@ export function JobChangeOrders({
           </summary>
           <ul className="mt-1 space-y-2">
             {closed.map((order) => (
-              <OrderRow key={order.id} order={order} data={data} canSetPrices={data.canSetPrices} onEdit={() => undefined} />
+              <OrderRow key={order.id} order={order} data={data} canSetPrices={data.canSetPrices} hasPhone={hasPhone} hasEmail={hasEmail} onEdit={() => undefined} />
             ))}
           </ul>
         </details>

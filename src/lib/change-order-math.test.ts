@@ -163,3 +163,26 @@ test("a line edited since the change order was written no longer matches it", ()
   assert.equal(lineMatchesOriginal({ quantity: 2, unitPriceCents: 14_000 }, fans), false);
   assert.equal(lineMatchesOriginal(null, fans), false);
 });
+
+test("an item edit that sends only a price keeps everything else as saved", async () => {
+  const { fillItemEdit } = await import("./change-order-math.ts");
+  const saved = { description: "Idk", quantity: "1.000", unit: "hr", unit_cost_cents: null, inventory_item_id: null, notes: null };
+  const filled = fillItemEdit(saved, { unitPrice: "10" });
+  assert.equal(filled.description, "Idk");
+  assert.equal(filled.quantity, "1");
+  assert.equal(filled.unit, "hr");
+  assert.equal(filled.unitPrice, "10");
+});
+
+test("an item edit replaces what it sends and keeps the saved cost and part", async () => {
+  const { fillItemEdit } = await import("./change-order-math.ts");
+  const saved = { description: "Outlet", quantity: 2, unit: "each", unit_cost_cents: 420, inventory_item_id: "part-1", notes: "garage" };
+  const filled = fillItemEdit(saved, { quantity: "3" });
+  assert.equal(filled.quantity, "3");
+  assert.equal(filled.description, "Outlet");
+  assert.equal(filled.unitCost, "4.20");
+  assert.equal(filled.inventoryItemId, "part-1");
+  assert.equal(filled.notes, "garage");
+  // No price sent: none is invented.
+  assert.equal(filled.unitPrice, undefined);
+});
