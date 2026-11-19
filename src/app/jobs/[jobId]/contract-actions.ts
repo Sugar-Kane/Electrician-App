@@ -9,6 +9,8 @@ import { takeAiUse } from "@/lib/ai-allowance";
 import { draftScope } from "@/lib/claude";
 import { withContinuation, workItemLabel } from "@/lib/job-scope";
 import { jobContinuationLine } from "@/lib/job-scope-server";
+import { contractPaymentTerms, withPaymentSchedule } from "@/lib/payment-plan";
+import { loadJobPaymentPlan } from "@/lib/payment-plan-server";
 import {
   completeDraftFields,
   placeholdersUsed,
@@ -373,6 +375,14 @@ export async function generateContract(
   });
   const scope = baseScope || continuation ? withContinuation(baseScope ?? "", continuation) : null;
 
+  // The job's payment plan (deposit and installments), when it has one.
+  const plan = await loadJobPaymentPlan(supabase, { organizationId, jobId: text(row.id) });
+  const planTerms = contractPaymentTerms(plan.payments, (isoDate) =>
+    isoDate
+      ? new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }).format(new Date(`${isoDate}T12:00:00Z`))
+      : "",
+  );
+
   const facts: Partial<ContractFacts> = {
     business_name: text(organization?.name),
     business_phone: text(organization?.phone),
@@ -387,8 +397,12 @@ export async function generateContract(
     // "Diagnostic fee: $180.00 (already paid)" — a customer who paid when they
     // booked is not asked for it again by their own contract. Called the
     // diagnostic fee here, on the signing summary and on the invoice alike.
+    // The payment plan's deposit when the job has one; otherwise the
+    // diagnostic fee, as before.
     deposit:
-      money.depositCents > 0
+      planTerms.depositCents > 0
+        ? `${formatMoney(planTerms.depositCents / 100)}, due on signing`
+        : money.depositCents > 0
         ? `${formatMoney(money.depositCents / 100)}${money.depositPaid ? " (already paid)" : ", due before work begins"}`
         : // No visit came first, so there is no fee — said, rather than left
           // as a blank that stops a quote being sent until somebody types "none".
@@ -397,7 +411,10 @@ export async function generateContract(
     today: formatDate(new Date().toISOString()),
   };
 
-  const filled = fillTemplate(body, facts);
+  const filledTemplate = fillTemplate(body, facts);
+  // The payment schedule the customer is agreeing to, in the words themselves,
+  // so the signing page and the PDF both show it.
+  const filled = { ...filledTemplate, body: withPaymentSchedule(filledTemplate.body, planTerms.block) };
 
   const { data: created, error } = await supabase
     .from("contracts")
@@ -415,8 +432,9 @@ export async function generateContract(
       // The same figures the words above were filled from, for the summary
       // the customer sees above them.
       total_cents: money.totalCents,
-      deposit_cents: money.depositCents,
-      deposit_paid: money.depositPaid,
+      deposit_cents: planTerms.depositCents > 0 ? planTerms.depositCents : money.depositCents,
+      deposit_paid: planTerms.depositCents > 0 ? false : money.depositPaid,
+      payment_schedule: planTerms.snapshot,
     })
     .select("id")
     .maybeSingle();

@@ -12,6 +12,8 @@ import { JobFollowUps } from "@/components/job-follow-ups";
 import { JobCallRecord } from "@/components/job-call-record";
 import { JobBilling, JobLinesPanel } from "@/components/job-lines-panel";
 import { JobScope } from "@/components/job-scope";
+import { JobPaymentPlan } from "@/components/job-payment-plan";
+import { getJobPaymentPlan } from "@/lib/payment-plan-data";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
 import { JobWorkDetails } from "@/components/job-work-details";
@@ -129,6 +131,7 @@ export default async function JobDetailPage({
     history,
     lastEstimate,
     changeOrders,
+    paymentPlan,
   ] = await Promise.all([
     getJob(jobId),
     getJobVisitsByNumber(jobId).catch(() => []),
@@ -144,6 +147,7 @@ export default async function JobDetailPage({
     getJobHistory(jobId),
     getJobLatestEstimate(jobId).catch(() => ""),
     getJobChangeOrders(jobId).catch(() => null),
+    getJobPaymentPlan(jobId).catch(() => null),
   ]);
   if (!job) notFound();
 
@@ -1182,6 +1186,9 @@ export default async function JobDetailPage({
               lineStock={lineStock}
               withBilling={false}
             />
+            {paymentPlan ? (
+              <JobPaymentPlan jobNumber={controls.jobNumber} plan={paymentPlan} locked={state === "canceled"} />
+            ) : null}
             {state !== "completed" && state !== "canceled" ? (
               <SendEstimate
                 jobNumber={controls.jobNumber}
