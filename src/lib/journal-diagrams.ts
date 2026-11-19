@@ -3,7 +3,7 @@
  *
  * The model picks a key and supplies the labels. It never writes markup.
  *
- * That is the same shape as `draftWorkOrderLines` and `readReceipt`: the model
+ * That is the same shape as `readReceipt`: the model
  * proposes, deterministic code renders. Three reasons it has to be that way
  * here rather than letting it draw:
  *

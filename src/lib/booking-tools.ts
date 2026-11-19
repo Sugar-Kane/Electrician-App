@@ -596,5 +596,24 @@ async function logNonServiceCall(input: {
     ...(input.session.customerId ? { customerId: input.session.customerId } : {}),
     metadata: { kind, summary, ...(input.session.phone ? { phone: input.session.phone } : {}) },
   });
+  // A spam or sales caller saved just for this call is not a customer: archive
+  // the contact while it is still waiting for review and has no work on file.
+  // A customer the owner kept, or anybody with a job or request, is left alone.
+  const customerId = input.session.customerId;
+  if (customerId) {
+    const [{ count: jobs }, { count: requests }] = await Promise.all([
+      input.database.from("jobs").select("id", { count: "exact", head: true }).eq("customer_id", customerId),
+      input.database.from("booking_requests").select("id", { count: "exact", head: true }).eq("customer_id", customerId),
+    ]);
+    if ((jobs ?? 1) === 0 && (requests ?? 1) === 0) {
+      await input.database
+        .from("customers")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", customerId)
+        .eq("organization_id", input.session.organizationId)
+        .eq("pending_review", true)
+        .is("archived_at", null);
+    }
+  }
   return { text: "Noted. Nothing was saved for the owner. If you have not yet closed, say: Whenever you're ready to schedule electrical work, just give us a call back. Have a great day! Then end the call." };
 }

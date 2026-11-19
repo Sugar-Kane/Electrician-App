@@ -5,6 +5,7 @@ import { decideAutomaticSend, type TemplateTrigger } from "@/lib/message-templat
 import { readLanguage } from "@/lib/customer-language";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { STOPPED_ERROR, sendSms } from "@/lib/twilio";
+import { zoneAbbreviation } from "@/lib/schedule-labels";
 
 /**
  * Fire the template for an event that just happened to a job.
@@ -317,6 +318,9 @@ function formatArrivalWindow(start: unknown, end: unknown, timeZone: string): st
   const time = (value: Date) =>
     new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(value);
 
-  if (typeof end !== "string") return `${day} at ${time(startDate)}`;
-  return `${day}, ${time(startDate)}-${time(new Date(end))}`;
+  // The zone is said so nobody reads the business's 9 AM as their own.
+  const zone = zoneAbbreviation(start, timeZone);
+  const suffix = zone ? ` ${zone}` : "";
+  if (typeof end !== "string") return `${day} at ${time(startDate)}${suffix}`;
+  return `${day}, ${time(startDate)}-${time(new Date(end))}${suffix}`;
 }

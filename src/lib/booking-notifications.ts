@@ -112,7 +112,7 @@ function customerFactsFor(input: BookingNotification, facts: BookingFacts): Book
   return {
     ...facts,
     language,
-    slotLabel: slotLabel(input.slot.start, input.slot.end, input.timeZone, undefined, localeFor(language)),
+    slotLabel: slotLabel(input.slot.start, input.slot.end, input.timeZone, undefined, localeFor(language), true),
   };
 }
 
@@ -126,7 +126,7 @@ function factsFor(input: BookingNotification): BookingFacts {
     businessName: input.context.businessName,
     businessPhone: input.context.businessPhone,
     contactName: input.contactName,
-    slotLabel: slotLabel(input.slot.start, input.slot.end, input.timeZone),
+    slotLabel: slotLabel(input.slot.start, input.slot.end, input.timeZone, undefined, "en-US", true),
     addressLine1: input.address.line1,
     city: input.address.city,
     diagnosticFee: input.context.diagnosticFee,

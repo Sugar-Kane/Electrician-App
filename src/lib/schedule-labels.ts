@@ -44,6 +44,20 @@ export function relativeDay(startIso: string, nowIso: string, timeZone: string):
   return "";
 }
 
+/**
+ * "PST", "PDT": the business's zone at that instant, said beside every time a
+ * customer reads in a text or an email, so somebody in another zone (or
+ * reading it while travelling) cannot take 9 AM for their own 9 AM.
+ */
+export function zoneAbbreviation(iso: string, timeZone: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  const part = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" })
+    .formatToParts(at)
+    .find((entry) => entry.type === "timeZoneName");
+  return part?.value ?? "";
+}
+
 function timeOfDay(iso: string, timeZone: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     timeZone,
@@ -82,6 +96,8 @@ export function slotLabel(
   timeZone: string,
   nowIso?: string,
   locale = "en-US",
+  /** For anything texted or emailed: "…, 10:00 AM-12:00 PM PST". Spoken and on-screen labels leave it off. */
+  withZone = false,
 ): string {
   const day = new Intl.DateTimeFormat(locale, {
     timeZone,
@@ -90,7 +106,8 @@ export function slotLabel(
     day: "numeric",
   }).format(new Date(start));
 
-  const window = `${timeOfDay(start, timeZone, locale)}-${timeOfDay(end, timeZone, locale)}`;
+  const zone = withZone ? zoneAbbreviation(start, timeZone) : "";
+  const window = `${timeOfDay(start, timeZone, locale)}-${timeOfDay(end, timeZone, locale)}${zone ? ` ${zone}` : ""}`;
   const relative = nowIso ? relativeDay(start, nowIso, timeZone) : "";
   const words = RELATIVE_WORDS[locale] ?? RELATIVE_WORDS["en-US"]!;
 

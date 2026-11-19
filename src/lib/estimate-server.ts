@@ -72,7 +72,7 @@ export async function sendJobEstimate(input: {
   const { data: jobRow } = await database
     .from("jobs")
     .select(
-      "id, job_number, status, customer_id, customer_description, diagnostic_paid, diagnostic_fee_cents, follow_up_of, customers ( first_name, last_name, company_name, phone, email ), organizations ( name, phone, timezone )",
+      "id, job_number, status, customer_id, customer_description, scope_of_work, diagnostic_paid, diagnostic_fee_cents, follow_up_of, customers ( first_name, last_name, company_name, phone, email ), organizations ( name, phone, timezone )",
     )
     .eq("organization_id", organizationId)
     .eq("job_number", input.jobNumber)
@@ -185,7 +185,8 @@ export async function sendJobEstimate(input: {
     estimateNumber,
     total: totalCents / 100,
     validUntilLabel: new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" }).format(expiresAt),
-    workSummary: text(job.customer_description) || undefined,
+    // The scope written on the Estimate card, else what the customer asked for.
+    workSummary: text(job.scope_of_work).trim() || text(job.customer_description) || undefined,
     viewUrl,
   };
 

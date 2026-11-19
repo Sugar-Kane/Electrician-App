@@ -502,7 +502,6 @@ export function NewJobForm({
           {diagnostic ? null : (
             <section className="rounded-panel border border-line bg-surface p-4 sm:p-6">
               <WorkOrderLines
-                describedBy={() => description.current?.value ?? ""}
                 defaultValue={kept?.workOrderLines ?? ""}
                 stock={stock}
               />
