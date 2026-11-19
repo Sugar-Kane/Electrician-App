@@ -7,6 +7,7 @@ import { LoaderCircle } from "lucide-react";
 import { signContract } from "@/app/contract/[token]/actions";
 import { SignatureInput, type SignatureValue } from "@/components/signature-input";
 import { readPrintedName } from "@/lib/contract-signing";
+import { esignConsentLine, esignConsentSections } from "@/lib/esign-consent";
 
 /**
  * Where a customer signs, on whatever phone is in their hand.
@@ -37,6 +38,7 @@ export function SignaturePad({
   onSigned,
   kind = "agreement",
   compact = false,
+  businessName = "",
 }: {
   /**
    * The contract's public token, which is the whole of the signing authority.
@@ -53,6 +55,8 @@ export function SignaturePad({
   kind?: "agreement" | "change_order";
   /** Tighter, so the whole sheet fits one phone screen when signed in person. */
   compact?: boolean;
+  /** Named in the electronic records consent; "the business" when unknown. */
+  businessName?: string;
 }) {
   const what = kind === "change_order" ? "change order" : "contract";
   const [state, formAction] = useActionState(signContract.bind(null, token), { error: "" });
@@ -92,11 +96,24 @@ export function SignaturePad({
           onChange={(event) => setConsent(event.target.checked)}
           className="mt-1 h-5 w-5 shrink-0"
         />
-        <span>
-          I agree to sign this {what} electronically, and that my electronic signature counts the
-          same as signing it by hand.
-        </span>
+        <span>{esignConsentLine(what)}</span>
       </label>
+
+      {/* The full consent, one tap away (ESIGN: told before agreeing). */}
+      <details className={compact ? "text-sm" : "rounded-control border border-line px-3 py-2 text-sm"}>
+        {/* A plain link-sized line on the in-person sheet, so it still fits one screen. */}
+        <summary className={`tap-target flex cursor-pointer items-center font-semibold text-brand ${compact ? "min-h-9" : "min-h-11"}`}>
+          Electronic records consent
+        </summary>
+        <div className="space-y-2 pb-2 text-ink-muted">
+          {esignConsentSections(businessName || undefined).map((section) => (
+            <p key={section.heading} className="leading-6">
+              <span className="font-semibold text-ink">{section.heading}. </span>
+              {section.body}
+            </p>
+          ))}
+        </div>
+      </details>
 
       {state.error ? (
         <p role="alert" className="rounded-control bg-caution-bg px-3 py-2 text-sm text-caution">

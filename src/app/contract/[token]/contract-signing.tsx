@@ -16,12 +16,14 @@ export function ContractSigning({
   token,
   defaultName,
   kind,
+  businessName,
 }: {
   token: string;
   defaultName: string;
   kind?: "agreement" | "change_order";
+  businessName?: string;
 }) {
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
-  return <SignaturePad token={token} defaultName={defaultName} onSigned={refresh} kind={kind} />;
+  return <SignaturePad token={token} defaultName={defaultName} onSigned={refresh} kind={kind} businessName={businessName} />;
 }
