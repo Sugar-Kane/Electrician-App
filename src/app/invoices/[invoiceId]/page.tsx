@@ -4,6 +4,7 @@ import { ArrowUpRight, FileWarning } from "lucide-react";
 
 import { FieldPageShell } from "@/components/field-page-shell";
 import { InvoiceDocumentPanel } from "@/components/invoice-document-panel";
+import { freshInvoiceDocument } from "@/lib/invoice-pdf-file";
 import { PaidInHandForm, SendPaidForm } from "@/components/invoice-steps";
 import { InvoiceSendPanel } from "@/components/invoice-send";
 import { InvoicePayments } from "@/components/invoice-refunds";
@@ -87,6 +88,9 @@ export default async function InvoicePage({
   // Card refunds carry their tracking number from Stripe, when it has one.
   const payments = await withCardReferences(context.organizationId, await getInvoicePayments(database, invoiceId));
 
+  // A PDF built before the invoice last changed (a payment, a refund) is built
+  // again first, so the one shown here matches the invoice.
+  await freshInvoiceDocument(context.organizationId, invoiceId).catch(() => null);
   const [document, summary, billingBlocked] = await Promise.all([
     currentDocument({
       database,
