@@ -530,6 +530,7 @@ export default async function ContractPage({ params }: { params: Promise<{ token
                 token={token}
                 defaultName={contract.customer_name ?? ""}
                 kind={copy?.document.kind}
+                businessName={contract.business_name}
               />
             </div>
             {changeOrder && changeOrder.status === "pending_approval" ? <ChangeOrderDecline token={token} /> : null}
