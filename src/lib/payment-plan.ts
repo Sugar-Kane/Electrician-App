@@ -179,24 +179,28 @@ export function shouldRequestPayment(
 export type SignedSchedulePayment = { kind: string; cents: number; due: string; dueDate: string | null };
 
 /**
- * Whether a payment is one the customer signed for: the same place in the
- * schedule, the same kind, amount and due date as the signed contract says.
- * Only such a payment is asked for automatically; a plan changed after
+ * Whether a pay link's request is one the customer signed for: this payment
+ * and every one before it (a link asks for those still owed too) the same
+ * kind, amount and due date, in the same places, as the signed contract
+ * says. Only such a request goes out automatically; a plan changed after
  * signing is asked for by hand, or after the new contract is signed.
  */
 export function matchesSignedSchedule(
-  payment: Pick<PlannedPayment, "kind" | "cents" | "due" | "dueDate">,
+  payments: Pick<PlannedPayment, "kind" | "cents" | "due" | "dueDate">[],
   index: number,
   signed: SignedSchedulePayment[] | null,
 ): boolean {
-  const entry = signed?.[index];
-  if (!entry) return false;
-  return (
-    entry.kind === payment.kind &&
-    whole(entry.cents) === payment.cents &&
-    entry.due === payment.due &&
-    (entry.dueDate ?? null) === (payment.due === "on_date" ? payment.dueDate ?? null : null)
-  );
+  if (!signed || index < 0 || index >= payments.length) return false;
+  return payments.slice(0, index + 1).every((payment, at) => {
+    const entry = signed[at];
+    return (
+      Boolean(entry) &&
+      entry.kind === payment.kind &&
+      whole(entry.cents) === payment.cents &&
+      entry.due === payment.due &&
+      (entry.dueDate ?? null) === (payment.due === "on_date" ? payment.dueDate ?? null : null)
+    );
+  });
 }
 
 function dollars(cents: number): string {

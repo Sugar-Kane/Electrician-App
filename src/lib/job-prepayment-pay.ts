@@ -943,7 +943,7 @@ export async function sendDuePaymentRequests(options: { jobId?: string; organiza
       // Only what the signed contract set out is asked for automatically: the
       // same payment, amount and date. A plan changed since is sent by hand,
       // or once the new contract is signed.
-      if (!due || !matchesSignedSchedule(payment.payment, payment.index, payment.signedSchedule)) continue;
+      if (!due || !matchesSignedSchedule(payment.payments, payment.index, payment.signedSchedule)) continue;
       const result = await sendPaymentRequest(payment.itemId, { byHand: false });
       if (result.ok && (result.email === "sent" || result.sms === "sent")) sent += 1;
     } catch (failure) {
