@@ -2,9 +2,9 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { LoaderCircle, Receipt, RotateCcw } from "lucide-react";
+import { LoaderCircle, RotateCcw } from "lucide-react";
 
-import { refundPaymentAction, sendRefundReceiptAction, type InvoiceActionState } from "@/app/invoices/actions";
+import { refundPaymentAction, type InvoiceActionState } from "@/app/invoices/actions";
 import { inputClass } from "@/components/ui/field";
 import { refundableCents, refundSummary } from "@/lib/invoice-refund";
 import { formatCents } from "@/lib/job-lines";
@@ -47,41 +47,6 @@ function RefundButton({ label }: { label: string }) {
   );
 }
 
-/** Send the customer the refund notice again, as a receipt with what was paid, refunded and kept. */
-function RefundReceipt({ invoiceId, refundId }: { invoiceId: string; refundId: string }) {
-  const [state, action] = useActionState(sendRefundReceiptAction, initial);
-  return (
-    <form action={action} className="mt-1">
-      <input type="hidden" name="invoiceId" value={invoiceId} />
-      <input type="hidden" name="refundId" value={refundId} />
-      <ReceiptButton />
-      {state.error ? (
-        <p className="mt-1 text-xs text-critical" role="alert">
-          {state.error}
-        </p>
-      ) : state.notice ? (
-        <p className="mt-1 text-xs text-positive" role="status">
-          {state.notice}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-function ReceiptButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="tap-target inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-brand disabled:opacity-60"
-    >
-      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Receipt className="h-4 w-4" aria-hidden />}
-      {pending ? "Sending…" : "Send refund receipt"}
-    </button>
-  );
-}
-
 function RefundForm({ invoiceId, payment }: { invoiceId: string; payment: PaymentWithRefunds }) {
   const [state, action] = useActionState(refundPaymentAction, initial);
   const left = refundableCents(payment.amountCents, payment.refunds);
@@ -110,10 +75,9 @@ function RefundForm({ invoiceId, payment }: { invoiceId: string; payment: Paymen
           className={`${inputClass} mt-1`}
         />
         <input name="reason" placeholder="Reason, for your records (optional)" aria-label="Reason" maxLength={300} className={`${inputClass} mt-2`} />
-        <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
-          <input type="checkbox" name="notifyCustomer" defaultChecked className="h-4 w-4" />
-          Tell the customer (email, and text if they agreed to texts)
-        </label>
+        <p className="mt-3 text-xs leading-5 text-ink-muted">
+          The customer is sent a refund receipt automatically (email, and text if they agreed to texts).
+        </p>
         <RefundButton label={payment.online ? "Refund to card" : "Record refund"} />
         {state.error ? (
           <p className="mt-2 text-sm text-critical" role="alert">
@@ -190,13 +154,6 @@ export function InvoicePayments({
                     <li key={`reference-${refund.id}`} className="text-xs text-ink-muted">
                       Card refund tracking number:{" "}
                       <span className="select-all font-mono font-semibold text-ink">{refund.reference}</span>
-                    </li>
-                  ))}
-                  {payment.refunds
-                    .filter((refund) => refund.status === "succeeded")
-                    .map((refund) => (
-                    <li key={`receipt-${refund.id}`}>
-                      <RefundReceipt invoiceId={invoiceId} refundId={refund.id} />
                     </li>
                   ))}
                 </ul>

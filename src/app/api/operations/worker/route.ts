@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { scanScheduledAutomationEvents } from "@/lib/automation-triggers-server";
+import { sendMissedRefundNotices } from "@/lib/refund-notice";
 import { runSupervisedWorker } from "@/lib/supervised-executor";
 
 export const dynamic = "force-dynamic";
@@ -34,5 +35,11 @@ export async function POST(request: Request) {
   }
   const scanned = process.env.VOLTEIRA_PHASE2_TRIGGERS_ENABLED === "true" ? await scanScheduledAutomationEvents() : null;
   const report = await runSupervisedWorker({ limit: 10 });
-  return NextResponse.json({ ...report, scanned });
+  // Refund receipts that have not gone out yet. Best effort: a failure here
+  // never stops the rest of the pass.
+  const refundReceipts = await sendMissedRefundNotices(10).catch((error) => {
+    console.error("worker: missed refund notices failed", error);
+    return 0;
+  });
+  return NextResponse.json({ ...report, scanned, refundReceipts });
 }
