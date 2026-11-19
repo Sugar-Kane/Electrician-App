@@ -12,6 +12,7 @@ import {
   canEditChangeOrder,
   changeOrderSummary,
   contractTotals,
+  canDeleteChangeOrder,
   fillItemEdit,
   itemNetCents,
   itemsNotReadyBecause,
@@ -1163,6 +1164,60 @@ export async function requestChangeOrderApproval(
  * customer signing at the same moment either signs first (and the change order
  * is approved, not withdrawn) or finds a document that can no longer be signed.
  */
+/**
+ * Delete a change order: a draft (through the person's own session, which may
+ * delete drafts), or one withdrawn or declined (with the service role, after
+ * checking it is this business's and in one of those states). Its items go
+ * with it. An approved one, or one with the customer, is never deleted.
+ */
+export async function deleteChangeOrder(
+  database: FlexibleSupabaseClient,
+  admin: FlexibleSupabaseClient,
+  input: { organizationId: string; changeOrderId: string; userId: string | null },
+): Promise<Result<{ number: number }>> {
+  const { data } = await database
+    .from("change_orders")
+    .select("id, job_id, number, status")
+    .eq("organization_id", input.organizationId)
+    .eq("id", input.changeOrderId)
+    .maybeSingle();
+  if (!data) return { ok: false, error: "That change order could not be found." };
+  const row = data as Row;
+  const status = text(row.status);
+  if (!canDeleteChangeOrder(status)) {
+    return {
+      ok: false,
+      error:
+        status === "pending_approval"
+          ? `Change order #${num(row.number)} is with the customer. Withdraw it first, then delete it.`
+          : `Change order #${num(row.number)} was approved and changed the contract, so it stays on the job.`,
+    };
+  }
+
+  const client = status === "draft" ? database : admin;
+  const { data: deleted, error } = await client
+    .from("change_orders")
+    .delete()
+    .eq("organization_id", input.organizationId)
+    .eq("id", input.changeOrderId)
+    .in("status", ["draft", "canceled", "rejected"])
+    .select("id");
+  if (error || !Array.isArray(deleted) || deleted.length === 0) {
+    if (error) console.error("change orders: could not be deleted", error);
+    return { ok: false, error: "That change order could not be deleted. Reload the job and try again." };
+  }
+
+  await recordActivity(database, {
+    organizationId: input.organizationId,
+    eventType: "change_order.deleted",
+    label: `Change order #${num(row.number)} deleted`,
+    jobId: text(row.job_id) || null,
+    actorUserId: input.userId,
+    metadata: { change_order_id: input.changeOrderId, status },
+  });
+  return { ok: true, number: num(row.number) };
+}
+
 export async function cancelChangeOrder(
   database: FlexibleSupabaseClient,
   input: { organizationId: string; changeOrderId: string; userId: string | null; declinedByCustomer?: boolean; reason?: string },

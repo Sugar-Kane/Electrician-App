@@ -14,6 +14,7 @@ import { JobBilling, JobLinesPanel } from "@/components/job-lines-panel";
 import { JobScope } from "@/components/job-scope";
 import { JobMenu } from "@/components/job-menu";
 import { JobNotes } from "@/components/job-notes";
+import { JobWorkDetails } from "@/components/job-work-details";
 import { JobPhotos } from "@/components/job-photos";
 import { DiagnosticDecision, JobStageCard } from "@/components/job-flow";
 import { JobWorkflow } from "@/components/job-workflow";
@@ -1235,15 +1236,16 @@ export default async function JobDetailPage({
 
           <StepCard id="findings" number={5} title="Work" state={stepState("work")} open={askedCard === "work"} summary={workSummary}>
             <div className="divide-y divide-line">
-              <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
               {workspaceOpen ? (
                 <>
-                  <div className="py-4">
-                    <JobPhotos jobNumber={controls.jobNumber} photos={photos} />
-                  </div>
-                  <div className="py-4">
-                    <JobNotes jobNumber={controls.jobNumber} notes={controls.technicianNotes} />
-                  </div>
+                  {/* Folds to "Work submitted" once the notes are submitted; the follow-up panel stays open. */}
+                  <JobWorkDetails
+                    jobNumber={controls.jobNumber}
+                    notes={controls.technicianNotes}
+                    photoCount={photos.length}
+                    visit={visitCard}
+                    photos={<JobPhotos jobNumber={controls.jobNumber} photos={photos} />}
+                  />
                   {state === "arrived" || state === "working" || state === "review" ? (
                     <div className="pt-4">
                       <EndVisitForReturn jobNumber={controls.jobNumber} timeZone={history.timeZone} />
@@ -1251,7 +1253,10 @@ export default async function JobDetailPage({
                   ) : null}
                 </>
               ) : (
-                <p className="pt-4 text-sm text-ink-muted">Photos and notes open once the work starts.</p>
+                <>
+                  <div className="pb-4 [&_section]:border-0 [&_section]:bg-transparent [&_section]:p-0">{visitCard}</div>
+                  <p className="pt-4 text-sm text-ink-muted">Photos and notes open once the work starts.</p>
+                </>
               )}
             </div>
           </StepCard>

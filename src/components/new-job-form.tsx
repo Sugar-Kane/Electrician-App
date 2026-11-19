@@ -232,6 +232,7 @@ export function NewJobForm({
         // started from that one's customer and address. Not linked for a
         // credit: there is no diagnostic fee to carry over.
         <p className="flex items-start gap-3 rounded-panel border border-brand/30 bg-brand/[0.06] p-4 text-sm leading-6">
+          <input type="hidden" name="continuesJob" value={followUp.jobNumber} />
           <Link2 className="mt-1 h-4 w-4 shrink-0 text-brand" aria-hidden />
           <span>
             Follow-up to job{" "}

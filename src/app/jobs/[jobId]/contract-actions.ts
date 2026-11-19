@@ -7,7 +7,8 @@ import { recordActivity } from "@/lib/activity";
 
 import { takeAiUse } from "@/lib/ai-allowance";
 import { draftScope } from "@/lib/claude";
-import { workItemLabel } from "@/lib/job-scope";
+import { withContinuation, workItemLabel } from "@/lib/job-scope";
+import { jobContinuationLine } from "@/lib/job-scope-server";
 import {
   completeDraftFields,
   placeholdersUsed,
@@ -354,7 +355,7 @@ export async function generateContract(
       : null;
   // Without the AI, a plain paragraph from what the job itself says: the
   // request and the work written on it. Still a draft, read before sending.
-  const scope =
+  const baseScope =
     writtenScope ||
     aiScope ||
     plainScope({
@@ -364,6 +365,13 @@ export async function generateContract(
       visitOnly: money.source === "diagnostic",
     }) ||
     null;
+  // A follow-up says which job it continues, in front of its scope.
+  const continuation = await jobContinuationLine(supabase, {
+    organizationId,
+    jobId: text(row.id),
+    timeZone: text(organization?.timezone) || "America/Los_Angeles",
+  });
+  const scope = baseScope || continuation ? withContinuation(baseScope ?? "", continuation) : null;
 
   const facts: Partial<ContractFacts> = {
     business_name: text(organization?.name),

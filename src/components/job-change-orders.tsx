@@ -24,6 +24,7 @@ import {
 import {
   addChangeOrderItemAction,
   cancelChangeOrderAction,
+  deleteChangeOrderAction,
   createChangeOrderAction,
   finishChangeOrderAction,
   foldChangeOrderIntoContractAction,
@@ -39,7 +40,7 @@ import { resendInvoiceRevisionAction } from "@/app/invoices/actions";
 import { FormMessage, inputClass } from "@/components/ui/field";
 import { SelectField } from "@/components/ui/select-field";
 import { adminFeeLabel } from "@/lib/admin-fee";
-import { itemNeedsPrice, signedCents, type ChangeOrderStatus } from "@/lib/change-order-math";
+import { canDeleteChangeOrder, itemNeedsPrice, signedCents, type ChangeOrderStatus } from "@/lib/change-order-math";
 import type { ChangeOrderItemRecord, ChangeOrderRecord, JobChangeOrders as JobChangeOrdersData, JobLineChoice } from "@/lib/change-orders-server";
 import type { StockOption } from "@/lib/job-line-data";
 import { formatCents, formatQuantity } from "@/lib/job-lines";
@@ -798,11 +799,15 @@ function Editor({
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => cancelChangeOrderAction(job, order.id), (result) => !result.error && onClose())}
-            aria-label="Cancel this change order"
-            className="tap-target inline-flex min-h-12 items-center justify-center rounded-control border border-line px-4 text-sm font-semibold text-critical disabled:opacity-60"
+            onClick={() => {
+              if (!window.confirm(`Delete change order #${order.number}? It has not gone to the customer.`)) return;
+              run(() => deleteChangeOrderAction(job, order.id), (result) => !result.error && onClose());
+            }}
+            aria-label="Delete this change order"
+            className="tap-target inline-flex min-h-12 items-center justify-center gap-1.5 rounded-control border border-line px-4 text-sm font-semibold text-critical disabled:opacity-60"
           >
-            Cancel
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Delete
           </button>
         </div>
         {!ready && order.items.length > 0 ? <p className="text-xs text-caution">Price every item before asking the customer.</p> : null}
@@ -946,6 +951,20 @@ function OrderRow({
               className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-on-brand"
             >
               <Pencil className="h-4 w-4" aria-hidden /> Edit change order
+            </button>
+          ) : null}
+
+          {canDeleteChangeOrder(order.status) ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (!window.confirm(`Delete change order #${order.number}? This cannot be undone.`)) return;
+                run(() => deleteChangeOrderAction(job, order.id));
+              }}
+              className="tap-target inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-control border border-line px-4 text-sm font-semibold text-critical disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden /> Delete change order
             </button>
           ) : null}
 
