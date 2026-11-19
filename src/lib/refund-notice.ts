@@ -4,7 +4,7 @@ import { emailSender, looksLikeEmail } from "@/lib/booking-confirmation";
 import { sendCustomerText } from "@/lib/customer-text";
 import { sendEmail } from "@/lib/email";
 import { invoiceLabel } from "@/lib/invoice-label";
-import { refundStatusFromStripe, refundSummary } from "@/lib/invoice-refund";
+import { refundNoticeWording, refundStatusFromStripe, refundSummary } from "@/lib/invoice-refund";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { STOPPED_ERROR, sendSms } from "@/lib/twilio";
@@ -38,13 +38,29 @@ function dollars(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
+/** Which kind of refund: from an invoice payment, or a diagnostic fee paid when booking. */
+export type RefundKind = "invoice" | "booking";
+
+function refundTable(kind: RefundKind): "invoice_refunds" | "booking_payment_refunds" {
+  return kind === "booking" ? "booking_payment_refunds" : "invoice_refunds";
+}
+
 /** The person giving the refund chose not to tell the customer. */
-export async function skipRefundNotice(refundId: string): Promise<void> {
+export async function skipRefundNotice(refundId: string, kind: RefundKind = "invoice"): Promise<void> {
   await getSupabaseAdmin()
-    .from("invoice_refunds")
+    .from(refundTable(kind))
     .update({ customer_notice: "skipped" })
     .eq("id", refundId)
     .is("customer_notice", null);
+}
+
+/** A diagnostic fee refund: no invoice, always back to the card it was paid with. */
+const BOOKING_REFUND_COLUMNS =
+  "organization_id, amount_cents, jobs ( job_number, customer_id, customers ( first_name, email, phone ) ), organizations ( name, phone )";
+
+/** Tell the customer their diagnostic fee was refunded. Claimed, so sent once. */
+export async function sendBookingRefundNotice(refundId: string): Promise<{ email: string; sms: string }> {
+  return sendRefundNotice(refundId, { kind: "booking" });
 }
 
 const REFUND_COLUMNS =
@@ -63,10 +79,14 @@ export async function sendRefundReceipt(refundId: string, reference = ""): Promi
 export async function sendRefundNotice(
   refundId: string,
   /** `reference`: the card network's number for the refund (from Stripe), for the customer to trace it. */
-  options: { receipt?: boolean; reference?: string } = {},
+  options: { receipt?: boolean; reference?: string; kind?: RefundKind } = {},
 ): Promise<{ email: string; sms: string }> {
   const outcome = { email: "not sent", sms: "not sent" };
-  const receipt = options.receipt === true;
+  const kind: RefundKind = options.kind ?? "invoice";
+  const table = refundTable(kind);
+  const columns = kind === "booking" ? BOOKING_REFUND_COLUMNS : REFUND_COLUMNS;
+  // A receipt (sent again by hand) is only for invoice refunds.
+  const receipt = options.receipt === true && kind === "invoice";
   const reference = (options.reference ?? "").trim();
   try {
     const database = getSupabaseAdmin();
@@ -74,18 +94,18 @@ export async function sendRefundNotice(
     // A receipt asked for by hand is not claimed; it goes every time.
     const { data: claimed } = receipt
       ? await database
-          .from("invoice_refunds")
-          .select(REFUND_COLUMNS)
+          .from(table)
+          .select(columns)
           .eq("id", refundId)
           .in("status", ["succeeded", "pending"])
           .maybeSingle()
       : await database
-          .from("invoice_refunds")
+          .from(table)
           .update({ customer_notice: "sending" })
           .eq("id", refundId)
           .is("customer_notice", null)
           .in("status", ["succeeded", "pending"])
-          .select(REFUND_COLUMNS)
+          .select(columns)
           .maybeSingle();
     if (!claimed) {
       return receipt
@@ -93,7 +113,7 @@ export async function sendRefundNotice(
         : { email: "already told or not due", sms: "already told or not due" };
     }
 
-    const row = claimed as Row;
+    const row = claimed as unknown as Row;
     const organizationId = text(row.organization_id);
     const job = one(row.jobs);
     const customer = one(job.customers);
@@ -103,8 +123,7 @@ export async function sendRefundNotice(
     const businessPhone = text(organization.phone);
     const firstName = text(customer.first_name);
     const amount = dollars(Number(row.amount_cents ?? 0));
-    const label = invoiceLabel(invoice);
-    const forWhat = label ? ` for invoice INV-${label}` : job.job_number ? ` for job #${job.job_number}` : "";
+    const label = kind === "invoice" ? invoiceLabel(invoice) : "";
 
     // The receipt: what was paid on the invoice, refunded from it, and kept.
     let totals: { paid: number; refunded: number } | null = null;
@@ -121,9 +140,10 @@ export async function sendRefundNotice(
       totals = { paid: summary.paidCents, refunded: summary.refundedCents + summary.pendingCents };
     }
 
-    // Back to a card through Stripe, or handed back in person.
-    let toCard = false;
-    if (text(row.invoice_payment_id)) {
+    // Back to a card through Stripe, or handed back in person. A diagnostic
+    // fee was paid online when booking, so it always goes back to the card.
+    let toCard = kind === "booking";
+    if (kind === "invoice" && text(row.invoice_payment_id)) {
       const { data: payment } = await database
         .from("invoice_payments")
         .select("stripe_checkout_session_id")
@@ -131,9 +151,15 @@ export async function sendRefundNotice(
         .maybeSingle();
       toCard = Boolean(text(payment?.stripe_checkout_session_id));
     }
-    const when = toCard
-      ? "It is on its way back to the card you paid with and usually shows within 5 to 10 business days."
-      : "This is your confirmation of the money we returned to you.";
+    const wording = refundNoticeWording({
+      businessName,
+      amount,
+      invoiceLabel: label,
+      jobNumber: String(job.job_number ?? ""),
+      diagnosticFee: kind === "booking",
+      toCard,
+    });
+    const { forWhat, when } = wording;
 
     let anySent = false;
     let anyFailed = false;
@@ -207,9 +233,7 @@ export async function sendRefundNotice(
       const sid = text(settings?.messaging_service_sid);
       if (!sid) outcome.sms = "texting not set up";
       else {
-        const body = toCard
-          ? `${businessName}: we've refunded ${amount}${forWhat}. It usually reaches your card in 5-10 business days.`
-          : `${businessName}: this confirms the ${amount} refund${forWhat}.`;
+        const body = wording.sms;
         const smsBody = totals
           ? `${body} Paid ${dollars(totals.paid)}, refunded ${dollars(totals.refunded)}, kept ${dollars(Math.max(totals.paid - totals.refunded, 0))}.`
           : body;
@@ -235,7 +259,7 @@ export async function sendRefundNotice(
     // A receipt sent by hand does not rewrite whether the first notice went.
     if (!receipt) {
       await database
-        .from("invoice_refunds")
+        .from(table)
         .update({ customer_notice: anySent ? "sent" : anyFailed ? "failed" : "skipped" })
         .eq("id", refundId);
     }

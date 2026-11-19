@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 
 import { recordActivity } from "@/lib/activity";
 import { refundStatusFromStripe, type RefundStatus } from "@/lib/invoice-refund";
-import { sendRefundNotice, skipRefundNotice } from "@/lib/refund-notice";
+import { sendBookingRefundNotice, sendRefundNotice, skipRefundNotice } from "@/lib/refund-notice";
 import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor } from "@/lib/stripe-connect";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -242,6 +242,10 @@ export async function handleRefundEvent(event: Stripe.Event, stripeAccount: stri
     // Volteira was already announced (or skipped), and the claim stops a repeat.
     const { data: row } = await admin.from("invoice_refunds").select("id").eq("stripe_refund_id", refund.id).maybeSingle();
     if (row?.id) await sendRefundNotice(String(row.id));
+    // A diagnostic fee refunded in Stripe's dashboard is announced the same
+    // way; one given in Volteira was already announced (or skipped).
+    const { data: fee } = await admin.from("booking_payment_refunds").select("id").eq("stripe_refund_id", refund.id).maybeSingle();
+    if (fee?.id) await sendBookingRefundNotice(String(fee.id));
   };
 
   if (event.type === "refund.created" || event.type === "refund.updated" || event.type === "refund.failed") {

@@ -75,3 +75,29 @@ test("a refund receipt goes only for money that really went back", () => {
   assert.equal(refundReceiptAllowed({ online: false, status: "succeeded", stripeRefundId: "", stripeStatus: null }).ok, true);
   assert.equal(refundReceiptAllowed({ online: false, status: "pending", stripeRefundId: "", stripeStatus: null }).ok, false);
 });
+
+test("a diagnostic fee refund notice names the fee and the job, never an invoice, and the card timeline", async () => {
+  const { refundNoticeWording } = await import("./invoice-refund.ts");
+  const fee = refundNoticeWording({
+    businessName: "Pacific Plains Electric",
+    amount: "$180.00",
+    invoiceLabel: "",
+    jobNumber: "32",
+    diagnosticFee: true,
+    toCard: true,
+  });
+  assert.match(fee.sms, /refunded \$180\.00 for your diagnostic visit fee for job #32/);
+  assert.match(fee.sms, /5-10 business days/);
+  assert.doesNotMatch(fee.sms + fee.when + fee.forWhat, /invoice/i);
+
+  const invoice = refundNoticeWording({
+    businessName: "Pacific Plains Electric",
+    amount: "$50.00",
+    invoiceLabel: "1042",
+    jobNumber: "32",
+    diagnosticFee: false,
+    toCard: false,
+  });
+  assert.match(invoice.sms, /confirms the \$50\.00 refund for invoice INV-1042/);
+  assert.match(invoice.when, /confirmation/);
+});

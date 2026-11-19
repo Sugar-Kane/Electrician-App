@@ -4,6 +4,7 @@ import { creditGivenCents } from "@/lib/follow-up-jobs";
 import { refundStatusFromStripe, type RefundStatus } from "@/lib/invoice-refund";
 import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor } from "@/lib/stripe-connect";
+import { sendBookingRefundNotice, skipRefundNotice } from "@/lib/refund-notice";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { asFlexibleClient, type FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
@@ -48,6 +49,8 @@ export type DiagnosticFeePayment = {
     reason: string;
     createdAt: string;
     failure: string;
+    /** Whether the customer was told: null (not yet), sending, sent, failed or skipped. */
+    customerNotice: string;
   }[];
 };
 
@@ -73,7 +76,7 @@ export async function getJobDiagnosticPayment(
   const [{ data: refunds, error }, { data: followUps }] = await Promise.all([
     db
       .from("booking_payment_refunds")
-      .select("id, amount_cents, status, reason, created_at, failure_reason")
+      .select("id, amount_cents, status, reason, created_at, failure_reason, customer_notice")
       .eq("payment_id", text(row.id))
       .order("created_at", { ascending: true }),
     db.from("jobs").select("id").eq("organization_id", organizationId).eq("follow_up_of", jobId),
@@ -103,6 +106,7 @@ export async function getJobDiagnosticPayment(
       reason: text(refund.reason),
       createdAt: text(refund.created_at),
       failure: text(refund.failure_reason),
+      customerNotice: text(refund.customer_notice),
     })),
   };
 }
@@ -119,7 +123,7 @@ function dollars(cents: number): string {
  */
 export async function refundDiagnosticFee(
   db: FlexibleSupabaseClient,
-  input: { paymentId: string; amountCents: number; reason: string },
+  input: { paymentId: string; amountCents: number; reason: string; notifyCustomer?: boolean },
 ): Promise<BookingRefundOutcome> {
   const { data, error } = await db.rpc("begin_booking_refund", {
     p_payment_id: input.paymentId,
@@ -137,6 +141,10 @@ export async function refundDiagnosticFee(
   const organizationId = text(started?.organization_id);
   const intent = text(started?.payment_intent_id);
   if (!refundId || !intent) return { ok: false, message: "The refund could not be started. Try again." };
+  // Decided before Stripe is asked, so its webhook cannot announce a refund
+  // the customer was not to be told about.
+  const notify = input.notifyCustomer !== false;
+  if (!notify) await skipRefundNotice(refundId, "booking");
 
   const admin = asFlexibleClient(getSupabaseAdmin());
   const stripe = getStripe();
@@ -180,12 +188,15 @@ export async function refundDiagnosticFee(
 
   if (status === "failed" || status === "canceled") return { ok: false, message: "Stripe did not refund it." };
 
-  return {
-    ok: true,
-    status,
-    message:
-      status === "succeeded"
-        ? `${amount} refunded to the customer's card. It usually reaches them in 5–10 business days.`
-        : `${amount} refund sent to Stripe. It shows as done once Stripe confirms.`,
-  };
+  let message =
+    status === "succeeded"
+      ? `${amount} refunded to the customer's card. It usually reaches them in 5–10 business days.`
+      : `${amount} refund sent to Stripe. It shows as done once Stripe confirms.`;
+  // The customer hears about it by email and text, the same as an invoice refund.
+  if (notify) {
+    const told = await sendBookingRefundNotice(refundId);
+    const by = [told.email === "sent" ? "email" : "", told.sms === "sent" ? "text" : ""].filter(Boolean);
+    message += by.length > 0 ? ` The customer was told by ${by.join(" and ")}.` : " The customer could not be told (no email on file, and no text went through).";
+  }
+  return { ok: true, status, message };
 }
