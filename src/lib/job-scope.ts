@@ -29,3 +29,22 @@ export function cleanScope(value: unknown): string {
     .trim()
     .slice(0, MAX_SCOPE_LENGTH);
 }
+
+/**
+ * The sentence that opens a follow-up job's contract scope: which job this
+ * work continues, so the customer reads the new agreement as the next part of
+ * work they already know about, priced and signed on its own.
+ */
+export function continuationLine(jobNumber: string, dateLabel: string): string {
+  const number = jobNumber.replace(/^#/, "").trim();
+  if (!number) return "";
+  return `This work continues job #${number}${dateLabel ? ` (${dateLabel})` : ""} and is agreed and billed separately.`;
+}
+
+/** The scope with the continuation sentence in front, once. */
+export function withContinuation(scope: string, line: string): string {
+  const body = scope.trim();
+  if (!line) return body;
+  if (body.startsWith(line)) return body;
+  return body ? `${line} ${body}` : line;
+}

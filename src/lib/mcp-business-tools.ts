@@ -1,8 +1,8 @@
 import "server-only";
 
 import { buildBusinessHours, parseBusinessHours } from "@/lib/business-hours";
-import { cleanScope } from "@/lib/job-scope";
-import { saveJobScope, scopeWorkItems } from "@/lib/job-scope-server";
+import { cleanScope, withContinuation } from "@/lib/job-scope";
+import { jobContinuationLine, saveJobScope, scopeWorkItems } from "@/lib/job-scope-server";
 import { completeDraftFields, fillTemplate, placeholdersUsed, scopePrompt, serviceAddress, STARTER_TEMPLATE, type ContractFacts } from "@/lib/contract-template";
 import { deliverInvoice } from "@/lib/invoice-delivery";
 import { sendJobEstimate } from "@/lib/estimate-server";
@@ -852,7 +852,11 @@ export async function runBusinessMcpTool(input: {
         ? new Intl.DateTimeFormat("en-US", { timeZone, month: "short", day: "numeric", year: "numeric" }).format(new Date(iso))
         : "";
       const totalCents = invoices.reduce((sum, invoice) => sum + Number(invoice.total_cents ?? 0), 0);
-      const scope = written;
+      // A follow-up says which job it continues, in front of its scope.
+      const scope = withContinuation(
+        written,
+        await jobContinuationLine(asFlexibleClient(database), { organizationId, jobId: text(row.id), timeZone }),
+      );
       const facts: Partial<ContractFacts> = {
         business_name: text(organization.name),
         business_phone: text(organization.phone),

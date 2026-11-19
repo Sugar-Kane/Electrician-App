@@ -1,7 +1,7 @@
 import "server-only";
 
 import { canEditContract, spliceScope } from "@/lib/document-edit";
-import { cleanScope, workItemLabel } from "@/lib/job-scope";
+import { cleanScope, continuationLine, withContinuation, workItemLabel } from "@/lib/job-scope";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
 
 /**
@@ -47,7 +47,10 @@ export async function saveJobScope(
       .limit(1)
       .maybeSingle();
     const contract = (found ?? null) as Record<string, unknown> | null;
-    const flat = scope.replace(/\s+/g, " ");
+    const flat = withContinuation(
+      scope.replace(/\s+/g, " "),
+      await jobContinuationLine(database, { organizationId: input.organizationId, jobId: input.jobId, timeZone: input.timeZone }),
+    );
     if (contract && text(contract.kind) !== "change_order" && canEditContract({ status: text(contract.status) || "draft" }).ok) {
       const current = text(contract.scope);
       const body = current ? spliceScope(text(contract.body), current, flat) : null;
@@ -86,4 +89,24 @@ export async function saveJobScope(
 /** The job's lines as the scope is written from them: "Labour: … (3 hr)". */
 export function scopeWorkItems(lines: unknown): string[] {
   return (Array.isArray(lines) ? (lines as Record<string, unknown>[]) : []).map(workItemLabel).filter(Boolean);
+}
+
+/** The continuation sentence for a job that continues another, or "". */
+export async function jobContinuationLine(
+  database: FlexibleSupabaseClient,
+  input: { organizationId: string; jobId: string; timeZone: string },
+): Promise<string> {
+  const { data } = await database
+    .from("jobs")
+    .select("continued:jobs!jobs_continues_job_id_fkey ( job_number, scheduled_start, organization_id )")
+    .eq("organization_id", input.organizationId)
+    .eq("id", input.jobId)
+    .maybeSingle();
+  const continued = ((data as Record<string, unknown> | null)?.continued ?? null) as Record<string, unknown> | null;
+  if (!continued || text(continued.organization_id) !== input.organizationId) return "";
+  const start = text(continued.scheduled_start);
+  const date = start
+    ? new Intl.DateTimeFormat("en-US", { timeZone: input.timeZone, month: "short", day: "numeric", year: "numeric" }).format(new Date(start))
+    : "";
+  return continuationLine(String(continued.job_number ?? ""), date);
 }

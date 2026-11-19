@@ -157,6 +157,21 @@ export async function createJob(
    * unlinked: a work order that silently lost its diagnostic also loses the
    * fee the customer was told would come off it.
    */
+  // A follow-up to a job that was not a diagnostic: the job it continues, so
+  // its contract can say so. Not linked for a credit. Ignored when it is not
+  // one of this business's jobs.
+  let continuesJobId: string | null = null;
+  const continuesNumber = Number(field(formData, "continuesJob").trim() || Number.NaN);
+  if (Number.isInteger(continuesNumber) && continuesNumber > 0) {
+    const { data: continued } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("job_number", continuesNumber)
+      .maybeSingle();
+    continuesJobId = continued ? text(continued.id) || null : null;
+  }
+
   const followUpNumber = Number(field(formData, "followUpOf").trim() || Number.NaN);
   let followed: { id: string; customerId: string } | null = null;
   if (Number.isInteger(followUpNumber) && followUpNumber > 0) {
@@ -369,6 +384,7 @@ export async function createJob(
       // A follow-up has no diagnostic fee of its own. The one the customer
       // paid belongs to the visit it follows, and is credited from there.
       ...(followed ? { follow_up_of: followed.id, diagnostic_fee_cents: 0 } : {}),
+      ...(continuesJobId ? { continues_job_id: continuesJobId } : {}),
     })
     .select("id, job_number")
     .maybeSingle();
