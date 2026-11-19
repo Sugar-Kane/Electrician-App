@@ -98,6 +98,8 @@ export type ChangeOrderRecord = {
   originalContractCents: number | null;
   baseContractId: string | null;
   documentContractId: string | null;
+  /** When the signing link for its document was texted to the customer, or null while it has not been. */
+  documentSentAt: string | null;
   createdAt: string;
   requestedAt: string | null;
   approvedAt: string | null;
@@ -204,6 +206,7 @@ function mapOrder(row: Row, resends: ResendRecord[]): ChangeOrderRecord {
     originalContractCents: maybeNum(row.original_contract_cents),
     baseContractId: text(row.base_contract_id) || null,
     documentContractId: text(row.document_contract_id) || null,
+    documentSentAt: null,
     createdAt: text(row.created_at),
     requestedAt: text(row.requested_at) || null,
     approvedAt: text(row.approved_at) || null,
@@ -296,7 +299,7 @@ export async function loadJobChangeOrders(
   const [{ data: contractRows }, { data: orderRows }, { data: lineRows }, invoices, { data: revisionRows }] = await Promise.all([
     database
       .from("contracts")
-      .select("id, kind, status, created_at, signed_at, total_cents")
+      .select("id, kind, status, created_at, signed_at, signature_sent_at, total_cents")
       .eq("organization_id", organizationId)
       .eq("job_id", jobId),
     database
@@ -338,7 +341,11 @@ export async function loadJobChangeOrders(
     resendsByOrder.set(orderId, list);
   }
 
-  const changeOrders = orders.map((row) => mapOrder(row, resendsByOrder.get(text(row.id)) ?? []));
+  const sentAtOf = new Map(contracts.map((contract) => [text(contract.id), text(contract.signature_sent_at) || null]));
+  const changeOrders = orders.map((row) => ({
+    ...mapOrder(row, resendsByOrder.get(text(row.id)) ?? []),
+    documentSentAt: sentAtOf.get(text(row.document_contract_id)) ?? null,
+  }));
   const lines: JobLineChoice[] = ((lineRows ?? []) as Row[]).map((row) => ({
     id: text(row.id),
     kind: text(row.kind) === "labor" ? "labor" : "material",

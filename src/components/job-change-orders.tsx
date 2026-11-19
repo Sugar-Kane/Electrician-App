@@ -794,7 +794,9 @@ function OrderRow({
         ? `Included in a revised contract · ${dateLabel(order.approvedAt)}`
         : `Approved by ${order.approvedByName || "the customer"} · ${dateLabel(order.approvedAt)}`
       : order.status === "pending_approval"
-        ? `Sent for signature · ${dateLabel(order.requestedAt)}`
+        ? order.documentSentAt
+          ? `Signing link texted · ${dateLabel(order.documentSentAt)}`
+          : "Ready to sign · not sent yet. Send it, or have them sign here, from the contract above."
         : order.status === "rejected"
           ? `Declined · ${dateLabel(order.rejectedAt)}`
           : order.status === "canceled"

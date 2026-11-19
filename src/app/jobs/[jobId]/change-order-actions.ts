@@ -175,12 +175,32 @@ export async function requestChangeOrderApprovalAction(
     expectedVersion,
   });
   if (!requested.ok) return { error: requested.error };
+
+  // Sent the way a contract is: signed for the business, then the signing link
+  // texted to the customer, through the same action the contract card uses
+  // (consent, the STOP ledger and the resend guard included).
+  const form = new FormData();
+  form.set("contractId", requested.contractId);
+  form.set("jobNumber", jobNumber);
+  const { sendSigningLink } = await import("@/app/jobs/[jobId]/contract-actions");
+  const sent = await sendSigningLink({ error: "" }, form);
   refresh(jobNumber);
+
   const revised = requested.revisedCents === null ? "" : ` The contract would then stand at ${formatCents(requested.revisedCents)}.`;
+  if (sent.error) {
+    // The change order is written and waiting; only the text did not go. Said
+    // as an error so the sheet stays open and the reason is read.
+    return {
+      error: `The change order is ready to sign, but the link was not texted: ${sent.error}${
+        sent.needsSignature ? " Add your signature in Settings, then send it from the contract above." : " Send it, or have them sign here, from the contract above."
+      }`,
+      contractId: requested.contractId,
+    };
+  }
   return {
     error: "",
     contractId: requested.contractId,
-    notice: `Ready for the customer to sign.${revised} Send it, or have them sign here, from the contract above.${requested.pdfError ? " The PDF could not be built yet; open it to try again." : ""}`,
+    notice: `${sent.notice ?? "Signing link texted."}${revised}${requested.pdfError ? " The PDF could not be built yet; open it to try again." : ""}`,
   };
 }
 
