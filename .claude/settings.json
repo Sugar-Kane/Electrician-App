@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/never-secret/hooks/run.sh\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
