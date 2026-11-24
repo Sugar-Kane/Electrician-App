@@ -1,0 +1,32 @@
+CSLB license lookup: Pacific Plains Electric
+Date: 2026-11-24
+Result: NOT VERIFIED. The CSLB search needs a form post and loads reCAPTCHA, so the lookup stopped there.
+
+License number printed on the site
+- "CSLB #1162180". It appears on all 40 crawled pages (observations.json, pages[].licenseMentions,
+  run 2026-11-24T23-44-09-923Z). Some pages also say "Verify license #1162180" (English) or
+  "Verificar la licencia #1162180" (Spanish).
+- The crawl recorded no link to a cslb.ca.gov URL in observations.json.
+
+What was tried (plain GET requests only)
+1. GET https://www2.cslb.ca.gov/OnlineServices/CheckLicenseII/CheckLicense.aspx
+   -> HTTP 200. This is the search form: an ASP.NET form (method="post", __VIEWSTATE) with
+   search buttons for license number, business name and personnel name. The page loads
+   https://www.google.com/recaptcha/api.js.
+2. GET https://www2.cslb.ca.gov/OnlineServices/CheckLicenseII/LicenseDetail.aspx?LicNum=1162180
+   -> sent back to CheckLicense.aspx (HTTP 200, the same 37,198-byte search form). No license
+   detail was returned.
+
+Why it stopped
+The audit rules allow only plain GETs: no automated form posts and no getting around a CAPTCHA.
+The search can only be run by posting the form, and the page uses reCAPTCHA, so no automated
+lookup was attempted.
+
+Not observed (still needs checking)
+- License status, classification (e.g. C-10), expiration date, contractor's bond, workers'
+  compensation coverage or exemption, and whether the licensee name matches "Pacific Plains Electric".
+
+Next step
+A person should search license #1162180 by hand at
+https://www2.cslb.ca.gov/OnlineServices/CheckLicenseII/CheckLicense.aspx and record the status,
+classification, expiration, bond and workers' comp details, with a screenshot, as evidence.

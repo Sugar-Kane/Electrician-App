@@ -1,0 +1,7 @@
+{
+  "queried_at": "2026-11-24T23:46:33+00:00",
+  "business": "Pacific Plains Electric",
+  "result": null,
+  "source": "https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/checklicense.aspx",
+  "notes": "NOT LOOKED UP. The official CSLB Check A License page could not be reached from the audit sandbox on 2026-11-24 (www.cslb.ca.gov and cslb.ca.gov were refused by the session network allowlist). A web search for '\"Pacific Plains Electric\" California contractor license' returned no CSLB record under that exact name; it returned only differently named businesses (e.g., 'Pacific Electric and Power Inc', 'Pacific Electric CA Inc', 'Pacific Electric CO', 'Pacific Electric'), which are NOT the tenant and must not be attributed to it. No license number, status, classification, expiration date, bond or workers' compensation status is recorded. Next step: an operator runs the official lookup by business name and by the license number Pacific Plains Electric supplies, and records number, status, classifications, expiration, bond and workers' compensation status with the source URL and date. The legal business name may differ from the trade name 'Pacific Plains Electric'."
+}

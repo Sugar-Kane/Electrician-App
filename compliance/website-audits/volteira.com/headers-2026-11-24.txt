@@ -1,0 +1,19 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/2 200 
+age: 0
+cache-control: private, no-cache, no-store, max-age=0, must-revalidate
+content-security-policy: script-src 'self' 'nonce-Ni2qT+mdtj0aMgFYq8y0Zw==' 'strict-dynamic' 'unsafe-eval' blob: https: 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+content-type: text/html; charset=utf-8
+date: Tue, 24 Nov 2026 23:43:38 GMT
+referrer-policy: strict-origin-when-cross-origin
+server: Vercel
+strict-transport-security: max-age=63072000
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-matched-path: /welcome
+x-powered-by: Next.js
+x-vercel-cache: MISS
+x-vercel-id: iad1::sfo1::4zj4g-1795563818737-04ddf5222e39
+
