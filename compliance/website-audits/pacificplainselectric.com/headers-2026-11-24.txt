@@ -1,0 +1,20 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/2 200 
+age: 0
+cache-control: private, no-cache, no-store, max-age=0, must-revalidate
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
+content-type: text/html; charset=utf-8
+date: Tue, 24 Nov 2026 23:43:39 GMT
+link: </>; rel=preconnect; crossorigin="", </images/switch/switch-on.webp>; rel=preload; as="image", </images/switch/switch-off.webp>; rel=preload; as="image", </images/switch/paddle-on.webp>; rel=preload; as="image", </images/switch/paddle-off.webp>; rel=preload; as="image"
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+server: Vercel
+strict-transport-security: max-age=31536000; includeSubDomains
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-matched-path: /
+x-vercel-cache: MISS
+x-vercel-id: iad1::sfo1::jgmtt-1795563819236-05d00887f4c7
+

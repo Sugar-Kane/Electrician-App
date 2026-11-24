@@ -1,0 +1,677 @@
+{
+  "tool": "volteira compliance run-website-audit",
+  "tool_version": "1.0.0",
+  "axe_version": "4.12.1",
+  "target": "https://www.volteira.com/",
+  "domain": "volteira.com",
+  "mode": "full",
+  "started_at": "2026-11-24T23:43:46.126Z",
+  "redirects": [
+    "https://www.volteira.com/"
+  ],
+  "canonical_origin": "https://www.volteira.com",
+  "robots": {
+    "present": true,
+    "disallow": [
+      "/api/",
+      "/booking/",
+      "/book/",
+      "/invite/",
+      "/auth/",
+      "/login",
+      "/signup"
+    ],
+    "sitemaps": [
+      "https://www.volteira.com/sitemap.xml"
+    ]
+  },
+  "sitemaps": [
+    {
+      "url": "https://www.volteira.com/sitemap.xml",
+      "entries": 1
+    }
+  ],
+  "pages": [
+    {
+      "url": "https://www.volteira.com/",
+      "status": 200,
+      "headers": {
+        "strict-transport-security": "max-age=63072000",
+        "content-security-policy": "script-src 'self' 'nonce-6wsLMzIYqfn5gPHi0wTNjA==' 'strict-dynamic' 'unsafe-eval' blob: https: 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        "content-security-policy-report-only": "",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "",
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "server": "Vercel",
+        "x-powered-by": "Next.js"
+      },
+      "title": "Volteira | Electrical Business Operations",
+      "lang": "en",
+      "metaRobots": "",
+      "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Run the business.\nPower every job."
+        },
+        {
+          "level": 2,
+          "text": "From the first call to paid.\nEvery step in one place."
+        },
+        {
+          "level": 2,
+          "text": "Everything stays connected."
+        },
+        {
+          "level": 2,
+          "text": "See how a job moves through Volteira."
+        },
+        {
+          "level": 2,
+          "text": "Spend less time running the office."
+        }
+      ],
+      "landmarks": {
+        "main": 1,
+        "nav": 5,
+        "header": 1,
+        "footer": 1
+      },
+      "skipLink": true,
+      "imagesMissingAlt": 0,
+      "imageCount": 0,
+      "privacyLinks": [],
+      "termsLinks": [],
+      "accessibilityLinks": [],
+      "doNotSellLinks": [],
+      "cookieLinks": [],
+      "forms": [],
+      "licenseMentions": [],
+      "insuranceClaims": [],
+      "feeMentions": [
+        "rah Martinez 200A panel upgrade · 418 Alder Lane, Sacramento Scheduled Estimate $4,850 Estimate (done) Priced Approval (done) Signed 3 Schedule Tue 8 AM 4 Work 5 Invo",
+        "ice 6 Getting paid Work & materials $4,850.00 Remove old panel, install 200A panel and meter socket 16 hr × $125",
+        "00 $2,000.00 Permit, inspection and utility coordination 4 hr × $125",
+        "00 $500.00 200A main breaker load center 1 each × $640",
+        "00 · from inventory $640.00 + 5 more lines Tuesday · 8:00 AM–4:00 PM Assigned to Jordan Ellis Contract sign",
+        "ed By Sarah Martinez, on her phone Diagnostic fee paid online $180.00, taken off the invoice From the first call to paid",
+        " Volteira texts back, offers a time, and takes the diagnostic fee up front",
+        "equests 3 new today Sarah Martinez Main breaker trips with the dryer and A/C on $180 paid From your website Texted Tue 8–10 AM Marcus Lee EV charger in the garage C",
+        " Here’s the link to pay the $180 diagnostic",
+        " Try the demo JOB #1042 Sarah Martinez WORKING Started 8:06 AM Work & materials $4,850.00 200A main breaker load center 1 each × $640",
+        "00 · from inventory $640.00 200A meter socket 1 each × $310",
+        "00 $310.00 Photos Before After Finish job Spend less time running the office"
+      ],
+      "reviewMentions": [],
+      "subscriptionMentions": [],
+      "hasConsentBanner": false,
+      "mixedContent": [],
+      "thirdPartyScripts": [
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3ca474hg32018.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1ducmyyk5_g9n.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/2h5uxjnczac14.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1vh6c9nnuae39.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/turbopack-3h_ctkfaeun7f.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3qwncth_gfs6c.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1zgkn563r80ai.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1d56g13qeeenc.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1chq7p7vpuqph.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/0c0hxoamwjsbw.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3f3415rgd-2g3.js",
+          "integrity": false
+        }
+      ],
+      "iframes": [],
+      "textSample": "Skip to content VOLTEIRA Demo Sign in Create account FOR ELECTRICAL CONTRACTORS. Run the business. Power every job. Volteira books the customer, prices the job and gets it signed. Then it schedules the work, sends the invoice and keeps every record in one place, built for electrical contractors. Create free account See how it works No credit card required · Try the demo volteira.com / jobs/1042 VOLTEIRA Today Jobs Customers Materials Messages Invoices Ridgeway Electric JOB #1042 · WORK ORDER Sarah Martinez 200A panel upgrade · 418 Alder Lane, Sacramento Scheduled Estimate $4,850 Estimate (done) Priced Approval (done) Signed 3 Schedule Tue 8 AM 4 Work 5 Invoice 6 Getting paid Work & materials $4,850.00 Remove old panel, install 200A panel and meter socket 16 hr × $125.00 $2,000.00 Permit, inspection and utility coordination 4 hr × $125.00 $500.00 200A main breaker load center 1 each × $640.00 · from inventory $640.00 + 5 more lines Tuesday · 8:00 AM–4:00 PM Assigned to Jordan Ellis Contract signed By Sarah Martinez, on her phone Diagnostic fee paid online $180.00, taken off the invoice From the first call to paid. Every step in one place. One path from the request on your website to the money in the bank. 01 BOOK Customers book themselves. Requests from your website and texts land in one place. Volteira texts back, offers a time, and takes the diagnostic fee up front. 02 PRICE Price it from a chat. Describe the job and get the materials list back, priced from Home Depot and Lo",
+      "linkCount": 16,
+      "thirdPartyHosts": [],
+      "axe": {
+        "violations": [
+          {
+            "id": "meta-viewport",
+            "impact": "moderate",
+            "tags": [
+              "wcag2aa",
+              "wcag144"
+            ],
+            "help": "Zooming and scaling must not be disabled",
+            "nodes": 1,
+            "sample": [
+              "meta[name=\"viewport\"]"
+            ]
+          }
+        ],
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "impact": "serious",
+            "tags": [
+              "wcag2aa",
+              "wcag143"
+            ],
+            "help": "Elements must meet minimum color contrast ratio thresholds",
+            "nodes": 6,
+            "sample": [
+              ".max-w-2xl > .tracking-\\[0\\.2em\\].uppercase.font-mono",
+              "#hero-heading",
+              "#hero-heading > .text-ink-muted"
+            ]
+          }
+        ],
+        "passes": 25
+      },
+      "keyboard": {
+        "stepsTaken": 40,
+        "focusedCount": 39,
+        "uniqueFocusTargets": 14,
+        "possibleTrap": false,
+        "withoutVisibleIndicator": [],
+        "smallTargets": [
+          "a:Try the demo 89x17",
+          "a:Try the demo 89x17"
+        ]
+      },
+      "cookies": [],
+      "storage": {
+        "local": [],
+        "session": []
+      },
+      "viewports": [
+        {
+          "viewport": "desktop-1920x1080",
+          "screenshot": "screenshots/desktop-1920x1080.png",
+          "horizontalOverflow": false
+        },
+        {
+          "viewport": "laptop-1440x900",
+          "screenshot": "screenshots/laptop-1440x900.png",
+          "horizontalOverflow": false
+        },
+        {
+          "viewport": "tablet-768x1024",
+          "screenshot": "screenshots/tablet-768x1024.png",
+          "horizontalOverflow": false
+        },
+        {
+          "viewport": "mobile-390x844",
+          "screenshot": "screenshots/mobile-390x844.png",
+          "horizontalOverflow": false
+        }
+      ]
+    },
+    {
+      "url": "https://www.volteira.com/changelog",
+      "status": 200,
+      "headers": {
+        "strict-transport-security": "max-age=63072000",
+        "content-security-policy": "script-src 'self' 'nonce-WnV3yrpy+csO7XoEwJrulA==' 'strict-dynamic' 'unsafe-eval' blob: https: 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        "content-security-policy-report-only": "",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "",
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "server": "Vercel",
+        "x-powered-by": "Next.js"
+      },
+      "title": "What's new | Volteira",
+      "lang": "en",
+      "metaRobots": "",
+      "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      "headings": [
+        {
+          "level": 1,
+          "text": "What’s new in Volteira"
+        },
+        {
+          "level": 2,
+          "text": "Supervised AI automation"
+        },
+        {
+          "level": 3,
+          "text": "AI approval inbox"
+        },
+        {
+          "level": 3,
+          "text": "Decide from ChatGPT"
+        },
+        {
+          "level": 3,
+          "text": "Automatic follow-ups"
+        },
+        {
+          "level": 3,
+          "text": "Approved customer texts go out on their own"
+        },
+        {
+          "level": 3,
+          "text": "Invoice reminders stay accurate"
+        },
+        {
+          "level": 3,
+          "text": "Clearer approval confirmations"
+        },
+        {
+          "level": 3,
+          "text": "What's new"
+        },
+        {
+          "level": 2,
+          "text": "Payments, refunds and delivery tracking"
+        },
+        {
+          "level": 3,
+          "text": "Paid bookings become confirmed jobs"
+        },
+        {
+          "level": 3,
+          "text": "Online payments count in Paid today"
+        },
+        {
+          "level": 3,
+          "text": "Refund diagnostic fees"
+        },
+        {
+          "level": 3,
+          "text": "Service addresses on jobs"
+        },
+        {
+          "level": 3,
+          "text": "Delivery status for contract and refund texts"
+        },
+        {
+          "level": 3,
+          "text": "Materials completes with the work"
+        },
+        {
+          "level": 3,
+          "text": "AI operations (preview)"
+        },
+        {
+          "level": 2,
+          "text": "Volteira"
+        },
+        {
+          "level": 3,
+          "text": "Run the business in one place"
+        }
+      ],
+      "landmarks": {
+        "main": 1,
+        "nav": 2,
+        "header": 1,
+        "footer": 0
+      },
+      "skipLink": true,
+      "imagesMissingAlt": 0,
+      "imageCount": 0,
+      "privacyLinks": [],
+      "termsLinks": [],
+      "accessibilityLinks": [],
+      "doNotSellLinks": [],
+      "cookieLinks": [],
+      "forms": [],
+      "licenseMentions": [],
+      "insuranceClaims": [],
+      "feeMentions": [
+        " FIXED Paid bookings become confirmed jobs A customer who pays the diagnostic fee online now gets a confirmed job on the schedule, a confirmation and a receipt",
+        " IMPROVED Online payments count in Paid today Diagnostic fees paid online show in Paid today and the pay tracker alongside invoice payments",
+        " NEW Refund diagnostic fees Refund a diagnostic fee from the job page"
+      ],
+      "reviewMentions": [
+        "W Decide from ChatGPT ChatGPT can propose actions and list, review, approve or reject proposals (propose_action, list_proposal",
+        " NEW AI operations (preview) A read-only overview of what needs attention and what conn"
+      ],
+      "subscriptionMentions": [],
+      "hasConsentBanner": false,
+      "mixedContent": [],
+      "thirdPartyScripts": [
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3ca474hg32018.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1ducmyyk5_g9n.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/2h5uxjnczac14.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1vh6c9nnuae39.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/turbopack-3h_ctkfaeun7f.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3qwncth_gfs6c.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1zgkn563r80ai.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1d56g13qeeenc.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1chq7p7vpuqph.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/0c0hxoamwjsbw.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3f3415rgd-2g3.js",
+          "integrity": false
+        }
+      ],
+      "iframes": [],
+      "textSample": "Skip to content VOLTEIRA Demo Sign in RELEASE NOTES What’s new in Volteira Every update, newest first. You’re on version v1.2.0. v1.2.0 v1.1.0 v1.0.0 v1.2.0 Nov 15, 2026 Latest Supervised AI automation AI can now suggest work and carry out what you approve: customer texts, notes and follow-ups, each checked and recorded. Nothing reaches a customer or touches money until a person approves the exact wording. NEW AI approval inbox AI operations shows every AI proposal with its exact wording, recipient, amount and history. Approve or reject it there; done, failed and rejected items have their own tabs. NEW Decide from ChatGPT ChatGPT can propose actions and list, review, approve or reject proposals (propose_action, list_proposals, get_proposal, approve_proposal, reject_proposal). Contracts, estimates, purchases, refunds, price changes and cancellations are approved in Volteira only. NEW Automatic follow-ups New website requests, signed contracts and finished jobs with no invoice add a follow-up to the job or customer. Overdue invoices and low stock put a proposal in the inbox. NEW Approved customer texts go out on their own Once approved, a text is sent within seconds, checked first for the customer's texting consent, an unchanged number and quiet hours. Delivery shows in Messages. IMPROVED Invoice reminders stay accurate An approved overdue-invoice reminder is checked against the invoice right before sending. If it has been paid, voided or changed, nothing is sent. IMPROVED Clea",
+      "linkCount": 8,
+      "thirdPartyHosts": [],
+      "axe": {
+        "violations": [
+          {
+            "id": "link-in-text-block",
+            "impact": "serious",
+            "tags": [
+              "wcag2a",
+              "wcag141"
+            ],
+            "help": "Links must be distinguishable without relying on color",
+            "nodes": 1,
+            "sample": [
+              ".mt-14 > a[href=\"/\"]"
+            ]
+          },
+          {
+            "id": "meta-viewport",
+            "impact": "moderate",
+            "tags": [
+              "wcag2aa",
+              "wcag144"
+            ],
+            "help": "Zooming and scaling must not be disabled",
+            "nodes": 1,
+            "sample": [
+              "meta[name=\"viewport\"]"
+            ]
+          }
+        ],
+        "incomplete": [],
+        "passes": 20
+      },
+      "keyboard": {
+        "stepsTaken": 40,
+        "focusedCount": 37,
+        "uniqueFocusTargets": 8,
+        "possibleTrap": false,
+        "withoutVisibleIndicator": [],
+        "smallTargets": [
+          "a:Back to Volteira 103x17",
+          "a:Back to Volteira 103x17",
+          "a:Back to Volteira 103x17",
+          "a:Back to Volteira 103x17"
+        ]
+      },
+      "cookies": [],
+      "storage": {
+        "local": [],
+        "session": []
+      }
+    },
+    {
+      "url": "https://www.volteira.com/demo",
+      "status": 200,
+      "headers": {
+        "strict-transport-security": "max-age=63072000",
+        "content-security-policy": "script-src 'self' 'nonce-wBjDD7EVmFNExxd1AlDCaQ==' 'strict-dynamic' 'unsafe-eval' blob: https: 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        "content-security-policy-report-only": "",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "",
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "server": "Vercel",
+        "x-powered-by": "Next.js"
+      },
+      "title": "Demo | Volteira",
+      "lang": "en",
+      "metaRobots": "",
+      "viewportMeta": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Sarah Martinez"
+        },
+        {
+          "level": 2,
+          "text": "Price the job"
+        },
+        {
+          "level": 3,
+          "text": "Customer request"
+        },
+        {
+          "level": 3,
+          "text": "Work & materials"
+        }
+      ],
+      "landmarks": {
+        "main": 1,
+        "nav": 0,
+        "header": 1,
+        "footer": 0
+      },
+      "skipLink": true,
+      "imagesMissingAlt": 0,
+      "imageCount": 0,
+      "privacyLinks": [],
+      "termsLinks": [],
+      "accessibilityLinks": [],
+      "doNotSellLinks": [],
+      "cookieLinks": [],
+      "forms": [],
+      "licenseMentions": [],
+      "insuranceClaims": [],
+      "feeMentions": [
+        "Sarah Martinez 200A panel upgrade · 418 Alder Lane, Sacramento Pending Estimate $4,850 1 Estimate $4,850 2 Approval To sign 3 Schedule Tue 8 AM 4 Work 5 Invoice 6 Get",
+        " Diagnostic fee of $180.00 paid online when Sarah booked Work & materials $4,850",
+        "00 Remove old panel, install 200A panel and meter socket 16 hr × $125.00 $2,000",
+        "00 Permit, inspection and utility coordination 4 hr × $125.00 $500",
+        "00 200A main breaker load center 1 each × $640.00 · from inventory $640",
+        "00 200A meter socket 1 each × $310.00 $310",
+        "00 Breakers, AFCI and GFCI 14 each × $55.00 · from inventory $770",
+        "00 4/0 SER cable 30 ft × $9.00 $270",
+        "00 Ground rods and clamps 1 set × $160.00 $160",
+        "00 Whole-home surge protector 1 each × $200.00 $200",
+        "00 Labor $2,500.00 Parts $2,350"
+      ],
+      "reviewMentions": [],
+      "subscriptionMentions": [],
+      "hasConsentBanner": false,
+      "mixedContent": [],
+      "thirdPartyScripts": [
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3ca474hg32018.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1ducmyyk5_g9n.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/2h5uxjnczac14.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1vh6c9nnuae39.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/turbopack-3h_ctkfaeun7f.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3qwncth_gfs6c.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1zgkn563r80ai.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/0wdqrihgikusn.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1nmdbbdvgm714.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/1chq7p7vpuqph.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/0c0hxoamwjsbw.js",
+          "integrity": false
+        },
+        {
+          "src": "https://www.volteira.com/_next/static/immutable/chunks/3f3415rgd-2g3.js",
+          "integrity": false
+        }
+      ],
+      "iframes": [],
+      "textSample": "Skip to content Back to Volteira DEMO Create your account A sample job. Nothing here is saved. JOB #1042 · WORK ORDER Sarah Martinez 200A panel upgrade · 418 Alder Lane, Sacramento Pending Estimate $4,850 1 Estimate $4,850 2 Approval To sign 3 Schedule Tue 8 AM 4 Work 5 Invoice 6 Getting paid STEP 1 OF 6 Price the job Sarah booked a diagnostic online and paid for it. Now price the upgrade: these lines carry through to the contract and the invoice. Customer request The original 100A panel is full, and the main breaker trips when the dryer and the air conditioning run together. Diagnostic fee of $180.00 paid online when Sarah booked Work & materials $4,850.00 Remove old panel, install 200A panel and meter socket 16 hr × $125.00 $2,000.00 Permit, inspection and utility coordination 4 hr × $125.00 $500.00 200A main breaker load center 1 each × $640.00 · from inventory $640.00 200A meter socket 1 each × $310.00 $310.00 Breakers, AFCI and GFCI 14 each × $55.00 · from inventory $770.00 4/0 SER cable 30 ft × $9.00 $270.00 Ground rods and clamps 1 set × $160.00 $160.00 Whole-home surge protector 1 each × $200.00 $200.00 Labor $2,500.00 Parts $2,350.00 Add labor Add part Generate contract",
+      "linkCount": 3,
+      "thirdPartyHosts": [],
+      "axe": {
+        "violations": [
+          {
+            "id": "meta-viewport",
+            "impact": "moderate",
+            "tags": [
+              "wcag2aa",
+              "wcag144"
+            ],
+            "help": "Zooming and scaling must not be disabled",
+            "nodes": 1,
+            "sample": [
+              "meta[name=\"viewport\"]"
+            ]
+          }
+        ],
+        "incomplete": [],
+        "passes": 25
+      },
+      "keyboard": {
+        "stepsTaken": 40,
+        "focusedCount": 37,
+        "uniqueFocusTargets": 12,
+        "possibleTrap": false,
+        "withoutVisibleIndicator": [],
+        "smallTargets": []
+      },
+      "cookies": [],
+      "storage": {
+        "local": [],
+        "session": []
+      }
+    }
+  ],
+  "excluded": [
+    {
+      "url": "https://www.volteira.com/login",
+      "reason": "disallowed by robots.txt"
+    },
+    {
+      "url": "https://www.volteira.com/signup",
+      "reason": "disallowed by robots.txt"
+    }
+  ],
+  "tracking": {
+    "fresh": {
+      "thirdPartyHosts": [],
+      "cookies": [],
+      "clicked": ""
+    },
+    "gpc": {
+      "thirdPartyHosts": [],
+      "cookies": [],
+      "clicked": ""
+    },
+    "after_accept": {
+      "thirdPartyHosts": [],
+      "cookies": [],
+      "clicked": ""
+    },
+    "after_reject": {
+      "thirdPartyHosts": [],
+      "cookies": [],
+      "clicked": ""
+    }
+  },
+  "tls": {
+    "protocol": "TLS 1.3",
+    "issuer": "YR1",
+    "validFrom": 1790237668,
+    "validTo": 1798013667,
+    "subjectName": "*.volteira.com"
+  },
+  "browsers": {
+    "chromium": {
+      "loaded": true
+    }
+  },
+  "errors": [],
+  "limitations": [
+    "Outside-in audit of public pages only: no login, no form submission, no payment, no booking.",
+    "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
+    "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
+  ],
+  "http_redirect": {
+    "status": 308,
+    "location": "https://www.volteira.com/"
+  },
+  "third_party_hosts": [],
+  "finished_at": "2026-11-24T23:44:09.719Z"
+}
