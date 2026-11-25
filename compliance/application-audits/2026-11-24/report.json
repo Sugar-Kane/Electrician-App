@@ -7,13 +7,13 @@
   "git_commit": "25d5faedfa5541b4302fb6d303faad3dd89516d8",
   "deployment_id": null,
   "environment": "source review at main 25d5fae + read-only production database catalog queries + locally rendered synthetic documents",
-  "legal_baseline_version": "2026-11-24",
+  "legal_baseline_version": "2026-11-25",
   "skill_version": "volteira-compliance 1.0.0",
   "tool_version": "1.0.0",
   "missing_registers": [],
   "limitations": [
     "Read-only audit: no application code or production data was changed; no real texts, emails, contracts, invoices or payments were sent or made.",
-    "Official legal sources were not reachable from the audit container; requirements whose source is unverified are reported BLUE with the observed result kept as observed_status.",
+    "Official sources were re-read on 2026-11-25 for 277 of 599 requirements (see compliance/legal-history/2026-11-25/verification-report.md). 115 California statute pages on leginfo.legislature.ca.gov were blocked by a Cloudflare challenge; those and other unverified requirements are reported BLUE with the observed result kept as observed_status.",
     "Stripe MCP was not authorized; Stripe behaviour was assessed from code and webhook handling only.",
     "Production environment variable values (MCP_BEARER_TOKEN, MCP_SESSION_SECRET, feature flags) were not read; checks that depend on them are YELLOW or BLUE.",
     "The CSLB license lookup is protected by reCAPTCHA; Pacific Plains' license status needs a manual check.",
@@ -22,97 +22,97 @@
     "Global (~/.claude) installation of the skills was not performed in this ephemeral container; the canonical copies are in the repository.",
     "Findings are evidence for review, not legal advice or a certification."
   ],
-  "generated_at": "2026-11-25T13:44:12.696Z",
+  "generated_at": "2026-11-25T14:19:15.691Z",
   "totals": {
-    "GREEN": 9,
-    "YELLOW": 64,
-    "RED": 38,
+    "GREEN": 14,
+    "YELLOW": 108,
+    "RED": 103,
     "GRAY": 36,
-    "BLUE": 271,
-    "total": 418
+    "BLUE": 158,
+    "total": 419
   },
   "metrics": {
-    "verified_pass_rate": 8.1,
-    "verification_coverage": 29.1,
-    "overall_verified_applicable_compliance": 2.4
+    "verified_pass_rate": 6.2,
+    "verification_coverage": 58.7,
+    "overall_verified_applicable_compliance": 3.7
   },
   "legal_totals": {
-    "GREEN": 0,
-    "YELLOW": 0,
-    "RED": 0,
+    "GREEN": 5,
+    "YELLOW": 44,
+    "RED": 64,
     "GRAY": 33,
-    "BLUE": 236,
-    "total": 269
+    "BLUE": 124,
+    "total": 270
   },
   "legal_metrics": {
-    "verified_pass_rate": null,
-    "verification_coverage": 0,
-    "overall_verified_applicable_compliance": 0
+    "verified_pass_rate": 4.4,
+    "verification_coverage": 47.7,
+    "overall_verified_applicable_compliance": 2.1
   },
   "standards_totals": {
     "GREEN": 9,
     "YELLOW": 64,
-    "RED": 38,
+    "RED": 39,
     "GRAY": 3,
-    "BLUE": 35,
+    "BLUE": 34,
     "total": 149
   },
   "standards_metrics": {
-    "verified_pass_rate": 8.1,
-    "verification_coverage": 76,
+    "verified_pass_rate": 8,
+    "verification_coverage": 76.7,
     "overall_verified_applicable_compliance": 6.2
   },
   "scorecards": [
     {
       "name": "Federal requirements",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "GREEN": 3,
+        "YELLOW": 25,
+        "RED": 14,
         "GRAY": 20,
-        "BLUE": 70,
+        "BLUE": 28,
         "total": 90
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 7.1,
+        "verification_coverage": 60,
+        "overall_verified_applicable_compliance": 4.3
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "California requirements",
       "totals": {
         "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "YELLOW": 2,
+        "RED": 4,
         "GRAY": 11,
-        "BLUE": 87,
+        "BLUE": 81,
         "total": 98
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
+        "verified_pass_rate": 0,
+        "verification_coverage": 6.9,
         "overall_verified_applicable_compliance": 0
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "California contractor requirements",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "GREEN": 2,
+        "YELLOW": 17,
+        "RED": 47,
         "GRAY": 3,
-        "BLUE": 104,
-        "total": 107
+        "BLUE": 39,
+        "total": 108
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 3,
+        "verification_coverage": 62.9,
+        "overall_verified_applicable_compliance": 1.9
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Cybersecurity (recommended controls)",
@@ -135,32 +135,32 @@
       "name": "ADA and accessibility",
       "totals": {
         "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "YELLOW": 1,
+        "RED": 2,
         "GRAY": 1,
-        "BLUE": 9,
+        "BLUE": 6,
         "total": 10
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
+        "verified_pass_rate": 0,
+        "verification_coverage": 33.3,
         "overall_verified_applicable_compliance": 0
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Privacy",
       "totals": {
         "GREEN": 1,
-        "YELLOW": 19,
-        "RED": 11,
+        "YELLOW": 23,
+        "RED": 18,
         "GRAY": 5,
-        "BLUE": 56,
+        "BLUE": 45,
         "total": 92
       },
       "metrics": {
-        "verified_pass_rate": 3.2,
-        "verification_coverage": 35.6,
+        "verified_pass_rate": 2.4,
+        "verification_coverage": 48.3,
         "overall_verified_applicable_compliance": 1.1
       },
       "result": "FAIL"
@@ -169,83 +169,83 @@
       "name": "Customer communications",
       "totals": {
         "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "YELLOW": 7,
+        "RED": 2,
         "GRAY": 12,
-        "BLUE": 24,
+        "BLUE": 15,
         "total": 36
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
+        "verified_pass_rate": 0,
+        "verification_coverage": 37.5,
         "overall_verified_applicable_compliance": 0
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Electronic signatures",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "GREEN": 3,
+        "YELLOW": 8,
+        "RED": 2,
         "GRAY": 0,
-        "BLUE": 21,
+        "BLUE": 8,
         "total": 21
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 23.1,
+        "verification_coverage": 61.9,
+        "overall_verified_applicable_compliance": 14.3
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Contracts",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "GREEN": 2,
+        "YELLOW": 11,
+        "RED": 40,
         "GRAY": 3,
-        "BLUE": 71,
-        "total": 74
+        "BLUE": 19,
+        "total": 75
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 3.8,
+        "verification_coverage": 73.6,
+        "overall_verified_applicable_compliance": 2.8
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Invoices and payments",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "GREEN": 2,
+        "YELLOW": 5,
+        "RED": 9,
         "GRAY": 7,
-        "BLUE": 34,
+        "BLUE": 18,
         "total": 41
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 12.5,
+        "verification_coverage": 47.1,
+        "overall_verified_applicable_compliance": 5.9
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "AI and MCP security",
       "totals": {
         "GREEN": 0,
         "YELLOW": 11,
-        "RED": 7,
+        "RED": 8,
         "GRAY": 1,
-        "BLUE": 5,
+        "BLUE": 4,
         "total": 24
       },
       "metrics": {
         "verified_pass_rate": 0,
-        "verification_coverage": 78.3,
+        "verification_coverage": 82.6,
         "overall_verified_applicable_compliance": 0
       },
       "result": "FAIL"
@@ -259,6 +259,27 @@
     "F-SEC-007-009-APP",
     "F-SEC-007-010-APP",
     "F-SEC-007-013-APP",
+    "F-FED-002-001-APP",
+    "F-FED-002-002-APP",
+    "F-FED-002-005-APP",
+    "F-FED-002-006-APP",
+    "F-FED-004-002-APP",
+    "F-CSLB-001-002-APP",
+    "F-CSLB-002-001-APP",
+    "F-CSLB-003-001-APP",
+    "F-CSLB-003-003-APP",
+    "F-CSLB-003-009-APP",
+    "F-CSLB-003-013-APP",
+    "F-CSLB-003-016-APP",
+    "F-CSLB-003-017-APP",
+    "F-CSLB-003-025-APP",
+    "F-CSLB-006-001-APP",
+    "F-CSLB-007-003-APP",
+    "F-CSLB-007-011-APP",
+    "F-CSLB-008-001-APP",
+    "F-CSLB-004-001-APP",
+    "F-CSLB-004-004-APP",
+    "F-CSLB-005-001-APP",
     "F-SEC-001-002-APP",
     "F-SEC-001-016-APP",
     "F-SEC-002-001-APP",
@@ -285,6 +306,60 @@
     "F-SEC-007-016-APP",
     "F-SEC-007-017-APP",
     "F-SEC-007-019-APP",
+    "F-FED-010-003-APP",
+    "F-FED-002-003-APP",
+    "F-FED-003-001-APP",
+    "F-FED-003-002-APP",
+    "F-FED-004-001-APP",
+    "F-FED-008-001-APP",
+    "F-FED-008-007-APP",
+    "F-FED-011-002-APP",
+    "F-FED-011-003-APP",
+    "F-FED-011-004-APP",
+    "F-CA-001-002-APP",
+    "F-CA-001-004-APP",
+    "F-CA-001-005-APP",
+    "F-CA-001-015-APP",
+    "F-CA-007-005-APP",
+    "F-FED-001-002-APP",
+    "F-FED-001-003-APP",
+    "F-FED-001-008-APP",
+    "F-FED-001-010-APP",
+    "F-FED-001-011-APP",
+    "F-CSLB-001-003-APP",
+    "F-CSLB-001-005-APP",
+    "F-CSLB-002-002-APP",
+    "F-CSLB-002-003-APP",
+    "F-CSLB-002-004-APP",
+    "F-CSLB-003-002-APP",
+    "F-CSLB-003-004-APP",
+    "F-CSLB-003-005-APP",
+    "F-CSLB-003-006-APP",
+    "F-CSLB-003-007-APP",
+    "F-CSLB-003-008-APP",
+    "F-CSLB-003-010-APP",
+    "F-CSLB-003-011-APP",
+    "F-CSLB-003-012-APP",
+    "F-CSLB-003-015-APP",
+    "F-CSLB-003-018-APP",
+    "F-CSLB-003-019-APP",
+    "F-CSLB-003-021-APP",
+    "F-CSLB-003-022-APP",
+    "F-CSLB-003-023-APP",
+    "F-CSLB-003-024-APP",
+    "F-CSLB-003-026-APP",
+    "F-CSLB-006-002-APP",
+    "F-CSLB-006-004-APP",
+    "F-CSLB-008-006-APP",
+    "F-CSLB-009-001-APP",
+    "F-CSLB-009-002-APP",
+    "F-CSLB-012-006-APP",
+    "F-CSLB-003-032-APP",
+    "F-FED-006-002-APP",
+    "F-FED-007-008-APP",
+    "F-CSLB-004-002-APP",
+    "F-CSLB-005-002-APP",
+    "F-CSLB-005-004-APP",
     "F-SEC-001-001-APP",
     "F-SEC-001-005-APP",
     "F-SEC-001-008-APP",
@@ -1323,7 +1398,7 @@
       "requirement_id": "FED-010-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "responsible_party": "Volteira platform",
@@ -1369,9 +1444,7 @@
       "test_result": "passed",
       "remediation": "Route MCP customer messages through supervised proposals with approver logging (SEC-007-009); store approved_by on messages; apply quiet hours on all AI sends; consider disclosing at the start of AI calls that the caller is speaking with an automated assistant (required in some states).",
       "priority": "P0",
-      "legal_review_required": false,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-010-004-APP",
@@ -1447,7 +1520,7 @@
       "requirement_id": "FED-002-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
@@ -1492,16 +1565,14 @@
       "test_result": "passed",
       "remediation": "Make sendSms refuse when there is no opted-in row (or the read fails) for this organization+customer, except for an explicitly enumerated, counsel-approved exempt category; record a consent row (source, wording version, captured_by) at every capture point including phone booking and owner entry, and show the customer the disclosure (or send a one-time confirmation text) when consent is inferred from a number given to the business. Add a test that a customer with no consent row is not texted.",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-002-002-APP",
       "requirement_id": "FED-002-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
@@ -1530,16 +1601,14 @@
       "test_result": "not-run",
       "remediation": "Tag every outbound message with a purpose (transactional vs marketing); refuse marketing-tagged sends without a 'marketing' scope opt-in that carries written-consent evidence; add owner guidance and an AI-side classifier that holds promotional free-form texts for review.",
       "priority": "P2",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-002-003-APP",
       "requirement_id": "FED-002-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
@@ -1570,9 +1639,7 @@
       "test_result": "passed",
       "remediation": "Store the callback consent (form wording, time, source) in messaging_consent with channel 'voice' or an equivalent ledger and refuse placeCall without it; publish required form wording for tenant websites.",
       "priority": "P2",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-002-004-APP",
@@ -1618,7 +1685,7 @@
       "requirement_id": "FED-002-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
@@ -1648,16 +1715,14 @@
       "test_result": "not-run",
       "remediation": "Add 'revoke', 'optout'/'opt out' and other synonyms; detect free-text revocation intent before the AI intake and treat it as an opt-out; upsert (not update) the opt-out row so a STOP lands with no prior row; add staff/voice/email 'customer asked to stop' actions that write the ledger; restrict UPDATE/DELETE of opted_out_at to the service role or a START-only function; add tests for each keyword and the no-row case.",
       "priority": "P0",
-      "legal_review_required": false,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-002-006-APP",
       "requirement_id": "FED-002-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
@@ -1693,9 +1758,7 @@
       "test_result": "passed",
       "remediation": "Upsert the opt-out row; fail closed when consent cannot be read; add an integration test from inbound STOP to a refused send.",
       "priority": "P1",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-002-007-APP",
@@ -1838,7 +1901,7 @@
       "requirement_id": "FED-002-011",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
@@ -1881,16 +1944,14 @@
       "test_result": "passed",
       "remediation": "Evaluate quiet hours in the recipient's timezone (from service address or area code) inside sendSms for all non-urgent automated texts, including MCP send_text.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-002-012-APP",
       "requirement_id": "FED-002-012",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
@@ -1926,9 +1987,7 @@
       "test_result": "passed",
       "remediation": "Add a test asserting the voicemail starts with the business name and contains the business number.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-002-013-APP",
@@ -2087,7 +2146,7 @@
       "requirement_id": "FED-003-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants",
@@ -2111,16 +2170,14 @@
       "test_result": "not-run",
       "remediation": "Add a purpose tag to sendEmail; for free-form owner/AI emails, either refuse promotional content or treat as commercial (unsubscribe, postal address, ad identification).",
       "priority": "P2",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-003-002-APP",
       "requirement_id": "FED-003-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants, Messaging provider",
@@ -2155,9 +2212,7 @@
       "test_result": "passed",
       "remediation": "Capture Resend domain verification and DNS SPF/DKIM/DMARC records as evidence.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-003-003-APP",
@@ -2366,7 +2421,7 @@
       "requirement_id": "FED-004-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "responsible_party": "Shadam LLC, Volteira platform, Pacific Plains Electric, Contractor tenants, Website operator",
@@ -2397,16 +2452,14 @@
       "test_result": "not-run",
       "remediation": "Rewrite the policy to describe every consent path and every vendor category actually used, or change the code to match the policy; add an automated check that the policy's vendor list matches the configured integrations.",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-004-002-APP",
       "requirement_id": "FED-004-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Volteira platform, Volteira as service provider",
@@ -2451,9 +2504,7 @@
       "test_result": "passed",
       "remediation": "Close MT-03 with two-tenant authenticated tests; enforce MFA (aal2) for owners and platform admins; write an incident response plan (FED-011-006).",
       "priority": "P1",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-004-003-APP",
@@ -2583,7 +2634,7 @@
       "requirement_id": "FED-005-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
@@ -2606,16 +2657,14 @@
       "test_result": "not-run",
       "remediation": "Add explicit relay-call handling (never classify as robocall, transfer or continue patiently) and test it.",
       "priority": "P2",
-      "legal_review_required": true,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-005-003-APP",
       "requirement_id": "FED-005-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
@@ -2637,9 +2686,7 @@
       "test_result": "not-run",
       "remediation": "Publish an accessibility statement with a contact method on Volteira and tenant pages.",
       "priority": "P2",
-      "legal_review_required": false,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-005-004-APP",
@@ -2703,7 +2750,7 @@
       "requirement_id": "FED-008-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider, Shadam LLC",
@@ -2726,9 +2773,7 @@
       "test_result": "not-run",
       "remediation": "Add a system-prompt rule to every assistant refusing to compose reviews/testimonials for a customer or employee, and a test.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-008-002-APP",
@@ -2880,7 +2925,7 @@
       "requirement_id": "FED-008-007",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Volteira platform, Pacific Plains Electric, Contractor tenants",
@@ -2903,16 +2948,14 @@
       "test_result": "not-run",
       "remediation": "Warn on or refuse contract templates containing non-disparagement/review-penalty language; keep any future Volteira terms free of them.",
       "priority": "P3",
-      "legal_review_required": true,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-008-008-APP",
       "requirement_id": "FED-008-008",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
@@ -2933,16 +2976,14 @@
       "test_result": "not-run",
       "remediation": "Verify on the rendered booking and pay pages that total charges are shown before payment.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-008-009-APP",
       "requirement_id": "FED-008-009",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
@@ -2964,16 +3005,14 @@
       "test_result": "not-run",
       "remediation": "State next to 'free' what is free and when charges would begin; require notice before any conversion to paid.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-FED-011-001-APP",
       "requirement_id": "FED-011-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "low",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
@@ -2994,16 +3033,14 @@
       "test_result": "not-run",
       "remediation": "Add an adults-only statement to the policies and terms.",
       "priority": "P3",
-      "legal_review_required": true,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-011-002-APP",
       "requirement_id": "FED-011-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
@@ -3026,16 +3063,14 @@
       "test_result": "not-run",
       "remediation": "Get counsel's determination; add an 'sold at the residence' flag that inserts the cancellation statement and Notice of Cancellation and holds work/payment until the period ends.",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-011-003-APP",
       "requirement_id": "FED-011-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
@@ -3065,16 +3100,14 @@
       "test_result": "passed",
       "remediation": "Insert the prescribed statement on in-home sales (FED-011-002) and test its presence and placement.",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-011-004-APP",
       "requirement_id": "FED-011-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
@@ -3096,9 +3129,7 @@
       "test_result": "not-run",
       "remediation": "Generate a completed Notice of Cancellation with the transaction date and deadline, prompt the technician to give oral notice, and track cancellation refunds against the 10-business-day deadline.",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-FED-011-005-APP",
@@ -3193,7 +3224,7 @@
       "requirement_id": "CA-001-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Volteira as service provider",
@@ -3217,9 +3248,7 @@
       "test_result": "not-run",
       "remediation": "Write the data-flow role map and commit Volteira to service-provider-only processing.",
       "priority": "P2",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-CA-001-003-APP",
@@ -3255,7 +3284,7 @@
       "requirement_id": "CA-001-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Volteira as service provider, Contractor tenants",
@@ -3277,16 +3306,14 @@
       "test_result": "not-run",
       "remediation": "Draft tenant terms with a CCPA service-provider addendum and require acceptance at signup.",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-CA-001-005-APP",
       "requirement_id": "CA-001-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Volteira as service provider, Third-party vendor, Payment processor, Messaging provider",
@@ -3307,9 +3334,7 @@
       "test_result": "not-run",
       "remediation": "Publish a subprocessor list and file each vendor's DPA (including AI no-training terms).",
       "priority": "P1",
-      "legal_review_required": true,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": true
     },
     {
       "finding_id": "F-CA-001-006-APP",
@@ -3782,7 +3807,7 @@
       "requirement_id": "CA-001-015",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
@@ -3804,9 +3829,7 @@
       "test_result": "not-run",
       "remediation": "Capture a network observation of public pages; tighten script-src to known origins.",
       "priority": "P3",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-CA-001-016-APP",
@@ -3842,7 +3865,7 @@
       "requirement_id": "CA-001-019",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
@@ -3863,9 +3886,7 @@
       "test_result": "not-run",
       "remediation": "Offer the customer an explicit choice on every consent path; separate contact consent from the fee agreement.",
       "priority": "P2",
-      "legal_review_required": false,
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-CA-001-023-APP",
@@ -5108,7 +5129,7 @@
       "requirement_id": "CA-007-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "responsible_party": "Volteira platform, Website operator, Contractor tenants",
@@ -5131,9 +5152,7 @@
       "test_result": "not-run",
       "remediation": "Publish an accessibility statement with a contact and triage SLA; add axe checks and a manual audit.",
       "priority": "P2",
-      "legal_review_required": false,
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "legal_review_required": false
     },
     {
       "finding_id": "F-CA-011-001-APP",
@@ -5199,7 +5218,7 @@
       "requirement_id": "FED-001-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "high",
       "expected": "Signature executed with intent, bound to the exact version signed, with signer identity, timestamp, IP/user agent and accepted consent version recorded.",
@@ -5241,16 +5260,14 @@
       "test_ids": [
         "src/lib/contract-signing.test.ts"
       ],
-      "test_result": "passed",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-FED-001-002-APP",
       "requirement_id": "FED-001-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "high",
       "expected": "Unchecked consent checkbox the consumer must tick; consent event stored with disclosure version and timestamp; withdrawn consent honored.",
@@ -5275,16 +5292,14 @@
       "remediation": "Create an esign_consents record (customer, organization, version, timestamp, IP/UA, scope, withdrawn_at) written in the same transaction as the signature; check withdrawn_at before sending any e-record.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-003-APP",
       "requirement_id": "FED-001-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "expected": "Before consent, clearly and conspicuously disclose the right to paper, the right to withdraw, and consequences/fees of withdrawal.",
@@ -5311,16 +5326,14 @@
       "test_ids": [
         "src/lib/esign-consent.test.ts:6"
       ],
-      "test_result": "passed",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-FED-001-004-APP",
       "requirement_id": "FED-001-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "GREEN",
       "severity": "medium",
       "confidence": "high",
       "expected": "State whether consent covers only this transaction or identified categories of records.",
@@ -5346,16 +5359,14 @@
       "test_ids": [
         "src/lib/esign-consent.test.ts:6"
       ],
-      "test_result": "passed",
-      "observed_status": "GREEN",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: GREEN)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-FED-001-005-APP",
       "requirement_id": "FED-001-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "Describe withdrawal and contact-update procedures and provide a working mechanism that records withdrawal so later records go on paper.",
@@ -5380,16 +5391,14 @@
       "remediation": "Add an e-records withdrawal flag on the customer (settable by staff and from the customer's link), block electronic sending of contracts/change orders/notices when set, and log the event.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-006-APP",
       "requirement_id": "FED-001-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "GREEN",
       "severity": "medium",
       "confidence": "high",
       "expected": "Tell the consumer how to get a paper copy after consenting and whether a fee applies.",
@@ -5411,16 +5420,14 @@
       "test_ids": [
         "src/lib/esign-consent.test.ts:6"
       ],
-      "test_result": "passed",
-      "observed_status": "GREEN",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: GREEN)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-FED-001-007-APP",
       "requirement_id": "FED-001-007",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "GREEN",
       "severity": "medium",
       "confidence": "high",
       "expected": "Statement of hardware/software requirements before consent.",
@@ -5442,16 +5449,14 @@
       "test_ids": [
         "src/lib/esign-consent.test.ts:6"
       ],
-      "test_result": "passed",
-      "observed_status": "GREEN",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: GREEN)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-FED-001-008-APP",
       "requirement_id": "FED-001-008",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "expected": "Consent given electronically in a way that reasonably demonstrates ability to access records in the form used (web page + PDF).",
@@ -5469,16 +5474,14 @@
       "remediation": "Have the consent step link to the PDF and record that it was opened (or ask the consumer to confirm they can open it) before the checkbox enables.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-009-APP",
       "requirement_id": "FED-001-009",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "low",
       "confidence": "medium",
       "expected": "On a material change to hardware/software requirements, give the revised statement and fee-free withdrawal, and re-obtain consent.",
@@ -5497,16 +5500,14 @@
       "remediation": "Store the consent version with each consent; on a version bump, require re-consent before the next electronic record is sent.",
       "priority": "P3",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-010-APP",
       "requirement_id": "FED-001-010",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Signed records retained accurately, accessible and protected from alteration for the full retention period.",
@@ -5542,16 +5543,14 @@
       "remediation": "Add a BEFORE DELETE trigger on contracts refusing rows with signed_at (and their documents) unless a retention-expiry/legal-approved path is used; extend keep_signed_contract_figures to payment_schedule; snapshot the letterhead/customer/job blocks into the contract at signing and render signed copies only from that snapshot; refuse rebuildContractPdf for signed contracts (or render the frozen copy); make the signed PDF document row immutable.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-011-APP",
       "requirement_id": "FED-001-011",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "expected": "Required contracts/notices delivered in a form the recipient can save and print.",
@@ -5577,16 +5576,14 @@
       "remediation": "Persist the delivery result (channel, time, message id) on the contract; surface 'copy not delivered' to the business with a hand-over/print fallback.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-012-APP",
       "requirement_id": "FED-001-012",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "low",
       "expected": "Voice/phone conversations never treated as delivery of disclosures required in writing.",
@@ -5604,16 +5601,14 @@
       "remediation": "Add an explicit rule in the voice/assistant tools that required notices (contracts, cancellation rights, deposit terms) are always followed by a written record, and document it.",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-FED-001-013-APP",
       "requirement_id": "FED-001-013",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "low",
       "expected": "Block or flag e-signature/delivery for ESIGN-excluded document types; assess California UETA too.",
@@ -5632,9 +5627,7 @@
       "remediation": "Document the electronic-record inventory against 15 USC 7003 and Civ. Code 1633.3 and add a guard if new document types are added (e.g., cancellation or lien notices).",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CA-005-001-APP",
@@ -5927,7 +5920,7 @@
       "requirement_id": "CSLB-001-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "A license lapse mid-job is surfaced so the tenant does not keep invoicing/collecting unknowingly.",
@@ -5947,16 +5940,14 @@
       "remediation": "Store CSLB status/expiry with verification date; show a blocking banner and require acknowledgement before invoices/pay links when status is not Active or verification is stale.",
       "priority": "P1",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-001-003-APP",
       "requirement_id": "CSLB-001-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Tenant classifications recorded; warn when job scope falls outside them.",
@@ -5975,16 +5966,14 @@
       "remediation": "Add classifications (from the CSLB lookup) to the organization license record and warn when a job's work type is outside C-10 or other held classes.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-001-004-APP",
       "requirement_id": "CSLB-001-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "C-7-only tenants cannot generate line-voltage contracts.",
@@ -6003,16 +5992,14 @@
       "remediation": "Same classification record as CSLB-001-003 with a C-7 scope warning.",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-001-005-APP",
       "requirement_id": "CSLB-001-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "expected": "Business name on contracts, estimates, change orders, invoices and booking pages exactly matches the license record (DBA only if listed).",
@@ -6039,9 +6026,7 @@
       "remediation": "Store the license-record legal name/DBA from verification and print that on contracts; warn when organizations.name differs.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-001-006-APP",
@@ -6111,11 +6096,11 @@
       "requirement_id": "CSLB-001-008",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "low",
       "confidence": "medium",
       "expected": "Volteira does not support unlicensed tenants for California work regardless of job size.",
-      "actual": "Nothing requires a license number before generating or sending contracts, so an unlicensed tenant can operate as if under the minor-work exemption without the required disclosure.",
+      "actual": "Nothing requires a license number before generating or sending contracts, so an unlicensed tenant could issue contracts. B&P 7048's minor-work exemption (under $1,000, no permit, not advertised as a contractor) would not cover a tenant that advertises through Volteira booking pages. Re-graded from RED after source verification showed B&P 7048 contains no disclosure duty.",
       "affected_files": [
         "src/app/jobs/[jobId]/contract-actions.ts:190",
         "src/app/settings/business/actions.ts:81"
@@ -6132,15 +6117,14 @@
       "priority": "P3",
       "legal_review_required": true,
       "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "status_reason": "Re-graded 2026-11-25: the 'required disclosure' basis was not in B&P 7048; the licensing gap itself remains."
     },
     {
       "finding_id": "F-CSLB-002-001-APP",
       "requirement_id": "CSLB-002-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "Each job/contract classified (home improvement, service and repair, commercial, new construction, subcontract); residential work defaults to home improvement and uses the 7159 template.",
@@ -6168,16 +6152,14 @@
       "remediation": "Add contract_type (and property/customer type) to jobs/contracts, default residential to home_improvement, and select a type-specific locked template.",
       "priority": "P0",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-002-002-APP",
       "requirement_id": "CSLB-002-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Distinct rule sets per type (7159 regime, 7159.10-14 service-and-repair, commercial/new-construction, subcontract); commercial template never used for residential work.",
@@ -6197,16 +6179,14 @@
       "remediation": "Implement per-type templates and rules keyed on the classification from CSLB-002-001.",
       "priority": "P1",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-002-003-APP",
       "requirement_id": "CSLB-002-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Service-and-repair template offered only when price <= $750, customer-initiated and other conditions met; otherwise 7159 contract.",
@@ -6226,16 +6206,14 @@
       "remediation": "Add a service-and-repair template with eligibility checks (price, customer-initiated flag) and automatic conversion to the 7159 template when a condition fails.",
       "priority": "P1",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-002-004-APP",
       "requirement_id": "CSLB-002-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "low",
       "expected": "One service charge only; service charge disclosed in ads and its amount when customer calls; replaced parts offered.",
@@ -6252,9 +6230,7 @@
       "remediation": "Add 'service charge applies' to all booking/advert surfaces, a replaced-parts offer checkbox on service-and-repair completion, and a single-service-charge rule.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-002-005-APP",
@@ -6314,7 +6290,7 @@
       "requirement_id": "CSLB-002-007",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Commercial/new-construction template still shows license number and business name.",
@@ -6335,9 +6311,7 @@
       "remediation": "Add commercial and new-construction templates; require the license number on every contract type.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-002-008-APP",
@@ -6409,7 +6383,7 @@
       "requirement_id": "CSLB-003-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "medium",
       "expected": "Contract and changes signed by both parties before work; app does not let a home-improvement job be marked started until fully signed.",
@@ -6435,16 +6409,14 @@
       "remediation": "Block the in-progress/started transition (and crew dispatch) for home-improvement jobs without a contract signed by both parties.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-002-APP",
       "requirement_id": "CSLB-003-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Body text at least 10pt and headings at least 10pt bold on the printed page; fonts embedded.",
@@ -6468,16 +6440,14 @@
       "remediation": "Render headings as explicit structured elements (not a text heuristic) at >=10pt bold; raise section labels to >=10pt; render statutory notices from a fixed component with their own sizes; remove the stray Helvetica.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-003-APP",
       "requirement_id": "CSLB-003-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "medium",
       "expected": "Signed and dated copy delivered to buyer before work starts; delivery recorded.",
@@ -6502,16 +6472,14 @@
       "remediation": "Store delivered_at/channel on the contract and require it before a home-improvement job can start.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-004-APP",
       "requirement_id": "CSLB-003-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Page 1 shows buyer's signing date and the contractor's cancellation mailing address preceded by the statutory lead-in.",
@@ -6533,16 +6501,14 @@
       "remediation": "Add a page-1 block (body type size) with buyer signing date (stamped at signing) and the cancellation address with the statutory lead-in.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-005-APP",
       "requirement_id": "CSLB-003-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Statement that a full unconditional lien release will be furnished after each satisfactory payment.",
@@ -6562,16 +6528,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-006-APP",
       "requirement_id": "CSLB-003-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "A change-order form incorporated into the contract.",
@@ -6592,19 +6556,17 @@
       "remediation": "Attach a blank change-order form (or the statutory incorporation language plus form) to every home-improvement contract.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-007-APP",
       "requirement_id": "CSLB-003-007",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
-      "expected": "Near the signatures, a 10pt bold / all-caps notice of the owner's right to require a performance and payment bond.",
+      "expected": "In close proximity to the signatures, a notice that the owner or tenant may require a performance and payment bond (B&P 7159(c)(6); no type-size rule).",
       "actual": "Missing; the signature block text is only 'By signing below both parties agree to the work and the price set out above.' (not shown once signed).",
       "affected_files": [
         "src/lib/contract-layout.ts:94",
@@ -6622,19 +6584,17 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Place the bond notice immediately above the signature lines.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-008-APP",
       "requirement_id": "CSLB-003-008",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
-      "severity": "medium",
+      "status": "RED",
+      "severity": "high",
       "confidence": "high",
-      "expected": "Required 7159(d) items in statutory order.",
+      "expected": "The contract includes or complies with all items listed in B&P 7159(d) (no ordering rule).",
       "actual": "Rendered order is WORK AGREEMENT, SCOPE OF WORK, PRICE, PAYMENT, ACCESS AND CONDITIONS, PAYMENT SCHEDULE (appended at the end when the template has no {{payment_terms}}), signatures; most required items are absent.",
       "affected_files": [
         "src/lib/contract-template.ts:193",
@@ -6649,19 +6609,17 @@
           "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
         }
       ],
-      "remediation": "Generate the 7159(d) sequence from a structured template in statutory order.",
+      "remediation": "Generate the 7159(d) items from a structured, locked template so none can be omitted.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-009-APP",
       "requirement_id": "CSLB-003-009",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "medium",
       "expected": "Contractor name, business address and license number, from the verified license record.",
@@ -6689,16 +6647,14 @@
       "remediation": "Source name/address/license from the verified record (CSLB-001-006) and refuse to generate when any is missing.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-010-APP",
       "requirement_id": "CSLB-003-010",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Name and HIS registration number of the salesperson who solicited/negotiated, if applicable.",
@@ -6717,16 +6673,14 @@
       "remediation": "Capture the selling user per job and HIS number per user; print when the seller is not the qualifier/owner.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-011-APP",
       "requirement_id": "CSLB-003-011",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "10pt bold heading 'Home Improvement' identifying the contract type.",
@@ -6747,16 +6701,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-012-APP",
       "requirement_id": "CSLB-003-012",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "12pt bold 'completely filled in copy' statement; refuse issuance while required fields are blank.",
@@ -6787,16 +6739,14 @@
       "test_ids": [
         "src/lib/contract-signing.test.ts:106"
       ],
-      "test_result": "passed",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-CSLB-003-013-APP",
       "requirement_id": "CSLB-003-013",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "Heading 'Contract Price' followed by the amount in dollars and cents from integer cents.",
@@ -6826,16 +6776,14 @@
       "test_ids": [
         "src/lib/contract-template.test.ts"
       ],
-      "test_result": "passed",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-CSLB-003-014-APP",
       "requirement_id": "CSLB-003-014",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "low",
       "expected": "If a finance charge applies, a 'Finance Charge' heading with amount set out separately.",
@@ -6852,16 +6800,14 @@
       "remediation": "Legal review of whether admin/card fees are finance charges; add the heading when applicable.",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-015-APP",
       "requirement_id": "CSLB-003-015",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Heading 'Description of the Project and Description of the Significant Materials to be Used and Equipment to be Installed' with scope and significant materials/equipment; empty scope blocks issuance.",
@@ -6883,16 +6829,14 @@
       "remediation": "Use the statutory heading and print significant materials/equipment (make/model/amperage) from job lines under it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-016-APP",
       "requirement_id": "CSLB-003-016",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "'Downpayment' heading, the amount, and 12pt bold 'THE DOWNPAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.'",
@@ -6924,16 +6868,14 @@
       "test_ids": [
         "src/lib/payment-plan.test.ts:14"
       ],
-      "test_result": "passed",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-CSLB-003-017-APP",
       "requirement_id": "CSLB-003-017",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "'Schedule of Progress Payments' heading; each payment in dollars and cents tied to specific work/materials; 12pt bold 'Do not pay ahead of the work...' statement.",
@@ -6963,16 +6905,14 @@
       "test_ids": [
         "src/lib/payment-plan.test.ts:143"
       ],
-      "test_result": "passed",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-CSLB-003-018-APP",
       "requirement_id": "CSLB-003-018",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Statement of what constitutes substantial commencement; 'Approximate Start Date' heading and date.",
@@ -6993,16 +6933,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Require an approximate start date.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-019-APP",
       "requirement_id": "CSLB-003-019",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "'Approximate Completion Date' heading and date.",
@@ -7023,16 +6961,14 @@
       "remediation": "Add a required approximate completion date and heading.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-020-APP",
       "requirement_id": "CSLB-003-020",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "If applicable, 'List of Documents to be Incorporated into the Contract' naming attachments.",
@@ -7052,16 +6988,14 @@
       "remediation": "Add the heading and a list built from documents the tenant marks as incorporated.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-021-APP",
       "requirement_id": "CSLB-003-021",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "'Note about Extra Work and Change Orders' heading and statutory statement.",
@@ -7082,16 +7016,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-022-APP",
       "requirement_id": "CSLB-003-022",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "'Commercial General Liability Insurance (CGL)' notice with the correct statement from stored tenant data; never defaults to 'carries insurance'.",
@@ -7118,16 +7050,14 @@
       "remediation": "Store CGL status/insurer/phone per tenant and render the matching statutory statement.",
       "priority": "P1",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-023-APP",
       "requirement_id": "CSLB-003-023",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "'Workers' Compensation Insurance' notice matching the CSLB record.",
@@ -7154,16 +7084,14 @@
       "remediation": "Store WC status from verification and render the matching statement.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-024-APP",
       "requirement_id": "CSLB-003-024",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Notice of buyer's rights regarding extra/change-order work.",
@@ -7183,16 +7111,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-025-APP",
       "requirement_id": "CSLB-003-025",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "'Mechanics Lien Warning' heading and full statutory text verbatim.",
@@ -7213,16 +7139,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P0",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-026-APP",
       "requirement_id": "CSLB-003-026",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "12pt 'Information about the Contractors State License Board (CSLB)' notice.",
@@ -7242,16 +7166,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P1",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-027-APP",
       "requirement_id": "CSLB-003-027",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "low",
       "expected": "Record reasons for schedule changes; any statutory delay statement confirmed by counsel.",
@@ -7268,9 +7190,7 @@
       "remediation": "Capture a reason when an approximate start/completion date changes; legal confirmation of any required statement.",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-028-APP",
@@ -7341,7 +7261,7 @@
       "requirement_id": "CSLB-003-030",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Arbitration clause, if any, titled 'ARBITRATION OF DISPUTES', 10pt bold, with statutory legend and separate buyer initials.",
@@ -7362,9 +7282,7 @@
       "remediation": "Detect arbitration language in tenant templates and refuse it unless rendered via a compliant arbitration component with separate initials.",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-003-031-APP",
@@ -7401,7 +7319,7 @@
       "requirement_id": "CSLB-006-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "medium",
       "expected": "Change order in writing and signed before work; no start or invoicing of change-order work until both parties sign.",
@@ -7432,16 +7350,14 @@
         "src/lib/change-order-apply.test.ts",
         "src/lib/change-order-math.test.ts"
       ],
-      "test_result": "passed",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-CSLB-006-002-APP",
       "requirement_id": "CSLB-006-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Each change order states scope, amount added/subtracted in dollars and cents, and the effect on progress payments and/or completion date.",
@@ -7465,9 +7381,7 @@
       "remediation": "Add a required 'Effect on schedule of payments and completion date' section computed from the recalculated plan.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-006-003-APP",
@@ -7500,7 +7414,7 @@
       "requirement_id": "CSLB-006-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "low",
       "expected": "After a priced change order, the revised schedule still satisfies the down-payment cap and no-payment-ahead rule.",
@@ -7524,16 +7438,14 @@
         "src/lib/payment-plan.test.ts:14",
         "src/lib/payment-plan.test.ts:122"
       ],
-      "test_result": "passed",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "passed"
     },
     {
       "finding_id": "F-CSLB-006-005-APP",
       "requirement_id": "CSLB-006-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "A change order pushing a service-and-repair contract above $750 forces re-documentation under 7159.",
@@ -7552,9 +7464,7 @@
       "remediation": "Implement with CSLB-002-003.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-007-001-APP",
@@ -7629,7 +7539,7 @@
       "requirement_id": "CSLB-007-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "'Three-Day Right to Cancel' notice verbatim in 12pt bold near the owner's signature, acknowledged by signature/date.",
@@ -7650,9 +7560,7 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P0",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-007-004-APP",
@@ -7829,7 +7737,7 @@
       "requirement_id": "CSLB-007-010",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Seven-Day Right to Cancel for disaster-related repair contracts where applicable.",
@@ -7848,16 +7756,14 @@
       "remediation": "Add a disaster-repair flag that switches to the seven-day notice after legal confirmation.",
       "priority": "P3",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-007-011-APP",
       "requirement_id": "CSLB-007-011",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "Right to Cancel notice and forms included in every home-improvement contract unless place-of-business negotiation recorded; tenant cannot remove them by editing.",
@@ -7879,16 +7785,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P0",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-007-012-APP",
       "requirement_id": "CSLB-007-012",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Federal Cooling-Off Rule notice/form for covered home sales, not conflicting with California's.",
@@ -7908,16 +7812,14 @@
       "remediation": "Use a combined notice satisfying both 16 CFR 429 and Civ. 1689.7 after legal review.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-008-001-APP",
       "requirement_id": "CSLB-008-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "Full statutory Mechanics Lien Warning in every home-improvement contract.",
@@ -7937,9 +7839,7 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P0",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-008-002-APP",
@@ -8030,7 +7930,7 @@
       "requirement_id": "CSLB-008-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Lien release statement in home-improvement contracts.",
@@ -8050,16 +7950,14 @@
       "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-009-001-APP",
       "requirement_id": "CSLB-009-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "expected": "License number on estimates, contracts, change orders, websites, booking pages and marketing messages.",
@@ -8080,16 +7978,14 @@
       "remediation": "Make license number mandatory and render it on estimates, booking pages, website footer and marketing templates; add a check that every outbound template includes it.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-009-002-APP",
       "requirement_id": "CSLB-009-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "medium",
       "expected": "No public booking/website page published for a tenant whose license is not verified.",
@@ -8108,16 +8004,14 @@
       "remediation": "Gate public booking/website publication on a current verification.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-009-003-APP",
       "requirement_id": "CSLB-009-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "low",
       "expected": "'Licensed, bonded and insured' claims derived from verified data.",
@@ -8134,16 +8028,14 @@
       "remediation": "Block or require verification before AI/marketing text claims licensed/bonded/insured.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-009-004-APP",
       "requirement_id": "CSLB-009-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "low",
       "expected": "Advertisements disclose that a service charge applies; amount given when the customer calls.",
@@ -8160,9 +8052,7 @@
       "remediation": "Add explicit 'a service charge applies' wording to all advertising surfaces and the voice script.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-009-005-APP",
@@ -8199,7 +8089,7 @@
       "requirement_id": "CSLB-009-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Advertised business name matches license.",
@@ -8225,9 +8115,7 @@
       "remediation": "See CSLB-001-005.",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-010-001-APP",
@@ -8313,7 +8201,7 @@
       "requirement_id": "CSLB-010-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "Tenants can record HIS registration for selling users; warning when an unregistered sales user is attributed as salesperson.",
@@ -8332,9 +8220,7 @@
       "remediation": "Add HIS number per member and salesperson per job with a warning when missing.",
       "priority": "P2",
       "legal_review_required": true,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-010-006-APP",
@@ -8547,7 +8433,7 @@
       "requirement_id": "CSLB-012-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "CGL statement matches current insurance; re-confirmation prompted at expiry.",
@@ -8573,16 +8459,14 @@
       "remediation": "Store CGL policy/expiry and prompt re-confirmation (see CSLB-003-022).",
       "priority": "P2",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-012-006-APP",
       "requirement_id": "CSLB-012-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Executed contracts, change orders, notices, audit trails, invoices, payments, refunds retained >= 5 years after completion and producible.",
@@ -8603,9 +8487,7 @@
       "remediation": "Add a retention policy: refuse deletion of signed contracts, change orders and payment records within five years of job completion (DB trigger), and route data-removal requests through a retention check.",
       "priority": "P1",
       "legal_review_required": false,
-      "test_result": "not-applicable",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "test_result": "not-applicable"
     },
     {
       "finding_id": "F-CSLB-012-007-APP",
@@ -8703,11 +8585,39 @@
       "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
     },
     {
+      "finding_id": "F-CSLB-003-032-APP",
+      "requirement_id": "CSLB-003-032",
+      "audit_id": "APP-2026-11-24",
+      "target": "Volteira application",
+      "status": "RED",
+      "severity": "high",
+      "confidence": "high",
+      "expected": "Contract and change orders carry the 7159(c)(7) subcontractor-use Yes/No checkbox and disclaimer.",
+      "actual": "Not present: the default template and the rendered synthetic contract (evidence/contracts-default-contract-synthetic.txt) contain no subcontractor-use checkbox or disclaimer, and change orders carry none.",
+      "affected_files": [
+        "src/lib/contract-layout.ts:94",
+        "src/lib/contract-template.ts:193"
+      ],
+      "evidence": [
+        {
+          "type": "rendered-document",
+          "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+          "collected_at": "2026-11-25",
+          "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+          "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+        }
+      ],
+      "remediation": "Add the 7159(c)(7) checkbox and disclaimer to the locked California home-improvement statutory block and to change orders, wording verbatim after legal sign-off.",
+      "priority": "P1",
+      "legal_review_required": false,
+      "test_result": "not-applicable"
+    },
+    {
       "finding_id": "F-FED-006-001-APP",
       "requirement_id": "FED-006-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Invoices, payments, refunds, Stripe fees, deposits and expenses are retained and exportable as complete transaction records.",
@@ -8740,16 +8650,14 @@
         "src/lib/csv.test.ts"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-FED-006-002-APP",
       "requirement_id": "FED-006-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Financial records are not auto-deleted or deletable before the applicable IRS period; retention is documented and export is offered before deletion.",
@@ -8779,9 +8687,7 @@
       "priority": "P1",
       "legal_review_required": false,
       "test_result": "not-applicable",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-FED-006-003-APP",
@@ -8865,7 +8771,7 @@
       "requirement_id": "FED-006-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "low",
       "confidence": "medium",
       "expected": "Tenants recording large cash payments are prompted about Form 8300 (recommended control).",
@@ -8895,9 +8801,7 @@
         "src/lib/invoice-payment.test.ts::paid in hand is refused when it would record money wrongly"
       ],
       "test_result": "passed",
-      "responsible_party": "Contractor tenants",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "responsible_party": "Contractor tenants"
     },
     {
       "finding_id": "F-FED-007-001-APP",
@@ -9142,7 +9046,7 @@
       "requirement_id": "FED-007-008",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Installment plans are capped at four installments with no finance charge, or TILA closed-end disclosures are given; tenants crossing TILA triggers are flagged.",
@@ -9180,9 +9084,7 @@
         "src/lib/payment-plan.test.ts::payments always add up to the total exactly, rounding included"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-FED-007-009-APP",
@@ -9348,7 +9250,7 @@
       "requirement_id": "FED-009-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "Before Stripe Checkout for the subscription, show price, billing frequency, automatic renewal, trial terms and how to cancel.",
@@ -9383,16 +9285,14 @@
       "priority": "P1",
       "legal_review_required": true,
       "test_result": "not-applicable",
-      "responsible_party": "Shadam LLC",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Shadam LLC"
     },
     {
       "finding_id": "F-FED-009-002-APP",
       "requirement_id": "FED-009-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "high",
       "expected": "An affirmative, specific consent to the recurring charge is captured and stored with the terms version.",
@@ -9414,16 +9314,14 @@
       "priority": "P1",
       "legal_review_required": false,
       "test_result": "not-applicable",
-      "responsible_party": "Shadam LLC",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Shadam LLC"
     },
     {
       "finding_id": "F-FED-009-003-APP",
       "requirement_id": "FED-009-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Cancellation at least as easy as signup; billing stops promptly.",
@@ -9452,9 +9350,7 @@
       "priority": "P2",
       "legal_review_required": false,
       "test_result": "not-applicable",
-      "responsible_party": "Shadam LLC",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "responsible_party": "Shadam LLC"
     },
     {
       "finding_id": "F-FED-009-004-APP",
@@ -10228,7 +10124,7 @@
       "requirement_id": "CSLB-004-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "critical",
       "confidence": "high",
       "expected": "Deposit capped at min($1,000, 10% of contract price) in integer cents; any deposit above the cap rejected however entered; pre-contract money counts.",
@@ -10263,16 +10159,14 @@
         "src/lib/payment-plan.test.ts::a percentage deposit is of the contract total, and the balance is the rest"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-004-002-APP",
       "requirement_id": "CSLB-004-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "high",
       "expected": "Money collected before the contract (booking deposit, diagnostic fee credited to the job) counts toward the down-payment cap.",
@@ -10305,16 +10199,14 @@
         "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-004-003-APP",
       "requirement_id": "CSLB-004-003",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "GREEN",
       "severity": "medium",
       "confidence": "medium",
       "expected": "The cap is never lifted for a tenant unless an approved bond/joint control is recorded and confirmed.",
@@ -10343,16 +10235,14 @@
         "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "GREEN",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: GREEN)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-004-004-APP",
       "requirement_id": "CSLB-004-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "Except the down payment, no payment is requested or accepted beyond work performed or materials delivered; no pay links or auto-charges for phases not completed.",
@@ -10394,16 +10284,14 @@
         "src/lib/payment-plan.test.ts::only a payment the customer signed for is asked for automatically"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-004-005-APP",
       "requirement_id": "CSLB-004-005",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "GREEN",
       "severity": "high",
       "confidence": "high",
       "expected": "Contract price, down payment and every progress payment stated in dollars and cents; integer cents; parts sum to the price exactly.",
@@ -10429,16 +10317,14 @@
         "src/lib/payment-plan.test.ts::the contract says each payment in plain words"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "GREEN",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: GREEN)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-004-006-APP",
       "requirement_id": "CSLB-004-006",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "medium",
       "confidence": "medium",
       "expected": "Until legal review decides, no additional up-front payment is requested on change orders beyond the original cap.",
@@ -10463,16 +10349,14 @@
         "src/lib/change-order-math.test.ts::only approved change orders move the contract total"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-005-001-APP",
       "requirement_id": "CSLB-005-001",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "critical",
       "confidence": "high",
       "expected": "Each progress payment requested corresponds to work performed/materials delivered; phase must be marked complete before an installment is issued or charged.",
@@ -10505,16 +10389,14 @@
         "src/lib/payment-plan.test.ts::what is due now: what has come due, less what was paid, never negative"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-005-002-APP",
       "requirement_id": "CSLB-005-002",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "expected": "Progress-payment invoices identify the contract, the schedule phase and amount matching the signed schedule.",
@@ -10541,9 +10423,7 @@
         "src/lib/payment-plan.test.ts::the contract says each payment in plain words"
       ],
       "test_result": "passed",
-      "responsible_party": "Volteira platform",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-005-003-APP",
@@ -10592,7 +10472,7 @@
       "requirement_id": "CSLB-005-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "BLUE",
+      "status": "RED",
       "severity": "high",
       "confidence": "medium",
       "expected": "Generate the statutory unconditional waiver and release on progress payment (Civ 8134) after funds are received, on request.",
@@ -10610,9 +10490,7 @@
       "priority": "P2",
       "legal_review_required": true,
       "test_result": "not-applicable",
-      "responsible_party": "Volteira platform",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "responsible_party": "Volteira platform"
     },
     {
       "finding_id": "F-CSLB-005-005-APP",

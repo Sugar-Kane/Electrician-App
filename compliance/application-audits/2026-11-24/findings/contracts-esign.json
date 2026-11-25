@@ -862,11 +862,11 @@
     "requirement_id": "CSLB-001-008",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "low",
     "confidence": "medium",
     "expected": "Volteira does not support unlicensed tenants for California work regardless of job size.",
-    "actual": "Nothing requires a license number before generating or sending contracts, so an unlicensed tenant can operate as if under the minor-work exemption without the required disclosure.",
+    "actual": "Nothing requires a license number before generating or sending contracts, so an unlicensed tenant could issue contracts. B&P 7048's minor-work exemption (under $1,000, no permit, not advertised as a contractor) would not cover a tenant that advertises through Volteira booking pages. Re-graded from RED after source verification showed B&P 7048 contains no disclosure duty.",
     "affected_files": [
       "src/app/jobs/[jobId]/contract-actions.ts:190",
       "src/app/settings/business/actions.ts:81"
@@ -882,7 +882,8 @@
     "remediation": "Require a verified license for California tenants before contracts can be generated (shared with CSLB-001-007).",
     "priority": "P3",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "not-applicable",
+    "status_reason": "Re-graded 2026-11-25: the 'required disclosure' basis was not in B&P 7048; the licensing gap itself remains."
   },
   {
     "finding_id": "F-CSLB-002-001-APP",
@@ -1325,7 +1326,7 @@
     "status": "RED",
     "severity": "high",
     "confidence": "high",
-    "expected": "Near the signatures, a 10pt bold / all-caps notice of the owner's right to require a performance and payment bond.",
+    "expected": "In close proximity to the signatures, a notice that the owner or tenant may require a performance and payment bond (B&P 7159(c)(6); no type-size rule).",
     "actual": "Missing; the signature block text is only 'By signing below both parties agree to the work and the price set out above.' (not shown once signed).",
     "affected_files": [
       "src/lib/contract-layout.ts:94",
@@ -1351,9 +1352,9 @@
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
     "status": "RED",
-    "severity": "medium",
+    "severity": "high",
     "confidence": "high",
-    "expected": "Required 7159(d) items in statutory order.",
+    "expected": "The contract includes or complies with all items listed in B&P 7159(d) (no ordering rule).",
     "actual": "Rendered order is WORK AGREEMENT, SCOPE OF WORK, PRICE, PAYMENT, ACCESS AND CONDITIONS, PAYMENT SCHEDULE (appended at the end when the template has no {{payment_terms}}), signatures; most required items are absent.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
@@ -1368,7 +1369,7 @@
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
       }
     ],
-    "remediation": "Generate the 7159(d) sequence from a structured template in statutory order.",
+    "remediation": "Generate the 7159(d) items from a structured, locked template so none can be omitted.",
     "priority": "P2",
     "legal_review_required": false,
     "test_result": "not-applicable"
@@ -3301,6 +3302,34 @@
       }
     ],
     "remediation": "Freeze payment_schedule; snapshot all printed data at signing; store the signed PDF hash and make that document row immutable; refuse re-render/delete of signed contracts.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-032-APP",
+    "requirement_id": "CSLB-003-032",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Contract and change orders carry the 7159(c)(7) subcontractor-use Yes/No checkbox and disclaimer.",
+    "actual": "Not present: the default template and the rendered synthetic contract (evidence/contracts-default-contract-synthetic.txt) contain no subcontractor-use checkbox or disclaimer, and change orders carry none.",
+    "affected_files": [
+      "src/lib/contract-layout.ts:94",
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add the 7159(c)(7) checkbox and disclaimer to the locked California home-improvement statutory block and to change orders, wording verbatim after legal sign-off.",
     "priority": "P1",
     "legal_review_required": false,
     "test_result": "not-applicable"

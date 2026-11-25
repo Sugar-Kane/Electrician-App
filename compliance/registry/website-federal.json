@@ -1727,8 +1727,8 @@
       "requirement_type": "regulatory",
       "citation": "12 CFR 1026.24(a)-(c)",
       "official_source_url": "https://www.ecfr.gov/current/title-12/section-1026.24",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site advertises closed-end consumer credit for personal/household purposes (e.g., 'Finance your panel upgrade for $99/month', 'as low as X% APR', partner financing such as Hearth/GreenSky/Synchrony)."
@@ -1746,8 +1746,8 @@
         "Third-party vendor"
       ],
       "required_behavior": [
-        "Any rate of finance charge is stated as an 'annual percentage rate' (APR), with any simple/periodic rate not more conspicuous than the APR; 'same as cash'/'0%' promotions state required conditions.",
-        "Advertised terms are terms that the creditor actually arranges or will arrange."
+        "Any rate of finance charge in an advertisement is stated as an 'annual percentage rate' (APR); a simple annual or periodic rate, if stated, is not more conspicuous than the APR (12 CFR 1026.24(c)).",
+        "Advertised specific credit terms are terms that actually are or will be arranged or offered by the creditor (12 CFR 1026.24(a))."
       ],
       "verification_methods": [
         "browser-assisted",
@@ -1766,7 +1766,7 @@
       "related_ids": [
         "WEB-FED-032"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. Read 12 CFR 1026.24 via the eCFR API. APR wording and conspicuousness are in (c); 'actually available terms' is in (a), so the citation now reads (a)-(c). The clause about 'same as cash'/'0%' promotions stating required conditions has no counterpart in 1026.24 (closed-end), so the requirement as written isn't fully supported."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. Read 12 CFR 1026.24 via the eCFR API. APR wording and conspicuousness are in (c); 'actually available terms' is in (a), so the citation now reads (a)-(c). The clause about 'same as cash'/'0%' promotions stating required conditions has no counterpart in 1026.24 (closed-end), so the requirement as written isn't fully supported. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
     }
   ]
 }

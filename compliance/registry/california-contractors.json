@@ -370,8 +370,8 @@
       "requirement_type": "legal-interpretation-required",
       "citation": "Cal. Bus. & Prof. Code § 7048",
       "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7048.",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "amendment_notes": "Threshold amount not verified; confirm whether AB 2622 (2024) amended this section.",
       "applicability": {
         "criteria": [
@@ -389,8 +389,8 @@
         "Contractor tenants"
       ],
       "required_behavior": [
-        "The minor work exemption applies only where the aggregate contract price for labor, materials and all other items is below the statutory threshold, the work does not require a building permit, and the contractor discloses it is not licensed (verify current threshold; historically $500, reportedly raised by 2024 legislation to $1,000 effective 2025 - unverified).",
-        "Volteira does not support unlicensed tenants for California work regardless of job size; the exemption is noted only to avoid misclassification."
+        "The minor work exemption applies only where the aggregate contract price for labor, materials and all other items is less than $1,000 and the work does not require a building permit; it is not available to a person who advertises or holds themselves out as a contractor or who employs others to perform the work.",
+        "Volteira does not support unlicensed tenants for California work regardless of job size; the exemption is noted only to avoid misclassification. (Any duty to disclose unlicensed status is outside B&P 7048, e.g. B&P 7027.2, and is not asserted here.)"
       ],
       "verification_methods": [
         "legal-review"
@@ -404,7 +404,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. B&P 7048 read: the current threshold is $1,000 (aggregate) for work not requiring a building permit, and the exemption does not apply to a person who advertises as a contractor or employs others. The text contains no requirement that the contractor 'disclose it is not licensed' (that duty appears elsewhere, e.g., B&P 7027.2, which was not checked), so the requirement as written isn't fully supported. Read in the CSLB 2026 Law Book on cslb.ca.gov."
+      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. B&P 7048 read: the current threshold is $1,000 (aggregate) for work not requiring a building permit, and the exemption does not apply to a person who advertises as a contractor or employs others. The text contains no requirement that the contractor 'disclose it is not licensed' (that duty appears elsewhere, e.g., B&P 7027.2, which was not checked), so the requirement as written isn't fully supported. Read in the CSLB 2026 Law Book on cslb.ca.gov. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
     },
     {
       "id": "CSLB-002-001",
@@ -1092,7 +1092,8 @@
       ],
       "required_behavior": [
         "The contract shall contain on the first page, in a typeface no smaller than that generally used in the body of the document: (A) the date the buyer signed the contract; and (B) the name and address of the contractor to which the buyer's notice of cancellation shall be mailed, immediately preceded by a statement advising the buyer that the Notice of Cancellation may be sent to the contractor at the address noted on the contract (verify exact wording).",
-        "For e-signed contracts, the buyer's signature date must be stamped onto page 1 of the final PDF."
+        "For e-signed contracts, the buyer's signature date must be stamped onto page 1 of the final PDF.",
+        "As amended by AB 1327 (effective 2026-01-01), the Notice of Cancellation information also includes the contractor's email address and a telephone number the buyer can call for help completing the notice (B&P 7159(c)(3)(B))."
       ],
       "enforcement_exposure": "Failure to provide the specified information, notices and disclosures, or to otherwise comply with § 7159, is cause for discipline (B&P 7159); certain violations are misdemeanors (verify penalty provisions in § 7159 / § 7159.5).",
       "verification_methods": [
@@ -1111,7 +1112,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: CORRECTED. Confirmed in B&P 7159(c)(3)(B). GAP: the current text also requires the contractor's EMAIL ADDRESS for the Notice of Cancellation (with the lead-in statement mentioning address or email) and, in (iii), the TELEPHONE NUMBER of the contractor or representative to help the buyer fill out the notice. required_behavior should be updated to include both. Read in the CSLB 'California Contractors License Law & Reference Book' (2026 Edition), an official State of California publication on cslb.ca.gov. URL changed from https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159. (leginfo is not readable from this session) to the Law Book PDF read."
+      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: CORRECTED. Confirmed in B&P 7159(c)(3)(B). GAP: the current text also requires the contractor's EMAIL ADDRESS for the Notice of Cancellation (with the lead-in statement mentioning address or email) and, in (iii), the TELEPHONE NUMBER of the contractor or representative to help the buyer fill out the notice. required_behavior should be updated to include both. Read in the CSLB 'California Contractors License Law & Reference Book' (2026 Edition), an official State of California publication on cslb.ca.gov. URL changed from https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159. (leginfo is not readable from this session) to the Law Book PDF read. Updated 2026-11-25: email address and telephone number added per the source verification pass."
     },
     {
       "id": "CSLB-003-005",
@@ -1245,8 +1246,8 @@
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code § 7159(c)(6)",
       "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159.",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Home improvement contract (B&P 7151.2) between a contractor and an owner or tenant",
@@ -1273,7 +1274,7 @@
         "Contractor tenants"
       ],
       "required_behavior": [
-        "The contract shall contain, in close proximity to the signatures of the owner and contractor, a notice in at least 10-point boldface type or in all capital letters stating that the owner has the right to require the contractor to have a performance and payment bond and that the expense of the bond may be borne by the owner (verify exact wording and placement)."
+        "The contract shall contain, in close proximity to the signatures of the owner and contractor, a notice stating that the owner or tenant has the right to require the contractor to have a performance and payment bond (B&P 7159(c)(6)). No particular type size or capitalization is required by this paragraph."
       ],
       "enforcement_exposure": "Failure to provide the specified information, notices and disclosures, or to otherwise comply with § 7159, is cause for discipline (B&P 7159); certain violations are misdemeanors (verify penalty provisions in § 7159 / § 7159.5).",
       "verification_methods": [
@@ -1292,7 +1293,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. The bond-notice duty is in B&P 7159(c)(6) (citation narrowed), but the current text only requires a notice 'in close proximity to the signatures' that the owner or tenant may require a performance and payment bond. It contains NO '10-point boldface or all capital letters' requirement, so the requirement as written isn't supported. Also note the related new 7159(c)(7) subcontractor-use checkbox and disclaimer, which no register item covers. Read in the CSLB 2026 Law Book on cslb.ca.gov."
+      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. The bond-notice duty is in B&P 7159(c)(6) (citation narrowed), but the current text only requires a notice 'in close proximity to the signatures' that the owner or tenant may require a performance and payment bond. It contains NO '10-point boldface or all capital letters' requirement, so the requirement as written isn't supported. Also note the related new 7159(c)(7) subcontractor-use checkbox and disclaimer, which no register item covers. Read in the CSLB 2026 Law Book on cslb.ca.gov. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
     },
     {
       "id": "CSLB-003-008",
@@ -1303,8 +1304,8 @@
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code § 7159(d)",
       "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159.",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Home improvement contract (B&P 7151.2) between a contractor and an owner or tenant",
@@ -1331,8 +1332,7 @@
         "Contractor tenants"
       ],
       "required_behavior": [
-        "The contract shall contain the items listed in § 7159(d) in the order set forth (verify that the 'in the order set forth' requirement remains in current text).",
-        "Volteira's template must keep the order: contractor identity; salesperson; 'Home Improvement' heading; completely-filled-in copy statement; Contract Price; Finance Charge; Description; Downpayment; Schedule of Progress Payments; commencement / Approximate Start Date; Approximate Completion Date; List of Documents; Note about Extra Work and Change Orders."
+        "The contract shall include or comply with all of the items listed in B&P 7159(d) (the statute does not require them in a particular order)."
       ],
       "enforcement_exposure": "Failure to provide the specified information, notices and disclosures, or to otherwise comply with § 7159, is cause for discipline (B&P 7159); certain violations are misdemeanors (verify penalty provisions in § 7159 / § 7159.5).",
       "verification_methods": [
@@ -1354,7 +1354,7 @@
       "related_ids": [
         "CSLB-003-009"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. B&P 7159(d) read: it requires the contract to 'include or comply with all of the following' but contains no 'in the order set forth' requirement. The ordering requirement is not supported by the current text. Read in the CSLB 2026 Law Book on cslb.ca.gov."
+      "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. B&P 7159(d) read: it requires the contract to 'include or comply with all of the following' but contains no 'in the order set forth' requirement. The ordering requirement is not supported by the current text. Read in the CSLB 2026 Law Book on cslb.ca.gov. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
     },
     {
       "id": "CSLB-003-009",
@@ -2759,6 +2759,64 @@
         "CSLB-007-008"
       ],
       "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
+    },
+    {
+      "id": "CSLB-003-032",
+      "title": "Subcontractor-use disclosure checkbox (B&P 7159(c)(7))",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Home improvement contract content (B&P 7159)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code § 7159(c)(7)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159.",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Home improvement contract (B&P 7151.2) between a contractor and an owner or tenant",
+          "Aggregate contract price for labor, materials and other items exceeds $500 (B&P 7159 applicability; verify)"
+        ],
+        "business_types": [
+          "Licensed contractor (C-10 electrical; C-7 low voltage where held)"
+        ],
+        "transaction_types": [
+          "Home improvement contract generated and e-signed in Volteira"
+        ],
+        "thresholds": [
+          "Aggregate contract price > $500 (verify current threshold in B&P 7159(a))"
+        ],
+        "exceptions": [
+          "Service and repair contracts meeting B&P 7159.10 (see CSLB-002-003)",
+          "Commercial, new-construction (non-home-improvement) and subcontracts with another contractor",
+          "Contractors with a registrar-approved blanket performance and payment bond for certain 7159.5 provisions (verify)"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira platform",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "The home improvement contract includes the Yes/No checkbox stating whether the contractor will use subcontractors, with the statutory disclaimer, and the same disclosure is repeated on change orders, as worded in B&P 7159(c)(7) in the CSLB 2026 Law Book."
+      ],
+      "enforcement_exposure": "Failure to provide the specified information, notices and disclosures, or to otherwise comply with § 7159, is cause for discipline (B&P 7159); certain violations are misdemeanors (verify penalty provisions in § 7159 / § 7159.5).",
+      "verification_methods": [
+        "code-review",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "Generated home improvement contract PDF (in-home and remote signing variants)",
+        "Contract template source in the codebase",
+        "Official text of B&P 7159 as of verification date"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "notes": "Added 2026-11-25 from the source verification pass (CSLB 2026 Law Book on cslb.ca.gov). Exact wording to be copied verbatim after legal sign-off."
     },
     {
       "id": "CSLB-004-001",

@@ -23,63 +23,63 @@
     "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
     "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
   ],
-  "generated_at": "2026-11-24T23:52:17.465Z",
+  "generated_at": "2026-11-25T14:19:08.079Z",
   "totals": {
-    "GREEN": 10,
-    "YELLOW": 2,
-    "RED": 0,
+    "GREEN": 21,
+    "YELLOW": 3,
+    "RED": 5,
     "GRAY": 4,
-    "BLUE": 164,
+    "BLUE": 147,
     "total": 180
   },
   "metrics": {
-    "verified_pass_rate": 83.3,
-    "verification_coverage": 6.8,
-    "overall_verified_applicable_compliance": 5.7
+    "verified_pass_rate": 72.4,
+    "verification_coverage": 16.5,
+    "overall_verified_applicable_compliance": 11.9
   },
   "legal_totals": {
-    "GREEN": 0,
+    "GREEN": 4,
     "YELLOW": 0,
-    "RED": 0,
+    "RED": 5,
     "GRAY": 4,
-    "BLUE": 84,
+    "BLUE": 75,
     "total": 88
   },
   "legal_metrics": {
-    "verified_pass_rate": null,
-    "verification_coverage": 0,
-    "overall_verified_applicable_compliance": 0
+    "verified_pass_rate": 44.4,
+    "verification_coverage": 10.7,
+    "overall_verified_applicable_compliance": 4.8
   },
   "standards_totals": {
-    "GREEN": 10,
-    "YELLOW": 2,
+    "GREEN": 17,
+    "YELLOW": 3,
     "RED": 0,
     "GRAY": 0,
-    "BLUE": 80,
+    "BLUE": 72,
     "total": 92
   },
   "standards_metrics": {
-    "verified_pass_rate": 83.3,
-    "verification_coverage": 13,
-    "overall_verified_applicable_compliance": 10.9
+    "verified_pass_rate": 85,
+    "verification_coverage": 21.7,
+    "overall_verified_applicable_compliance": 18.5
   },
   "scorecards": [
     {
       "name": "Federal website requirements",
       "totals": {
-        "GREEN": 0,
+        "GREEN": 1,
         "YELLOW": 0,
-        "RED": 0,
+        "RED": 5,
         "GRAY": 3,
-        "BLUE": 30,
+        "BLUE": 24,
         "total": 33
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 16.7,
+        "verification_coverage": 20,
+        "overall_verified_applicable_compliance": 3.3
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "California website requirements",
@@ -101,36 +101,36 @@
     {
       "name": "California contractor website requirements",
       "totals": {
-        "GREEN": 0,
+        "GREEN": 4,
         "YELLOW": 0,
         "RED": 0,
         "GRAY": 0,
-        "BLUE": 21,
+        "BLUE": 17,
         "total": 21
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 100,
+        "verification_coverage": 19,
+        "overall_verified_applicable_compliance": 19
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "CONDITIONAL PASS"
     },
     {
       "name": "Accessibility (WCAG 2.2 A/AA)",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
+        "GREEN": 6,
+        "YELLOW": 1,
         "RED": 0,
         "GRAY": 0,
-        "BLUE": 55,
+        "BLUE": 48,
         "total": 55
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 85.7,
+        "verification_coverage": 12.7,
+        "overall_verified_applicable_compliance": 10.9
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "CONDITIONAL PASS"
     },
     {
       "name": "Privacy and tracking",
@@ -154,17 +154,17 @@
       "totals": {
         "GREEN": 0,
         "YELLOW": 0,
-        "RED": 0,
+        "RED": 5,
         "GRAY": 0,
-        "BLUE": 15,
+        "BLUE": 10,
         "total": 15
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
+        "verified_pass_rate": 0,
+        "verification_coverage": 33.3,
         "overall_verified_applicable_compliance": 0
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Cybersecurity baseline (audit policy, not law)",
@@ -184,9 +184,15 @@
       "result": "CONDITIONAL PASS"
     }
   ],
-  "website_result": "CONDITIONAL PASS",
-  "critical_findings": [],
+  "website_result": "FAIL",
+  "critical_findings": [
+    "F-WEB-FED-008-PACIFICPLAINSELECTRI",
+    "F-WEB-FED-009-PACIFICPLAINSELECTRI",
+    "F-WEB-FED-010-PACIFICPLAINSELECTRI",
+    "F-WEB-FED-013-PACIFICPLAINSELECTRI"
+  ],
   "high_findings": [
+    "F-WEB-FED-011-PACIFICPLAINSELECTRI",
     "F-WEB-SEC-006-PACIFICPLAINSELECTRI",
     "F-WEB-SEC-007-PACIFICPLAINSELECTRI"
   ],
@@ -327,8 +333,7 @@
       "responsible_party": "Website operator",
       "expected": "Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alternative format. Offer an equivalent non-web way to request a quote/booking/payment (e.g., staffed phone line) with comparable hours and pricing.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "accessibility page linked",
       "affected_pages": [],
@@ -391,7 +396,7 @@
       "responsible_party": "Website operator, Messaging provider",
       "expected": "Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Pacific Plains Electric' / 'Volteira') to send marketing text messages/calls using automated technology to the number provided. Disclosure is legible (size/contrast), visible without scrolling away from the control, and written in plain language. Marketing consent is separate from consent for transactional/informational messages.",
       "legal_review_required": true,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "0/2 phone form(s) show STOP and rates wording near the field",
       "affected_pages": [
@@ -410,9 +415,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Pacific Plains Electric' / 'Volteira') to send marketing text messages/calls using automated technology to the number provided.",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P1"
     },
     {
       "finding_id": "F-WEB-FED-009-PACIFICPLAINSELECTRI",
@@ -423,7 +426,7 @@
       "responsible_party": "Website operator",
       "expected": "Disclosure states that consent to marketing messages is not required to purchase goods or services. The quote/booking/checkout form can be submitted with the marketing-consent control left unselected (the form actually works without consent).",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "0/2 phone form(s) show STOP and rates wording near the field",
       "affected_pages": [
@@ -442,9 +445,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Disclosure states that consent to marketing messages is not required to purchase goods or services.",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P1"
     },
     {
       "finding_id": "F-WEB-FED-010-PACIFICPLAINSELECTRI",
@@ -455,7 +456,7 @@
       "responsible_party": "Website operator, Messaging provider",
       "expected": "Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled into 'I agree to the Terms' are not used. The consent record (phone number, disclosure text/version, timestamp, page URL, IP/user agent, method) is stored and retrievable.",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "0/2 phone form(s) show STOP and rates wording near the field",
       "affected_pages": [
@@ -474,9 +475,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled into 'I agree to the Terms' are not used.",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P1"
     },
     {
       "finding_id": "F-WEB-FED-011-PACIFICPLAINSELECTRI",
@@ -487,7 +486,7 @@
       "responsible_party": "Website operator, Messaging provider",
       "expected": "Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoices) so consent is knowing and within scope. Informational consent is not used to send marketing content; mixed-content messages are treated as marketing.",
       "legal_review_required": true,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "0/2 phone form(s) show STOP and rates wording near the field",
       "affected_pages": [
@@ -506,9 +505,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoices) so consent is knowing and within scope.",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P1"
     },
     {
       "finding_id": "F-WEB-FED-012-PACIFICPLAINSELECTRI",
@@ -551,7 +548,7 @@
       "responsible_party": "Website operator, Messaging provider",
       "expected": "Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method. Revocation requests received by text reply (STOP, quit, end, revoke, opt out, cancel, unsubscribe), web form, email or phone are honored within 10 business days; at most one confirmation text without marketing content is sent.",
       "legal_review_required": true,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "0/2 phone form(s) show STOP and rates wording near the field",
       "affected_pages": [
@@ -570,9 +567,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method.",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P1"
     },
     {
       "finding_id": "F-WEB-FED-014-PACIFICPLAINSELECTRI",
@@ -947,7 +942,7 @@
       "target": "pacificplainselectric.com",
       "severity": "high",
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
-      "expected": "Any rate of finance charge is stated as an 'annual percentage rate' (APR), with any simple/periodic rate not more conspicuous than the APR; 'same as cash'/'0%' promotions state required conditions. Advertised terms are terms that the creditor actually arranges or will arrange.",
+      "expected": "Any rate of finance charge in an advertisement is stated as an 'annual percentage rate' (APR); a simple annual or periodic rate, if stated, is not more conspicuous than the APR (12 CFR 1026.24(c)). Advertised specific credit terms are terms that actually are or will be arranged or offered by the creditor (12 CFR 1026.24(a)).",
       "legal_review_required": true,
       "status": "BLUE",
       "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
@@ -1645,8 +1640,7 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "The contractor's CSLB license number appears in all forms of advertising, including the website. How to check: (1) the license number (digits, typically labelled 'CSLB Lic. #' or 'CA Lic. #') is visible on the homepage and in the footer of every page template, and on paid/landing pages and booking pages; (2) the number is real text (not only in an image) so it can be read and searched; (3) the same number appears on linked profiles the site controls (Google Business Profile, Yelp, social pages) as a best practice; (4) the number matches the CSLB record for the advertised business name (see WEB-CSLB-002).",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
       "affected_pages": [],
@@ -1673,8 +1667,7 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "The license shown is current and active on the CSLB public license lookup on the audit date (not expired, suspended or inactive). The business name used on the site (and in ads) is the name on the CSLB license record (or an approved DBA on the record); the site does not advertise under a different or misleading name. How to check: search the number at the CSLB Check a License page, record status, legal name/DBA, entity type, classifications, bond and workers' compensation status, and compare with site header, footer, About page and legal pages.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
       "affected_pages": [],
@@ -1701,8 +1694,7 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Every advertised service is within the classifications on the CSLB record (e.g., C-10 Electrical covers electrical wiring, panels, EV chargers, lighting; solar may require C-46 or be within C-10; low-voltage systems C-7; HVAC C-20; general remodeling B). Services outside the classification are removed, or the site states they are performed by appropriately licensed subcontractors (with their license numbers where required).",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
       "affected_pages": [],
@@ -1747,8 +1739,7 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "'Bonded' matches an active contractor's bond on the CSLB record; 'insured' is backed by current general liability insurance (mandatory for LLC licensees in the amounts in 7071.19) and the workers' compensation status on the CSLB record is current (or a valid exemption where no employees). Claims are removed promptly if a bond, policy or license lapses.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
       "affected_pages": [],
@@ -1773,7 +1764,7 @@
       "target": "pacificplainselectric.com",
       "severity": "medium",
       "responsible_party": "Pacific Plains Electric, Website operator",
-      "expected": "The site does not use misleading or deceptive representations or false advertising to obtain contracts, and 'free' goods/services, prizes or discounts offered as inducements comply with 7161's prohibitions.",
+      "expected": "The site does not use false, misleading or deceptive advertising or misrepresentations to procure contracts (B&P 7161(a), (b), (e)).",
       "legal_review_required": true,
       "status": "BLUE",
       "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
@@ -1827,7 +1818,7 @@
       "target": "pacificplainselectric.com",
       "severity": "critical",
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
-      "expected": "The e-signed or click-accepted contract includes the 7159 contents in the required order/format, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327). Contract is presented in full to the buyer before signature (not only a summary).",
+      "expected": "The e-signed or click-accepted contract includes the 7159 contents as required, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327). Contract is presented in full to the buyer before signature (not only a summary).",
       "legal_review_required": true,
       "status": "BLUE",
       "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
@@ -2511,8 +2502,7 @@
       "responsible_party": "Website operator",
       "expected": "Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0/3 key page(s) scroll sideways at 390px wide",
       "affected_pages": [],
@@ -2662,8 +2652,7 @@
       "responsible_party": "Website operator",
       "expected": "Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) where Tab cycled within two elements",
       "affected_pages": [],
@@ -2802,8 +2791,7 @@
       "responsible_party": "Website operator",
       "expected": "A mechanism (skip link, landmarks, headings) is available to bypass blocks of content repeated on multiple pages.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) without a skip link or main landmark",
       "affected_pages": [],
@@ -2830,8 +2818,7 @@
       "responsible_party": "Website operator",
       "expected": "Each page has a title that describes its topic or purpose.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) without a title",
       "affected_pages": [],
@@ -2970,8 +2957,7 @@
       "responsible_party": "Website operator",
       "expected": "Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0/40 pages had focus targets with no outline or shadow on focus",
       "affected_pages": [],
@@ -3166,7 +3152,7 @@
       "responsible_party": "Website operator",
       "expected": "Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential).",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "YELLOW",
       "confidence": "high",
       "actual": "24 focusable target(s) under 24×24 px (spacing exceptions not evaluated)",
       "affected_pages": [],
@@ -3182,9 +3168,7 @@
       "test_ids": [],
       "test_result": "not-applicable",
       "remediation": "Meet: Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential).",
-      "priority": "P3",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "priority": "P3"
     },
     {
       "finding_id": "F-WCAG-301-001-PACIFICPLAINSELECTRI",
@@ -3195,8 +3179,7 @@
       "responsible_party": "Website operator",
       "expected": "The default human language of each page is programmatically determinable (valid lang attribute on html).",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) without a language",
       "affected_pages": [],

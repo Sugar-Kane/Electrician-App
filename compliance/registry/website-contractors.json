@@ -253,8 +253,8 @@
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7161",
       "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7161",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website advertises construction/electrical contracting services in California (pacificplainselectric.com).",
@@ -269,7 +269,7 @@
         "Website operator"
       ],
       "required_behavior": [
-        "The site does not use misleading or deceptive representations or false advertising to obtain contracts, and 'free' goods/services, prizes or discounts offered as inducements comply with 7161's prohibitions."
+        "The site does not use false, misleading or deceptive advertising or misrepresentations to procure contracts (B&P 7161(a), (b), (e))."
       ],
       "verification_methods": [
         "browser-assisted",
@@ -284,7 +284,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Exact subdivisions of 7161 recalled from prior knowledge; confirm in official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. B&P 7161 read: (a), (b) and (e) cover false, misleading or deceptive advertising and misrepresentations used to procure contracts. The current section (operative July 1, 2021) has no provision on 'free' goods/services, prizes or discounts as inducements, so that part of the requirement isn't supported. Read in the CSLB 2026 Law Book on cslb.ca.gov."
+      "notes": "Exact subdivisions of 7161 recalled from prior knowledge; confirm in official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. B&P 7161 read: (a), (b) and (e) cover false, misleading or deceptive advertising and misrepresentations used to procure contracts. The current section (operative July 1, 2021) has no provision on 'free' goods/services, prizes or discounts as inducements, so that part of the requirement isn't supported. Read in the CSLB 2026 Law Book on cslb.ca.gov. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
     },
     {
       "id": "WEB-CSLB-007",
@@ -387,8 +387,8 @@
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7159(c)-(e)",
       "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "amendment_notes": "AB 1327 (Stats. 2025) added contractor email/telephone and email Notice of Cancellation provisions (per secondary sources and CSLB 2026 new-laws bulletin); not verified against official text.",
       "applicability": {
         "criteria": [
@@ -413,7 +413,7 @@
         "Third-party vendor"
       ],
       "required_behavior": [
-        "The e-signed or click-accepted contract includes the 7159 contents in the required order/format, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327).",
+        "The e-signed or click-accepted contract includes the 7159 contents as required, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327).",
         "Contract is presented in full to the buyer before signature (not only a summary)."
       ],
       "enforcement_exposure": "Noncompliant contracts: CSLB discipline, misdemeanor exposure under 7159, and potential unenforceability/restitution claims.",
@@ -440,7 +440,7 @@
         "WEB-CSLB-012",
         "WEB-CSLB-014"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. B&P 7159(c)-(e) contents confirmed, but the current text does not require the items to appear 'in the required order' (7159(d) says only 'include or comply with all of the following'), so the ordering claim isn't supported. The CSLB information notice is (e)(5), the Mechanics Lien Warning (e)(4). Read in the CSLB 2026 Law Book on cslb.ca.gov."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. B&P 7159(c)-(e) contents confirmed, but the current text does not require the items to appear 'in the required order' (7159(d) says only 'include or comply with all of the following'), so the ordering claim isn't supported. The CSLB information notice is (e)(5), the Mechanics Lien Warning (e)(4). Read in the CSLB 2026 Law Book on cslb.ca.gov. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
     },
     {
       "id": "WEB-CSLB-010",

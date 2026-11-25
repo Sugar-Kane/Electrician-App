@@ -6,7 +6,7 @@
   "started_at": "2026-11-24T23:43:46.126Z",
   "finished_at": "2026-11-24T23:44:09.719Z",
   "environment": "public website (outside-in)",
-  "profile": "contractor",
+  "profile": "generic",
   "collects_personal_info": false,
   "collects_phone": false,
   "offers_subscription": false,
@@ -32,26 +32,26 @@
     "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
     "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
   ],
-  "generated_at": "2026-11-24T23:52:17.588Z",
+  "generated_at": "2026-11-25T14:19:08.212Z",
   "totals": {
-    "GREEN": 10,
-    "YELLOW": 2,
-    "RED": 0,
-    "GRAY": 10,
-    "BLUE": 158,
+    "GREEN": 16,
+    "YELLOW": 4,
+    "RED": 2,
+    "GRAY": 31,
+    "BLUE": 127,
     "total": 180
   },
   "metrics": {
-    "verified_pass_rate": 83.3,
-    "verification_coverage": 7.1,
-    "overall_verified_applicable_compliance": 5.9
+    "verified_pass_rate": 72.7,
+    "verification_coverage": 14.8,
+    "overall_verified_applicable_compliance": 10.7
   },
   "legal_totals": {
     "GREEN": 0,
     "YELLOW": 0,
     "RED": 0,
-    "GRAY": 9,
-    "BLUE": 79,
+    "GRAY": 30,
+    "BLUE": 58,
     "total": 88
   },
   "legal_metrics": {
@@ -60,35 +60,35 @@
     "overall_verified_applicable_compliance": 0
   },
   "standards_totals": {
-    "GREEN": 10,
-    "YELLOW": 2,
-    "RED": 0,
+    "GREEN": 16,
+    "YELLOW": 4,
+    "RED": 2,
     "GRAY": 1,
-    "BLUE": 79,
+    "BLUE": 69,
     "total": 92
   },
   "standards_metrics": {
-    "verified_pass_rate": 83.3,
-    "verification_coverage": 13.2,
-    "overall_verified_applicable_compliance": 11
+    "verified_pass_rate": 72.7,
+    "verification_coverage": 24.2,
+    "overall_verified_applicable_compliance": 17.6
   },
   "scorecards": [
     {
       "name": "Federal website requirements",
       "totals": {
         "GREEN": 0,
-        "YELLOW": 0,
+        "YELLOW": 1,
         "RED": 0,
         "GRAY": 9,
-        "BLUE": 24,
+        "BLUE": 23,
         "total": 33
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
+        "verified_pass_rate": 0,
+        "verification_coverage": 4.2,
         "overall_verified_applicable_compliance": 0
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "CONDITIONAL PASS"
     },
     {
       "name": "California website requirements",
@@ -113,33 +113,33 @@
         "GREEN": 0,
         "YELLOW": 0,
         "RED": 0,
-        "GRAY": 0,
-        "BLUE": 21,
+        "GRAY": 21,
+        "BLUE": 0,
         "total": 21
       },
       "metrics": {
         "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verification_coverage": null,
+        "overall_verified_applicable_compliance": null
       },
       "result": "INSUFFICIENT EVIDENCE"
     },
     {
       "name": "Accessibility (WCAG 2.2 A/AA)",
       "totals": {
-        "GREEN": 0,
-        "YELLOW": 0,
-        "RED": 0,
+        "GREEN": 6,
+        "YELLOW": 1,
+        "RED": 2,
         "GRAY": 0,
-        "BLUE": 55,
+        "BLUE": 46,
         "total": 55
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
-        "overall_verified_applicable_compliance": 0
+        "verified_pass_rate": 66.7,
+        "verification_coverage": 16.4,
+        "overall_verified_applicable_compliance": 10.9
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Privacy and tracking",
@@ -163,17 +163,17 @@
       "totals": {
         "GREEN": 0,
         "YELLOW": 0,
-        "RED": 0,
-        "GRAY": 6,
-        "BLUE": 9,
+        "RED": 1,
+        "GRAY": 7,
+        "BLUE": 7,
         "total": 15
       },
       "metrics": {
-        "verified_pass_rate": null,
-        "verification_coverage": 0,
+        "verified_pass_rate": 0,
+        "verification_coverage": 12.5,
         "overall_verified_applicable_compliance": 0
       },
-      "result": "INSUFFICIENT EVIDENCE"
+      "result": "FAIL"
     },
     {
       "name": "Cybersecurity baseline (audit policy, not law)",
@@ -193,7 +193,7 @@
       "result": "CONDITIONAL PASS"
     }
   ],
-  "website_result": "CONDITIONAL PASS",
+  "website_result": "FAIL",
   "critical_findings": [],
   "high_findings": [],
   "legal_review": [
@@ -333,7 +333,7 @@
       "responsible_party": "Website operator",
       "expected": "Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alternative format. Offer an equivalent non-web way to request a quote/booking/payment (e.g., staffed phone line) with comparable hours and pricing.",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "YELLOW",
       "confidence": "high",
       "actual": "no accessibility statement or contact found",
       "affected_pages": [],
@@ -349,9 +349,7 @@
       "test_ids": [],
       "test_result": "not-applicable",
       "remediation": "Meet: Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alternative format.",
-      "priority": "P3",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "priority": "P3"
     },
     {
       "finding_id": "F-WEB-FED-006-VOLTEIRACOM",
@@ -930,7 +928,7 @@
       "target": "volteira.com",
       "severity": "high",
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
-      "expected": "Any rate of finance charge is stated as an 'annual percentage rate' (APR), with any simple/periodic rate not more conspicuous than the APR; 'same as cash'/'0%' promotions state required conditions. Advertised terms are terms that the creditor actually arranges or will arrange.",
+      "expected": "Any rate of finance charge in an advertisement is stated as an 'annual percentage rate' (APR); a simple annual or periodic rate, if stated, is not more conspicuous than the APR (12 CFR 1026.24(c)). Advertised specific credit terms are terms that actually are or will be arranged or offered by the creditor (12 CFR 1026.24(a)).",
       "legal_review_required": true,
       "status": "BLUE",
       "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
@@ -1638,29 +1636,22 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "The contractor's CSLB license number appears in all forms of advertising, including the website. How to check: (1) the license number (digits, typically labelled 'CSLB Lic. #' or 'CA Lic. #') is visible on the homepage and in the footer of every page template, and on paid/landing pages and booking pages; (2) the number is real text (not only in an image) so it can be read and searched; (3) the same number appears on linked profiles the site controls (Google Business Profile, Yelp, social pages) as a best practice; (4) the number matches the CSLB record for the advertised business name (see WEB-CSLB-002).",
       "legal_review_required": false,
-      "status": "BLUE",
-      "confidence": "high",
-      "actual": "licence number shown on 0/3 pages: none",
-      "affected_pages": [
-        "https://www.volteira.com/",
-        "https://www.volteira.com/changelog",
-        "https://www.volteira.com/demo"
-      ],
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
       "evidence": [
         {
           "type": "network-observation",
-          "location": "observations.json#pages[].licenseMentions",
+          "location": "observations.json#pages[].textSample",
           "collected_at": "2026-11-24T23:44:09.719Z",
           "method": "page text",
-          "limitations": "Whether the number is active and matches the business name needs the CSLB record."
+          "limitations": ""
         }
       ],
-      "test_ids": [],
-      "test_result": "failed",
-      "remediation": "Meet: The contractor's CSLB license number appears in all forms of advertising, including the website.",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "remediation": "None.",
+      "test_result": "not-applicable",
+      "priority": "none"
     },
     {
       "finding_id": "F-WEB-CSLB-002-VOLTEIRACOM",
@@ -1671,29 +1662,22 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "The license shown is current and active on the CSLB public license lookup on the audit date (not expired, suspended or inactive). The business name used on the site (and in ads) is the name on the CSLB license record (or an approved DBA on the record); the site does not advertise under a different or misleading name. How to check: search the number at the CSLB Check a License page, record status, legal name/DBA, entity type, classifications, bond and workers' compensation status, and compare with site header, footer, About page and legal pages.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "confidence": "high",
-      "actual": "licence number shown on 0/3 pages: none",
-      "affected_pages": [
-        "https://www.volteira.com/",
-        "https://www.volteira.com/changelog",
-        "https://www.volteira.com/demo"
-      ],
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
       "evidence": [
         {
           "type": "network-observation",
-          "location": "observations.json#pages[].licenseMentions",
+          "location": "observations.json#pages[].textSample",
           "collected_at": "2026-11-24T23:44:09.719Z",
           "method": "page text",
-          "limitations": "Whether the number is active and matches the business name needs the CSLB record."
+          "limitations": ""
         }
       ],
-      "test_ids": [],
-      "test_result": "failed",
-      "remediation": "Meet: The license shown is current and active on the CSLB public license lookup on the audit date (not expired, suspended or inactive).",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "remediation": "None.",
+      "test_result": "not-applicable",
+      "priority": "none"
     },
     {
       "finding_id": "F-WEB-CSLB-003-VOLTEIRACOM",
@@ -1704,29 +1688,22 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Every advertised service is within the classifications on the CSLB record (e.g., C-10 Electrical covers electrical wiring, panels, EV chargers, lighting; solar may require C-46 or be within C-10; low-voltage systems C-7; HVAC C-20; general remodeling B). Services outside the classification are removed, or the site states they are performed by appropriately licensed subcontractors (with their license numbers where required).",
       "legal_review_required": true,
-      "status": "BLUE",
-      "confidence": "high",
-      "actual": "licence number shown on 0/3 pages: none",
-      "affected_pages": [
-        "https://www.volteira.com/",
-        "https://www.volteira.com/changelog",
-        "https://www.volteira.com/demo"
-      ],
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
       "evidence": [
         {
           "type": "network-observation",
-          "location": "observations.json#pages[].licenseMentions",
+          "location": "observations.json#pages[].textSample",
           "collected_at": "2026-11-24T23:44:09.719Z",
           "method": "page text",
-          "limitations": "Whether the number is active and matches the business name needs the CSLB record."
+          "limitations": ""
         }
       ],
-      "test_ids": [],
-      "test_result": "failed",
-      "remediation": "Meet: Every advertised service is within the classifications on the CSLB record (e.g., C-10 Electrical covers electrical wiring, panels, EV chargers, lighting; solar may require C-46 or be within C-10; low-voltage systems C-7; HVAC C-20; general remodeling B).",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "remediation": "None.",
+      "test_result": "not-applicable",
+      "priority": "none"
     },
     {
       "finding_id": "F-WEB-CSLB-004-VOLTEIRACOM",
@@ -1737,13 +1714,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Claims such as 'certified electricians', 'licensed electricians' or 'master electrician' are accurate: workers performing C-10 electrical work hold DIR electrician certification (or are registered trainees as allowed), and titles not issued in California (e.g., 'master electrician') are not presented as a California license.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1755,29 +1740,22 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "'Bonded' matches an active contractor's bond on the CSLB record; 'insured' is backed by current general liability insurance (mandatory for LLC licensees in the amounts in 7071.19) and the workers' compensation status on the CSLB record is current (or a valid exemption where no employees). Claims are removed promptly if a bond, policy or license lapses.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "confidence": "high",
-      "actual": "licence number shown on 0/3 pages: none",
-      "affected_pages": [
-        "https://www.volteira.com/",
-        "https://www.volteira.com/changelog",
-        "https://www.volteira.com/demo"
-      ],
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
       "evidence": [
         {
           "type": "network-observation",
-          "location": "observations.json#pages[].licenseMentions",
+          "location": "observations.json#pages[].textSample",
           "collected_at": "2026-11-24T23:44:09.719Z",
           "method": "page text",
-          "limitations": "Whether the number is active and matches the business name needs the CSLB record."
+          "limitations": ""
         }
       ],
-      "test_ids": [],
-      "test_result": "failed",
-      "remediation": "Meet: 'Bonded' matches an active contractor's bond on the CSLB record; 'insured' is backed by current general liability insurance (mandatory for LLC licensees in the amounts in 7071.19) and the workers' compensation status on the CSLB record is current (or a valid exemption where no employees).",
-      "priority": "P1",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "remediation": "None.",
+      "test_result": "not-applicable",
+      "priority": "none"
     },
     {
       "finding_id": "F-WEB-CSLB-006-VOLTEIRACOM",
@@ -1786,15 +1764,23 @@
       "target": "volteira.com",
       "severity": "medium",
       "responsible_party": "Pacific Plains Electric, Website operator",
-      "expected": "The site does not use misleading or deceptive representations or false advertising to obtain contracts, and 'free' goods/services, prizes or discounts offered as inducements comply with 7161's prohibitions.",
+      "expected": "The site does not use false, misleading or deceptive advertising or misrepresentations to procure contracts (B&P 7161(a), (b), (e)).",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1806,13 +1792,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Payment processor",
       "expected": "The diagnostic/service fee amount (all-inclusive of mandatory charges) is shown before the customer books or pays, with what it covers, whether it is credited toward the repair, refund/cancellation terms, and any after-hours or distance surcharges. The Stripe charge equals the displayed amount.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1824,13 +1818,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Online estimate tools and price ranges state their assumptions and limitations, reflect real pricing, and are not used to advertise services with intent not to sell them as advertised. Final contract prices that differ from online estimates are explained in writing before work.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1840,15 +1842,23 @@
       "target": "volteira.com",
       "severity": "critical",
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
-      "expected": "The e-signed or click-accepted contract includes the 7159 contents in the required order/format, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327). Contract is presented in full to the buyer before signature (not only a summary).",
+      "expected": "The e-signed or click-accepted contract includes the 7159 contents as required, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327). Contract is presented in full to the buyer before signature (not only a summary).",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1860,13 +1870,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Immediately upon signing, the buyer can obtain (download/email) a complete, legible copy of the signed contract and attached notices in a retainable form, consistent with ESIGN/UETA delivery rules.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1878,13 +1896,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "The contract includes the statutory 'Mechanics Lien Warning' text in the required form, and any preliminary notice practices are explained.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1896,13 +1922,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Any deposit or down payment collected online for a home improvement contract does not exceed $1,000 or 10 percent of the contract price, whichever is less (swimming pool contracts have a different limit), and the contract states the down payment. Browser check: compare deposit amount at checkout with the accepted estimate total; Stripe charge must be at or below the limit.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1914,13 +1948,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Online payment requests/invoices after the down payment do not demand payment in excess of the value of work performed or materials delivered, except as permitted for the down payment.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1932,13 +1974,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Determine whether contracts formed online (or negotiated in the buyer's home and signed online) are 'home solicitation contracts' (made at a place other than the seller's appropriate trade premises) requiring the three-business-day (five business days for buyers 65 or older) right to cancel and the statutory Notice of Cancellation form. Where applicable, the e-sign flow presents the Notice of Cancellation in the required form and size, with the contractor's address and email for cancellation, and the contractor does not begin work or take payment in violation of the cancellation period (except qualifying emergency repairs with the buyer's waiver).",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1950,13 +2000,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Where a right to cancel applies, the contract and Notice of Cancellation provide the contractor's email address and state that the notice may be emailed; the published email address is monitored and cancellations received by email are honored.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1968,13 +2026,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Determine whether online-booked service/repair jobs qualify as 'service and repair contracts' (buyer-initiated, price within the statutory cap) and, if so, that the online booking/acceptance and paperwork meet the 7159.10-7159.14 requirements instead of full 7159 contents (including rules on deposits and the buyer's right to cancel).",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -1986,13 +2052,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "Change orders presented online state the scope, price change and schedule effect and are signed (valid electronic signature) by the buyer before the extra work begins; a copy is delivered to the buyer.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -2004,13 +2078,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
       "expected": "If the online contract contains an arbitration provision, it uses the statutory heading/text, bold or prominent type, and a separate space for the buyer's initials/acknowledgment.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -2022,13 +2104,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Determine whether installed consumer goods (EV chargers, fixtures, panels, generators) sold by the contractor carry implied warranties under Song-Beverly and whether workmanship warranties are service contracts (1791(o), 1794.4). Warranty claims on the site state duration, coverage, exclusions and how to claim, and do not disclaim non-waivable implied warranties.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -2040,13 +2130,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Text of the written warranty is made available before purchase by a clear and conspicuous hyperlink or on the product/quote page, or a statement of how to obtain it free.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -2058,13 +2156,21 @@
       "responsible_party": "Pacific Plains Electric, Website operator",
       "expected": "Provide the CSLB-developed Solar Energy System Disclosure Document with the contract and comply with related CSLB solar requirements; site claims about savings are substantiated.",
       "legal_review_required": true,
-      "status": "BLUE",
-      "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
-      "confidence": "high",
-      "actual": "not assessed automatically",
-      "evidence": [],
-      "test_result": "not-run",
-      "remediation": "Verify manually or with the business's records.",
+      "status": "GRAY",
+      "status_reason": "The site does not advertise contracting services.",
+      "confidence": "medium",
+      "actual": "no contractor licence wording or trade services found",
+      "evidence": [
+        {
+          "type": "network-observation",
+          "location": "observations.json#pages[].textSample",
+          "collected_at": "2026-11-24T23:44:09.719Z",
+          "method": "page text",
+          "limitations": ""
+        }
+      ],
+      "remediation": "None.",
+      "test_result": "not-applicable",
       "priority": "none"
     },
     {
@@ -2384,7 +2490,7 @@
       "responsible_party": "Website operator",
       "expected": "Color is not the only visual means of conveying information, indicating an action, prompting a response or distinguishing an element (e.g., errors, required fields, links in text).",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "link-in-text-block (serious, 1 element(s)) on https://www.volteira.com/changelog",
       "affected_pages": [
@@ -2401,9 +2507,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Color is not the only visual means of conveying information, indicating an action, prompting a response or distinguishing an element (e.g., errors, required fields, links in text).",
-      "priority": "P2",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P2"
     },
     {
       "finding_id": "F-WCAG-104-002-VOLTEIRACOM",
@@ -2470,7 +2574,7 @@
       "responsible_party": "Website operator",
       "expected": "Text can be resized up to 200 percent without assistive technology and without loss of content or functionality.",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "RED",
       "confidence": "high",
       "actual": "meta-viewport (moderate, 1 element(s)) on https://www.volteira.com/; meta-viewport (moderate, 1 element(s)) on https://www.volteira.com/changelog; meta-viewport (moderate, 1 element(s)) on https://www.volteira.com/demo",
       "affected_pages": [
@@ -2489,9 +2593,7 @@
       "test_ids": [],
       "test_result": "failed",
       "remediation": "Meet: Text can be resized up to 200 percent without assistive technology and without loss of content or functionality.",
-      "priority": "P2",
-      "observed_status": "RED",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: RED)."
+      "priority": "P2"
     },
     {
       "finding_id": "F-WCAG-104-005-VOLTEIRACOM",
@@ -2530,8 +2632,7 @@
       "responsible_party": "Website operator",
       "expected": "Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0/1 key page(s) scroll sideways at 390px wide",
       "affected_pages": [],
@@ -2669,8 +2770,7 @@
       "responsible_party": "Website operator",
       "expected": "Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) where Tab cycled within two elements",
       "affected_pages": [],
@@ -2809,8 +2909,7 @@
       "responsible_party": "Website operator",
       "expected": "A mechanism (skip link, landmarks, headings) is available to bypass blocks of content repeated on multiple pages.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) without a skip link or main landmark",
       "affected_pages": [],
@@ -2837,8 +2936,7 @@
       "responsible_party": "Website operator",
       "expected": "Each page has a title that describes its topic or purpose.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) without a title",
       "affected_pages": [],
@@ -2977,8 +3075,7 @@
       "responsible_party": "Website operator",
       "expected": "Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0/3 pages had focus targets with no outline or shadow on focus",
       "affected_pages": [],
@@ -3173,7 +3270,7 @@
       "responsible_party": "Website operator",
       "expected": "Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential).",
       "legal_review_required": false,
-      "status": "BLUE",
+      "status": "YELLOW",
       "confidence": "high",
       "actual": "6 focusable target(s) under 24×24 px (spacing exceptions not evaluated)",
       "affected_pages": [],
@@ -3189,9 +3286,7 @@
       "test_ids": [],
       "test_result": "not-applicable",
       "remediation": "Meet: Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential).",
-      "priority": "P3",
-      "observed_status": "YELLOW",
-      "status_reason": "Official source not yet verified in this legal baseline (observed: YELLOW)."
+      "priority": "P3"
     },
     {
       "finding_id": "F-WCAG-301-001-VOLTEIRACOM",
@@ -3202,8 +3297,7 @@
       "responsible_party": "Website operator",
       "expected": "The default human language of each page is programmatically determinable (valid lang attribute on html).",
       "legal_review_required": false,
-      "status": "BLUE",
-      "status_reason": "Observed behaviour passes, but the requirement's official source was not verified in this baseline.",
+      "status": "GREEN",
       "confidence": "high",
       "actual": "0 page(s) without a language",
       "affected_pages": [],
