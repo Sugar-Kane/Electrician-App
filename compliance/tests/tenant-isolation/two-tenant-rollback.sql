@@ -1,6 +1,6 @@
 -- TI-001 .. TI-012: two-tenant isolation test in ONE transaction that always aborts.
 --
--- STATUS: written for APP-2026-11-24, NOT EXECUTED. Review before running.
+-- STATUS: run 1 on 2026-11-25 (evidence/tenant-isolation-run1.json); revised after run 1 (customer names, split storage checks).
 -- Supports: SEC-002-001, -002, -003, -004, -006, -007, -010, -012, -013, -019.
 --
 -- What it does
@@ -122,8 +122,8 @@ begin
   select * into ids from _ti_ids;
 
   begin
-    insert into public.customers (id, organization_id) values (ids.b_customer, ids.b_org);
-    insert into public.customers (id, organization_id) values (ids.a_customer, ids.a_org);
+    insert into public.customers (id, organization_id, first_name, last_name) values (ids.b_customer, ids.b_org, 'Compliance', 'Customer B');
+    insert into public.customers (id, organization_id, first_name, last_name) values (ids.a_customer, ids.a_org, 'Compliance', 'Customer A');
   exception when others then
     insert into _ti_results (test_id, phase, table_name, operation, detail)
     values ('TI-000', 'setup', 'customers', 'insert', 'FAILED: ' || sqlstate || ' ' || sqlerrm);
@@ -344,7 +344,7 @@ begin
 
   -- TI-006 INSERT a row carrying B's organization_id (must be refused)
   begin
-    insert into public.customers (organization_id) values (ids.b_org);
+    insert into public.customers (organization_id, first_name) values (ids.b_org, 'Planted by A');
     insert into _ti_results (test_id, phase, table_name, operation, expected, blocked, passed, detail)
     values ('TI-006', 'as_a', 'customers', 'insert with B org id', 0, false, false, 'INSERT SUCCEEDED (cross-tenant write)');
   exception when others then
@@ -392,23 +392,34 @@ begin
     values ('TI-009', 'as_a', 'rpc organization_roster', 'roster of B', 0, true, true, sqlstate || ' ' || sqlerrm);
   end;
 
-  -- TI-010 Storage: list / overwrite / delete B's object metadata
+  -- TI-010 Storage: list / overwrite / delete B's object metadata, each in its own block so
+  -- one refusal does not discard the other results.
   select seeded into s from _ti_seeded where table_name = 'storage.objects';
   begin
     select count(*) into n from storage.objects where bucket_id = 'business-documents' and name like ids.b_org::text || '/%';
     insert into _ti_results (test_id, phase, table_name, operation, seeded, expected, actual, passed)
     values ('TI-010', 'as_a', 'storage.objects', 'list B objects', s, 0, n, n = 0);
+  exception when others then
+    insert into _ti_results (test_id, phase, table_name, operation, seeded, expected, blocked, passed, detail)
+    values ('TI-010', 'as_a', 'storage.objects', 'list B objects', s, 0, true, true, sqlstate || ' ' || sqlerrm);
+  end;
+  begin
     with u as (update storage.objects set metadata = metadata where bucket_id = 'business-documents' and name like ids.b_org::text || '/%' returning 1)
       select count(*) into n from u;
     insert into _ti_results (test_id, phase, table_name, operation, seeded, expected, actual, passed)
     values ('TI-010', 'as_a', 'storage.objects', 'update B objects', s, 0, n, n = 0);
+  exception when others then
+    insert into _ti_results (test_id, phase, table_name, operation, seeded, expected, blocked, passed, detail)
+    values ('TI-010', 'as_a', 'storage.objects', 'update B objects', s, 0, true, true, sqlstate || ' ' || sqlerrm);
+  end;
+  begin
     with d as (delete from storage.objects where bucket_id = 'business-documents' and name like ids.b_org::text || '/%' returning 1)
       select count(*) into n from d;
     insert into _ti_results (test_id, phase, table_name, operation, seeded, expected, actual, passed)
     values ('TI-010', 'as_a', 'storage.objects', 'delete B objects', s, 0, n, n = 0);
   exception when others then
     insert into _ti_results (test_id, phase, table_name, operation, seeded, expected, blocked, passed, detail)
-    values ('TI-010', 'as_a', 'storage.objects', 'list/update/delete B objects', s, 0, true, true, sqlstate || ' ' || sqlerrm);
+    values ('TI-010', 'as_a', 'storage.objects', 'delete B objects', s, 0, true, true, sqlstate || ' ' || sqlerrm);
   end;
   begin
     insert into storage.objects (bucket_id, name, owner)
