@@ -10,11 +10,11 @@ source is marked ❔; the problem was still observed.
 
 | Priority | Items |
 |---|---|
-| P0 | 22 |
-| P1 | 75 |
-| P2 | 77 |
-| P3 | 37 |
-| **Total** | **211** |
+| P0 | 26 |
+| P1 | 101 |
+| P2 | 116 |
+| P3 | 53 |
+| **Total** | **296** |
 
 ## P0
 
@@ -158,6 +158,25 @@ source is marked ❔; the problem was still observed.
 - **Done when:** Revocation accepted by any reasonable means, including replies of stop, quit, end, revoke, opt out, cancel, unsubscribe, free-text revocations, voice, email or telling staff. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
 
+### F-SEC-001-002-APP: Owners, admins and platform staff must use MFA
+
+- **Requirement:** SEC-001-002 (OWASP ASVS 5.0.0 V6.3.3; OWASP ASVS 5.0.0 V8.4.2; NIST CSF 2.0 PR.AA-03)
+- **Observed:** RED, severity critical, confidence high
+- **Problem:** MFA does not exist, so no role is required to use it. Platform admin access is gated by private.is_platform_admin() only; no admin_* RPC or server action checks aal (catalog: checks_aal=false for every admin_* function). Owner-only actions (Stripe Connect start, team management, MCP credentials, report export) have no step-up.
+- **Fix:** After SEC-001-001, add a requireAal2() helper used by admin layout/actions, owner/admin server actions and the admin_* RPCs (check auth.jwt()->>'aal' = 'aal2' in SQL); record any tenant-level relaxation in platform_admin_audit.
+- **Files:** `src/app/settings/payments/start/route.ts:25`, `src/app/settings/team/actions.ts:37`, `src/app/reports/export/route.ts:20`, `src/lib/admin-console.ts:996`
+- **Done when:** Owners, admins and platform admins need an aal2 session for privileged actions (billing, members, export, MCP connections, admin console). Tests: src/lib/admin-trace.test.ts.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-007-APP ⚖️: Breach notification workflow supports Cal. Civ. Code 1798.82 duties
+
+- **Requirement:** SEC-006-007 (NIST CSF 2.0 RS.CO-02; NIST CSF 2.0 GV.OC-03)
+- **Observed:** RED, severity critical, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).
+- **Fix:** With counsel, create a breach-notification workflow and notice templates meeting Cal. Civ. Code 1798.82 headings and AG submission rules.
+- **Done when:** Workflow to decide 1798.82 notification, draft compliant notices, track timing, AG sample copy >500 residents; other states and contracts. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
 ### F-SEC-007-006-APP: Indirect prompt injection from untrusted content is contained
 
 - **Requirement:** SEC-007-006 (OWASP Top 10 for LLM Applications 2025 LLM01:2025; OWASP MCP Top 10 2025 (beta) MCP06:2025; OWASP MCP Top 10 2025 (beta) MCP10:2025)
@@ -237,6 +256,26 @@ source is marked ❔; the problem was still observed.
 - **Files:** `src/lib/mcp-business-tools.ts:711`, `src/lib/customer-text.ts:131`, `src/lib/voice-intake.ts:44`, `src/lib/grok-voice.ts:197`
 - **Done when:** Human approval before AI-proposed customer texts are sent, with the approver logged; no false prices/urgency; re-check consent, opt-out and quiet hours at send time. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/ai-mcp.json`
+
+### F-SEC-002-010-APP: Role-based function-level authorization is enforced server-side
+
+- **Requirement:** SEC-002-010 (OWASP API Security Top 10 2023 API5:2023; OWASP ASVS 5.0.0 V8.2.1; OWASP ASVS 5.0.0 V8.1.1)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** Billing role rule is enforced in DB (can_edit_billing) and tested; owner-only invites guarded by triggers; exports gated by canExportReports. But organization_subscriptions lets any owner/admin INSERT/UPDATE/DELETE their own row including status and plan (policies 'Organization admins can add/update/remove subscriptions', authenticated UPDATE on every column, no guard trigger). src/lib/ai-allowance.ts:18-24 reads that status with the service role and paidPlanActive() makes AI use unlimited, so an admin can grant itself a paid plan (and unlimited AI spend) without paying. Similarly stripe_connect_accounts is admin-writable for charges_enabled/payouts_enabled/fee_payer/stripe_account_id. No permission matrix document.
+- **Fix:** Drop the INSERT/UPDATE/DELETE policies on organization_subscriptions and revoke insert/update/delete from authenticated (only the Stripe webhook via service role writes it); likewise restrict stripe_connect_accounts writes to service role (sync from Stripe account.updated); write and publish the role permission matrix.
+- **Files:** `supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:189`, `supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229`, `src/lib/ai-allowance.ts:18`, `src/lib/stripe-subscription.ts:37`
+- **Done when:** Documented permission matrix; role checked server-side; technicians cannot do owner-only actions; admins cannot grant themselves paid features. Tests: src/lib/billing-permission.test.ts.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-012-APP: Least privilege for roles and database grants
+
+- **Requirement:** SEC-002-012 (OWASP ASVS 5.0.0 V8.1.1; NIST CSF 2.0 PR.AA-05)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** authenticated has full INSERT/UPDATE/DELETE/TRUNCATE table grants on every public table (default ACL from postgres grants arwdDxtm), so least privilege rests entirely on RLS. Where policies are broad this is exploitable: owners/admins can write organization_subscriptions (status/plan) and stripe_connect_accounts (charges_enabled, payouts_enabled, fee_payer); members can update/delete messaging_consent and stripe_customers. Function default ACL grants EXECUTE to anon and authenticated.
+- **Fix:** Revoke TRUNCATE and write privileges from authenticated on service-owned tables (organization_subscriptions, stripe_connect_accounts, stripe_webhook_events, audit tables); alter default privileges to stop granting EXECUTE to anon; show owner count per tenant to owners.
+- **Files:** `supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229`
+- **Done when:** anon/authenticated hold only needed privileges; default privileges reviewed; least-privilege tenant roles. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
 
 ## P1
 
@@ -389,6 +428,105 @@ source is marked ❔; the problem was still observed.
 - **Files:** `docs/security/REMEDIATION.md:5-25`, `docs/security/MULTI-TENANT-READINESS.md:98-100`, `src/lib/mcp-business-authorization.ts`, `src/app/api/twilio/inbound/route.ts:34-45`
 - **Done when:** Reasonable security: tenant isolation, access control, MFA for admins, least-privilege AI/MCP tools, secrets, logging, vendor oversight, incident response. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
+
+### F-SEC-001-016-APP: Volteira platform admin area has layered access control
+
+- **Requirement:** SEC-001-016 (OWASP ASVS 5.0.0 V8.4.2; NIST CSF 2.0 PR.AA-05)
+- **Observed:** YELLOW, severity critical, confidence medium
+- **Problem:** Platform admin is a server-side allowlist (platform_admins table, private.is_platform_admin checked inside every admin_* RPC; RPCs not executable by anon). Masking and trace/impersonation logging with reason are implemented and tested (admin-mask, admin-trace, admin-removal-rules tests pass; impersonation_sessions carry reason and expiry). Missing: aal2 requirement (no MFA) and any documented quarterly admin review.
+- **Fix:** Require aal2 for the admin area (see SEC-001-002) and record a quarterly review of platform_admins membership.
+- **Files:** `src/lib/admin-console.ts:996`, `src/lib/request-context.ts:192`
+- **Done when:** Platform admin by server-side allowlist with aal2; PI masked by default; unmasking/trace logged with reason; quarterly review. Tests: src/lib/admin-mask.test.ts, src/lib/admin-trace.test.ts, src/lib/admin-removal-rules.test.ts.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-001-APP: Row-level security is enabled on every tenant table
+
+- **Requirement:** SEC-002-001 (OWASP ASVS 5.0.0 V8.4.1; OWASP ASVS 5.0.0 V8.2.2; OWASP API Security Top 10 2023 API1:2023; NIST CSF 2.0 PR.AA-05)
+- **Observed:** YELLOW, severity critical, confidence high
+- **Problem:** All 95 public tables have relrowsecurity = true (none disabled); 0 tables use FORCE RLS. Four tables have RLS with zero policies (booking_calendar_connections, booking_calendar_events, organization_ai_keys, task_work), which denies all non-service access. No views. The behavioural two-tenant check has not been run.
+- **Fix:** Run compliance/tests/tenant-isolation/two-tenant-rollback.sql (TI-002) on a branch/copy and attach results; add a CI check that fails when a migration creates a public table without enable row level security.
+- **Files:** `supabase/migrations/20261117130000_tenant_relationship_and_storage_guards.sql:1`
+- **Done when:** RLS enabled on every Data API table; FORCE RLS considered; Tenant A sees zero Tenant B rows in every table; new tables enable RLS. Tests: compliance/tests/tenant-isolation/two-tenant-rollback.sql.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-002-APP: RLS policies are scoped by organization membership
+
+- **Requirement:** SEC-002-002 (OWASP ASVS 5.0.0 V8.2.2; OWASP ASVS 5.0.0 V8.3.1; OWASP API Security Top 10 2023 API1:2023; OWASP Top 10:2025 A01:2025)
+- **Observed:** YELLOW, severity critical, confidence high
+- **Problem:** Policies use private.is_org_member / is_org_admin / can_edit_billing (membership via organization_members and auth.uid()); none reference user_metadata. Only USING (true) policy is site_videos (marketing videos, not tenant data). Defect: 'Owners can delete organizations' compares membership.organization_id = membership.id (unqualified id bound to the subquery table), so it never matches and owners cannot delete (fails closed, but not the intended rule).
+- **Fix:** Run TI-002..TI-005; fix the organizations delete policy to compare membership.organization_id = organizations.id in a new migration.
+- **Files:** `supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:185`
+- **Done when:** Policies check organization membership via organization_members, never user_metadata; no USING (true) on tenant data; A affects zero B rows. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-003-APP: Writes cannot move or create rows in another tenant
+
+- **Requirement:** SEC-002-003 (OWASP ASVS 5.0.0 V8.2.2; OWASP ASVS 5.0.0 V15.3.3; OWASP API Security Top 10 2023 API3:2023)
+- **Observed:** YELLOW, severity critical, confidence high
+- **Problem:** No UPDATE policy lacks WITH CHECK; INSERT policies check membership of the new organization_id. 89 tables carry zz_tenant_owner_immutable (keep_tenant_owner raises when organization_id changes) and zz_tenant_references_guard (cross-tenant references refused). The prior audit's local harness (scripts/security/tenant-isolation-test.sql) is not part of npm test and has not been run against the live schema in this audit.
+- **Fix:** Run TI-006..TI-008 and record results; wire scripts/security/replay-migrations.sh + tenant-isolation-test.sql into a pre-release job.
+- **Files:** `supabase/migrations/20261117130000_tenant_relationship_and_storage_guards.sql:1`, `scripts/security/tenant-isolation-test.sql:1`
+- **Done when:** INSERT/UPDATE WITH CHECK requires membership of the new organization_id; organization_id immutable after insert; A cannot insert into or move rows to B. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-004-APP: SECURITY DEFINER functions check membership and pin search_path
+
+- **Requirement:** SEC-002-004 (OWASP ASVS 5.0.0 V8.3.1; OWASP ASVS 5.0.0 V8.2.1; NIST CSF 2.0 PR.AA-05)
+- **Observed:** YELLOW, severity critical, confidence high
+- **Problem:** All 178 SECURITY DEFINER functions in public/private set search_path in proconfig. Service-only money/worker RPCs (settle_*, record_stripe_refund, claim_*, website_intake, etc.) are not executable by authenticated. Default ACL for functions in public still grants EXECUTE to anon and authenticated, and 37 SECURITY DEFINER functions are anon-executable (token/slug public RPCs plus private trigger helpers); 52 authenticated-executable ones have no auth.uid()/membership helper in their own body and rely on token checks or private.* gate helpers (sampled: correctly gated). sweep_expired_impersonations is callable by any signed-in user (low impact).
+- **Fix:** Change default privileges (alter default privileges in schema public revoke execute on functions from anon, authenticated); revoke anon EXECUTE from private.* trigger helpers; run TI-009 and extend it to each anon RPC with another tenant's identifiers.
+- **Files:** `supabase/migrations/20261111010000_security_role_and_rpc_hardening.sql:1`
+- **Done when:** Every SECURITY DEFINER function pins search_path, checks membership for tenant data, and EXECUTE is revoked where not needed. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-006-APP: The anon role cannot read or write tenant data
+
+- **Requirement:** SEC-002-006 (OWASP ASVS 5.0.0 V8.2.1; OWASP ASVS 5.0.0 V8.4.1; OWASP API Security Top 10 2023 API5:2023)
+- **Observed:** YELLOW, severity critical, confidence high
+- **Problem:** anon holds table privileges only on site_videos and tenant_legal_pages (published pages only). Other anon access is through SECURITY DEFINER RPCs that take a token/slug (get_invoice_by_link, get_public_contract, sign_contract_in_app, decline_change_order, list_public_booking_slots, create_public_booking_intake, etc.). Their outputs were not inspected field by field, and anon behaviour has not been exercised.
+- **Fix:** Run TI-012; review each anon RPC's return columns for minimisation; revoke anon EXECUTE on private.* helpers.
+- **Done when:** Anon key alone returns no tenant data except deliberately public minimal data; public flows use token-validating RPCs. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-007-APP: Storage objects are tenant-scoped
+
+- **Requirement:** SEC-002-007 (OWASP ASVS 5.0.0 V8.4.1; OWASP ASVS 5.0.0 V8.2.2; OWASP ASVS 5.0.0 V5.3.2)
+- **Observed:** YELLOW, severity critical, confidence high
+- **Problem:** business-documents is private with storage.objects policies keyed on private.storage_object_organization_id(name) membership (delete admin-only). documents.storage_path has CHECK private.is_owned_object_path(storage_path, organization_id, 3). isOwnedObjectPath guards every service-role sign/download (tested). Signed URLs are 60s for most paths, 1h for avatars. public-branding is public by design. Behavioural storage test not run.
+- **Fix:** Run TI-010 (list/overwrite/delete/upload into B prefix as A); set allowed_mime_types on business-documents.
+- **Files:** `src/lib/tenant-storage-path.ts:1`
+- **Done when:** Tenant buckets private; keys start with server-generated org id; storage policies check membership of path org; short signed URLs after authz. Tests: src/lib/tenant-storage-path.test.ts.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-008-APP: Service-role key is server-only and its use is tenant-scoped in code
+
+- **Requirement:** SEC-002-008 (OWASP ASVS 5.0.0 V13.3.2; OWASP ASVS 5.0.0 V8.3.1; NIST CSF 2.0 PR.AA-05)
+- **Observed:** YELLOW, severity critical, confidence medium
+- **Problem:** getSupabaseAdmin() reads SUPABASE_SECRET_KEY (not NEXT_PUBLIC) and imports 'server-only'. 83 modules call it (list in scratch admin_callers). Spot checks: webhooks resolve org from verified data (Twilio by receiving number, Stripe by connected account cross-check, intake by hashed key); OAuth callback re-checks membership before admin writes; report export uses currentContext().organizationId. Not every one of 83 callers was traced. SUPABASE_SECRET_KEY is targeted to Production and Preview in Vercel.
+- **Fix:** Trace and document each getSupabaseAdmin caller's tenant source (reachable unauthenticated? scoped how?) in docs/security; add an ESLint rule that flags admin-client queries without .eq('organization_id', ...).
+- **Files:** `src/lib/supabase/admin.ts:1`, `src/lib/job-prepayment-pay.ts:537`, `src/app/api/integrations/google-drive/callback/route.ts:53`
+- **Done when:** Service-role key never public; admin client modules server-only; every admin query filtered by server-derived organization_id. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-009-APP: API routes and server actions prevent object-level authorization bypass (BOLA)
+
+- **Requirement:** SEC-002-009 (OWASP API Security Top 10 2023 API1:2023; OWASP ASVS 5.0.0 V8.2.2; OWASP ASVS 5.0.0 V8.3.3; OWASP Top 10:2025 A01:2025)
+- **Observed:** YELLOW, severity critical, confidence medium
+- **Problem:** Spot-checked handlers scope by context: messages/[messageId]/photos filters organization_id = context.organizationId; recordings/[recordingSid] relies on RLS (any of the user's orgs, not only the active one); proposals decision/reconcile and materials-chat use currentContext. RLS backs user-client queries. Service-role handlers were not exhaustively replayed with foreign IDs.
+- **Fix:** Add an HTTP-level two-tenant replay suite on a non-production project; scope the recordings lookup to the active organization.
+- **Files:** `src/app/api/messages/[messageId]/photos/[index]/route.ts:11`, `src/app/api/twilio/recordings/[recordingSid]/route.ts:24`
+- **Done when:** Every handler taking an ID resolves it within the caller's active organization; replay with B IDs gives 404/403. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-015-APP: Inbound webhooks resolve the tenant from verified data
+
+- **Requirement:** SEC-002-015 (OWASP ASVS 5.0.0 V8.3.3; OWASP ASVS 5.0.0 V8.4.1; OWASP API Security Top 10 2023 API10:2023)
+- **Observed:** YELLOW, severity critical, confidence medium
+- **Problem:** Stripe connected-account events (pay links) cross-check event.account against the business's stored account before acting (job-prepayment-pay.ts:537-545). Platform subscription events trust metadata.organization_id first (stripe-subscription.ts:14) - acceptable only because Volteira creates those objects on its own account. Twilio routes resolve the tenant by receiving number after signature verification. No Resend inbound webhook exists. Risk: stripe_account_id is admin-writable in stripe_connect_accounts (unique, so cannot steal a registered account, but can point at an unregistered one).
+- **Fix:** Make stripe_connect_accounts service-role-write only; for subscription events prefer stored stripe_subscription_id/customer mapping over metadata; add a signed-event replay test across two tenants.
+- **Files:** `src/lib/job-prepayment-pay.ts:537`, `src/lib/stripe-subscription.ts:14`, `src/app/api/twilio/recording/route.ts:60`
+- **Done when:** Stripe by connected account / stored IDs, Twilio by owned number, Resend by stored message ID; metadata org ids cross-checked. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
 
 ### F-SEC-007-002-APP: Tenant identity is derived server-side and re-checked on every tool call
 
@@ -870,6 +1008,155 @@ source is marked ❔; the problem was still observed.
 - **Done when:** Incident response plan mapping state breach laws, FTC Safeguards (if applicable), Stripe/PCI reporting and tenant notice timelines. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
 
+### F-SEC-001-001-APP: Multi-factor authentication is available to every user
+
+- **Requirement:** SEC-001-001 (OWASP ASVS 5.0.0 V6.3.3; NIST CSF 2.0 PR.AA-03)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No MFA anywhere in the application: no enroll/challenge/verify calls, no aal checks (grep mfa\|totp\|aal over src returns no auth usage). Production auth.mfa_factors has 0 rows. Local supabase/config.toml has [auth.mfa.totp] enroll_enabled = false.
+- **Fix:** Enable TOTP (and WebAuthn when available) in Supabase Auth; add an Account > Security enrollment flow using supabase.auth.mfa.enroll/challenge/verify; read the aal claim server-side in currentContext(); nudge enrollment on sign-up and the account page.
+- **Files:** `src/app/account/page.tsx:384`, `src/lib/request-context.ts:52`, `supabase/config.toml:317`
+- **Done when:** Every user can enroll a TOTP/WebAuthn factor from account settings; AAL checked server-side; MFA encouraged. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-002-019-APP: Automated two-tenant isolation tests run before release
+
+- **Requirement:** SEC-002-019 (OWASP ASVS 5.0.0 V8.4.1; NIST CSF 2.0 ID.IM-02)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No such test runs automatically: there is no CI (.github absent) and npm test covers pure functions only. scripts/security/tenant-isolation-test.sql (prior audit) and the new compliance/tests/tenant-isolation/two-tenant-rollback.sql exist but neither has been run in this audit or on a schedule.
+- **Fix:** Run compliance/tests/tenant-isolation/two-tenant-rollback.sql on a Supabase branch before each release that changes migrations, fail the release on any passed=false row, and keep the output as evidence.
+- **Files:** `scripts/security/tenant-isolation-test.sql:1`, `compliance/tests/tenant-isolation/two-tenant-rollback.sql:1`
+- **Done when:** Repeatable two-tenant test over every table/view/RPC/bucket as A, B and anon, run before each migration release. Tests: compliance/tests/tenant-isolation/two-tenant-rollback.sql.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-003-012-APP: Mass assignment is prevented
+
+- **Requirement:** SEC-003-012 (OWASP ASVS 5.0.0 V15.3.3; OWASP API Security Top 10 2023 API3:2023)
+- **Observed:** YELLOW, severity high, confidence medium
+- **Problem:** Reviewed actions copy explicit fields. inviteTeammate takes organizationId from the form but RLS/can_manage_members enforces it. Because authenticated holds UPDATE on all columns, a client calling PostgREST directly can set status/plan on organization_subscriptions and charges_enabled on stripe_connect_accounts (see SEC-002-010).
+- **Fix:** Use column-level UPDATE grants or guard triggers for status/total/paid columns on tenant tables.
+- **Files:** `src/app/settings/team/actions.ts:41`
+- **Done when:** Explicit field copying; organization_id, role, status, totals, paid flags never from client unless authorized. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-003-016-APP: Public and costly endpoints are rate limited
+
+- **Requirement:** SEC-003-016 (OWASP ASVS 5.0.0 V2.4.1; OWASP API Security Top 10 2023 API4:2023; OWASP API Security Top 10 2023 API6:2023)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** Only AI has a server-side monthly allowance (ai-allowance.ts, 429 in materials-chat). No per-IP or per-token limiter exists for public booking intake, booking holds, website intake, MCP token route, invoice/contract token pages or SMS sends; no alerting when limits hit. The AI allowance itself can be bypassed by an admin flipping organization_subscriptions.status (SEC-002-010).
+- **Fix:** Add a shared limiter (e.g. Vercel Firewall rate-limit rules or Upstash/DB token bucket) for public POSTs, token routes, MCP and SMS sends, with alerts; close the subscription-status bypass.
+- **Files:** `src/app/api/jobs/[jobNumber]/materials-chat/route.ts:62`, `src/app/api/intake/website/route.ts:38`, `src/app/api/mcp/[token]/route.ts:1`
+- **Done when:** Per-IP/tenant/token limits on intake, booking, holds, SMS, AI, Twilio callbacks and MCP; money/message limits enforced and alerting. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-004-001-APP: Production, preview and development environments are separated
+
+- **Requirement:** SEC-004-001 (NIST CSF 2.0 PR.IR-01; OWASP ASVS 5.0.0 V15.2.3)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** Vercel env names show SUPABASE_SECRET_KEY, TWILIO_AUTH_TOKEN, TWILIO_ACCOUNT_SID, ANTHROPIC_API_KEY, RESEND_API_KEY, MCP_SESSION_SECRET, DOCUMENT_SYNC_ENCRYPTION_KEY and GOOGLE_MAPS_SERVER_KEY targeted to both Production and Preview; only one Supabase project is in use (wyyzptlciccewyxxjkyx), so preview deployments run against production data with the service-role key. Stripe has separate preview keys (integration-managed). Deployment Protection status not inspected.
+- **Fix:** Create a non-production Supabase project/branch for Preview, re-scope production-only secrets to Production, use Twilio test credentials in Preview, and confirm Vercel Deployment Protection on previews.
+- **Done when:** Preview/dev use non-production Supabase, Stripe test keys and non-production Twilio; production secrets scoped to Production; previews protected. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-004-010-APP: Security monitoring and alerting is in place
+
+- **Requirement:** SEC-004-010 (NIST CSF 2.0 DE.CM-09; NIST CSF 2.0 DE.CM-06; NIST CSF 2.0 DE.AE-02; OWASP ASVS 5.0.0 V16.4.3)
+- **Observed:** RED, severity high, confidence medium
+- **Problem:** No alerting configuration or log drain is evidenced in the repository; webhook signature failures return 403 without counting/alerting; no documented owner. (Vercel drains not inspected.)
+- **Fix:** Configure a Vercel log drain and alerts (signature failures, 5xx spikes, SMS/AI spend), and schedule Supabase advisor review.
+- **Done when:** Alerts for runtime errors, auth anomalies, webhook signature failures, SMS/AI spend and advisors to a named person; logs shipped off-platform. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-005-001-APP: Audit events carry actor, tenant, time, resource, action and outcome
+
+- **Requirement:** SEC-005-001 (OWASP ASVS 5.0.0 V16.2.1; OWASP ASVS 5.0.0 V16.2.2; NIST CSF 2.0 PR.PS-04)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** activity_events has organization_id, actor_user_id, event_type, entity_type/entity_id, created_at, but no actor type, outcome or request id; members can INSERT arbitrary rows (any actor_user_id). supervised_action_audit is the strongest (actor_id, actor_kind, via, from/to status, content_hash). platform_admin_audit lacks outcome. mcp_call_log has is_error/http_status but no actor.
+- **Fix:** Define one audit schema (actor_id, actor_type, organization_id, resource, action, outcome, request_id); write it server-side only (revoke INSERT from authenticated, set actor from auth.uid()).
+- **Done when:** Audit records carry actor id and type, org, UTC time, resource type/id, action, outcome and correlation id; human and agent both recorded. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-005-005-APP ⚖️: Messaging consent grants and withdrawals are logged immutably
+
+- **Requirement:** SEC-005-005 (OWASP ASVS 5.0.0 V16.3.3; OWASP ASVS 5.0.0 V16.4.2)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** messaging_consent has customer, channel, scope, opted_in/out timestamps, source, proof_text, captured_by, but no disclosure version, and it is mutable: RLS grants any member UPDATE and DELETE ('Organization members can update/delete messaging_consent') and there is no immutability trigger (only updated_at). sms-consent.test.ts passes for the rule logic only.
+- **Fix:** Make consent append-only: drop UPDATE/DELETE policies, add a consent_events table with disclosure version, record withdrawals as new rows.
+- **Done when:** Consent records capture customer, tenant, channel, disclosure version, source, time, withdrawal keyword; append-only. Tests: src/lib/sms-consent.test.ts.
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-005-013-APP: Audit logs are tamper-resistant, access-controlled and retained
+
+- **Requirement:** SEC-005-013 (OWASP ASVS 5.0.0 V16.4.2; OWASP ASVS 5.0.0 V16.4.3; NIST CSF 2.0 PR.PS-04)
+- **Observed:** YELLOW, severity high, confidence high
+- **Problem:** RLS has no UPDATE/DELETE policies on activity_events, mcp_call_log, platform_admin_audit, invoice_revisions, so those are effectively append-only for authenticated (table grants exist but RLS blocks); supervised_action_audit also has a refuse_audit_update trigger. But members can INSERT forged activity_events, messaging_consent is fully mutable, TRUNCATE is granted to authenticated (TRUNCATE is not subject to RLS but needs the privilege - granted), and retention is documented only for mcp_call_log.
+- **Fix:** Revoke TRUNCATE/UPDATE/DELETE (and INSERT where server-written) on audit tables from authenticated; document retention for each.
+- **Done when:** App roles cannot UPDATE/DELETE audit rows; tenants read only their own; retention documented. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-001-APP: A documented incident response plan exists and is maintained
+
+- **Requirement:** SEC-006-001 (NIST CSF 2.0 ID.IM-04; NIST CSF 2.0 RS.MA-01)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).
+- **Fix:** Write docs/security/incident-response.md naming the incident lead and backup, contacts (counsel, insurer, vendors), severity levels and runbooks.
+- **Done when:** Written IR plan with lead/backup, contacts, severities, runbooks; reviewed annually. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-002-APP: Incidents are detected, triaged and declared against criteria
+
+- **Requirement:** SEC-006-002 (NIST CSF 2.0 DE.AE-02; NIST CSF 2.0 DE.AE-08; NIST CSF 2.0 RS.MA-02)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). No security.txt intake and no alerting.
+- **Fix:** Define one intake (security@ address + alerts) and written declaration criteria with triage time targets.
+- **Done when:** Single intake for alerts and reports; time-bound triage; declaration criteria. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-003-APP ⚖️: Incidents are classified, including personal-information breaches
+
+- **Requirement:** SEC-006-003 (NIST CSF 2.0 RS.MA-03; NIST CSF 2.0 RS.AN-08)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).
+- **Fix:** Add a classification matrix including Cal. Civ. Code 1798.82(h) data elements and encryption-key exposure.
+- **Done when:** Classification by severity, tenants, data types (1798.82(h) PI, payment, credentials), encryption state. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-005-APP: Evidence is preserved with integrity
+
+- **Requirement:** SEC-006-005 (NIST CSF 2.0 RS.AN-03; NIST CSF 2.0 RS.AN-06; NIST CSF 2.0 RS.AN-07)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Log retention is not documented and no drain exists.
+- **Fix:** Add an evidence-preservation runbook (Vercel/Supabase log export, PITR timestamp, action log).
+- **Done when:** Runbooks preserve logs, PITR point and investigator actions before changes; retention adequate. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-006-APP: Containment and eradication runbooks exist for key scenarios
+
+- **Requirement:** SEC-006-006 (NIST CSF 2.0 RS.MI-01; NIST CSF 2.0 RS.MI-02)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Partial building blocks exist (MCP credential revocation, AI kill-switch env flags such as VOLTEIRA_PHASE2_* ), but no runbooks.
+- **Fix:** Write the five containment runbooks referencing existing kill switches and revocation paths.
+- **Done when:** Runbooks for leaked secret, compromised account, cross-tenant exposure, MCP/AI misuse, webhook abuse. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-008-APP ⚖️: Affected contractor tenants are notified promptly
+
+- **Requirement:** SEC-006-008 (NIST CSF 2.0 RS.CO-02; NIST CSF 2.0 RS.CO-03; NIST CSF 2.0 GV.SC-08)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Tenant terms were not found to state the notice duty.
+- **Fix:** Add tenant-notification steps and a service-provider breach-notice clause (1798.82(b)) to tenant terms.
+- **Done when:** Immediate notice to affected contractor tenants; duty reflected in tenant terms. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
+### F-SEC-006-010-APP: Recovery uses verified backups and confirmed restoration criteria
+
+- **Requirement:** SEC-006-010 (NIST CSF 2.0 RC.RP-01; NIST CSF 2.0 RC.RP-02; NIST CSF 2.0 RC.RP-03; NIST CSF 2.0 RC.RP-05; NIST CSF 2.0 RC.RP-06)
+- **Observed:** RED, severity high, confidence high
+- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). No restore test record (see SEC-004-009).
+- **Fix:** Add recovery steps and criteria; perform a restore drill.
+- **Files:** `docs/security/MIGRATION-RUNBOOK.md:9`
+- **Done when:** Recovery verifies backup integrity, confirms clean restore, declares end with documentation. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
+- **Source:** `application-audits/2026-11-24/findings/security.json`
+
 ### F-SEC-007-001-APP: MCP requests are authenticated with tokens issued for this server
 
 - **Requirement:** SEC-007-001 (MCP Specification 2026-07-28 Access Token Privilege Restriction; Token Audience Binding and Validation; MCP Security Best Practices 2026-07-28 Token Passthrough; OWASP ASVS 5.0.0 V10.3.1; OWASP MCP Top 10 2025 (beta) MCP07:2025)
@@ -995,6 +1282,9 @@ source is marked ❔; the problem was still observed.
 | Finding | Requirement | Observed | Severity | Problem | Fix | Files |
 |---|---|---|---|---|---|---|
 | F-FED-002-002-APP ❔ | FED-002-002 Prior express written consent for telemarketing/advertising… | YELLOW | critical | No marketing send feature exists: the schema has a 'marketing' scope but no code writes or reads it; templates and automatic messages are transactional; the MCP proposal tool says 'Customer messages are transactional on… | Tag every outbound message with a purpose (transactional vs marketing); refuse marketing-tagged sends without a 'marketing' scope opt-in that carries written-consent evidence; add owner guidance and an AI-side classifie… | src/lib/mcp-supervised-tools.ts:56, src/lib/customer-text.ts:55-80, src/app/messages/actions.ts:30-60 |
+| F-SEC-003-001-APP | SEC-003-001 Database access uses parameterized queries | YELLOW | critical | Application data access uses supabase-js builders. guard_tenant_references uses pg_catalog.format for dynamic SQL. .or()/.filter() call sites embedding user search text were not exhaustively reviewed. | Grep every .or(/.filter( call and escape user input (or switch to ilike with bound values); add a lint rule. | src/lib/supabase/flexible.ts:1 |
+| F-SEC-003-017-APP | SEC-003-017 Stripe webhooks verify signatures with a replay window | YELLOW | critical | Webhook reads request.text() and verifies with stripe.webhooks.constructEvent (default 300s tolerance), trying platform then Connect secret; 400 on missing/invalid signature. Connected events cross-check event.account. … | Record event.id in stripe_webhook_events (insert ... on conflict do nothing) before processing; add a signature-verification unit test. | src/app/api/stripe/webhook/route.ts:27, src/app/api/stripe/webhook/route.ts:41 |
+| F-SEC-003-021-APP | SEC-003-021 Money flows enforce sequence, atomicity and locking | YELLOW | critical | Settlement RPCs are service-only SECURITY DEFINER functions; refund/payment/plan/change-order rules are unit-tested (invoice-refund, invoice-payment, payment-plan, change-order-apply all pass). Concurrency (double submi… | Add a DB concurrency test (two sessions settling the same refund/payment) on a branch. | src/lib/invoice-refund-server.ts:1 |
 | F-SEC-007-013-APP | SEC-007-013 No cross-tenant leakage through AI context, memory or caches | YELLOW | critical | assistant_memories has organization_id with RLS enabled and member-scoped policies (inspected); assistant-memory.ts filters by organization_id; the assistant brief is built per request from the signed-in member's RLS cl… | Run and log the two-tenant AI test (synthetic Tenant A/B; ask A's assistant, SMS bot and MCP connection about B's customers). Restrict assistant_memories writes to owner/admin or mark memories with author and show them … | src/lib/assistant-memory.ts:32, src/app/assistant/agent-actions.ts:79, src/lib/claude.ts:61 |
 | F-CA-001-002-APP ⚖️ ❔ | CA-001-002 Role determination: Volteira as service provider/contractor… | RED | high | No data-flow role documentation exists. Customer data flows to xAI (live call audio), Anthropic (assistant), Google (geocoding, calendar, drive), Twilio, Resend and Stripe, with no recorded role or purpose limitation. | Write the data-flow role map and commit Volteira to service-provider-only processing. | src/lib/grok-voice.ts, src/lib/claude.ts, src/lib/geocoding.ts |
 | F-CA-004-001-APP ❔ | CA-004-001 Breach notification scope: personal information definition … | RED | high | No written definition or incident classification exists. | Add the definition to an incident response plan. | docs/security |
@@ -1027,6 +1317,31 @@ source is marked ❔; the problem was still observed.
 | F-FED-002-015-APP ❔ | FED-002-015 CTIA Messaging Principles and Best Practices: opt-in, STOP/… | YELLOW | high | The booking-page disclosure carries the required elements (CT-SMS-001 passes), is optional and unchecked, and links Terms and Privacy (public-booking-flow.tsx:517-541). The first AI text carries 'Reply STOP to opt out' … | Record Twilio HELP/STOP auto-reply configuration as evidence; send a disclosure/confirmation text when consent is captured outside the booking form. | src/lib/sms-consent.ts:16-26, src/components/public-booking-flow.tsx:511-541, src/app/api/twilio/inbound/route.ts:18-24 |
 | F-FED-003-001-APP ❔ | FED-003-001 Classify each email as commercial vs transactional/relation… | YELLOW | high | All built-in emails (booking confirmations, estimates, invoices, receipts, contracts, refunds, invitations) are transactional by content, but nothing tags them, and the AI-proposed send_customer_email accepts a free-for… | Add a purpose tag to sendEmail; for free-form owner/AI emails, either refuse promotional content or treat as commercial (unsubscribe, postal address, ad identification). | src/lib/email.ts:27-37, src/lib/mcp-supervised-tools.ts:56-64, src/lib/mcp-supervised-tools.ts:207-242 |
 | F-FED-007-002-APP ❔ | FED-007-002 SAQ A eligibility: fully outsourced, hosted Stripe Checkout… | YELLOW | high | Every checkout is created server-side with ui_mode 'hosted_page' and the browser is redirected to session.url; a nonce-based CSP is enforced and tested. Eligibility attestation is not documented. The booking page displa… | Record the SAQ A eligibility determination (hosted redirect, CSP evidence); change 'Secure test payment' to 'Secure payment' on the booking form. | src/lib/booking-checkout.ts:120, src/lib/job-prepayment-pay.ts:454, src/lib/csp.ts:1 |
+| F-SEC-001-005-APP | SEC-001-005 Sensitive account changes require re-authentication | YELLOW | high | Password change sends current_password to supabase.auth.updateUser (account/actions.ts:462). Email change calls updateUser({ email }) with no re-authentication (account/actions.ts:89; relies on Supabase double-confirmat… | Require re-authentication (supabase.auth.reauthenticate nonce or password re-entry within N minutes) before email change, payout onboarding, ownership transfer and future MFA factor changes; enable secure email change i… | src/app/account/actions.ts:89, src/app/account/actions.ts:462, src/app/settings/payments/start/route.ts:25 |
+| F-SEC-001-008-APP | SEC-001-008 Password reset is secure and does not bypass MFA | YELLOW | high | Reset completes only for a session whose amr includes 'recovery' within one hour (password-reset.ts mayResetPassword, tested); callback uses getSafeNextPath. No hints/questions. Because MFA does not exist, 'reset does n… | When MFA ships, require aal2 (or a factor challenge) after recovery before updateUser({password}) for users with factors; document the Supabase OTP expiry setting. | src/lib/password-reset.ts:26, src/app/reset-password/actions.ts:30, src/app/auth/callback/route.ts:16 |
+| F-SEC-001-012-APP | SEC-001-012 Sessions are verified server-side and revoked on sign-out | YELLOW | high | currentUser() and the proxy use supabase.auth.getClaims() (signature-verified JWT) and API routes such as recordings use getUser(). signOut() calls supabase.auth.signOut() whose default scope is global (revokes refresh … | Add a test or documented manual check that a refresh token is rejected after sign-out; keep access-token lifetime short; consider getUser() (server round-trip) on high-risk actions. | src/lib/request-context.ts:52, src/lib/supabase/proxy.ts:323, src/app/account/actions.ts:472 |
+| F-SEC-001-013-APP | SEC-001-013 Removing or disabling a user ends their sessions everywhere | YELLOW | high | Membership is re-read on every request (currentContext queries organization_members; RLS helpers check membership per query), so removal takes effect immediately even with a valid JWT (active-business.test.ts covers the… | Add 'sign out everywhere' (signOut({scope:'others'})) on Account > Security and after password change; add a platform-admin action using auth.admin.signOut for a user; pending rolled-back two-tenant test TI-001..TI-012 … | src/lib/request-context.ts:83, src/lib/active-business.ts:1 |
+| F-SEC-001-015-APP | SEC-001-015 All authentication pathways are inventoried | YELLOW | high | docs/security/source-inventory.md and public-paths.ts (tested) enumerate public routes, and each pathway was found in code: password, email OTP/recovery, invitation tokens, capability links (invoice/estimate/contract/bo… | Write docs/security/auth-pathways.md listing each pathway, credential type, entropy, lifetime, revocation and rate limit; keep public-paths.test.ts in sync. | src/lib/public-paths.ts:57, docs/security/source-inventory.md:1 |
+| F-SEC-001-017-APP | SEC-001-017 Customer-facing capability links are unguessable, scoped an… | YELLOW | high | Tokens are gen_random_uuid() UUIDv4 (122 random bits, CSPRNG) in uuid columns: contracts.public_token, booking_requests.public_token, job_payment_plan_items.pay_token, invoices/estimates.preview_token, invitations.token… | Move to 256-bit random tokens (encode(gen_random_bytes(32),'base64url') in text columns) for new links; add revoke/rotate and expiry after purpose ends; remove the token from the booking pay log line. | next.config.ts:200, src/app/booking/[token]/pay/route.ts:104 |
+| F-SEC-002-013-APP | SEC-002-013 Invitations are single-use, expiring and cannot escalate pr… | YELLOW | high | accept_organization_invitation requires signed-in user, matching confirmed email, not revoked/accepted/expired, with FOR UPDATE; invitations expire (14 days); guard_owner_invitation/guard_owner_membership stop non-owner… | Add a database test for invite acceptance (wrong email, expired, revoked, technician creating owner invite); use 256-bit tokens. | src/app/settings/team/actions.ts:37, supabase/migrations/20260810040000_organization_invitations.sql:121 |
+| F-SEC-002-014-APP | SEC-002-014 Active-business switching re-validates membership on every … | YELLOW | high | BUSINESS_COOKIE is validated as a UUID and only honoured when chooseMembership finds a current membership (tested); RLS checks membership on every query; impersonation read from DB, not cookie. DB-level removed-member s… | Run compliance/tests/tenant-isolation/two-tenant-rollback.sql with a removed-member variant (delete A's membership, keep JWT) and record the result. | src/lib/request-context.ts:96, src/lib/request-context.ts:121, src/lib/active-business.ts:1 |
+| F-SEC-002-016-APP | SEC-002-016 Public tenant pages expose only that tenant's public data | YELLOW | high | Custom hosts resolved via bookingHostFor (string match) then get_booking_page_by_host / get_verified_host_for_slug (verified domain mapping); tenant-domain.test.ts passes (18 tests). Public RPC outputs not field-reviewe… | Add a DB test that calls create_public_booking_intake with A's slug and B's identifiers and expects refusal; review returned columns. | src/proxy.ts:51, src/lib/tenant-domain.ts:1 |
+| F-SEC-002-017-APP | SEC-002-017 Reports, search and exports are tenant-filtered | YELLOW | high | reports/export uses currentContext().organizationId passed into buildReportExport (service role) and gates on canExportReports(role). Search and dashboards use the RLS client. Not exercised with two tenants. | Add an export test with two seeded tenants asserting zero foreign rows. | src/app/reports/export/route.ts:18, src/app/reports/export/route.ts:31 |
+| F-SEC-002-018-APP ⚖️ | SEC-002-018 Tenant offboarding and deletion is complete and isolated | RED | high | No offboarding/deletion procedure exists in docs. The organizations DELETE policy is broken (never matches), so owners cannot delete via the app; platform admin data actions exist (admin/organizations/[id]/data-actions.… | Write a tenant offboarding runbook (export, delete rows/objects, revoke MCP and OAuth credentials, disconnect Stripe/Twilio numbers, retained records and legal holds, backup retention) and fix the delete policy. | src/app/admin/organizations/[id]/data-actions.ts:1 |
+| F-SEC-003-002-APP | SEC-003-002 Output is encoded for its context (XSS) | YELLOW | high | No innerHTML/document.write found; only dangerouslySetInnerHTML is JSON-LD. Email HTML templates and PDFs (react-pdf) were not audited for escaping of customer values. | Review email HTML builders (invitationEmail, invoice emails) for HTML-escaping of customer-supplied strings and add a test for one template. | src/components/journal-structured-data.tsx:96 |
+| F-SEC-003-005-APP | SEC-003-005 Server actions and cookie-authenticated routes are protecte… | YELLOW | high | experimental.serverActions.allowedOrigins is not set (default same-origin check). Invoice and plan pay routes are POST. But /booking/[token]/pay is a GET that starts a Stripe checkout session (state change on GET, token… | Make booking pay a POST (form button) and add an Origin check helper for cookie-authenticated route handlers that change state. | next.config.ts:164, src/app/booking/[token]/pay/route.ts:34, src/app/settings/payments/start/route.ts:21 |
+| F-SEC-003-006-APP | SEC-003-006 Server-side URL fetching is protected against SSRF | YELLOW | high | Twilio recording and message media fetch helpers restrict to Twilio hosts (twilio-recording, message-media tests pass). Other outbound fetches (geocoding, Google APIs, HIBP) use fixed hosts. Website intake / AI web tool… | Inventory every fetch() whose URL contains request/AI data and route them through one allowlisting helper with redirect: 'manual'. | src/lib/twilio.ts:1, src/lib/message-media.ts:1 |
+| F-SEC-003-009-APP | SEC-003-009 Uploads are validated for type, size and content | YELLOW | high | business-documents bucket has a 50MB limit but allowed_mime_types = null; public-branding allows image/svg+xml (public bucket, SVG not sanitized at bucket level). site-videos and attachment-kinds tests pass for those up… | Set allowed_mime_types on business-documents; remove image/svg+xml from public-branding or sanitize SVG server-side; document limits per upload. | next.config.ts:180 |
+| F-SEC-003-020-APP | SEC-003-020 Webhook processing is idempotent and rejects replays | YELLOW | high | Payment recording is keyed on checkout/refund IDs (comments and RPC design: 'a retry never records a payment twice'); stripe_webhook_events (unique event id) is unused by code. Twilio status updates are not keyed on an … | Use stripe_webhook_events for event-level dedupe; add a replay test for paid->refunded->paid ordering. | src/lib/job-prepayment-pay.ts:521, src/app/api/stripe/webhook/route.ts:56 |
+| F-SEC-004-002-APP | SEC-004-002 Secrets are inventoried and held in a secrets manager | YELLOW | high | Secrets live in Vercel (mostly 'sensitive' type) and Supabase Vault (4 secrets). No inventory document with owner and rotation interval. BLOB_READ_WRITE_TOKEN is stored as non-sensitive 'encrypted' type across all envir… | Write docs/security/secrets-inventory.md (name, purpose, owner, store, environments, rotation interval); convert BLOB_READ_WRITE_TOKEN to Sensitive. |  |
+| F-SEC-004-005-APP | SEC-004-005 Repository and CI prevent secret commits | YELLOW | high | .gitignore excludes .env*; .claude/settings.json runs .claude/never-secret/hooks/run.sh on every PostToolUse. GitHub secret scanning/push protection status not visible (no gh access used). | Confirm GitHub secret scanning and push protection are on for the repository. | .gitignore:34, .claude/settings.json:1 |
+| F-SEC-004-011-APP | SEC-004-011 Dependencies are scanned and patched within defined timefra… | YELLOW | high | npm audit --omit=dev: 0 vulnerabilities (2026-11-25). package-lock.json committed. No CI or Dependabot (.github absent) and no documented remediation timeframes. | Add Dependabot/CI audit with documented SLAs (critical 7d, high 30d). | package-lock.json:1 |
+| F-SEC-004-013-APP | SEC-004-013 Agent tooling (Claude Code hooks, skills, MCP servers) is r… | YELLOW | high | .claude/settings.json runs a vendored never-secret hook on every tool use; .claude/COMMANDS.md inventories skills. Agent sessions have Supabase MCP connected to the production project with apply_migration/execute_sql av… | Restrict the Supabase MCP connection to read-only (or a branch) by default; record review of the never-secret hook version. | .claude/settings.json:1, .claude/never-secret/hooks/run.sh:1 |
+| F-SEC-005-004-APP | SEC-005-004 Admin and permission changes are logged | YELLOW | high | Platform admin actions, unmasking and impersonation are written to platform_admin_audit / impersonation_sessions with reason (admin-trace test passes). Tenant-side invites, removals and role changes were not found writi… | Write activity_events (server-side) for invitation create/revoke/accept, member removal and role change. | src/app/settings/team/actions.ts:37 |
+| F-SEC-005-007-APP ⚖️ | SEC-005-007 Contract signature events are logged with integrity evidence | YELLOW | high | Contracts store signed_body_hash; triggers keep_signed_contract_text/figures/keep_contractor_signature block edits after signing; contract signing captures client IP (contract/[token]/actions.ts:57-62). Tests pass. cont… | Confirm view/send events are recorded; restrict contract_signers updates after signature. | src/app/contract/[token]/actions.ts:57 |
+| F-SEC-005-008-APP | SEC-005-008 Financial changes are logged with before and after values | YELLOW | high | invoice_revisions stores previous/next, subtotal_delta_cents, credit_due_cents and created_by; activity timeline and refund tests pass. Payment records and discount edits were not all confirmed to log before/after. invo… | Extend revision logging to manual payments, discounts and deposit applications. |  |
+| F-SEC-005-011-APP | SEC-005-011 Every MCP tool call is logged | YELLOW | high | mcp_call_log has organization_id, method, tool_name, redacted arguments, is_error/http_status, duration_ms, session_key; owners/admins can read; retention cron. No explicit connection/credential id column. mcp-log-redac… | Add the credential/connection id to each row (details in SEC-007 findings). | src/lib/mcp-log.ts:1 |
+| F-SEC-005-012-APP | SEC-005-012 Logs contain no secrets and minimal personal information | RED | high | src/app/booking/[token]/pay/route.ts:104 logs the booking capability token via console.error (Vercel runtime logs). Capability and MCP tokens are in URL paths, so Vercel request logs contain them; no retention/access st… | Remove the token from that log line; document Vercel log retention/access; move tokens out of paths (fragment or POST) where practical. | src/app/booking/[token]/pay/route.ts:104 |
 | F-SEC-007-007-APP | SEC-007-007 Tool arguments are validated server-side | YELLOW | high | The protocol layer passes arguments straight to handlers without validating against inputSchema (src/lib/mcp-protocol.ts:162-171); additionalProperties:false is declared but not enforced, so unknown fields are silently … | Validate every tools/call against the tool's inputSchema in handleOne (e.g. Ajv in strict mode, or zod schemas generated per tool), rejecting unknown fields and out-of-range values with isError before the handler runs; … | src/lib/mcp-protocol.ts:162, src/lib/mcp-protocol.ts:208, src/lib/mcp-business-tools.ts:711 |
 | F-SEC-007-011-APP | SEC-007-011 AI and MCP outputs do not disclose sensitive information | RED | high | No grant model exists (SEC-007-003), so every business connection can read full customer text conversations (list_text_conversations / get_text_conversation), customer details, invoices and proposal provider receipts. C… | Put text history and any recording/transcript access behind a separate opt-in grant; trim tool responses to the fields needed (e.g. omit email/phone from search results unless asked); add response-shape tests for the te… | src/lib/mcp-text-history.ts:36, src/lib/mcp-text-history.ts:51, src/lib/mcp-customer-tools.ts:36 |
 | F-SEC-007-016-APP | SEC-007-016 AI-produced financial figures are computed deterministically | YELLOW | high | Totals are computed in code in cents: add_job_lines parses lines and totals them (mcp-job-lines tested), bill_job and create_invoice use invoiceTotals, change orders and discounts recompute via tested math, the assistan… | Make create_invoice/set_invoice_amount derive totals from priced lines (or require the human to type the figure in Volteira); keep the model's role to proposing lines, not totals. | src/lib/mcp-business-tools.ts:601, src/lib/assistant-confirmed.ts:354, src/lib/mcp-job-lines.ts:1 |
@@ -1068,6 +1383,17 @@ source is marked ❔; the problem was still observed.
 | F-FED-009-003-APP ❔ | FED-009-003 Provide simple mechanisms to stop recurring charges | YELLOW | medium | 'Manage billing' opens the Stripe Billing Portal for owners/admins, and cancel_at_period_end is synced and shown as 'Access ends <date>'. Whether the portal configuration allows cancellation is a Stripe dashboard settin… | Enable cancellation in the Billing Portal configuration (or pass a configuration id with subscription_cancel enabled) and add an in-app 'Cancel plan' link that opens the portal cancel flow directly. | src/app/account/actions.ts:415, src/app/account/actions.ts:435, src/app/account/page.tsx:266 |
 | F-FED-010-002-APP ❔ | FED-010-002 AI capability and performance claims must be truthful and s… | YELLOW | medium | In-app copy on the Use in ChatGPT page states 'It always asks you before it changes anything or messages a customer.' That depends on the model honoring the confirmed flag; Volteira does not enforce it server-side (SEC-… | Either enforce approval in Volteira (SEC-007-009) or reword to 'ChatGPT or Claude is instructed to ask you before...'; review volteira.com marketing copy for AI claims. | src/app/settings/chatgpt/chatgpt-connection-card.tsx:86 |
 | F-FED-010-005-APP ⚖️ ❔ | FED-010-005 AI vendor terms and data-use limits (Anthropic, OpenAI, xAI) | RED | medium | Vendor agreements and provider-side retention/training settings are not visible from the repository (BLUE portion). What is observable is missing: the tenant-facing privacy policy names no AI providers or AI processing;… | Obtain and file the Anthropic, xAI (and OpenAI, if used) commercial terms and record no-training/retention settings (zero data retention where available); list AI subprocessors in the privacy policy; tell owners connect… | src/app/legal/[org]/privacy/page.tsx:1, src/lib/sms-intake-runner.ts:53, src/app/api/xai/voice/route.ts:135 |
+| F-SEC-001-003-APP | SEC-001-003 Password policy follows modern length-based rules | YELLOW | medium | App enforces 10 characters on password change and reset (server-side: src/lib/password-reset.ts MIN_NEW_PASSWORD_LENGTH=10, account/actions.ts:449) but sign-up enforces 8 only in the browser (auth-form.tsx minLength=8) … | Set Supabase Auth minimum password length to at least 10 (matching change/reset) in the production dashboard and in config.toml; document the policy; optionally move sign-up to a server action so length and breach check… | src/components/auth-form.tsx:37, src/lib/password-reset.ts:21, src/app/account/actions.ts:449 |
+| F-SEC-001-004-APP | SEC-001-004 New passwords are checked against breached-password lists | YELLOW | medium | HIBP k-anonymity check (src/lib/pwned-password.ts) runs server-side on reset and change, but at sign-up only in the browser (bypassable by calling Supabase Auth directly). It fails open silently: catch returns false wit… | Enable Supabase leaked-password protection (or move sign-up to a server action that runs passwordIsBreached); log (without the password or hash) when the HIBP lookup fails or times out. | src/lib/pwned-password.ts:46, src/components/auth-form.tsx:43, src/app/reset-password/actions.ts:27 |
+| F-SEC-001-009-APP | SEC-001-009 Lost MFA factor recovery requires identity proofing | RED | medium | No MFA, no factor management UI, and no documented recovery procedure in docs/security. | Write a lost-factor recovery runbook (identity proofing at least as strong as enrollment, performed by platform staff, logged to platform_admin_audit) and ship self-service factor revocation with MFA. | src/app/account/page.tsx:384 |
+| F-SEC-004-003-APP | SEC-004-003 Secrets are rotated on schedule and on personnel or inciden… | RED | medium | No rotation procedure or record exists in the repository. | Document zero-downtime rotation steps per secret (Stripe webhook roll, Supabase key rotation, Twilio secondary token) and log each rotation. |  |
+| F-SEC-005-003-APP | SEC-005-003 Authorization failures and cross-tenant attempts are logged | RED | medium | Webhook signature failures return 403 without logging (e.g. twilio/inbound route.ts:36-44); RLS denials and invalid capability tokens are not logged; a few console.error lines exist for mismatched Stripe accounts only. | Log (rate-limited) authorization failures and invalid signatures with route, tenant and reason. | src/app/api/twilio/inbound/route.ts:36, src/lib/job-prepayment-pay.ts:544 |
+| F-SEC-005-006-APP | SEC-005-006 Access to and export of personal information is logged | RED | medium | reports/export and twilio/recordings serve data without writing any audit event; admin views log through platform_admin_audit. | Write an audit event for each export (report, range, row count) and each recording playback. | src/app/reports/export/route.ts:17, src/app/api/twilio/recordings/[recordingSid]/route.ts:9 |
+| F-SEC-005-009-APP ⚖️ | SEC-005-009 Deletions are logged | RED | medium | Members can DELETE customers (policy) and no deletion audit event was found. | Add delete triggers that write a PI-free audit row (table, id, actor, time). |  |
+| F-SEC-006-004-APP | SEC-006-004 Escalation paths are defined | RED | medium | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). | Document escalation thresholds and contacts. |  |
+| F-SEC-006-009-APP | SEC-006-009 Vendors are coordinated in incident response | RED | medium | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). | Record vendor security contacts and subscribe to status/security feeds. |  |
+| F-SEC-006-012-APP | SEC-006-012 Incident response is exercised and improved | RED | medium | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). | Schedule a tabletop (cross-tenant exposure, leaked service-role key) within 90 days. |  |
+| F-SEC-006-013-APP ❔ | SEC-006-013 Incident response plan covers payment-related incidents (PC… | RED | medium | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). | Add a payment-incident runbook covering Stripe Checkout redirect integrity and Stripe notification. |  |
 | F-SEC-007-015-APP | SEC-007-015 AI usage is bounded per tenant | RED | medium | A monthly per-tenant allowance (takeAiUse) guards the in-app assistant, materials chat, contract scope, journal and receipts (rules tested), and Anthropic calls set max_tokens. But AI paths triggered from outside are no… | Count SMS-intake and voice sessions against the tenant allowance (with a per-number/per-conversation rate limit so a flood of inbound texts cannot spend a tenant's AI budget); add per-credential rate limiting and a batc… | src/lib/sms-intake-runner.ts:158, src/app/api/xai/voice/route.ts:29, src/app/api/mcp/[token]/route.ts:68 |
 | F-CA-008-002-APP ❔ | CA-008-002 Clear and conspicuous automatic renewal terms before the su… | RED | low | Same gap as FED-009-001: no renewal terms or cancellation policy shown before Stripe Checkout. | Implement the FED-009-001 disclosure block adjacent to the consent checkbox. | src/app/account/actions.ts:348, src/app/account/actions.ts:384, src/app/account/page.tsx:280 |
 | F-CA-008-003-APP ❔ | CA-008-003 Express affirmative consent to renewal terms and consent re… | RED | low | No consent capture or record (see FED-009-002). | Implement the FED-009-002 consent checkbox and retain records for at least three years or one year after termination, whichever is longer. | src/app/account/actions.ts:348, src/app/account/actions.ts:384, src/app/account/page.tsx:280 |
@@ -1082,6 +1408,10 @@ source is marked ❔; the problem was still observed.
 | F-FED-003-002-APP ❔ | FED-003-002 No false or misleading header information (applies to comme… | YELLOW | high | emailSender builds 'Business Name <configured address>' and strips characters that could forge a header (booking-confirmation.ts:698-708), tested; reply_to routes to the business. Domain authentication (SPF/DKIM/DMARC) … | Capture Resend domain verification and DNS SPF/DKIM/DMARC records as evidence. | src/lib/booking-confirmation.ts:698-708, src/lib/email.ts:91-106 |
 | F-FED-008-001-APP ❔ | FED-008-001 No fake or false consumer reviews or testimonials, includin… | YELLOW | high | No review solicitation, display or testimonial feature exists in the app or front page. The AI assistants (in-app, ChatGPT/Claude MCP, journal writer) have no instruction refusing to write reviews or testimonials in a c… | Add a system-prompt rule to every assistant refusing to compose reviews/testimonials for a customer or employee, and a test. | src/lib/assistant-brief.ts, src/lib/journal-writer.ts, src/lib/grok-voice.ts |
 | F-FED-008-007-APP ⚖️ ❔ | FED-008-007 Consumer Review Fairness Act: form contracts may not restri… | YELLOW | high | Volteira fills the tenant's own contract document and adds only payment terms and the down-payment notice (contract-template.ts:1-16; payment-plan.ts:57, 255); the SMS terms page has no review clause. Tenant-uploaded co… | Warn on or refuse contract templates containing non-disparagement/review-penalty language; keep any future Volteira terms free of them. | src/lib/contract-template.ts:1-16, src/lib/payment-plan.ts:250-256, src/app/legal/[org]/terms/page.tsx |
+| F-SEC-001-018-APP | SEC-001-018 OAuth integration flows (Google Drive/Calendar) are protect… | YELLOW | high | Google Drive and Calendar flows create a signed state containing organization and user (createDocumentOAuthState), store it in an httpOnly cookie, compare on callback and re-check the signed-in user and owner/admin memb… | Add PKCE (code_challenge S256) to both Google flows; document the scopes and why each is needed. | src/app/api/integrations/google-drive/callback/route.ts:44, src/app/api/integrations/google-calendar/callback/route.ts:17, src/app/api/integrations/google-calendar/connect/route.ts:16 |
+| F-SEC-003-011-APP | SEC-003-011 Input is validated at a trusted layer | YELLOW | high | Money rules are integer cents and tested (money-input, invoice-math, invoice-refund); DB constraints such as invoice_payments.amount_cents > 0 exist. Validation is hand-written per action (no schema library); not unifor… | Adopt a schema validator (zod is already an override dependency) for server action inputs. | src/lib/money-input.ts:1, src/lib/invoice-math.ts:1 |
+| F-SEC-003-019-APP | SEC-003-019 Resend and other inbound webhooks verify signatures | YELLOW | high | xAI voice webhook verifies webhook-id/timestamp/signature (xai-webhook.test.ts passes). Operations worker compares VOLTEIRA_SUPERVISED_WORKER_TOKEN with timingSafeEqual. Website intake uses hashed bearer keys. No Resend… | Set XAI_WEBHOOK_SECRET in Production (or remove the route); return a generic 403 body. | src/app/api/xai/voice/route.ts:33, src/app/api/operations/worker/route.ts:23 |
+| F-SEC-004-006-APP | SEC-004-006 All traffic is encrypted in transit with certificate valida… | YELLOW | high | No rejectUnauthorized:false or NODE_TLS_REJECT_UNAUTHORIZED in src/scripts; HSTS set; all providers called over https. DB tooling SSL mode not documented. | Document sslmode=require for direct DB connections (scripts/security). | next.config.ts:204 |
 | F-SEC-007-019-APP | SEC-007-019 AI output is handled as untrusted before rendering or use | YELLOW | high | Model output is rendered as React text (auto-escaped); the only dangerouslySetInnerHTML uses safeJsonLd for journal JSON-LD, which escapes <, >, & and line separators; model-proposed store product URLs pass storeProduct… | Document the review; add a unit test for safeJsonLd with a </script> payload and for storeProductUrl rejecting javascript:/lookalike hosts; add a lint rule forbidding dangerouslySetInnerHTML outside json-ld. | src/components/journal-structured-data.tsx:96, src/lib/json-ld.ts:24, src/lib/store-price-rules.ts:75 |
 | F-CA-004-004-APP ❔ | CA-004-004 Alternate notice for breaches of online account credentials | RED | medium | No procedure for account-credential breaches (owner/staff passwords via Supabase auth). | Add the credential-breach notice procedure (no notice to the compromised email). | docs/security |
 | F-CA-005-006-APP ❔ | CA-005-006 Errors in automated transactions | YELLOW | medium | Signing page shows the full contract text and a summary of the stored figures above it; unsigned contracts with blanks cannot be signed. Not exercised in a browser in this audit. | Verify in browser; add an explicit 'review totals, deposit and schedule' step before the sign button. | src/app/contract/[token]/page.tsx:1, src/lib/contract-signing.ts:141 |
@@ -1099,6 +1429,15 @@ source is marked ❔; the problem was still observed.
 | F-FED-002-012-APP ❔ | FED-002-012 Identification in artificial/prerecorded messages and calle… | YELLOW | medium | The AI greeting names the business first (tested in both the Gather and xAI paths). Outbound callbacks use the organization's own phone as caller ID (website-intake-runner.ts:206-229). The AI voicemail names the busines… | Add a test asserting the voicemail starts with the business name and contains the business number. | src/lib/voice-intake.ts:44-61, src/lib/website-intake.ts:218-231, src/lib/website-intake-runner.ts:206-229 |
 | F-FED-008-008-APP ❔ | FED-008-008 Guides Against Deceptive Pricing: former price, comparable … | YELLOW | medium | No former-price or sale claims found. The booking page shows the diagnostic fee and the late-cancellation fee next to the agreement (public-booking-flow.tsx:505-507). Evidence is code-read only. | Verify on the rendered booking and pay pages that total charges are shown before payment. | src/components/public-booking-flow.tsx:505-507 |
 | F-FED-008-009-APP ❔ | FED-008-009 Use of the word 'Free' (e.g., 'free estimate', 'free trial') | YELLOW | medium | The front page advertises 'Create free account' (front-page.tsx:274, 372) while account/page.tsx:98 notes membership is free only until a monthly price is set in Stripe; no terms of the free offer appear near the claim.… | State next to 'free' what is free and when charges would begin; require notice before any conversion to paid. | src/components/front-page.tsx:274, src/components/front-page.tsx:372, src/app/account/page.tsx:98 |
+| F-SEC-001-007-APP | SEC-001-007 Sign-in, sign-up and reset do not reveal which accounts exi… | YELLOW | medium | Sign-in maps 'invalid login' to a generic message, but other Supabase error messages are shown verbatim (auth-form.tsx:73), so a sign-up error such as 'User already registered' would be displayed when email confirmation… | Map every sign-up/sign-in auth error to fixed generic text; keep email confirmation on in production (verify in dashboard) so signUp returns an obfuscated user for existing emails. | src/components/auth-form.tsx:73, src/components/forgot-password-form.tsx:42 |
+| F-SEC-001-014-APP | SEC-001-014 Authentication cookies use secure attributes | YELLOW | medium | Supabase auth cookies are set by @supabase/ssr defaults (script-readable by design, SameSite=Lax, path /); the app passes the library options through unchanged (supabase/proxy.ts:316). Tenant custom domains are rewritte… | Document the @supabase/ssr cookie attributes and the CSP compensating control; verify in a browser that production cookies carry Secure; set cookieOptions { secure: true, sameSite: 'lax' } explicitly. | src/lib/supabase/proxy.ts:316, src/proxy.ts:62, src/app/api/integrations/google-calendar/connect/route.ts:15 |
+| F-SEC-002-011-APP | SEC-002-011 Field-level access and response minimization | YELLOW | medium | Many loaders use explicit column lists, but technicians are allowed to see all billing ('Technicians can still see it all', billing-permission.ts:4) and RLS SELECT policies are member-wide. No role-based field minimisat… | Define which fields technicians need (costs, margins, payout data) and restrict them in loaders/RLS (column-level grants or views with security_invoker). | src/lib/billing-permission.ts:4 |
+| F-SEC-003-008-APP | SEC-003-008 Redirects only go to allowlisted destinations | YELLOW | medium | getSafeNextPath resolves against a fixed base and rejects other origins (used by login and auth/callback). Google redirect_uri is built from configured origin. No unit test covers getSafeNextPath ('//evil' etc.). | Confirm Supabase Auth redirect allowlist and Google OAuth redirect URIs are exact-match in their consoles. | src/lib/auth-redirect.ts:1, src/app/auth/callback/route.ts:16 |
+| F-SEC-003-010-APP | SEC-003-010 Untrusted files are served safely and scanned where risk wa… | YELLOW | medium | Documents are served through Supabase signed URLs (storage origin); app sets X-Content-Type-Options nosniff globally. No documented antivirus decision. | Record an AV-scanning decision with compensating controls; use download disposition for non-image signed URLs. | next.config.ts:201 |
+| F-SEC-003-013-APP | SEC-003-013 Errors are generic to clients and fail closed | YELLOW | medium | src/app/error.tsx exists; actions return fixed messages. Fail-open choices: passwordIsBreached returns false on error; AI allowance allows use when count fails (ai-allowance.ts comment). xAI route returns 'XAI_WEBHOOK_S… | Log fail-open events; return a generic 403 body from webhooks. | src/app/error.tsx:1, src/lib/pwned-password.ts:58, src/app/api/xai/voice/route.ts:51 |
+| F-SEC-003-023-APP | SEC-003-023 Email/SMS composition resists header and template injection… | YELLOW | medium | Email goes through Resend API JSON (no raw headers); invite email validates address with a simple anchored regex. Not exhaustively reviewed for regex backtracking or object merges. | Run a ReDoS linter (eslint-plugin-regexp) and review spreads of request JSON into objects. | src/app/settings/team/actions.ts:50, src/lib/email.ts:1 |
+| F-SEC-004-012-APP | SEC-004-012 Build supply chain is pinned and verified | YELLOW | medium | Lockfile committed; most runtime deps pinned exactly, but @anthropic-ai/sdk, @react-pdf/renderer and pdfjs-dist use caret ranges. No CI to pin. Vercel installs from lockfile. | Pin remaining caret ranges; document dependency review for new packages. | package.json:12 |
+| F-SEC-004-016-APP | SEC-004-016 Production build exposes no debug features or source metada… | YELLOW | medium | productionBrowserSourceMaps not set (default off); no debug routes found; public/ has only icons. Live probing of /.git and /.env not performed. | Run a quick external check of production for /.env, /.git/config and source maps. | next.config.ts:140 |
 | F-SEC-007-014-APP | SEC-007-014 MCP server tool definitions are integrity-controlled | YELLOW | medium | All MCP tool definitions are static arrays in src/lib/mcp-*.ts and booking-tool-rules.ts; no tenant data is interpolated into tool names or descriptions (tenant data goes into the voice session instructions, not tool de… | Add a unit test that hashes the combined tools/list (names, descriptions, schemas) and fails unless a stored hash and SERVER_VERSION are updated together; keep tool descriptions free of runtime data. | src/app/api/mcp/[token]/route.ts:22, src/lib/mcp-protocol.ts:140 |
 | F-CA-002-004-APP ❔ | CA-002-004 Describe process to review and request changes to PII (if o… | YELLOW | low | 'Your choices' says customers can ask to correct details or get a copy by contacting the business (privacy/page.tsx:102-106). Code-read only; no rendered check. | Describe how requests are made and handled. | src/app/legal/[org]/privacy/page.tsx:102-106 |
 | F-CA-002-005-APP ❔ | CA-002-005 Describe how users are notified of material policy changes | RED | low | The policy has no statement about notification of changes. | Add a change-notification section and follow it. | src/app/legal/[org]/privacy/page.tsx:34-117 |
@@ -1112,4 +1451,7 @@ source is marked ❔; the problem was still observed.
 | F-FED-001-009-APP ❔ | FED-001-009 Notify and allow fee-free withdrawal when hardware/software… | YELLOW | low | ESIGN_CONSENT_VERSION exists and each new signing shows the current text, but the version accepted is never stored, so there is no way to tell who consented to an older statement or to notify them. | Store the consent version with each consent; on a version bump, require re-consent before the next electronic record is sent. | src/lib/esign-consent.ts:20 |
 | F-FED-006-005-APP ❔ | FED-006-005 Report cash receipts over $10,000 in one transaction or rel… | YELLOW | low | Cash and check can be recorded as prepayments (recordPrepayment) and as paid-in-hand invoices (record_invoice_paid_in_hand RPC), but there is no flag or notice when cash received in one or related transactions exceeds $… | When cash/cashier's-check payments recorded for one customer within 12 months exceed $10,000, show a non-blocking Form 8300 reminder to the owner and log it. | src/lib/payment-plan-server.ts:201, src/lib/invoice-paid-in-hand.ts:82 |
 | F-FED-011-001-APP ⚖️ ❔ | FED-011-001 COPPA applicability: services not directed to children unde… | YELLOW | low | The product is a B2B tool and booking for property owners; nothing is directed to children. No terms or policy state the service is for adults, and there is no process for deleting a child's data. | Add an adults-only statement to the policies and terms. | src/app/legal/[org]/privacy/page.tsx:39-60, src/app/legal/[org]/terms/page.tsx |
+| F-SEC-004-017-APP | SEC-004-017 A vulnerability disclosure process exists | RED | low | No public/.well-known/security.txt and no disclosure policy page. | Publish /.well-known/security.txt with a contact and a short disclosure policy. |  |
+| F-SEC-005-014-APP | SEC-005-014 Log entries are encoded and logging is inventoried | RED | low | No logging inventory document; console logging uses structured objects in places. | Write a logging inventory (Vercel, Supabase, app tables, providers) with retention. |  |
+| F-SEC-006-011-APP | SEC-006-011 Recovery progress is communicated | RED | low | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). | Define status communication channels and templates. |  |
 | F-CSLB-011-004-APP ❔ | CSLB-011-004 Permit tracking on jobs | RED | informational | Only a 'permit' document type exists for uploads; no structured permit fields, and the template comments treat {{permit_number}} as something 'this app does not track'. | Add structured permit fields and a {{permit_number}} placeholder. | src/lib/contract-template.ts:82 |
