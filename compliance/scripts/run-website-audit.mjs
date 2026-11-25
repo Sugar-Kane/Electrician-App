@@ -354,7 +354,6 @@ async function main() {
     if (mode !== "security" && mode !== "privacy") {
       await page.addScriptTag({ content: axeSource });
       axe = await page.evaluate(async () => {
-        // eslint-disable-next-line no-undef
         const r = await axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] }, resultTypes: ["violations", "incomplete"] });
         const slim = (list) => list.map((v) => ({ id: v.id, impact: v.impact, tags: v.tags.filter((t) => t.startsWith("wcag")), help: v.help, nodes: v.nodes.length, sample: v.nodes.slice(0, 3).map((n) => n.target.join(" ")) }));
         return { violations: slim(r.violations), incomplete: slim(r.incomplete), passes: r.passes.length };
