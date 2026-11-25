@@ -1,0 +1,1876 @@
+{
+  "register": "website-california",
+  "baseline_version": "2026-11-24",
+  "generated_at": "2026-11-24T23:48:32+00:00",
+  "requirements": [
+    {
+      "id": "WEB-CA-001",
+      "title": "CalOPPA: privacy policy conspicuously posted",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(a), 22577(b)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22577",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "The privacy policy is 'conspicuously posted' by at least one method in B&P 22577(b): (1) the policy itself appears on the homepage; (2) it appears on the first significant page after entering the site; (3) an icon hyperlink to it that contains the word 'privacy' appears on the homepage or first significant page, in a color that contrasts with the page background; (4) a text hyperlink that includes the word 'privacy' appears on the homepage or first significant page, written in capital letters equal to or greater in size than the surrounding text, or in larger type than surrounding text, or in contrasting type, font or color to surrounding text of the same size, or set off by symbols or marks that call attention to it; or (5) any other functional hyperlink so displayed that a reasonable person would notice it.",
+        "The link resolves (HTTP 200) to the current policy and is present on every page template (footer) as good practice."
+      ],
+      "enforcement_exposure": "AG enforcement under UCL (B&P 17200) after 30-day notice to cure (22575(a)); penalties up to $2,500 per violation under UCL.",
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "homepage screenshot showing link styling",
+        "DOM capture of the link text and href",
+        "HTTP status of policy URL"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "notes": "Check: find an <a> on the homepage whose text contains 'privacy' (case-insensitive) and verify styling meets one of the (b)(4) options; record which 22577(b) method is satisfied. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-002",
+      "title": "CalOPPA: categories of PII and third parties disclosed",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(b)(1)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Policy identifies the categories of personally identifiable information collected through the site and the categories of third-party persons or entities with whom it may be shared."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "privacy policy snapshot (HTML/PDF) with retrieval date",
+        "annotated excerpt for the required element"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-001",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-003",
+      "title": "CalOPPA: process to review and request changes (if offered)",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(b)(2)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "If the operator maintains a process for consumers to review and request changes to their PII, the policy describes that process."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "privacy policy snapshot (HTML/PDF) with retrieval date",
+        "annotated excerpt for the required element"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-001",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-004",
+      "title": "CalOPPA: process for notifying users of material changes",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(b)(3)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Policy describes how the operator notifies consumers of material changes to the policy (e.g., banner, email, updated date)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "privacy policy snapshot (HTML/PDF) with retrieval date",
+        "annotated excerpt for the required element"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-001",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-005",
+      "title": "CalOPPA: effective date stated",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(b)(4)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Policy states its effective date."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "privacy policy snapshot (HTML/PDF) with retrieval date",
+        "annotated excerpt for the required element"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-001",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-006",
+      "title": "CalOPPA: Do Not Track response disclosed",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(b)(5), (b)(7)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Policy discloses how the operator responds to web browser 'do not track' signals or other mechanisms giving consumers choice about collection of PII across sites over time, or links to a program/protocol description that offers that choice.",
+        "If GPC is honored as a CCPA opt-out, the DNT/GPC statements are consistent."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "privacy policy snapshot (HTML/PDF) with retrieval date",
+        "annotated excerpt for the required element"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-001",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-007",
+      "title": "CalOPPA: third-party tracking disclosure",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22575(b)(6)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Policy discloses whether other parties (e.g., Google, Meta, analytics, session-replay or chat vendors) may collect PII about a consumer's online activities over time and across different websites when the consumer uses the operator's site."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "privacy policy snapshot (HTML/PDF) with retrieval date",
+        "annotated excerpt for the required element"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-001",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-008",
+      "title": "CalOPPA: operator complies with its posted policy",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Privacy policy (CalOPPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 22576",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22576",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Operator of a commercial website or online service that collects personally identifiable information (e.g., name, address, email, phone) from California residents who use or visit it."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Internet service providers transmitting third-party content are not 'operators' for that activity."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "Actual collection and sharing observed on the site (forms, cookies, pixels, SDKs, chat, session replay) match the posted policy; knowing and willful or negligent and material failure to comply is a violation."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "automated-test",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "HAR capture",
+        "third-party request inventory compared to policy"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-026",
+        "WEB-CA-007"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-009",
+      "title": "CCPA: notice at collection at or before collection points",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.100(a)-(b); 11 CCR 7012",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "At or before each point of collection (quote/booking/contact forms, SMS opt-in, newsletter, chat, cookies), a notice or a conspicuous link to it states: categories of personal information (incl. sensitive) collected, purposes, whether each category is sold or shared, retention period or criteria, and a link to the privacy policy; and, if the business sells/shares, the 'Do Not Sell or Share' link.",
+        "For online collection, the link appears on the page where data is collected (e.g., beneath the form submit button) and on the homepage."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "screenshots of each form with notice/link",
+        "notice text snapshot"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-010",
+      "title": "CCPA: privacy policy contents",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.130(a)(5); 11 CCR 7011",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Privacy policy describes consumer rights (know/access, delete, correct, opt out of sale/sharing, limit sensitive PI, non-retaliation) and how to exercise them, including authorized agents and how requests are verified.",
+        "Lists, for the preceding 12 months: categories of PI collected, sources, business/commercial purposes, categories of third parties to whom disclosed, categories sold or shared (or a statement that none are), and retention periods.",
+        "States how the business responds to opt-out preference signals; gives contact information; states the date last updated and is updated at least every 12 months."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "policy snapshot with element-by-element checklist"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-011",
+      "title": "CCPA: 'Do Not Sell or Share My Personal Information' link where selling/sharing",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.120, 1798.135(a); 11 CCR 7013, 7015, 7026",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "If the business sells or shares personal information (including cross-context behavioral advertising via pixels such as Meta Pixel, Google Ads remarketing, TikTok), a clear and conspicuous 'Do Not Sell or Share My Personal Information' link (or the CPPA-specified alternative opt-out link/icon) appears on the homepage and at points of collection, leading directly to the opt-out mechanism.",
+        "Opt-out takes effect for cookies/pixels without requiring account creation or excessive information; the business may not sell/share for at least 12 months before asking again.",
+        "If the business does not sell/share, the privacy policy says so and observed network traffic is consistent."
+      ],
+      "enforcement_exposure": "CPPA administrative fines up to $2,500 per violation or $7,500 per intentional violation (CPI-adjusted); AG civil penalties.",
+      "verification_methods": [
+        "browser-assisted",
+        "automated-test",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "homepage/footer screenshot",
+        "HAR showing ad pixels before/after opt-out",
+        "list of ad/analytics vendors and contract terms"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-012",
+      "title": "CCPA: opt-out preference signal (GPC) honored",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.135(b), (e); 11 CCR 7025",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "amendment_notes": "CCPA regulation amendments approved 2025 and effective January 1, 2026 added the display of opt-out-signal processing status (per secondary sources; confirm in 11 CCR 7025). AB 566 (Opt Me Out Act) requires browsers to offer an opt-out preference signal from January 1, 2027.",
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "A browser sending a Global Privacy Control signal (Sec-GPC: 1 header / navigator.globalPrivacyControl) is treated as a valid request to opt out of sale/sharing for that browser (and any known consumer profile), without requiring further action.",
+        "The site does not respond to the signal with a pop-up or interstitial that degrades the experience or demands confirmation (frictionless processing).",
+        "The site displays whether it has processed the signal (e.g., 'Opt-Out Request Honored') where required by the amended 11 CCR 7025."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "HAR comparison with GPC on vs off (ad pixels, sharing cookies)",
+        "screenshot of opt-out status display"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-013",
+      "title": "CCPA: 'Limit the Use of My Sensitive Personal Information' link (if applicable)",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.121, 1798.135(a)(2); 11 CCR 7027",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "If the business uses or discloses sensitive personal information for purposes beyond those permitted in 11 CCR 7027(m), it provides a 'Limit the Use of My Sensitive Personal Information' link (or alternative opt-out link).",
+        "Otherwise, the policy states sensitive PI is used only for permitted purposes."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "policy statement",
+        "data inventory of sensitive PI (precise geolocation, account log-in, payment card with credentials)"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "low",
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-014",
+      "title": "CCPA: designated methods to submit requests to know/access, delete and correct",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.130(a)(1); 11 CCR 7020",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "The business offers two or more designated methods for requests to know, delete and correct, including at minimum a toll-free telephone number; a business that operates exclusively online and has a direct relationship with the consumer need only provide an email address.",
+        "If the business maintains a website, the website is available as a method (e.g., request webform).",
+        "Methods are listed in the privacy policy and actually work (number answers/routes, form submits, email delivers)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "operational"
+      ],
+      "required_evidence": [
+        "screenshot of listed methods",
+        "test call log",
+        "test webform submission confirmation"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "notes": "Pacific Plains Electric is not online-only (in-home services), so a toll-free number is required if CCPA applies; Volteira may qualify for the online-only email exception if it operates exclusively online with a direct relationship. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-015",
+      "title": "CCPA: request process easy to use, no account required, proportionate verification",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.130(a)(2); 11 CCR 7004, 7020, 7060-7062",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Consumers are not required to create an account to submit a request; the request form asks only for information needed to verify identity, proportionate to the request's sensitivity.",
+        "Opt-out requests are not subject to identity verification beyond what is necessary.",
+        "Authorized agent submission is supported."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual",
+        "operational"
+      ],
+      "required_evidence": [
+        "request form field inventory",
+        "test request walkthrough"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-014",
+        "WEB-CA-016"
+      ],
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-016",
+      "title": "CCPA: no dark patterns in consent and choice interfaces",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.140(h), (l); 11 CCR 7004",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Consent and privacy-choice interfaces (cookie banners, opt-in checkboxes, opt-out pages) are easy to understand, offer symmetry in choice (e.g., 'Accept all' and 'Reject all' equally prominent and equally easy; opting out takes no more steps than opting in), avoid confusing language/double negatives, do not use manipulative interface design, and are easy to execute.",
+        "Consent obtained through dark patterns is not treated as consent."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "screenshots of banner/preference center states",
+        "click-count comparison accept vs reject"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-027",
+        "WEB-CA-011"
+      ],
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-017",
+      "title": "CCPA: notice of financial incentive for data-for-discount offers",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "Cal. Civ. Code 1798.125(b); 11 CCR 7016",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data.",
+          "Only where the site offers a price/service difference or incentive tied to collecting/retaining personal information."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Where the site offers a discount, coupon or other benefit in exchange for personal information (e.g., '$25 off when you sign up for texts/email'), a notice of financial incentive before opt-in summarizes terms, categories of PI, how to opt in and withdraw, and a good-faith estimate of the value of the consumer's data and the calculation method.",
+        "Opt-in to the incentive is affirmative and revocable."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "screenshot of offer and incentive notice"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-018",
+      "title": "CCPA: notices readable and accessible",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "regulatory",
+      "citation": "11 CCR 7003",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Privacy notices and request interfaces use plain language, are readable on small screens, are available in the languages in which the business ordinarily provides contracts/ads to California consumers, and are reasonably accessible to consumers with disabilities (generally WCAG-conformant online)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "automated-test"
+      ],
+      "required_evidence": [
+        "axe scan of privacy policy and request pages",
+        "language versions inventory"
+      ],
+      "automated_test_ids": [
+        "axe:color-contrast",
+        "axe:document-title",
+        "axe:html-has-lang",
+        "axe:link-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WCAG-104-003",
+        "WCAG-301-001"
+      ],
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-019",
+      "title": "CCPA ADMT: pre-use notice and opt-out for significant decisions (future-effective)",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (CCPA/CPRA)",
+      "requirement_type": "future-effective",
+      "citation": "11 CCR Article 11 (automated decisionmaking technology), as adopted 2025; section numbers to be confirmed against the official text",
+      "official_source_url": "https://cppa.ca.gov/regulations/",
+      "last_verified": "",
+      "source_verified": false,
+      "effective_date": "2027-01-01",
+      "amendment_notes": "CPPA regulations on ADMT, risk assessments and cybersecurity audits approved September 2025 and effective January 1, 2026; ADMT obligations apply from January 1, 2027 for existing uses (per secondary sources).",
+      "applicability": {
+        "criteria": [
+          "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
+          "Pacific Plains Electric: likely below thresholds unless revenue exceeds the adjusted figure; record the determination.",
+          "Shadam LLC (Volteira): a 'business' for its own marketing-site visitors only if a threshold is met; acts as a 'service provider' (1798.140(ag)) for contractor tenants' customer data."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "thresholds": [
+          "Revenue threshold (CPI-adjusted)",
+          "100,000 consumers/households",
+          "50% revenue from selling/sharing"
+        ],
+        "exceptions": [
+          "Not applicable to entities below all thresholds (CalOPPA still applies).",
+          "Certain B2B and employee data exemptions expired January 1, 2023; B2B contacts are covered consumers."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "If the business uses automated decisionmaking technology to make a significant decision about consumers (financial or lending services, housing, education, employment, or healthcare), provide a pre-use notice at or before collection describing the purpose, how the ADMT works and the right to opt out and access; offer opt-out (two or more methods) unless an exception applies; respond to ADMT access requests.",
+        "Determine and document whether any site feature (e.g., AI quote estimation, automated credit/financing pre-qualification, automated job applicant screening on a careers page) is ADMT making a significant decision."
+      ],
+      "verification_methods": [
+        "document-inspection",
+        "browser-assisted",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "ADMT applicability memo",
+        "pre-use notice screenshot if applicable"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "notes": "Likely not applicable to quote/booking sites that do not make significant decisions; applicability must be documented. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-020",
+      "title": "CIPA: session replay, chat and form-capture interception risk",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Wiretapping / tracking (CIPA)",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "Cal. Penal Code 631(a), 632.7, 637.2",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=PEN&sectionNum=631",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Site loads third-party code that captures communications or interactions in real time: session replay (e.g., Hotjar, FullStory, Microsoft Clarity, LogRocket), third-party chat/AI chat widgets, form-field keystroke capture, or ad/analytics pixels transmitting URLs/form data to third parties."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "Inventory every third-party script that receives chat messages, form inputs, keystrokes, mouse movements or page contents in real time.",
+        "Obtain prior, informed consent (clear notice before interaction, e.g., chat pre-roll disclosure that conversations are recorded and shared with the named vendor; consent banner gating session replay) or ensure the vendor acts solely as the operator's tool ('extension') under contract.",
+        "Disclose these vendors in the privacy policy (cross-reference CalOPPA 22575(b)(6))."
+      ],
+      "enforcement_exposure": "Private suits seeking $5,000 statutory damages per violation (Penal Code 637.2); extensive class-action activity with split trial-court rulings.",
+      "verification_methods": [
+        "browser-assisted",
+        "automated-test",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "HAR showing third-party requests carrying form/chat payloads",
+        "consent banner and chat disclosure screenshots",
+        "vendor DPAs/terms"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-021",
+        "WEB-CA-007",
+        "WEB-FED-027"
+      ],
+      "notes": "Courts disagree on whether website vendors are third-party eavesdroppers. SB 690 (2025-2026) was narrowed before passage: per secondary sources the enacted version (reported signed September 30, 2026) removed the proposed 'commercial business purpose' exemption for 631/632/632.7, so interception claims remain available. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-021",
+      "title": "CIPA: pen register / trap-and-trace claims for tracking pixels",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Wiretapping / tracking (CIPA)",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "Cal. Penal Code 638.50, 638.51",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=PEN&sectionNum=638.51",
+      "last_verified": "",
+      "source_verified": false,
+      "amendment_notes": "Per secondary sources, SB 690 (enacted 2026) eliminates the private right of action for 638.51 pen-register/trap-and-trace claims; effective date and retroactivity to be confirmed from the chaptered text.",
+      "applicability": {
+        "criteria": [
+          "Site loads third-party code that captures communications or interactions in real time: session replay (e.g., Hotjar, FullStory, Microsoft Clarity, LogRocket), third-party chat/AI chat widgets, form-field keystroke capture, or ad/analytics pixels transmitting URLs/form data to third parties."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "Inventory pixels/beacons that collect IP address, device identifiers or routing information for third parties; gate non-essential trackers behind consent and disclose them."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "tracker inventory with consent gating evidence"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-020"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-022",
+      "title": "CIPA: call recording disclosure for phone intake linked from the site",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Wiretapping / tracking (CIPA)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Penal Code 632, 632.7",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=PEN&sectionNum=632",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Phone numbers or click-to-call links on the site route to a line where calls are recorded or transcribed (including AI phone intake/voice agents)."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Messaging provider"
+      ],
+      "required_behavior": [
+        "Callers are told at the start of the call that it is recorded/transcribed (and by whom, if an AI or vendor), before any confidential communication; the site's privacy policy discloses call recording."
+      ],
+      "verification_methods": [
+        "operational",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "test call recording of greeting",
+        "privacy policy call-recording clause"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-023",
+      "title": "Unruh Civil Rights Act: website accessibility (ADA-derived)",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Accessibility",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "Cal. Civ. Code 51(b), (f); 52(a)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=51",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Business establishment serving the public in California; website nexus to services (both sites).",
+          "Coverage of website-only businesses is unsettled in California appellate case law."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Website and its forms, booking, checkout and e-sign flows are accessible to people with disabilities; a violation of the ADA is a violation of Unruh (51(f)).",
+        "Measured against the WCAG 2.2 Level A/AA baseline (website-accessibility register)."
+      ],
+      "enforcement_exposure": "Statutory damages of at least $4,000 per violation plus attorney fees (Civ. 52(a)); high California filing volume.",
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "website-accessibility register audit results"
+      ],
+      "automated_test_ids": [
+        "axe:color-contrast",
+        "axe:label",
+        "axe:image-alt",
+        "axe:button-name",
+        "axe:link-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-FED-002",
+        "WEB-FED-003",
+        "WEB-FED-004",
+        "WEB-CA-024"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-024",
+      "title": "Disabled Persons Act: full and equal access",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Accessibility",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "Cal. Civ. Code 54, 54.1, 54.3",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=54.1",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Business establishment serving the public in California; website nexus to services (both sites).",
+          "Coverage of website-only businesses is unsettled in California appellate case law."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Provide full and equal access to services offered through the website; DPA incorporates ADA violations (54(c), 54.1(d))."
+      ],
+      "enforcement_exposure": "Damages of at least $1,000 per offense (Civ. 54.3); cannot recover under both Unruh and DPA for the same act.",
+      "verification_methods": [
+        "browser-assisted",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "website-accessibility register audit results"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-CA-023"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-025",
+      "title": "UETA: agreement to transact electronically and retainable records",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Electronic signatures and records",
+      "requirement_type": "statutory",
+      "citation": "Cal. Civ. Code 1633.5(b)-(c), 1633.7, 1633.8",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1633.5",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Site forms contracts or obtains signatures electronically (estimates/contracts, change orders, subscription terms)."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Excluded transactions and specific statutory writing/delivery rules listed in Civ. 1633.3 and elsewhere require separate analysis."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "The flow shows that the party agreed to conduct the transaction electronically (determined from context, but an explicit agreement step is best practice) and that the party may refuse to conduct further transactions electronically (a right that cannot be waived by agreement).",
+        "Where a law requires information be provided in writing, the electronic record is delivered in a form the recipient can retain and print at the time of receipt (1633.8); records are not inhibited from printing/storing."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "e-sign flow screenshots",
+        "downloadable signed record"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-006",
+        "WEB-FED-007",
+        "WEB-CSLB-009"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-026",
+      "title": "FAL/UCL: no untrue or misleading advertising statements",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17500, 17200",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17500",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Any statement on the site made to induce purchase of services or software."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Claims about price, availability, speed, guarantees, licensing, ratings, savings and product capability are true and not misleading to a reasonable consumer, with substantiation on file.",
+        "Advertised offers (e.g., '$49 diagnostic', 'free estimates', 'same-day service') are available as described in the advertised area."
+      ],
+      "enforcement_exposure": "Civil penalties up to $2,500 per violation under each statute (AG/DA/city attorney); restitution and injunctions via private UCL suits.",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "claims inventory with screenshots",
+        "substantiation file"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-016",
+        "WEB-FED-017",
+        "WEB-CA-028"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-027",
+      "title": "FAL: former price and comparison claims",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17501",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17501",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Site advertises a former price, 'regular price', strike-through price or percentage-off savings."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Any advertised former price was the prevailing market price within the three months immediately preceding the ad, or the ad clearly states when the former price prevailed."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "screenshots of comparison prices",
+        "pricing history records"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-028",
+      "title": "CLRA (SB 478): advertised price includes all mandatory fees",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "Cal. Civ. Code 1770(a)(29)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1770",
+      "last_verified": "",
+      "source_verified": false,
+      "effective_date": "2024-07-01",
+      "amendment_notes": "Added by SB 478 (Stats. 2023, ch. 400), operative July 1, 2024 (per prior knowledge; not verified).",
+      "applicability": {
+        "criteria": [
+          "Price advertised, displayed or offered to a consumer for goods or services for personal, family or household purposes (residential electrical services; consumer-facing offers)."
+        ],
+        "business_types": [
+          "pacificplainselectric.com (residential customers)",
+          "volteira.com only for any consumer (non-business) offers"
+        ],
+        "exceptions": [
+          "Government-imposed taxes and fees, and postage/carriage charges reasonably and actually incurred to ship goods, may be excluded.",
+          "Business-purpose purchases (B2B SaaS) are outside the CLRA's 'consumer' definition."
+        ]
+      },
+      "responsible_parties": [
+        "Pacific Plains Electric",
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Every displayed price (e.g., diagnostic fee, service call, flat-rate repair, deposit) includes all mandatory fees or charges (trip fee, fuel surcharge, booking/convenience fee, card processing fee if mandatory) other than government taxes and permitted shipping.",
+        "The price shown on the site equals the amount charged at Stripe checkout for the same item."
+      ],
+      "enforcement_exposure": "CLRA private actions for actual/statutory damages, restitution, punitive damages and attorney fees (Civ. 1780); also UCL/FAL.",
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshot of displayed price",
+        "Stripe checkout screenshot showing total",
+        "fee schedule"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-016",
+        "WEB-CSLB-007"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-029",
+      "title": "Online seller disclosures before payment (refund policy, legal name and address)",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17538(d)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17538",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Vendor conducting business through the Internet that accepts payment online from California consumers (e.g., Stripe diagnostic-fee or subscription payments)."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "Before accepting payment, the site discloses the vendor's return/refund policy (e.g., whether the diagnostic fee is refundable or credited) and the vendor's legal name and complete street address, and any other information 17538(d) requires."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "checkout/payment page screenshots",
+        "footer/terms page with legal entity name and address"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "notes": "Subdivision content recalled from prior knowledge; confirm the exact list of required disclosures in the official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-030",
+      "title": "ARL: clear and conspicuous automatic renewal terms before subscribing",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Automatic renewal (ARL)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17601(b), 17602(a)(1)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602",
+      "last_verified": "",
+      "source_verified": false,
+      "amendment_notes": "Amended by AB 2863 (Stats. 2024), operative July 1, 2025 (express affirmative consent, consent records, online cancellation and save-offer limits, annual reminders). Not verified against official text.",
+      "applicability": {
+        "criteria": [
+          "Business makes an automatic renewal or continuous service offer to a 'consumer' in California (Volteira subscription plans; any maintenance-plan subscription offered by Pacific Plains Electric)."
+        ],
+        "business_types": [
+          "volteira.com",
+          "pacificplainselectric.com if a recurring maintenance plan is sold"
+        ],
+        "exceptions": [
+          "ARL 'consumer' means an individual acquiring goods/services for personal, family or household purposes (B&P 17601); applicability to Volteira's business customers requires legal review."
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "Before the subscription is fulfilled, the automatic renewal offer terms are presented clearly and conspicuously and in visual proximity to the request for consent: that the subscription continues until cancelled, the cancellation policy, the recurring charge amount and frequency (and if it may change, that fact and the amount to which it will change if known), the length of the renewal term, and the minimum purchase obligation if any."
+      ],
+      "enforcement_exposure": "Goods/services provided without compliant consent are deemed an unconditional gift (B&P 17603); UCL/FAL enforcement.",
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "checkout screenshots showing terms adjacent to consent"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-028",
+        "WEB-FED-029",
+        "WEB-FED-030"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-031",
+      "title": "ARL: affirmative consent to automatic renewal terms and consent record",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Automatic renewal (ARL)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17602(a)(2)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602",
+      "last_verified": "",
+      "source_verified": false,
+      "effective_date": "2025-07-01",
+      "amendment_notes": "Amended by AB 2863 (Stats. 2024), operative July 1, 2025 (express affirmative consent, consent records, online cancellation and save-offer limits, annual reminders). Not verified against official text.",
+      "applicability": {
+        "criteria": [
+          "Business makes an automatic renewal or continuous service offer to a 'consumer' in California (Volteira subscription plans; any maintenance-plan subscription offered by Pacific Plains Electric)."
+        ],
+        "business_types": [
+          "volteira.com",
+          "pacificplainselectric.com if a recurring maintenance plan is sold"
+        ],
+        "exceptions": [
+          "ARL 'consumer' means an individual acquiring goods/services for personal, family or household purposes (B&P 17601); applicability to Volteira's business customers requires legal review."
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "The consumer's express affirmative consent to the automatic renewal terms is obtained before charging (separate from consent to other terms), and the business retains a record of that consent for the period required by statute."
+      ],
+      "enforcement_exposure": "Goods/services provided without compliant consent are deemed an unconditional gift (B&P 17603); UCL/FAL enforcement.",
+      "verification_methods": [
+        "browser-assisted",
+        "database-assisted"
+      ],
+      "required_evidence": [
+        "DOM capture of consent control",
+        "consent record sample"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-028",
+        "WEB-FED-029",
+        "WEB-FED-030"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-032",
+      "title": "ARL: post-purchase acknowledgment with terms and cancellation method",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Automatic renewal (ARL)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17602(a)(3), (b)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602",
+      "last_verified": "",
+      "source_verified": false,
+      "amendment_notes": "Amended by AB 2863 (Stats. 2024), operative July 1, 2025 (express affirmative consent, consent records, online cancellation and save-offer limits, annual reminders). Not verified against official text.",
+      "applicability": {
+        "criteria": [
+          "Business makes an automatic renewal or continuous service offer to a 'consumer' in California (Volteira subscription plans; any maintenance-plan subscription offered by Pacific Plains Electric)."
+        ],
+        "business_types": [
+          "volteira.com",
+          "pacificplainselectric.com if a recurring maintenance plan is sold"
+        ],
+        "exceptions": [
+          "ARL 'consumer' means an individual acquiring goods/services for personal, family or household purposes (B&P 17601); applicability to Volteira's business customers requires legal review."
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "An acknowledgment that includes the automatic renewal terms, the cancellation policy and information on how to cancel is provided in a manner capable of being retained (e.g., email); for free trials, how to cancel before being charged."
+      ],
+      "enforcement_exposure": "Goods/services provided without compliant consent are deemed an unconditional gift (B&P 17603); UCL/FAL enforcement.",
+      "verification_methods": [
+        "operational",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "acknowledgment email from test signup"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-028",
+        "WEB-FED-029",
+        "WEB-FED-030"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-033",
+      "title": "ARL: online cancellation at will without obstruction",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Automatic renewal (ARL)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17602(d) (as amended by AB 2863)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602",
+      "last_verified": "",
+      "source_verified": false,
+      "effective_date": "2025-07-01",
+      "amendment_notes": "Amended by AB 2863 (Stats. 2024), operative July 1, 2025 (express affirmative consent, consent records, online cancellation and save-offer limits, annual reminders). Not verified against official text.",
+      "applicability": {
+        "criteria": [
+          "Business makes an automatic renewal or continuous service offer to a 'consumer' in California (Volteira subscription plans; any maintenance-plan subscription offered by Pacific Plains Electric)."
+        ],
+        "business_types": [
+          "volteira.com",
+          "pacificplainselectric.com if a recurring maintenance plan is sold"
+        ],
+        "exceptions": [
+          "ARL 'consumer' means an individual acquiring goods/services for personal, family or household purposes (B&P 17601); applicability to Volteira's business customers requires legal review."
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "A consumer who accepted the offer online can cancel exclusively online, at will, through a prominently located direct link or button (e.g., in account settings) or a pre-formatted termination email, without being required to call or chat.",
+        "Any save/retention offer is presented only as permitted (with a clear option to proceed to cancel)."
+      ],
+      "enforcement_exposure": "Goods/services provided without compliant consent are deemed an unconditional gift (B&P 17603); UCL/FAL enforcement.",
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screen recording of cancellation flow"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-028",
+        "WEB-FED-029",
+        "WEB-FED-030"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-034",
+      "title": "ARL: required notices for trials, price changes and reminders",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Automatic renewal (ARL)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17602 (as amended by AB 2863)",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602",
+      "last_verified": "",
+      "source_verified": false,
+      "effective_date": "2025-07-01",
+      "amendment_notes": "Amended by AB 2863 (Stats. 2024), operative July 1, 2025 (express affirmative consent, consent records, online cancellation and save-offer limits, annual reminders). Not verified against official text.",
+      "applicability": {
+        "criteria": [
+          "Business makes an automatic renewal or continuous service offer to a 'consumer' in California (Volteira subscription plans; any maintenance-plan subscription offered by Pacific Plains Electric)."
+        ],
+        "business_types": [
+          "volteira.com",
+          "pacificplainselectric.com if a recurring maintenance plan is sold"
+        ],
+        "exceptions": [
+          "ARL 'consumer' means an individual acquiring goods/services for personal, family or household purposes (B&P 17601); applicability to Volteira's business customers requires legal review."
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "Send notices required by the ARL: before a free trial (or promotional price) of the statutory length converts, before a price change takes effect, and the periodic reminder required by AB 2863, each with how to cancel."
+      ],
+      "enforcement_exposure": "Goods/services provided without compliant consent are deemed an unconditional gift (B&P 17603); UCL/FAL enforcement.",
+      "verification_methods": [
+        "operational",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "notice templates and send logs"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-028",
+        "WEB-FED-029",
+        "WEB-FED-030"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-035",
+      "title": "Shine the Light: direct-marketing disclosure rights (if applicable)",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Consumer privacy (other)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Civ. Code 1798.83",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.83",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Business with an established business relationship that discloses customers' personal information to third parties for their direct marketing purposes."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Businesses with fewer than 20 full-time or part-time employees are exempt.",
+          "May comply via a privacy policy allowing opt-out or opt-in for third-party direct marketing disclosures."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "If personal information is disclosed to third parties for their direct marketing, the site provides a designated address/email/toll-free number (or privacy-policy notice) for consumers to request the disclosure information, or offers the opt-out/opt-in alternative."
+      ],
+      "verification_methods": [
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "privacy policy Shine-the-Light section or exemption determination"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    },
+    {
+      "id": "WEB-CA-036",
+      "title": "Bot disclosure for chatbots used to sell",
+      "register": "website-california",
+      "jurisdiction": "California",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code 17940-17943",
+      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17941",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Site uses an automated chat agent (bot or AI assistant) that communicates with California visitors to incentivize a purchase or sale of goods or services."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "The chat widget clearly, conspicuously and reasonably discloses that the visitor is communicating with a bot (e.g., 'You're chatting with an AI assistant') so the person is not misled about its artificial identity."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "screenshot of chat greeting/disclosure"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "notes": "Liability attaches to use of a bot with intent to mislead about its artificial identity; disclosure provides the statutory safe harbor. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+    }
+  ]
+}

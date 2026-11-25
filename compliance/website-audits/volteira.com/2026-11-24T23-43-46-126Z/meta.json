@@ -1,0 +1,35 @@
+{
+  "audit_id": "WEB-volteira.com-2026-11-24",
+  "kind": "website",
+  "target": "volteira.com",
+  "website_url": "https://www.volteira.com/",
+  "started_at": "2026-11-24T23:43:46.126Z",
+  "finished_at": "2026-11-24T23:44:09.719Z",
+  "environment": "public website (outside-in)",
+  "profile": "generic",
+  "collects_personal_info": false,
+  "collects_phone": false,
+  "offers_subscription": false,
+  "legal_baseline_version": "2026-11-24",
+  "skill_version": "website-compliance 1.0.0",
+  "tool_version": "1.0.0",
+  "axe_version": "4.12.1",
+  "pages_discovered": 5,
+  "pages_tested": 3,
+  "pages_excluded": [
+    {
+      "url": "https://www.volteira.com/login",
+      "reason": "disallowed by robots.txt"
+    },
+    {
+      "url": "https://www.volteira.com/signup",
+      "reason": "disallowed by robots.txt"
+    }
+  ],
+  "missing_registers": [],
+  "limitations": [
+    "Outside-in audit of public pages only: no login, no form submission, no payment, no booking.",
+    "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
+    "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
+  ]
+}

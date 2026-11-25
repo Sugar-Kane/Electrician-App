@@ -1,0 +1,20 @@
+{
+  "status": "PROPOSED — not enforced. Activating any gate needs Adam's approval.",
+  "version": "1.0.0",
+  "updated": "2026-11-24",
+  "block": [
+    { "id": "GATE-01", "why": "Cross-tenant information exposure", "requirement_prefixes": ["SEC-002"], "min_severity": "high" },
+    { "id": "GATE-02", "why": "Critical cybersecurity vulnerability", "requirement_prefixes": ["SEC-001", "SEC-003", "SEC-004"], "min_severity": "critical" },
+    { "id": "GATE-03", "why": "Consent enforcement bypass (texting, calls, email)", "requirement_prefixes": ["FED-002", "FED-003", "CA-006"], "min_severity": "high" },
+    { "id": "GATE-04", "why": "Silent modification of signed contracts or e-signature integrity", "requirement_prefixes": ["FED-001", "CA-005", "CSLB-006"], "min_severity": "high" },
+    { "id": "GATE-05", "why": "Contractor down payment / progress payment limit bypass", "requirement_prefixes": ["CSLB-004", "CSLB-005"], "min_severity": "high" },
+    { "id": "GATE-06", "why": "Unauthorized payments or improper card data storage", "requirement_prefixes": ["FED-007"], "min_severity": "high" },
+    { "id": "GATE-07", "why": "AI or MCP able to bypass consent, money or tenant controls", "requirement_prefixes": ["SEC-007", "FED-010"], "min_severity": "high" },
+    { "id": "GATE-08", "why": "Critical accessibility barrier on a customer journey", "requirement_prefixes": ["WCAG-"], "min_severity": "critical" }
+  ],
+  "escalate": [
+    "Any requirement with legal_review_required true whose observed status is RED or YELLOW",
+    "Any high or critical requirement that is BLUE (unverified) at release time",
+    "Any regression reported by compare-audits since the previous release"
+  ]
+}

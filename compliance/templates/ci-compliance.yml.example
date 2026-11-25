@@ -1,0 +1,28 @@
+# PROPOSED — not active. Copy to .github/workflows/compliance.yml in a reviewed PR to enable.
+name: compliance
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit tests (includes src/compliance-tests)
+        run: npm test
+      - name: Requirement registers are valid
+        run: node compliance/scripts/validate-requirements.mjs
+      - name: Command registry matches the skills on disk
+        run: node compliance/scripts/verify-command-registry.mjs
+      - name: Website skill copies are current
+        run: node compliance/scripts/package-website-skill.mjs --check
+      - name: Release readiness (report only)
+        continue-on-error: true
+        run: node compliance/scripts/compare-audits.mjs --latest compliance/application-audits --release
