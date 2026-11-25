@@ -1,0 +1,1873 @@
+[
+  {
+    "finding_id": "F-FED-006-001-APP",
+    "requirement_id": "FED-006-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Invoices, payments, refunds, Stripe fees, deposits and expenses are retained and exportable as complete transaction records.",
+    "actual": "Payments/invoices/jobs/customers/activity CSV exports exist, but the payments export reads only invoice_payments and booking payments: pay-link and cash prepayments held in job_prepayments before an invoice is sent, invoice_refunds, and Volteira's application fee / Stripe fees are not exported. Vendor receipts become inventory movements (receipt-lines.ts) but no expense export was found.",
+    "affected_files": [
+      "src/lib/report-exports.ts:19",
+      "src/lib/report-exports.ts:110",
+      "src/lib/report-exports.ts:115",
+      "src/lib/payment-plan-server.ts:201",
+      "src/lib/receipt-lines.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/report-exports.ts:97",
+        "collected_at": "2026-11-24",
+        "method": "Read export builder; payments export queries only invoice_payments and payments."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Add refunds (invoice_refunds, booking refunds), unapplied job_prepayments and per-payment application/processing fees to the payments export (or a new 'ledger' export); add a supplier-receipt/expense export; document each export's columns.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/csv.test.ts"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-006-002-APP",
+    "requirement_id": "FED-006-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Financial records are not auto-deleted or deletable before the applicable IRS period; retention is documented and export is offered before deletion.",
+    "actual": "No retention rule protects financial records. Row Level Security lets any billing member delete any invoice (sent or paid) directly through the Supabase API, cascading its payments, refunds and revisions; any org member can delete a job, cascading its job_prepayments (money received); an owner can delete the organization, cascading all invoices. The app's delete action refuses only invoices with money against them (src/app/invoices/actions.ts:381); sent unpaid invoices are deletable in-app. No documented retention policy or export-before-closure flow found.",
+    "affected_files": [
+      "src/app/invoices/actions.ts:381",
+      "src/app/invoices/actions.ts:407",
+      "supabase/migrations/20261112010000_invoice_refunds.sql",
+      "supabase/migrations/20261119140000_job_payment_plans.sql"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "pg_policies / pg_constraint for invoices, jobs, organizations, invoice_payments, invoice_refunds, invoice_revisions, job_prepayments",
+        "collected_at": "2026-11-24",
+        "method": "Found: invoices DELETE policy 'Billing members can delete invoices' (can_edit_billing, any status); invoice_payments/invoice_refunds/invoice_revisions FK ON DELETE CASCADE to invoices; jobs DELETE policy 'Organization members can delete jobs' (any member); job_prepayments and job_payment_plan_items ON DELETE CASCADE to jobs; invoices FK to organizations ON DELETE CASCADE; organizations DELETE policy for owners. No trigger blocks deleting sent/paid invoices.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/invoices/actions.ts:381",
+        "collected_at": "2026-11-24",
+        "method": "App-level guard only; RLS DELETE policy has no status/paid condition."
+      }
+    ],
+    "remediation": "Replace the invoices DELETE policy with one limited to status='draft' with no payments; add a BEFORE DELETE trigger refusing deletion of sent/paid/void invoices and of jobs with invoices or prepayments; change invoice_payments/invoice_refunds/job_prepayments FKs to ON DELETE RESTRICT; restrict job DELETE to billing editors; replace organization hard delete with a closure flow that exports records and retains them for the documented period. Add a money-rule test for the delete guard.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-006-003-APP",
+    "requirement_id": "FED-006-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Electronic records have integrity controls, indexing/retrieval, legible hardcopy and documented formats.",
+    "actual": "Integer-cent storage, invoice PDFs (/invoice/[token]/pdf), invoice_revisions with unique (invoice_id, revision_number), and tenant-reference guard triggers exist. However sent invoices remain UPDATE-able by billing members under RLS with no immutability trigger on invoices (only contracts have keep_signed_* triggers), records can be hard-deleted (see FED-006-002), and export formats are undocumented.",
+    "affected_files": [
+      "src/lib/invoice-revision-server.ts:1",
+      "src/lib/invoice-pdf-file.ts:1",
+      "src/lib/report-exports.ts:19"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "information_schema.triggers on invoices",
+        "collected_at": "2026-11-24",
+        "method": "Triggers on invoices: invoices_number_label, set_invoices_updated_at, zz_apply_job_prepayments, zz_tenant_owner_immutable, zz_tenant_references_guard; no trigger freezing sent invoice figures.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Add a trigger that freezes subtotal/tax/credit/total on non-draft invoices except via the revision RPC that writes invoice_revisions; document CSV column definitions and the PDF as the legible hardcopy.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/invoice-math.test.ts::a hundred invoices of the same amount sum exactly"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-006-004-APP",
+    "requirement_id": "FED-006-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Stripe, as payment settlement entity, files 1099-Ks for connected accounts and collects tenant TINs at onboarding.",
+    "actual": "Connected accounts are created with controller.stripe_dashboard 'full', fees payer 'account', losses 'stripe' (Standard-style, direct charges), and onboarding uses Stripe account links, so Stripe collects TIN/KYC. Who files 1099-K is a Stripe Connect tax-reporting setting not visible in code.",
+    "affected_files": [
+      "src/lib/stripe-connect.ts:131",
+      "src/lib/stripe-connect.ts:141",
+      "src/lib/stripe-connect.ts:164"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/stripe-connect.ts:131",
+        "collected_at": "2026-11-24",
+        "method": "Read accounts.create controller settings."
+      },
+      {
+        "type": "config",
+        "location": "Stripe Connect tax reporting settings",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Confirm in the Stripe Dashboard (Connect > Tax reporting) that Stripe files 1099-K for these accounts and record the confirmation in compliance/evidence.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Depends on Stripe dashboard tax-reporting configuration and the current threshold, which cannot be verified from code; Stripe MCP was unavailable.",
+    "test_result": "not-applicable",
+    "responsible_party": "Payment processor"
+  },
+  {
+    "finding_id": "F-FED-006-005-APP",
+    "requirement_id": "FED-006-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Tenants recording large cash payments are prompted about Form 8300 (recommended control).",
+    "actual": "Cash and check can be recorded as prepayments (recordPrepayment) and as paid-in-hand invoices (record_invoice_paid_in_hand RPC), but there is no flag or notice when cash received in one or related transactions exceeds $10,000. The legal duty is the tenant's.",
+    "affected_files": [
+      "src/lib/payment-plan-server.ts:201",
+      "src/lib/invoice-paid-in-hand.ts:82"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan-server.ts:201",
+        "collected_at": "2026-11-24",
+        "method": "No threshold check on cash amounts."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "When cash/cashier's-check payments recorded for one customer within 12 months exceed $10,000, show a non-blocking Form 8300 reminder to the owner and log it.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/invoice-payment.test.ts::paid in hand is refused when it would record money wrongly"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Contractor tenants"
+  },
+  {
+    "finding_id": "F-FED-007-001-APP",
+    "requirement_id": "FED-007-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Each entity maintains and annually validates PCI DSS compliance appropriate to its role.",
+    "actual": "All card entry happens on Stripe-hosted Checkout (ui_mode 'hosted_page') for bookings, pay links, invoices and the subscription; no card fields in Volteira code were found. Annual SAQ/AOC validation is an organizational act not evidenced in the repository.",
+    "affected_files": [
+      "src/lib/booking-checkout.ts:120",
+      "src/lib/job-prepayment-pay.ts:461",
+      "src/lib/invoice-online-pay.ts:156",
+      "src/app/account/actions.ts:387"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib",
+        "collected_at": "2026-11-24",
+        "method": "grep for Elements/card inputs found none; all checkouts are hosted."
+      },
+      {
+        "type": "config",
+        "location": "PCI SAQ/AOC records",
+        "method": "Not found in repo",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Complete SAQ A for Shadam LLC and obtain/record Stripe's AOC; store dated copies under compliance/evidence and calendar annual revalidation.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "Validation (SAQ/AOC) is a business record outside the application; nothing in the repository evidences it.",
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-FED-007-002-APP",
+    "requirement_id": "FED-007-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Redirect-only Stripe-hosted Checkout, no card fields in Volteira code, and script-attack protection on pages that redirect to checkout.",
+    "actual": "Every checkout is created server-side with ui_mode 'hosted_page' and the browser is redirected to session.url; a nonce-based CSP is enforced and tested. Eligibility attestation is not documented. The booking page displays 'Secure test payment powered by Stripe' in production copy, which is misleading but not a PCI issue.",
+    "affected_files": [
+      "src/lib/booking-checkout.ts:120",
+      "src/lib/job-prepayment-pay.ts:454",
+      "src/lib/csp.ts:1",
+      "src/components/public-booking-flow.tsx:545"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/csp.ts",
+        "collected_at": "2026-11-24",
+        "method": "Nonce CSP applies to all pages including booking/pay pages."
+      }
+    ],
+    "remediation": "Record the SAQ A eligibility determination (hosted redirect, CSP evidence); change 'Secure test payment' to 'Secure payment' on the booking form.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/csp.test.ts::scripts need this response's nonce",
+      "src/lib/csp.test.ts::every nonce is new and long enough not to guess"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-007-003-APP",
+    "requirement_id": "FED-007-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "AI and voice assistants never request card numbers; PAN-like strings are redacted in inbound SMS, notes, transcripts and AI logs and not sent to AI vendors.",
+    "actual": "Voice AI and SMS intake prompts say never ask for card details, and MCP logs mask card numbers (tested). No PAN detection/redaction exists for inbound SMS bodies, job notes, call transcripts or text passed to the model before it is sent to the AI vendor.",
+    "affected_files": [
+      "src/lib/grok-voice.ts:243",
+      "src/lib/sms-intake.ts:763",
+      "src/lib/mcp-log-redaction.ts:15"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/mcp-log-redaction.ts",
+        "collected_at": "2026-11-24",
+        "method": "Redaction limited to MCP log rows."
+      }
+    ],
+    "remediation": "Add a shared Luhn-checked PAN detector; mask matches in inbound SMS before storage and before model calls, in notes and voice transcripts; reply asking the customer to use the pay link. Add a test for the masker.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/mcp-log-redaction.test.ts::results lose links, emails, phone numbers and card numbers, and are capped"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-007-004-APP",
+    "requirement_id": "FED-007-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Documented PCI role determination for the platform; secret keys protected; webhook signatures verified.",
+    "actual": "Webhook verifies signatures with constructEvent against two secrets and rejects unsigned/invalid requests; pay-link and invoice handlers only believe events from the business's own connected account. No documented QSA/Stripe determination of Volteira's PCI role was found.",
+    "affected_files": [
+      "src/app/api/stripe/webhook/route.ts:27",
+      "src/app/api/stripe/webhook/route.ts:48",
+      "src/lib/job-prepayment-pay.ts:542"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/stripe/webhook/route.ts:27",
+        "collected_at": "2026-11-24",
+        "method": "Signature verification read."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Obtain written Stripe/QSA guidance on the platform's validation level and file it; add a unit test that the webhook route rejects a bad signature.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-FED-007-005-APP",
+    "requirement_id": "FED-007-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "high",
+    "expected": "Recurring consumer debits carry an authenticated authorization and copy.",
+    "actual": "No preauthorized/recurring consumer debits exist: each deposit, installment and invoice payment is a separate one-time Checkout the customer starts from a link; no setup_future_usage, off_session charges or saved mandates appear in code.",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:454",
+      "src/lib/invoice-online-pay.ts:156"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib",
+        "collected_at": "2026-11-24",
+        "method": "grep setup_future_usage|off_session|mandate: no matches."
+      }
+    ],
+    "remediation": "None now. If autopay is added, use Stripe mandates, give the customer a copy, and send 10-day notices for varying amounts.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: every payment is a one-time, customer-initiated Checkout; one-time ACH debits are not preauthorized transfers (verified by grep for setup_future_usage/off_session/mandate).",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-007-006-APP",
+    "requirement_id": "FED-007-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "high",
+    "expected": "Installment credit is never conditioned on autopay.",
+    "actual": "There is no autopay feature; customers pay each installment through a link by card or bank, so no compulsory EFT condition exists.",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:461"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/job-prepayment-pay.ts:461",
+        "collected_at": "2026-11-24",
+        "method": "Card and bank both offered; no saved payment method."
+      }
+    ],
+    "remediation": "None now; keep autopay optional if ever added.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: no autopay/preauthorized EFT exists in the product (grep found no setup_future_usage or off_session).",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-007-007-APP",
+    "requirement_id": "FED-007-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Document which Reg E provisions apply to each party; Volteira does not hold itself out as handling bank error resolution.",
+    "actual": "No customer-facing copy claims Volteira resolves bank EFT errors; refunds go back through Stripe. No written allocation of Reg E duties exists.",
+    "affected_files": [
+      "src/components/invoice-refunds.tsx:64"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/invoice-refunds.tsx:64",
+        "collected_at": "2026-11-24",
+        "method": "Refund copy says money goes back through Stripe."
+      }
+    ],
+    "remediation": "Have counsel write a one-page Reg E allocation memo and store it under compliance/evidence.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "A legal allocation memo is a document outside the application; nothing to verify in code beyond the absence of misleading claims.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-007-008-APP",
+    "requirement_id": "FED-007-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Installment plans are capped at four installments with no finance charge, or TILA closed-end disclosures are given; tenants crossing TILA triggers are flagged.",
+    "actual": "planAmounts accepts any number of deposit/installment items with no limit; nothing caps a plan at four installments (excluding down payment) and nothing flags a tenant who offers more. No finance charge or late fee exists (good). A tenant can therefore create consumer plans 'payable by written agreement in more than four installments' with no TILA disclosures.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:63",
+      "src/lib/payment-plan-server.ts:126",
+      "src/app/jobs/[jobId]/payment-plan-actions.ts:57"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts:63",
+        "collected_at": "2026-11-24",
+        "method": "No count limit on items."
+      },
+      {
+        "type": "database-check",
+        "location": "pg_constraint job_payment_plan_items",
+        "collected_at": "2026-11-24",
+        "method": "No constraint on item count per job.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Refuse plans with more than four payments after the down payment (count installment + final) for residential customers unless TILA disclosures are implemented; add a money-rule test.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::payments always add up to the total exactly, rounding included"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-007-009-APP",
+    "requirement_id": "FED-007-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "expected": "No contract clause takes a security interest in the dwelling without rescission handling.",
+    "actual": "Payment plans carry no finance charge and Volteira is not a TILA creditor arrangement by design; contract templates were not found to grant a consensual security interest (statutory mechanics lien notices are separate).",
+    "affected_files": [
+      "src/lib/contract-template.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/contract-*.ts",
+        "collected_at": "2026-11-24",
+        "method": "grep -i for 'security interest|deed of trust' found no matches."
+      }
+    ],
+    "remediation": "Keep security-interest clauses out of templates; counsel to confirm mechanics-lien notice treatment.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable while no template grants a consensual security interest in the home (grep of contract templates) and no finance charge exists.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-007-010-APP",
+    "requirement_id": "FED-007-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "expected": "Holder Rule notice in any consumer credit contract.",
+    "actual": "The seller does not take consumer credit contracts or arrange purchase-money loans; installment plans are interest-free payment schedules in the home-improvement contract. Whether such a schedule is a 'consumer credit contract' was not legally determined.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:244"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts:244",
+        "collected_at": "2026-11-24",
+        "method": "Contract payment terms block has no credit terms."
+      }
+    ],
+    "remediation": "Have counsel confirm interest-free schedules are outside the Holder Rule; if not, add the bold Holder notice to contracts with plans.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable on current design (no finance charge, no lender arranged), subject to legal confirmation.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-007-011-APP",
+    "requirement_id": "FED-007-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "WEB debit authorizations are identifiable, authenticated, retained 2 years.",
+    "actual": "ACH is collected only via Stripe-hosted Checkout (us_bank_account), which displays Stripe's mandate text and keeps the mandate. Retention and wording are Stripe-side.",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:461",
+      "src/lib/invoice-online-pay.ts:167"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/job-prepayment-pay.ts:461",
+        "collected_at": "2026-11-24",
+        "method": "Hosted Checkout ACH."
+      },
+      {
+        "type": "config",
+        "location": "Stripe mandate records",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Confirm with Stripe that mandates for direct charges on connected accounts are retained for 2 years and retrievable on request.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Mandate text and retention are held by Stripe; Stripe MCP unavailable.",
+    "test_result": "not-applicable",
+    "responsible_party": "Payment processor"
+  },
+  {
+    "finding_id": "F-FED-007-012-APP",
+    "requirement_id": "FED-007-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Account validation before first WEB debit; fraud monitoring obligations confirmed.",
+    "actual": "Checkout sets us_bank_account verification_method 'automatic' (Financial Connections with microdeposit fallback), so Stripe validates accounts. Fraud-monitoring allocation is not documented.",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:462"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/job-prepayment-pay.ts:462",
+        "collected_at": "2026-11-24",
+        "method": "verification_method automatic."
+      }
+    ],
+    "remediation": "Obtain Stripe's statement on 2026 Nacha fraud-monitoring coverage for connected accounts and file it.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Validation is performed by Stripe; fraud-monitoring allocation requires Stripe confirmation not available from code.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-007-013-APP",
+    "requirement_id": "FED-007-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Connected Account Agreement presented; 1% fee disclosed to tenants; refunds idempotent via API; liability allocated.",
+    "actual": "Onboarding uses Stripe-hosted account links (Stripe presents its agreement); settings payments page states Volteira's 1% comes out of each payment; losses set to 'stripe' with direct charges; refunds via Stripe with refund tests for amounts and permissions. Refund API calls pass idempotency keys derived from the refund row (invoice-refund-server.ts:184, booking-refund-server.ts:173). Restricted-business screening and Terms of Service allocation of chargeback liability were not found.",
+    "affected_files": [
+      "src/lib/stripe-connect.ts:138",
+      "src/app/settings/payments/page.tsx:84",
+      "src/lib/invoice-refund-server.ts:184",
+      "src/lib/booking-refund-server.ts:173"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/settings/payments/page.tsx:84",
+        "collected_at": "2026-11-24",
+        "method": "Fee disclosure copy."
+      }
+    ],
+    "remediation": "State in Volteira's Terms of Service the 1% fee and the refund/chargeback/negative-balance allocation; document Stripe restricted-business screening at onboarding.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/invoice-math.test.ts::the platform takes one percent",
+      "src/lib/invoice-refund.test.ts::a blank amount refunds everything left; never more than the payment holds",
+      "src/lib/invoice-refund.test.ts::only the owner or an admin can refund"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-FED-009-001-APP",
+    "requirement_id": "FED-009-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Before Stripe Checkout for the subscription, show price, billing frequency, automatic renewal, trial terms and how to cancel.",
+    "actual": "The only pre-checkout disclosure is the button label 'Start Premium \u00b7 <price>'; Volteira's page does not state that the plan renews automatically, the renewal interval, or how to cancel before redirecting to Stripe Checkout. Stripe's hosted page shows the recurring price, but cancellation terms are not configured (no custom_text / consent_collection). The paid plan is live only when STRIPE_PREMIUM_PRICE_ID is set; production currently has 0 organization_subscriptions rows.",
+    "affected_files": [
+      "src/app/account/actions.ts:348",
+      "src/app/account/actions.ts:384",
+      "src/app/account/page.tsx:280"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:384",
+        "collected_at": "2026-11-24",
+        "method": "Checkout params lack custom_text/consent_collection."
+      },
+      {
+        "type": "database-check",
+        "location": "count(*) organization_subscriptions by status",
+        "collected_at": "2026-11-24",
+        "method": "0 rows: feature not yet used in production.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      },
+      {
+        "type": "config",
+        "location": "Stripe Checkout settings",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Next to the Start Premium button, show: price per month, 'renews automatically each month until you cancel', and 'cancel any time in Account > Plan > Manage billing'; repeat via Checkout custom_text.submit.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-FED-009-002-APP",
+    "requirement_id": "FED-009-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "An affirmative, specific consent to the recurring charge is captured and stored with the terms version.",
+    "actual": "No consent checkbox or consent record exists; startPremiumCheckout redirects straight to Stripe and no consent_collection.terms_of_service or local consent row is stored.",
+    "affected_files": [
+      "src/app/account/actions.ts:348",
+      "src/app/account/actions.ts:384",
+      "src/app/account/page.tsx:280"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:384",
+        "collected_at": "2026-11-24",
+        "method": "No consent capture."
+      }
+    ],
+    "remediation": "Add an unchecked 'I agree to be charged <price> monthly until I cancel' box required before startPremiumCheckout, store user id, time, price id and terms version; also set consent_collection.terms_of_service='required'.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-FED-009-003-APP",
+    "requirement_id": "FED-009-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Cancellation at least as easy as signup; billing stops promptly.",
+    "actual": "'Manage billing' opens the Stripe Billing Portal for owners/admins, and cancel_at_period_end is synced and shown as 'Access ends <date>'. Whether the portal configuration allows cancellation is a Stripe dashboard setting not verified.",
+    "affected_files": [
+      "src/app/account/actions.ts:415",
+      "src/app/account/actions.ts:435",
+      "src/app/account/page.tsx:266",
+      "src/lib/stripe-subscription.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:435",
+        "collected_at": "2026-11-24",
+        "method": "Portal session created."
+      },
+      {
+        "type": "config",
+        "location": "Stripe Billing Portal configuration",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Enable cancellation in the Billing Portal configuration (or pass a configuration id with subscription_cancel enabled) and add an in-app 'Cancel plan' link that opens the portal cancel flow directly.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-FED-009-004-APP",
+    "requirement_id": "FED-009-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "expected": "Record that the 2024 amended Negative Option Rule is not in force; comply with ROSCA and state ARLs.",
+    "actual": "No application behavior depends on the vacated rule; ROSCA/ARL obligations are assessed under FED-009-001..003 and CA-008.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "compliance/registry/federal.json",
+        "collected_at": "2026-11-24",
+        "method": "Registry entry is a status record."
+      }
+    ],
+    "remediation": "Monitor FTC rulemaking; no code change.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Informational status record with no application obligation; vacated amendments impose no current federal duty.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-008-001-APP",
+    "requirement_id": "CA-008-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Record ARL applicability: Volteira B2B subscription likely outside; tenant homeowner recurring plans in scope.",
+    "actual": "Volteira's subscription is sold to businesses; tenants have no recurring homeowner plan feature (only Volteira's own subscription uses mode 'subscription').",
+    "affected_files": [
+      "src/app/account/actions.ts:385"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src",
+        "collected_at": "2026-11-24",
+        "method": "grep for mode: \"subscription\" / maintenance or membership plans: only Volteira's own subscription."
+      }
+    ],
+    "remediation": "Re-assess if tenant membership/maintenance plans are added.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "ARL protects consumers buying for personal/household use; Volteira's plan is business-purpose and tenants cannot sell recurring plans in the app (grep).",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-008-002-APP",
+    "requirement_id": "CA-008-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "high",
+    "expected": "Renewal terms (continues until cancelled, cancellation policy, amount, term) shown clearly before billing info, near consent (as a control even if ARL is GRAY).",
+    "actual": "Same gap as FED-009-001: no renewal terms or cancellation policy shown before Stripe Checkout.",
+    "affected_files": [
+      "src/app/account/actions.ts:348",
+      "src/app/account/actions.ts:384",
+      "src/app/account/page.tsx:280"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/page.tsx:280",
+        "collected_at": "2026-11-24",
+        "method": "Button label is the only disclosure."
+      }
+    ],
+    "remediation": "Implement the FED-009-001 disclosure block adjacent to the consent checkbox.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-CA-008-003-APP",
+    "requirement_id": "CA-008-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "high",
+    "expected": "Express affirmative consent to renewal terms, retained as verification.",
+    "actual": "No consent capture or record (see FED-009-002).",
+    "affected_files": [
+      "src/app/account/actions.ts:348",
+      "src/app/account/actions.ts:384",
+      "src/app/account/page.tsx:280"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:348",
+        "collected_at": "2026-11-24",
+        "method": "No consent step."
+      }
+    ],
+    "remediation": "Implement the FED-009-002 consent checkbox and retain records for at least three years or one year after termination, whichever is longer.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-CA-008-004-APP",
+    "requirement_id": "CA-008-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Retainable acknowledgment with terms and how to cancel.",
+    "actual": "Volteira sends no subscription acknowledgment of its own; any confirmation would come from Stripe receipt/subscription emails, which are dashboard settings.",
+    "affected_files": [
+      "src/lib/stripe-subscription.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Stripe customer email settings",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Send a Volteira acknowledgment email on checkout.session.completed with price, renewal term, and cancellation steps.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Whether Stripe sends a qualifying acknowledgment depends on dashboard email settings that could not be inspected.",
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-CA-008-005-APP",
+    "requirement_id": "CA-008-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Online cancellation via a prominent direct link without obstruction.",
+    "actual": "Owners/admins can open the Stripe Billing Portal from Account > Plan; cancellation availability depends on portal configuration; no retention-offer flow exists in code.",
+    "affected_files": [
+      "src/app/account/actions.ts:415",
+      "src/app/account/page.tsx:274"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/page.tsx:274",
+        "collected_at": "2026-11-24",
+        "method": "Manage billing button."
+      }
+    ],
+    "remediation": "Label a direct 'Cancel plan' link and confirm the portal cancel option is enabled.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-CA-008-006-APP",
+    "requirement_id": "CA-008-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "low",
+    "expected": "Annual renewal reminder.",
+    "actual": "No reminder logic in code; the plan appears monthly (price label), where annual reminders are less relevant; Stripe upcoming-renewal emails are dashboard settings.",
+    "affected_files": [
+      "src/lib/stripe-subscription.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Stripe Billing emails",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "If any annual plan is offered, enable Stripe upcoming-renewal reminders or send one from Volteira.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Billing interval and Stripe reminder settings live in the Stripe price/dashboard, not inspectable here.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-008-007-APP",
+    "requirement_id": "CA-008-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "low",
+    "expected": "Notice of material changes including price increases before they take effect.",
+    "actual": "No price-change notice flow in code; price changes would be made in Stripe.",
+    "affected_files": [
+      "src/app/account/actions.ts:356"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Stripe price management",
+        "method": "Not inspected",
+        "limitations": "Stripe MCP required authentication and was not used; Stripe dashboard settings (Checkout, Billing portal, customer emails, tax reporting) were not inspected."
+      }
+    ],
+    "remediation": "Adopt a documented procedure: email subscribers 30 days before any price change with cancel instructions.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Price changes are operational (Stripe dashboard); no evidence either way.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-008-008-APP",
+    "requirement_id": "CA-008-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "expected": "Free trial/promotional conversion disclosures and pre-conversion notice.",
+    "actual": "Checkout sets no trial_period_days and allow_promotion_codes false; the 'Free' plan does not convert to paid without a separate checkout.",
+    "affected_files": [
+      "src/app/account/actions.ts:391",
+      "src/app/account/page.tsx:260"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:384",
+        "collected_at": "2026-11-24",
+        "method": "No trial or promo in subscription checkout."
+      }
+    ],
+    "remediation": "If a trial is ever added, disclose post-trial price and notify 3-21 days before conversion.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "No free-to-pay conversion or trial exists in code (trial_period_days absent, promotion codes disabled).",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-009-001-APP",
+    "requirement_id": "CA-009-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "No unlawful, unfair or fraudulent practices; violations of other register items are potential UCL violations.",
+    "actual": "Several register violations identified in this slice are UCL 'unlawful' predicates: payments requestable/collectable ahead of work contrary to B&P 7159.5 (CSLB-004-004, CSLB-005-001), diagnostic credit wording that is unconditional while the MCP invoice path does not apply it (CA-009-004), and missing subscription renewal disclosures/consent (FED-009-001/002).",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:730",
+      "src/app/jobs/[jobId]/invoice-actions.ts:168",
+      "src/lib/mcp-business-tools.ts:618",
+      "src/app/account/actions.ts:384"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "see linked findings",
+        "collected_at": "2026-11-24",
+        "method": "Derived from CSLB-004-004, CSLB-005-001, CA-009-004, FED-009-001."
+      }
+    ],
+    "remediation": "Resolve the linked RED findings; treat this finding as closed when they are.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CA-009-002-APP",
+    "requirement_id": "CA-009-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Advertising and AI-generated website content accurate and reviewed.",
+    "actual": "Outside the payments slice; tenant website/journal claims were not reviewed here. Booking page copy reviewed for fees only.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/book",
+        "collected_at": "2026-11-24",
+        "method": "Fee wording reviewed only."
+      }
+    ],
+    "remediation": "Cover in the website/marketing slice.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Advertising content review belongs to the website/communications audit slice; not verified here.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-009-003-APP",
+    "requirement_id": "CA-009-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Displayed price includes all mandatory fees; no checkout add-on fees.",
+    "actual": "The booking fee shown in the form is the same amount sent to Checkout (unit_amount = feeCents); Volteira's 1% and Stripe fees are deducted from the business, not added; the admin fee is built into line prices (tested); no surcharge code exists. Equality of displayed and charged booking amount is code-read only.",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx:143",
+      "src/lib/booking-checkout.ts:145",
+      "src/lib/invoice-math.ts:80"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/booking-checkout.ts:145",
+        "collected_at": "2026-11-24",
+        "method": "Single line item at the displayed fee."
+      }
+    ],
+    "remediation": "Add a test that the checkout line item amount equals the displayed booking fee for standard and emergency outcomes.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/admin-fee.test.ts::the admin fee is built into the customer's price, rounded to the cent",
+      "src/lib/admin-fee.test.ts::the fee on a line is exactly the difference the customer pays, whatever the quantity"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CA-009-004-APP",
+    "requirement_id": "CA-009-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Full fee shown before booking; plain statement it is charged whether or not work is approved; credit conditions (which work, time window, not cash-refundable) stated; credit shown as a separate line and never applied twice.",
+    "actual": "Credit is applied once and shown as 'Diagnostic fee already paid' (tested). But: (1) the Stripe Checkout line always says 'Diagnostic fee is credited toward approved repair work' and the /booking/[token] page always shows creditedNote, even when the business set credit_diagnostic_to_repair=false (the booking form honours the setting, so the customer sees contradictory terms); (2) no wording states the fee is charged whether or not further work is approved, nor any time window or that the credit is not cash-refundable; (3) the cancellation term says the business 'may retain' a fee, without saying when; (4) the MCP create_invoice tool builds invoices with invoiceTotals({subtotalCents}) and no diagnostic credit, so an invoice created that way omits the promised credit.",
+    "affected_files": [
+      "src/lib/booking-checkout.ts:150",
+      "src/lib/booking-page-copy.ts:48",
+      "src/app/booking/[token]/page.tsx:275",
+      "src/components/public-booking-flow.tsx:484",
+      "src/components/public-booking-flow.tsx:505",
+      "src/lib/mcp-business-tools.ts:618"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/booking-checkout.ts:150",
+        "collected_at": "2026-11-24",
+        "method": "Unconditional credit text."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/mcp-business-tools.ts:618",
+        "collected_at": "2026-11-24",
+        "method": "No diagnosticPaidCents passed."
+      }
+    ],
+    "remediation": "Drive every credit statement (Checkout description, booking page, confirmation) from credit_diagnostic_to_repair and a stated window; add 'This fee is charged whether or not you approve further work' and 'credit is not refundable as cash' beside the price; state the exact cancellation cutoff; make mcp create_invoice call diagnosticCreditLeft like raiseInvoice. Add a test that an MCP-created invoice for a credited job carries the credit.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/invoice-math.test.ts::a diagnostic paid at booking comes off the job's first invoice",
+      "src/lib/invoice-math.test.ts::a job invoiced in stages does not refund the diagnostic three times",
+      "src/lib/invoice-math.test.ts::an unpaid diagnostic is never credited"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CA-009-005-APP",
+    "requirement_id": "CA-009-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "AI drafts cannot state unsupplied prices/rights; human approval and logging.",
+    "actual": "Payment-related MCP tools (create_invoice, mark paid, send) require a proposal then confirmed=true; broader AI message review is outside this slice.",
+    "affected_files": [
+      "src/lib/mcp-paid-invoice-tools.ts:31",
+      "src/lib/mcp-workday-tools.ts:178"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/mcp-paid-invoice-tools.ts:31",
+        "collected_at": "2026-11-24",
+        "method": "Confirm-before-act tool descriptions."
+      }
+    ],
+    "remediation": "Cover in the AI/MCP and communications slices.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "AI messaging approval and logging are assessed in the AI/MCP and communications slices; only payment tool confirmation was observed here.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-009-006-APP",
+    "requirement_id": "CA-009-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "No CLRA waivers in contract templates; route 1782 notices to legal.",
+    "actual": "Contract template content belongs to the contracts slice and was not reviewed here.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/contract-template.ts",
+        "collected_at": "2026-11-24",
+        "method": "Not reviewed in this slice."
+      }
+    ],
+    "remediation": "Cover in the contracts slice.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Contract template wording is assessed by the contracts slice.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-009-007-APP",
+    "requirement_id": "CA-009-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Determine whether installment plans are retail installment contracts; show total, schedule and fees before acceptance.",
+    "actual": "Plans have no finance or service charge, and the contract's PAYMENT SCHEDULE block shows each payment in dollars and when due (tested). No legal determination of Unruh Act applicability is recorded, and plans with many installments are unrestricted (see FED-007-008).",
+    "affected_files": [
+      "src/lib/payment-plan.ts:244",
+      "src/lib/payment-plan.ts:214"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Obtain counsel's Unruh/CFL determination for interest-free schedules; limit installment count pending that determination.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::the contract says each payment in plain words",
+      "src/lib/payment-plan.test.ts::the contract carries the payment schedule, and no longer says the balance is due on completion"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Contractor tenants"
+  },
+  {
+    "finding_id": "F-CA-009-008-APP",
+    "requirement_id": "CA-009-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Legal name, street address and refund/cancellation policy disclosed before accepting online payment.",
+    "actual": "The booking form shows the business display name and a vague cancellation line; the pay-link and booking pages show business name and phone only. No legal business name, street address or refund policy is shown before Checkout for booking fees, deposits or pay links.",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx:505",
+      "src/lib/booking-page-copy.ts:54",
+      "src/lib/job-prepayment-pay.ts:466"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/public-booking-flow.tsx:505",
+        "collected_at": "2026-11-24",
+        "method": "Only display_name and cancellation fee sentence."
+      }
+    ],
+    "remediation": "Show legal name, street address and a refund/cancellation policy link on the booking form, booking page and /pay/[token] before the Pay button; pull from organization settings.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "responsible_party": "Contractor tenants"
+  },
+  {
+    "finding_id": "F-CA-010-001-APP",
+    "requirement_id": "CA-010-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "No single rate applied to whole invoices by default; tenants can classify lines (materials, fixtures, labor, diagnostic) for tax.",
+    "actual": "Volteira applies no rate at all: tax is a single dollar amount the user types per invoice (tax_cents), defaulting to 0, added after the credit. This avoids a wrong default rate, but there is no line-level taxable classification (fixture vs material vs labor) to support Regulation 1521 treatment.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/invoice-actions.ts:83",
+      "src/lib/invoice-math.ts:40",
+      "src/components/invoice-adjustments.tsx:185"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Add a per-line tax class (labor, materials-consumed, fixture-resale, diagnostic, exempt) and compute tax only on classes the tenant marks taxable; keep the manual override.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/invoice-math.test.ts::tax is charged after the credit, not before"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CA-010-002-APP",
+    "requirement_id": "CA-010-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Templates support adviser-required wording for lump-sum vs T&M and separately stated fixtures.",
+    "actual": "Change-order summary splits materials and labor (tested) but there is no adviser guidance to compare template wording against.",
+    "affected_files": [
+      "src/lib/change-order-math.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Obtain tax adviser guidance, then adjust estimate/contract templates.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Requires tax adviser guidance on Regulation 1521 that has not been obtained.",
+    "test_ids": [
+      "src/lib/change-order-math.test.ts::the summary splits materials, labor, changes and removals, and they add up"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CA-010-003-APP",
+    "requirement_id": "CA-010-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Tax line reflects tax actually due; computed in integer cents per line with documented rounding; rate and taxable base shown.",
+    "actual": "Tax is a free-typed amount with no rate, no taxable base and no per-line computation; the customer invoice shows only 'Tax $X'. Nothing prevents collecting more than is due (e.g., tax typed on non-taxable labor), and nothing flags it.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/invoice-actions.ts:83",
+      "src/app/invoice/[token]/page.tsx:214",
+      "src/lib/invoice-adjustments-server.ts:197"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/invoice/[token]/page.tsx:214",
+        "collected_at": "2026-11-24",
+        "method": "Tax shown without rate/base."
+      }
+    ],
+    "remediation": "Compute tax from a configured rate and the taxable lines in integer cents (documented half-up rounding), show 'Tax (rate% on $base)', and warn when a manual tax exceeds rate x taxable base.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/invoice-math.test.ts::tax is charged after the credit, not before"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CA-010-004-APP",
+    "requirement_id": "CA-010-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Prompt for seller's permit number when tax collection is enabled.",
+    "actual": "No seller's permit field or prompt exists; tax can be added to any invoice without one.",
+    "affected_files": [
+      "src/components/invoice-adjustments.tsx:185"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src",
+        "collected_at": "2026-11-24",
+        "method": "grep seller's permit: no matches."
+      }
+    ],
+    "remediation": "Add an optional seller's permit number in business settings and prompt for it the first time tax is entered.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "responsible_party": "Contractor tenants"
+  },
+  {
+    "finding_id": "F-CA-010-005-APP",
+    "requirement_id": "CA-010-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Invoices, contracts, purchase and payment records retained at least four years.",
+    "actual": "Same deletion paths as FED-006-002: RLS allows deleting any invoice (cascading payments/refunds/revisions) and any job (cascading prepayments); organization delete cascades invoices; no retention period is defined.",
+    "affected_files": [
+      "src/app/invoices/actions.ts:407"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "pg_policies / pg_constraint for invoices, jobs, organizations, invoice_payments, invoice_refunds, invoice_revisions, job_prepayments",
+        "collected_at": "2026-11-24",
+        "method": "Found: invoices DELETE policy 'Billing members can delete invoices' (can_edit_billing, any status); invoice_payments/invoice_refunds/invoice_revisions FK ON DELETE CASCADE to invoices; jobs DELETE policy 'Organization members can delete jobs' (any member); job_prepayments and job_payment_plan_items ON DELETE CASCADE to jobs; invoices FK to organizations ON DELETE CASCADE; organizations DELETE policy for owners. No trigger blocks deleting sent/paid invoices.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      }
+    ],
+    "remediation": "Apply the FED-006-002 remediation with a minimum four-year retention for invoices, contracts, payments and supplier receipts.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CA-010-006-APP",
+    "requirement_id": "CA-010-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "high",
+    "expected": "No card surcharges/convenience fees without legal review.",
+    "actual": "No surcharge or convenience fee exists; card and ACH are charged the same amount; processing fees are borne by the business.",
+    "affected_files": [
+      "src/lib/booking-checkout.ts:166",
+      "src/lib/job-prepayment-pay.ts:479"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src",
+        "collected_at": "2026-11-24",
+        "method": "grep surcharge|convenience fee: none in charging code."
+      }
+    ],
+    "remediation": "Keep surcharges off; require legal review before adding any.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: the product imposes no surcharge or convenience fee on any payment method (grep).",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-010-007-APP",
+    "requirement_id": "CA-010-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Tax adviser confirms SaaS subscription not taxable.",
+    "actual": "Subscription checkout sets automatic_tax disabled; taxability is a tax determination.",
+    "affected_files": [
+      "src/app/account/actions.ts:390"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:390",
+        "collected_at": "2026-11-24",
+        "method": "automatic_tax: false."
+      }
+    ],
+    "remediation": "Obtain and file a tax adviser memo.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Requires a tax professional's determination.",
+    "test_result": "not-applicable",
+    "responsible_party": "Shadam LLC"
+  },
+  {
+    "finding_id": "F-CA-010-008-APP",
+    "requirement_id": "CA-010-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "District tax rate by job site location per adviser.",
+    "actual": "No rate lookup exists; tax is typed manually, so location is not used.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/invoice-actions.ts:83"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/jobs/[jobId]/invoice-actions.ts:83",
+        "collected_at": "2026-11-24",
+        "method": "Manual tax amount."
+      }
+    ],
+    "remediation": "After adviser guidance, add rate lookup by job-site address.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Recorded as an adviser question; no rule to test against.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-004-001-APP",
+    "requirement_id": "CSLB-004-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Deposit capped at min($1,000, 10% of contract price) in integer cents; any deposit above the cap rejected however entered; pre-contract money counts.",
+    "actual": "planAmounts enforces the cap on deposits and anything due on signing, for fixed and percent amounts, on save and again on every load, so a plan inserted directly through the API that breaks the cap yields no pay links (loadPlanPayment returns null). Gaps: the cap base is the job's live line-item total, not the signed contract price; recordPrepayment accepts any cash/check amount before the invoice with no cap; booking diagnostic fees are not counted (CSLB-004-002); no DB constraint enforces the cap.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:51",
+      "src/lib/payment-plan.ts:83",
+      "src/lib/payment-plan-server.ts:45",
+      "src/lib/payment-plan-server.ts:201",
+      "src/lib/job-prepayment-pay.ts:131"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "database-check",
+        "location": "pg_constraint job_payment_plan_items / job_prepayments",
+        "collected_at": "2026-11-24",
+        "method": "No cap constraint; only amount > 0 checks.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      }
+    ],
+    "remediation": "Base the cap on the signed contract price (contracts figures) when one exists; make recordPrepayment refuse (or require an explicit 'payment for work performed' reason) amounts that would take total pre-work money above the cap; include paid diagnostic credits in the down-payment sum.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less",
+      "src/lib/payment-plan.test.ts::a percentage deposit is of the contract total, and the balance is the rest"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-004-002-APP",
+    "requirement_id": "CSLB-004-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Money collected before the contract (booking deposit, diagnostic fee credited to the job) counts toward the down-payment cap.",
+    "actual": "The booking diagnostic fee is collected at booking and credited toward approved repair work (diagnostic-credit.ts), but planAmounts/maxDownPaymentCents never consider it. Example: a $15,000 repair booked from a $150 diagnostic can carry a $1,000 deposit, so $1,150 is taken before work. Also sendPaymentRequest(byHand) sends a deposit pay link before any contract is signed (no signed check on the by-hand path).",
+    "affected_files": [
+      "src/lib/payment-plan.ts:83",
+      "src/lib/diagnostic-credit.ts:20",
+      "src/lib/booking-checkout.ts:150",
+      "src/lib/job-prepayment-pay.ts:730",
+      "src/lib/job-prepayment-pay.ts:758"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts:83",
+        "collected_at": "2026-11-24",
+        "method": "Down payment sum excludes diagnostic credit."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Pass the diagnostic credit still to be applied into planAmounts and count it in the down payment; refuse by-hand deposit requests until the contract with the schedule is signed (or legal review approves pre-contract collection). Add a money-rule test.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-004-003-APP",
+    "requirement_id": "CSLB-004-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "The cap is never lifted for a tenant unless an approved bond/joint control is recorded and confirmed.",
+    "actual": "No bond or joint-control override exists; maxDownPaymentCents applies to every job, and the cap test passes.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:51"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src",
+        "collected_at": "2026-11-24",
+        "method": "grep bond|joint control: no override path."
+      }
+    ],
+    "remediation": "None. If an exception is added, require recorded bond details plus legal sign-off.",
+    "priority": "none",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-004-004-APP",
+    "requirement_id": "CSLB-004-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Except the down payment, no payment is requested or accepted beyond work performed or materials delivered; no pay links or auto-charges for phases not completed.",
+    "actual": "Installments are scheduled by calendar date ('on_date') or on signing, never by phase completion, and only 'deposit'/'on_signing' items count toward the cap, so a plan of $1,000 deposit + $8,999 installment dated tomorrow + $1 balance on a $10,000 job passes planAmounts. Auto-requests fire on the date regardless of progress; sendPaymentRequest(byHand) sends any item's link at any time; the /pay/[token] page lets the customer pay an installment before its date (payLinkCents ignores due status). raiseInvoice and the MCP create_invoice tool accept any typed amount, even on a job with no lines or work done.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:83",
+      "src/lib/payment-plan.ts:152",
+      "src/lib/payment-plan.ts:169",
+      "src/lib/job-prepayment-pay.ts:350",
+      "src/lib/job-prepayment-pay.ts:730",
+      "src/app/jobs/[jobId]/invoice-actions.ts:78",
+      "src/app/jobs/[jobId]/invoice-actions.ts:168",
+      "src/lib/mcp-business-tools.ts:603"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts:83",
+        "collected_at": "2026-11-24",
+        "method": "Reproduction by reading: plan above passes all checks."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "src/lib/payment-plan.ts:63",
+        "method": "planAmounts(1_000_000, [{kind:'deposit',amountType:'fixed',amountCents:100_000,due:'on_signing'},{kind:'installment',amountType:'fixed',amountCents:899_900,due:'on_date',dueDate:'2026-11-26'}]) returns ok:true (traced by reading; not executed)."
+      }
+    ],
+    "remediation": "Tie each non-deposit payment to a phase that must be marked complete (optionally with photos) before it can be requested, linked or paid; block pay links and invoices whose cumulative amount exceeds deposit + value of completed phases; require a reason and owner confirmation for typed invoice amounts above unbilled line value. Add money-rule tests.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::a payment is asked for automatically once, when due, and never after the invoice",
+      "src/lib/payment-plan.test.ts::only a payment the customer signed for is asked for automatically"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-004-005-APP",
+    "requirement_id": "CSLB-004-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Contract price, down payment and every progress payment stated in dollars and cents; integer cents; parts sum to the price exactly.",
+    "actual": "All amounts are integer cents; the last payment is the computed balance so the plan sums exactly; the contract PAYMENT SCHEDULE states each payment as $X.XX with its due term. Verified by passing tests.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:63",
+      "src/lib/payment-plan.ts:214"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "None.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::a percentage deposit is of the contract total, and the balance is the rest",
+      "src/lib/payment-plan.test.ts::payments always add up to the total exactly, rounding included",
+      "src/lib/payment-plan.test.ts::the contract says each payment in plain words"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-004-006-APP",
+    "requirement_id": "CSLB-004-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Until legal review decides, no additional up-front payment is requested on change orders beyond the original cap.",
+    "actual": "The cap is recomputed from the job's current line total, which includes approved change-order lines; after a change order raises the total, the plan can be re-saved with a larger deposit (up to the new cap) and requested by hand immediately. Automatic requests are held until the new schedule is signed, but the by-hand path is not.",
+    "affected_files": [
+      "src/lib/payment-plan-server.ts:45",
+      "src/lib/payment-plan-server.ts:126",
+      "src/lib/job-prepayment-pay.ts:730"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan-server.ts:45",
+        "collected_at": "2026-11-24",
+        "method": "Cap base = live line total."
+      }
+    ],
+    "remediation": "Freeze the down-payment cap at the signed contract's price; refuse plan edits that raise the deposit after signing pending legal review.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/change-order-math.test.ts::only approved change orders move the contract total"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-005-001-APP",
+    "requirement_id": "CSLB-005-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Each progress payment requested corresponds to work performed/materials delivered; phase must be marked complete before an installment is issued or charged.",
+    "actual": "There is no concept of phase completion: installments are due on a date or on signing; auto and by-hand requests and the pay page do not check job progress; invoices can be raised for typed amounts at any job stage. The contract says 'Progress payments are for work performed or materials delivered' but nothing enforces it.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:14",
+      "src/lib/payment-plan.ts:169",
+      "src/lib/payment-plan.ts:254",
+      "src/lib/job-prepayment-pay.ts:894",
+      "src/app/jobs/[jobId]/invoice-actions.ts:168"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts:14",
+        "collected_at": "2026-11-24",
+        "method": "PlanDue is on_signing | on_date | on_completion only."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Add PlanDue 'on_phase' tied to a job phase/milestone with completion (who, when, photos); allow requests and pay links only after completion; migrate on_date installments to require completion confirmation.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::what is due now: what has come due, less what was paid, never negative"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-005-002-APP",
+    "requirement_id": "CSLB-005-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Progress-payment invoices identify the contract, the schedule phase and amount matching the signed schedule.",
+    "actual": "Pay links and requests name the payment ('Deposit', 'Payment 2', 'Balance') and job number, and automatic requests go only when they match the signed schedule (tested). There are no phase descriptions in the schedule, progress requests are pay links rather than invoices, and the invoice for the balance does not reference the schedule line.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:214",
+      "src/lib/payment-plan.ts:229",
+      "src/lib/job-prepayment-pay.ts:450",
+      "src/lib/job-prepayment-pay.ts:773"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      }
+    ],
+    "remediation": "Add a phase description to each plan item, show it on the contract schedule, pay links and invoices, and reference the contract number.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::only a payment the customer signed for is asked for automatically",
+      "src/lib/payment-plan.test.ts::the contract says each payment in plain words"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-005-003-APP",
+    "requirement_id": "CSLB-005-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Cumulative invoiced/collected never exceeds down payment + value of completed phases, and never exceeds contract price + signed change orders; blocked or flagged.",
+    "actual": "Pay links are capped at the plan total (payLinkCents) and an invoice payment cannot exceed what is owed (tested), but no guard compares cumulative billing to work completed: typed invoice amounts (raiseInvoice, MCP create_invoice) are unbounded by contract price or line values, and dated installments ignore progress. No test covers an overbilling guard.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/invoice-actions.ts:78",
+      "src/lib/mcp-business-tools.ts:603",
+      "src/lib/payment-plan.ts:152"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-24",
+        "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "database-check",
+        "location": "pg_constraint invoices",
+        "collected_at": "2026-11-24",
+        "method": "No check relating invoice totals to contract or job value.",
+        "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      }
+    ],
+    "remediation": "Add a server-side guard (and money-rule test) that refuses or requires owner override with reason when cumulative invoices + prepayments on a job would exceed deposit + completed-phase value or contract price + approved change orders.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts::money received pays the plan in order, and a pay link asks only for what is left",
+      "src/lib/invoice-payment.test.ts::a payment is never recorded for more than is owed, nothing, or an unreadable amount"
+    ],
+    "test_result": "passed",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-005-004-APP",
+    "requirement_id": "CSLB-005-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Generate the statutory unconditional waiver and release on progress payment (Civ 8134) after funds are received, on request.",
+    "actual": "No lien release / waiver generation exists anywhere in the application (grep for lien, waiver, 8134 found nothing relevant).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src",
+        "collected_at": "2026-11-24",
+        "method": "grep -i 'lien|waiver and release|8134': no feature."
+      }
+    ],
+    "remediation": "Add a 'Lien release' document for each received payment using the statutory Civ 8134/8138 forms, available only after the payment has cleared.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "responsible_party": "Volteira platform"
+  },
+  {
+    "finding_id": "F-CSLB-005-005-APP",
+    "requirement_id": "CSLB-005-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Retention payment deadlines on private works where retention is withheld.",
+    "actual": "The app has no retention/withholding feature; payment plans cannot hold back a retention percentage.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:14"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src",
+        "collected_at": "2026-11-24",
+        "method": "grep retention in payment code: none."
+      }
+    ],
+    "remediation": "If retention is added for commercial jobs, implement Civ 8800 deadlines.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: no retention withholding exists in the product.",
+    "test_result": "not-applicable"
+  }
+]
