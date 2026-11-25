@@ -1,0 +1,25 @@
+{
+  "audit_id": "APP-volteira-2026-11-24",
+  "kind": "application",
+  "target": "Volteira application",
+  "started_at": "2026-11-24T20:00:00.000Z",
+  "finished_at": "2026-11-25T13:40:00.000Z",
+  "git_commit": "25d5faedfa5541b4302fb6d303faad3dd89516d8",
+  "deployment_id": null,
+  "environment": "source review at main 25d5fae + read-only production database catalog queries + locally rendered synthetic documents",
+  "legal_baseline_version": "2026-11-25",
+  "skill_version": "volteira-compliance 1.0.0",
+  "tool_version": "1.0.0",
+  "missing_registers": [],
+  "limitations": [
+    "Read-only audit: no application code or production data was changed; no real texts, emails, contracts, invoices or payments were sent or made.",
+    "Official sources were re-read on 2026-11-25 for 277 of 599 requirements (see compliance/legal-history/2026-11-25/verification-report.md). 115 California statute pages on leginfo.legislature.ca.gov were blocked by a Cloudflare challenge; those and other unverified requirements are reported BLUE with the observed result kept as observed_status.",
+    "Stripe MCP was not authorized; Stripe behaviour was assessed from code and webhook handling only.",
+    "Production environment variable values (MCP_BEARER_TOKEN, MCP_SESSION_SECRET, feature flags) were not read; checks that depend on them are YELLOW or BLUE.",
+    "The CSLB license lookup is protected by reCAPTCHA; Pacific Plains' license status needs a manual check.",
+    "AI provider contracts, retention and training settings were not reviewed.",
+    "No live prompt-injection testing and no destructive security testing.",
+    "Global (~/.claude) installation of the skills was not performed in this ephemeral container; the canonical copies are in the repository.",
+    "Findings are evidence for review, not legal advice or a certification."
+  ]
+}

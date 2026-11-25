@@ -32,3 +32,7 @@ Production's migration history (`supabase_migrations.schema_migrations`) lists e
 - Add tests only for money and security rules: prices, totals, invoices, deposits, credits and payments; signing in, and what each person may see or change; keeping one business's data from another's; contract signatures; texting consent and opt-outs.
 - Everything else (layout, wording, a new page or field, maps, how something loads) is checked by building the app and using the change in a browser, with no new tests.
 - When a change breaks an existing test, fix the code, or update the test if the behavior was meant to change. Don't delete or skip a test to get a merge through.
+
+# Custom commands
+
+`.claude/COMMANDS.md` lists every custom Claude Code skill and command. When you create, rename, change or deprecate one, update its row there and run `node compliance/scripts/verify-command-registry.mjs`.

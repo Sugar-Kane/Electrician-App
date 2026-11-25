@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "volteira/compliance/evidence.schema.json",
+  "title": "Evidence record",
+  "description": "Redacted proof behind a finding. Never contains customer data, credentials, payment details or secrets.",
+  "type": "object",
+  "required": ["evidence_id", "requirement_id", "finding_id", "type", "collected_at", "environment", "location", "method", "limitations", "app_version"],
+  "properties": {
+    "evidence_id": { "type": "string" },
+    "requirement_id": { "type": "string" },
+    "finding_id": { "type": "string" },
+    "type": { "type": "string" },
+    "collected_at": { "type": "string" },
+    "environment": { "type": "string" },
+    "location": { "type": "string" },
+    "method": { "type": "string" },
+    "limitations": { "type": "string" },
+    "app_version": { "type": "string" },
+    "redacted": { "type": "boolean" }
+  }
+}

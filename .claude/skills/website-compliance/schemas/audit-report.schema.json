@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "volteira/compliance/audit-report.schema.json",
+  "title": "Audit report",
+  "type": "object",
+  "required": ["audit_id", "kind", "target", "started_at", "legal_baseline_version", "skill_version", "environment", "findings", "totals", "metrics", "limitations"],
+  "properties": {
+    "audit_id": { "type": "string" },
+    "kind": { "enum": ["application", "website"] },
+    "target": { "type": "string" },
+    "started_at": { "type": "string" },
+    "git_branch": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "deployment_id": { "type": "string" },
+    "website_url": { "type": "string" },
+    "legal_baseline_version": { "type": "string" },
+    "skill_version": { "type": "string" },
+    "environment": { "type": "string" },
+    "jurisdictions": { "type": "array", "items": { "type": "string" } },
+    "findings": { "type": "array", "items": { "$ref": "finding.schema.json" } },
+    "totals": {
+      "type": "object",
+      "required": ["GREEN", "YELLOW", "RED", "GRAY", "BLUE", "total"],
+      "properties": {
+        "GREEN": { "type": "integer" },
+        "YELLOW": { "type": "integer" },
+        "RED": { "type": "integer" },
+        "GRAY": { "type": "integer" },
+        "BLUE": { "type": "integer" },
+        "total": { "type": "integer" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Computed from totals only; null when a denominator is zero.",
+      "properties": {
+        "verified_pass_rate": { "type": ["number", "null"] },
+        "verification_coverage": { "type": ["number", "null"] },
+        "overall_verified_applicable_compliance": { "type": ["number", "null"] }
+      }
+    },
+    "scorecards": { "type": "object" },
+    "website_result": { "enum": ["PASS", "CONDITIONAL PASS", "FAIL", "INSUFFICIENT EVIDENCE"] },
+    "pages": { "type": "array" },
+    "tests_run": { "type": "array" },
+    "tests_not_run": { "type": "array" },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

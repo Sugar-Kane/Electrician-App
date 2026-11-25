@@ -1,0 +1,3632 @@
+[
+  {
+    "finding_id": "F-FED-002-001-APP",
+    "requirement_id": "FED-002-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
+    "expected": "Consent recorded per tenant and number (source, date, scope, wording) before any automated text, and sends blocked when no valid consent is on file or it has been revoked.",
+    "actual": "The ledger exists and is tenant-scoped (messaging_consent with organization_id, source, opted_in_at, proof_text carrying SMS_CONSENT_VERSION), but the send gate deliberately allows texts with no consent record and when the record cannot be read: textRefusal() returns null for null/'unknown' consent and only a STOP refuses (messaging-rules.ts:101-108; twilio.ts:270-276). recordManualSmsConsent() writes an 'admin' consent automatically when staff enter a mobile number on a new job, with no disclosure shown to the customer. In production 5 customers have phones but only 1 consent row exists while 4 outbound texts were sent.",
+    "affected_files": [
+      "src/lib/messaging-rules.ts:94-108",
+      "src/lib/twilio.ts:246-277",
+      "src/lib/customer-text.ts:35-53",
+      "src/lib/manual-sms-consent.ts:271-326",
+      "src/app/api/twilio/inbound/route.ts:119-136"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/messaging-rules.ts:101",
+        "collected_at": "2026-11-25",
+        "method": "Code read: no record or unreadable record is not a refusal"
+      },
+      {
+        "type": "database-check",
+        "location": "public.messaging_consent constraints/policies/triggers",
+        "collected_at": "2026-11-25",
+        "method": "pg_constraint + pg_policies read-only: UNIQUE(customer_id,channel,scope); scope check transactional|marketing; source check; RLS INSERT/UPDATE/DELETE for any org member"
+      },
+      {
+        "type": "database-check",
+        "location": "counts: customers=6 (5 with phone), messaging_consent rows=1 (inbound_text), outbound messages=4, orgs=1",
+        "collected_at": "2026-11-25",
+        "method": "select count(*) only"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      }
+    ],
+    "test_ids": [
+      "messaging-rules.test.ts: only a STOP refuses a text: the one rule every text goes through"
+    ],
+    "test_result": "passed",
+    "remediation": "Make sendSms refuse when there is no opted-in row (or the read fails) for this organization+customer, except for an explicitly enumerated, counsel-approved exempt category; record a consent row (source, wording version, captured_by) at every capture point including phone booking and owner entry, and show the customer the disclosure (or send a one-time confirmation text) when consent is inferred from a number given to the business. Add a test that a customer with no consent row is not texted.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-002-002-APP",
+    "requirement_id": "FED-002-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Marketing texts only with prior express written consent, kept separate from transactional consent, with each message tagged marketing or informational.",
+    "actual": "No marketing send feature exists: the schema has a 'marketing' scope but no code writes or reads it; templates and automatic messages are transactional; the MCP proposal tool says 'Customer messages are transactional only (never marketing)'. However nothing classifies or blocks promotional content in free-form inbox texts, MCP send_text, or AI-proposed messages, so a tenant or AI could send an advertisement under transactional consent.",
+    "affected_files": [
+      "src/lib/mcp-supervised-tools.ts:56",
+      "src/lib/customer-text.ts:55-80",
+      "src/app/messages/actions.ts:30-60"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "public.messaging_consent constraints/policies/triggers",
+        "collected_at": "2026-11-25",
+        "method": "pg_constraint + pg_policies read-only: UNIQUE(customer_id,channel,scope); scope check transactional|marketing; source check; RLS INSERT/UPDATE/DELETE for any org member"
+      },
+      {
+        "type": "source-reference",
+        "location": "grep 'marketing' across src: no send path uses scope 'marketing'",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Tag every outbound message with a purpose (transactional vs marketing); refuse marketing-tagged sends without a 'marketing' scope opt-in that carries written-consent evidence; add owner guidance and an AI-side classifier that holds promotional free-form texts for review.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-003-APP",
+    "requirement_id": "FED-002-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "No outbound artificial/AI-voice calls to residential or wireless lines without consent; the same gate for landline and wireless.",
+    "actual": "The only outbound AI call is the website callback, placed only when the website request's contact method is 'phone' (websiteCallDecision, website-intake.ts:206-215; placeCall in website-intake-runner.ts:224). The gate is number-type agnostic. No record of the consent wording the customer saw on the tenant's own website form is stored, and there is no do-not-call or 'stop calling' mechanism on the call.",
+    "affected_files": [
+      "src/lib/website-intake.ts:206-215",
+      "src/lib/website-intake-runner.ts:200-240",
+      "src/lib/twilio.ts:390-443"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/website-intake.test.ts:109",
+        "collected_at": "2026-11-25",
+        "method": "Passing test: Maya rings only someone who asked for a call"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      }
+    ],
+    "test_ids": [
+      "website-intake.test.ts: Maya rings only someone who asked for a call, and a resent request rings nobody twice"
+    ],
+    "test_result": "passed",
+    "remediation": "Store the callback consent (form wording, time, source) in messaging_consent with channel 'voice' or an equivalent ledger and refuse placeCall without it; publish required form wording for tenant websites.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-004-APP",
+    "requirement_id": "FED-002-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Volteira as service provider",
+    "expected": "Every outbound AI-voice call or AI voicemail treated as an artificial-voice call requiring prior express consent, with identification and opt-out.",
+    "actual": "Outbound AI calls and AI voicemails happen only for website callbacks the customer requested (tested). The voicemail identifies the business and callback number (websiteCallbackVoicemail, website-intake.ts:218-231) but that function has no test; no consent artifact for an artificial-voice call is stored and no opt-out is offered during the call.",
+    "affected_files": [
+      "src/lib/website-intake.ts:206-231",
+      "src/lib/voice-intake.ts:55-61",
+      "src/app/api/twilio/website-callback/route.ts:85-110"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/website-intake.test.ts:109",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/website-intake.ts:218",
+        "collected_at": "2026-11-25",
+        "method": "Voicemail content code read; untested"
+      }
+    ],
+    "test_ids": [
+      "website-intake.test.ts: Maya rings only someone who asked for a call, and a resent request rings nobody twice"
+    ],
+    "test_result": "passed",
+    "remediation": "Record callback consent explicitly as consent to an automated/AI-voice call; add a spoken opt-out ('say stop calling') that writes a voice opt-out honoured by placeCall; add a test for voicemail identification.",
+    "priority": "P2",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-002-005-APP",
+    "requirement_id": "FED-002-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
+    "expected": "Revocation accepted by any reasonable means, including replies of stop, quit, end, revoke, opt out, cancel, unsubscribe, free-text revocations, voice, email or telling staff.",
+    "actual": "Inbound handling matches only the exact single words stop, stopall, unsubscribe, cancel, end, quit after stripping non-letters (route.ts:23, 89). 'revoke' and 'opt out' (normalised to 'optout') are not recognised, and a sentence such as 'please stop texting me' is passed to the AI intake instead of opting out. There is no path to record a revocation made by voice, email or to staff. A STOP from a customer with no consent row updates zero rows (route.ts:142-151), so the local ledger records nothing and sendSms will text them again unless Twilio's own list blocks it. Any org member can also UPDATE or DELETE messaging_consent rows under RLS, so a STOP can be cleared outside the START path.",
+    "affected_files": [
+      "src/app/api/twilio/inbound/route.ts:23-24",
+      "src/app/api/twilio/inbound/route.ts:89",
+      "src/app/api/twilio/inbound/route.ts:142-151",
+      "src/app/api/twilio/inbound/route.ts:282-292",
+      "src/lib/messaging-rules.ts:101-108"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/twilio/inbound/route.ts:23",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "public.messaging_consent constraints/policies/triggers",
+        "collected_at": "2026-11-25",
+        "method": "pg_constraint + pg_policies read-only: UNIQUE(customer_id,channel,scope); scope check transactional|marketing; source check; RLS INSERT/UPDATE/DELETE for any org member"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add 'revoke', 'optout'/'opt out' and other synonyms; detect free-text revocation intent before the AI intake and treat it as an opt-out; upsert (not update) the opt-out row so a STOP lands with no prior row; add staff/voice/email 'customer asked to stop' actions that write the ledger; restrict UPDATE/DELETE of opted_out_at to the service role or a START-only function; add tests for each keyword and the no-row case.",
+    "priority": "P0",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-006-APP",
+    "requirement_id": "FED-002-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Revocations processed immediately at send time and never later than 10 business days.",
+    "actual": "Where a consent row exists, a STOP is written synchronously before anything else and returns 500 so Twilio retries if it fails (route.ts:138-151); sendSms re-reads consent on every send (twilio.ts:270-275), and the supervised executor treats a STOP as a final failure (tested). Gaps: a STOP with no prior row is not recorded (zero-row update), and an unreadable consent record is treated as allowed.",
+    "affected_files": [
+      "src/app/api/twilio/inbound/route.ts:138-151",
+      "src/lib/twilio.ts:270-276",
+      "src/lib/customer-text.ts:165-174"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/messaging-rules.test.ts:74",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/supervised-executor.test.ts:142",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "messaging-rules.test.ts: only a STOP refuses a text: the one rule every text goes through",
+      "supervised-executor.test.ts: a dropped connection is uncertain, a STOP is a failure, a rate limit is retried"
+    ],
+    "test_result": "passed",
+    "remediation": "Upsert the opt-out row; fail closed when consent cannot be read; add an integration test from inbound STOP to a refused send.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-007-APP",
+    "requirement_id": "FED-002-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Default: a STOP opts the person out of all non-essential automated texts from that tenant.",
+    "actual": "Every customer text goes through sendSms, which reads the single transactional row for that organization+customer and refuses after a STOP until a later START (twilio.ts:259-277, messaging-rules.ts:101-108). No other category of automated text exists, so a STOP covers all of them for that tenant only. Owner alerts use a separate path to the owner's own number.",
+    "affected_files": [
+      "src/lib/twilio.ts:259-307",
+      "src/lib/messaging-rules.ts:101-108"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/messaging-rules.test.ts:74",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/messaging-rules.test.ts:84",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "public.messaging_consent constraints/policies/triggers",
+        "collected_at": "2026-11-25",
+        "method": "pg_constraint + pg_policies read-only: UNIQUE(customer_id,channel,scope); scope check transactional|marketing; source check; RLS INSERT/UPDATE/DELETE for any org member"
+      }
+    ],
+    "test_ids": [
+      "messaging-rules.test.ts: only a STOP refuses a text: the one rule every text goes through",
+      "messaging-rules.test.ts: the inbox composer follows the same rule: only a STOP blocks it"
+    ],
+    "test_result": "passed",
+    "remediation": "Keep the single-scope design; if a marketing scope is ever added, make a STOP on any message revoke both scopes unless counsel approves narrower scoping.",
+    "priority": "none",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-002-008-APP",
+    "requirement_id": "FED-002-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
+    "expected": "At most one opt-out confirmation text within 5 minutes, with no marketing.",
+    "actual": "The app sends no confirmation itself (empty TwiML) and relies on Twilio Advanced Opt-Out at the Messaging Service (route.ts:18-20); the AI intake is skipped for opt-out keywords (route.ts:282). The Twilio Advanced Opt-Out configuration and its reply text could not be inspected.",
+    "affected_files": [
+      "src/app/api/twilio/inbound/route.ts:18-20",
+      "src/app/api/twilio/inbound/route.ts:282-283"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/twilio/inbound/route.ts:18",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Export and record the Messaging Service's Advanced Opt-Out settings (STOP reply wording) as evidence; check they hold one confirmation with no marketing.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "The Twilio Messaging Service Advanced Opt-Out configuration (the actual STOP reply) is outside the repository and database and was not accessible."
+  },
+  {
+    "finding_id": "F-FED-002-009-APP",
+    "requirement_id": "FED-002-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Scrub marketing calls/texts against the National DNC Registry.",
+    "actual": "No telephone-solicitation feature exists: texts are transactional (booking, arrival, estimates, invoices, contracts) and the only outbound calls are callbacks the customer requested. No bulk/marketing send capability was found.",
+    "affected_files": [
+      "src/lib/automatic-messages.ts",
+      "src/lib/website-intake.ts:206-215"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep for marketing/bulk send paths across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Before any marketing or bulk send feature is built, add DNC scrubbing or a documented exemption.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: Volteira has no telephone-solicitation (marketing) calling or texting feature; all sends are transactional or customer-requested callbacks."
+  },
+  {
+    "finding_id": "F-FED-002-010-APP",
+    "requirement_id": "FED-002-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Written company-specific DNC policy, training and honoring requests within 10 business days for telemarketing.",
+    "actual": "No telemarketing calls or texts are initiated by any feature (see FED-002-009).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep for marketing/bulk send paths across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "If telemarketing is introduced, implement a per-tenant DNC list and written policy first.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: the rule covers entities making telemarketing calls; no telemarketing feature exists."
+  },
+  {
+    "finding_id": "F-FED-002-011-APP",
+    "requirement_id": "FED-002-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "8am-9pm in the recipient's local time for marketing; recommended for all automated texts.",
+    "actual": "Quiet hours (default 21:00-08:00) are evaluated in the business's timezone, not the recipient's (messaging-rules.ts:134-160); the inbox can override them (messages/actions.ts:34-49) and the supervised executor defers during them (tested). sendCustomerText (used by MCP send_text), automatic messages and website callback calls do not check quiet hours. No marketing is sent, so the legal rule itself is not triggered.",
+    "affected_files": [
+      "src/lib/messaging-rules.ts:134-160",
+      "src/app/messages/actions.ts:34-49",
+      "src/lib/supervised-executor.ts:64-117",
+      "src/lib/customer-text.ts:55-150"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/supervised-executor.test.ts:135",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/messaging-rules.test.ts:129",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "public.messaging_settings (1 row)",
+        "collected_at": "2026-11-25",
+        "method": "a2p_campaign_id set, a2p_brand_id set, a2p_registered_at NULL, quiet hours 21:00-08:00, ai_enabled false"
+      }
+    ],
+    "test_ids": [
+      "messaging-rules.test.ts: quiet hours are judged in the business timezone, not the server's",
+      "supervised-executor.test.ts: quiet hours defer the text instead of sending it"
+    ],
+    "test_result": "passed",
+    "remediation": "Evaluate quiet hours in the recipient's timezone (from service address or area code) inside sendSms for all non-urgent automated texts, including MCP send_text.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-012-APP",
+    "requirement_id": "FED-002-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
+    "expected": "Artificial/AI voice messages identify the business at the start and give its phone number; accurate caller ID.",
+    "actual": "The AI greeting names the business first (tested in both the Gather and xAI paths). Outbound callbacks use the organization's own phone as caller ID (website-intake-runner.ts:206-229). The AI voicemail names the business and reads the callback number (website-intake.ts:218-231) but that is untested.",
+    "affected_files": [
+      "src/lib/voice-intake.ts:44-61",
+      "src/lib/website-intake.ts:218-231",
+      "src/lib/website-intake-runner.ts:206-229"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/voice-intake.test.ts:51",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/grok-voice.test.ts:31",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "voice-intake.test.ts: every caller is told the call may be recorded, before they say anything",
+      "grok-voice.test.ts: every caller is told the call may be recorded, in the first thing said"
+    ],
+    "test_result": "passed",
+    "remediation": "Add a test asserting the voicemail starts with the business name and contains the business number.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-013-APP",
+    "requirement_id": "FED-002-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "Design to the stricter of the statutory text and FCC interpretation; do not rely on FCC orders binding courts.",
+    "actual": "The send gate relies on a permissive reading that a number given for service is consent (no record needed; messaging-rules.ts:94-100 comment), and on inbound first texts as opt-in. These are FCC-interpretation-dependent positions after McLaughlin.",
+    "affected_files": [
+      "src/lib/messaging-rules.ts:90-108",
+      "src/lib/manual-sms-consent.ts:232-240"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/messaging-rules.ts:94",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Have counsel confirm the consent theories; implement the stricter default (explicit recorded consent) per FED-002-001.",
+    "priority": "P2",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-002-014-APP",
+    "requirement_id": "FED-002-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants, Messaging provider",
+    "expected": "Each tenant brand and campaign registered and approved before sending, with traffic consistent with the registered use case.",
+    "actual": "Production messaging_settings shows a campaign id and brand but a2p_registered_at is NULL, and 4 outbound texts exist. a2p_registered_at only drives a settings-page banner (settings/notifications/page.tsx:58); sendSms/sendCustomerText never check it. The filed campaign describes one opt-in path (booking checkbox) and no embedded links (docs/a2p-10dlc-campaign-resubmission.md:30-38), but the app also texts on owner-entered ('admin'), inbound-text and verbal consent, and sends links (invoice pay links invoice-messages.ts:93-95, signing links, estimate links).",
+    "affected_files": [
+      "src/app/settings/notifications/page.tsx:41-58",
+      "src/lib/twilio.ts:259-277",
+      "src/lib/invoice-messages.ts:88-101",
+      "docs/a2p-10dlc-campaign-resubmission.md:30-38",
+      "src/lib/manual-sms-consent.ts:278-326"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "public.messaging_settings (1 row)",
+        "collected_at": "2026-11-25",
+        "method": "a2p_campaign_id set, a2p_brand_id set, a2p_registered_at NULL, quiet hours 21:00-08:00, ai_enabled false"
+      },
+      {
+        "type": "database-check",
+        "location": "counts: customers=6 (5 with phone), messaging_consent rows=1 (inbound_text), outbound messages=4, orgs=1",
+        "collected_at": "2026-11-25",
+        "method": "select count(*) only"
+      },
+      {
+        "type": "source-reference",
+        "location": "docs/a2p-10dlc-campaign-resubmission.md:30",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Block customer sends in sendSms until the tenant's campaign is approved (a2p_registered_at set); update the campaign to describe every opt-in path and the embedded-link content, or remove those paths.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-015-APP",
+    "requirement_id": "FED-002-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Pacific Plains Electric, Contractor tenants, Messaging provider",
+    "expected": "Opt-in with program description, frequency, rates, terms/privacy links; STOP and HELP with compliant auto-responses; no prohibited content.",
+    "actual": "The booking-page disclosure carries the required elements (CT-SMS-001 passes), is optional and unchecked, and links Terms and Privacy (public-booking-flow.tsx:517-541). The first AI text carries 'Reply STOP to opt out' (tested). HELP is not handled in code and relies on Twilio Advanced Opt-Out, which was not verifiable. Consents captured on other paths (owner entry, phone) show the customer no disclosure.",
+    "affected_files": [
+      "src/lib/sms-consent.ts:16-26",
+      "src/components/public-booking-flow.tsx:511-541",
+      "src/app/api/twilio/inbound/route.ts:18-24",
+      "src/lib/manual-sms-consent.ts:289-295"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:117",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/sms-intake.test.ts:160",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "CT-SMS-001",
+      "sms-intake.test.ts: replies fit in two segments and carry the opt-out only on the first"
+    ],
+    "test_result": "passed",
+    "remediation": "Record Twilio HELP/STOP auto-reply configuration as evidence; send a disclosure/confirmation text when consent is captured outside the booking form.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-002-016-APP",
+    "requirement_id": "FED-002-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Determine TSR coverage of any outbound sales calling, including voice AI.",
+    "actual": "No outbound sales calling program exists; the AI places single callbacks only to people who asked for one through the business's website, and inbound sales callers are declined.",
+    "affected_files": [
+      "src/lib/website-intake.ts:206-215",
+      "src/lib/grok-voice.ts:217"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/website-intake.test.ts:109",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "website-intake.test.ts: Maya rings only someone who asked for a call, and a resent request rings nobody twice"
+    ],
+    "test_result": "passed",
+    "remediation": "Have counsel record the TSR determination; revisit if outbound sales calling is added.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable on current features: no plan or campaign to induce purchases by outbound telephone calls; outbound calls are customer-requested callbacks (counsel to confirm)."
+  },
+  {
+    "finding_id": "F-FED-003-001-APP",
+    "requirement_id": "FED-003-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants",
+    "expected": "Every email template classified transactional vs commercial; commercial rules applied to commercial or mixed messages.",
+    "actual": "All built-in emails (booking confirmations, estimates, invoices, receipts, contracts, refunds, invitations) are transactional by content, but nothing tags them, and the AI-proposed send_customer_email accepts a free-form subject and body (mcp-supervised-tools.ts:56-64, 242) that could be promotional; 'transactional only' is only a tool description.",
+    "affected_files": [
+      "src/lib/email.ts:27-37",
+      "src/lib/mcp-supervised-tools.ts:56-64",
+      "src/lib/mcp-supervised-tools.ts:207-242",
+      "src/lib/supervised-executor.ts:212"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep sendEmail( callers: 13 files, all transactional templates",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a purpose tag to sendEmail; for free-form owner/AI emails, either refuse promotional content or treat as commercial (unsubscribe, postal address, ad identification).",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-003-002-APP",
+    "requirement_id": "FED-003-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants, Messaging provider",
+    "expected": "From name/address and routing accurately identify the tenant or Volteira; authenticated domain; no spoofing.",
+    "actual": "emailSender builds 'Business Name <configured address>' and strips characters that could forge a header (booking-confirmation.ts:698-708), tested; reply_to routes to the business. Domain authentication (SPF/DKIM/DMARC) of BOOKING_EMAIL_FROM could not be checked.",
+    "affected_files": [
+      "src/lib/booking-confirmation.ts:698-708",
+      "src/lib/email.ts:91-106"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/booking-confirmation.test.ts:166",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/booking-confirmation.test.ts:182",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "booking-confirmation.test.ts: the email comes from the business, not from the software",
+      "booking-confirmation.test.ts: a business name cannot break the From header apart"
+    ],
+    "test_result": "passed",
+    "remediation": "Capture Resend domain verification and DNS SPF/DKIM/DMARC records as evidence.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-003-003-APP",
+    "requirement_id": "FED-003-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Commercial email requirement (deceptive subject lines).",
+    "actual": "No commercial/promotional email feature exists; every sendEmail caller sends transactional or relationship messages (confirmations, estimates, invoices, receipts, contracts, refunds, team invitations). There is no unsubscribe or suppression mechanism, so these become applicable the moment any marketing email is sent (see FED-003-001 for the free-form AI/owner email risk).",
+    "affected_files": [
+      "src/lib/email.ts:54-137"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep sendEmail( callers across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Before any marketing email: add per-tenant suppression, List-Unsubscribe one-click, footer with ad identification and the tenant's postal address (tenant_legal_pages.mailing_address exists), and block sends without them.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: applies to email whose primary purpose is commercial; no such email is sent by any current feature."
+  },
+  {
+    "finding_id": "F-FED-003-004-APP",
+    "requirement_id": "FED-003-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants",
+    "expected": "Commercial email requirement (functioning opt-out).",
+    "actual": "No commercial/promotional email feature exists; every sendEmail caller sends transactional or relationship messages (confirmations, estimates, invoices, receipts, contracts, refunds, team invitations). There is no unsubscribe or suppression mechanism, so these become applicable the moment any marketing email is sent (see FED-003-001 for the free-form AI/owner email risk).",
+    "affected_files": [
+      "src/lib/email.ts:54-137"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep sendEmail( callers across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Before any marketing email: add per-tenant suppression, List-Unsubscribe one-click, footer with ad identification and the tenant's postal address (tenant_legal_pages.mailing_address exists), and block sends without them.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: applies to email whose primary purpose is commercial; no such email is sent by any current feature."
+  },
+  {
+    "finding_id": "F-FED-003-005-APP",
+    "requirement_id": "FED-003-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants",
+    "expected": "Commercial email requirement (honoring opt-outs within 10 business days).",
+    "actual": "No commercial/promotional email feature exists; every sendEmail caller sends transactional or relationship messages (confirmations, estimates, invoices, receipts, contracts, refunds, team invitations). There is no unsubscribe or suppression mechanism, so these become applicable the moment any marketing email is sent (see FED-003-001 for the free-form AI/owner email risk).",
+    "affected_files": [
+      "src/lib/email.ts:54-137"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep sendEmail( callers across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Before any marketing email: add per-tenant suppression, List-Unsubscribe one-click, footer with ad identification and the tenant's postal address (tenant_legal_pages.mailing_address exists), and block sends without them.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: applies to email whose primary purpose is commercial; no such email is sent by any current feature."
+  },
+  {
+    "finding_id": "F-FED-003-006-APP",
+    "requirement_id": "FED-003-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform",
+    "expected": "Commercial email requirement (advertisement identification, opt-out notice and postal address).",
+    "actual": "No commercial/promotional email feature exists; every sendEmail caller sends transactional or relationship messages (confirmations, estimates, invoices, receipts, contracts, refunds, team invitations). There is no unsubscribe or suppression mechanism, so these become applicable the moment any marketing email is sent (see FED-003-001 for the free-form AI/owner email risk).",
+    "affected_files": [
+      "src/lib/email.ts:54-137"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep sendEmail( callers across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Before any marketing email: add per-tenant suppression, List-Unsubscribe one-click, footer with ad identification and the tenant's postal address (tenant_legal_pages.mailing_address exists), and block sends without them.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: applies to email whose primary purpose is commercial; no such email is sent by any current feature."
+  },
+  {
+    "finding_id": "F-FED-003-007-APP",
+    "requirement_id": "FED-003-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Commercial email requirement (no-fee single-step opt-out).",
+    "actual": "No commercial/promotional email feature exists; every sendEmail caller sends transactional or relationship messages (confirmations, estimates, invoices, receipts, contracts, refunds, team invitations). There is no unsubscribe or suppression mechanism, so these become applicable the moment any marketing email is sent (see FED-003-001 for the free-form AI/owner email risk).",
+    "affected_files": [
+      "src/lib/email.ts:54-137"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep sendEmail( callers across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Before any marketing email: add per-tenant suppression, List-Unsubscribe one-click, footer with ad identification and the tenant's postal address (tenant_legal_pages.mailing_address exists), and block sends without them.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: applies to email whose primary purpose is commercial; no such email is sent by any current feature."
+  },
+  {
+    "finding_id": "F-FED-003-008-APP",
+    "requirement_id": "FED-003-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Pacific Plains Electric, Contractor tenants",
+    "expected": "Contractual allocation of sender duties between Volteira and tenants for commercial email.",
+    "actual": "No commercial email is sent, and no tenant agreement exists in the product (signup has no terms acceptance).",
+    "affected_files": [
+      "src/app/signup"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep terms/agree in src/app/signup, src/app/onboarding: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "When tenant terms are written (see CA-001-004), include CAN-SPAM sender allocation.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable today: Volteira transmits no commercial email for tenants; becomes applicable with any marketing email feature (counsel review flagged)."
+  },
+  {
+    "finding_id": "F-FED-003-009-APP",
+    "requirement_id": "FED-003-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider, Contractor tenants, Messaging provider",
+    "expected": "SPF, DKIM and DMARC on sending domains; one-click unsubscribe on marketing; low spam rate.",
+    "actual": "Mail goes through Resend from BOOKING_EMAIL_FROM; no marketing mail, so List-Unsubscribe is not needed today. DNS authentication and spam rates were not inspected.",
+    "affected_files": [
+      "src/lib/email.ts:43-48"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "RESEND_API_KEY / BOOKING_EMAIL_FROM env (values not read)",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record the sending domain's SPF/DKIM/DMARC records and Resend verification status.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Sending domain DNS records and Resend domain verification/spam metrics are outside the repository and were not checked."
+  },
+  {
+    "finding_id": "F-FED-004-001-APP",
+    "requirement_id": "FED-004-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Volteira platform, Pacific Plains Electric, Contractor tenants, Website operator",
+    "expected": "Every privacy, security and AI statement matches actual practice.",
+    "actual": "The tenant privacy policy states 'We text you only if you asked us to, by ticking the optional... box' and 'Booking by phone does not sign you up for text messages' (privacy/page.tsx:62-73), but the app records consent automatically when staff enter a number ('admin'), when a phone caller asks for a link ('verbal', booking-notifications.ts:287), and texts customers with no consent record at all (messaging-rules.ts:101). It says the only recipients are the messaging carrier and software/hosting/database providers acting under contract (82-87), omitting Stripe, Resend, xAI (live call audio), Anthropic, and Google APIs. The AI receptionist presents as 'Maya' and discloses it is virtual only if sincerely asked (grok-voice.ts:197; sms-intake.ts:689).",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:62-73",
+      "src/app/legal/[org]/privacy/page.tsx:82-87",
+      "src/lib/manual-sms-consent.ts:278-326",
+      "src/lib/booking-notifications.ts:287",
+      "src/lib/messaging-rules.ts:101-108",
+      "src/lib/grok-voice.ts:197"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:67",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "vendor endpoints in src: api.twilio.com, pay.stripe.com, api.resend.com, api.x.ai, @anthropic-ai/sdk, googleapis.com",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Rewrite the policy to describe every consent path and every vendor category actually used, or change the code to match the policy; add an automated check that the policy's vendor list matches the configured integrations.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-004-002-APP",
+    "requirement_id": "FED-004-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Volteira as service provider",
+    "expected": "Reasonable security: tenant isolation, access control, MFA for admins, least-privilege AI/MCP tools, secrets, logging, vendor oversight, incident response.",
+    "actual": "RLS is enabled on all 95 public tables; tenant guard triggers exist (e.g. zz_tenant_references_guard on messaging_consent); MCP authorization, tenant storage path and webhook signature tests pass. However docs/security/REMEDIATION.md:5 records 'NOT READY to onboard a second paying business' with MT-03 HIGH (live RLS/storage/MCP isolation unverified) open; no MFA enforcement for admins was found; there is no incident response plan.",
+    "affected_files": [
+      "docs/security/REMEDIATION.md:5-25",
+      "docs/security/MULTI-TENANT-READINESS.md:98-100",
+      "src/lib/mcp-business-authorization.ts",
+      "src/app/api/twilio/inbound/route.ts:34-45"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "pg_class public schema",
+        "collected_at": "2026-11-25",
+        "method": "95 of 95 public tables have RLS enabled"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:149",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:163",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "CT-TENANT-001",
+      "CT-WEBHOOK-001",
+      "CT-AUTHZ-001",
+      "mcp-business-authorization.test.ts"
+    ],
+    "test_result": "passed",
+    "remediation": "Close MT-03 with two-tenant authenticated tests; enforce MFA (aal2) for owners and platform admins; write an incident response plan (FED-011-006).",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-004-003-APP",
+    "requirement_id": "FED-004-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "Documented legal determination whether Shadam or tenants are Safeguards Rule financial institutions.",
+    "actual": "No determination is documented. Tenants can set payment plans with deposits and scheduled progress payments (src/lib/payment-plan.ts); whether any amounts to extending credit is undetermined.",
+    "affected_files": [
+      "src/lib/payment-plan.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Obtain and file counsel's determination.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on whether Shadam or any tenant extends consumer credit (installment financing), a legal/business fact not in the repository."
+  },
+  {
+    "finding_id": "F-FED-004-004-APP",
+    "requirement_id": "FED-004-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "Written information security program per Safeguards Rule, if a financial institution.",
+    "actual": "No WISP or Qualified Individual designation exists; applicability unresolved (FED-004-003).",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/*: no WISP",
+        "collected_at": "2026-11-25",
+        "method": "File review"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "If covered, adopt a WISP; otherwise record the N/A determination.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on the FED-004-003 financial-institution determination, which has not been made."
+  },
+  {
+    "finding_id": "F-FED-004-005-APP",
+    "requirement_id": "FED-004-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "FTC notification within 30 days for events affecting 500+ consumers, if a financial institution.",
+    "actual": "No breach procedure exists; applicability unresolved (FED-004-003).",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/*: no incident procedure",
+        "collected_at": "2026-11-25",
+        "method": "File review"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Include the FTC notice step conditionally in the incident plan.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on the FED-004-003 financial-institution determination, which has not been made."
+  },
+  {
+    "finding_id": "F-FED-005-001-APP",
+    "requirement_id": "FED-005-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider, Website operator, Shadam LLC",
+    "expected": "Tenant public booking, payment, signing and portal pages usable by people with disabilities.",
+    "actual": "Components use aria attributes (123 component files) and the signature accepts a typed name (CT-SIGN-003), but no accessibility audit, automated axe scan or assistive-technology test exists (the only e2e spec is e2e/navigation.spec.ts).",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx",
+      "e2e/navigation.spec.ts",
+      "playwright.config.ts"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:102",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "package.json: no axe/pa11y dependency",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "CT-SIGN-003"
+    ],
+    "test_result": "passed",
+    "remediation": "Run an axe + manual keyboard/screen-reader audit of booking, pay, estimate, contract signing and invoice pages and record results.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "status_reason": "No accessibility test or audit evidence exists; conformance cannot be verified from source alone (browser/AT testing required)."
+  },
+  {
+    "finding_id": "F-FED-005-002-APP",
+    "requirement_id": "FED-005-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Accessible alternatives to the AI voice line; relay calls not dropped; transfer to a human.",
+    "actual": "Alternatives exist (online booking page, SMS intake, transfer to a person via twilio-transfer). The voice prompt tells the AI to end calls with 'a recording or robocall' without asking (grok-voice.ts:217) and has no instruction for TRS/relay operators, so a relay announcement could be misclassified and dropped.",
+    "affected_files": [
+      "src/lib/grok-voice.ts:197",
+      "src/lib/grok-voice.ts:217",
+      "src/lib/twilio-transfer.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep relay|TTY|711 across src: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add explicit relay-call handling (never classify as robocall, transfer or continue patiently) and test it.",
+    "priority": "P2",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-005-003-APP",
+    "requirement_id": "FED-005-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Follow DOJ guidance practices and provide a way to report accessibility problems.",
+    "actual": "Some practices exist in code (labels, aria, tokens), but there is no accessibility statement or accessibility feedback channel anywhere in the app or tenant pages.",
+    "affected_files": [
+      "src/app/legal/[org]/layout.tsx",
+      "src/components/public-booking-flow.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -i accessib across src/app: no statement or report link",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Publish an accessibility statement with a contact method on Volteira and tenant pages.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-005-004-APP",
+    "requirement_id": "FED-005-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Volteira platform, Volteira as service provider, Pacific Plains Electric, Contractor tenants",
+    "expected": "WCAG 2.2 AA conformance, including 2.5.7, 2.5.8, 3.3.7, 3.3.8.",
+    "actual": "Drawn signature has a typed alternative (CT-SIGN-003 passes) and the responsive skill checks tap targets, but there is no WCAG test evidence for any page.",
+    "affected_files": [
+      "src/components/signature-input.tsx",
+      "e2e/navigation.spec.ts"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:102",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "CT-SIGN-003"
+    ],
+    "test_result": "passed",
+    "remediation": "Add automated axe checks to Playwright for customer-facing routes and a manual WCAG 2.2 AA review.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "WCAG conformance requires rendered-page testing; no automated or manual accessibility results exist to inspect."
+  },
+  {
+    "finding_id": "F-FED-005-005-APP",
+    "requirement_id": "FED-005-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "Record Title II rule status.",
+    "actual": "Volteira and its contractor tenants are private entities; Title II web rule does not apply directly.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "Registry applicability exception",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Note flow-down terms if a tenant contracts with a public entity.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: the DOJ Title II rule binds state and local governments, not Shadam LLC or contractor tenants."
+  },
+  {
+    "finding_id": "F-FED-008-001-APP",
+    "requirement_id": "FED-008-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider, Shadam LLC",
+    "expected": "No fake or AI-generated reviews; AI assistants refuse to draft reviews in a customer's voice.",
+    "actual": "No review solicitation, display or testimonial feature exists in the app or front page. The AI assistants (in-app, ChatGPT/Claude MCP, journal writer) have no instruction refusing to write reviews or testimonials in a customer's voice.",
+    "affected_files": [
+      "src/lib/assistant-brief.ts",
+      "src/lib/journal-writer.ts",
+      "src/lib/grok-voice.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep review|testimonial|aggregateRating across src: no review feature",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a system-prompt rule to every assistant refusing to compose reviews/testimonials for a customer or employee, and a test.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-008-002-APP",
+    "requirement_id": "FED-008-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Review rule: no review incentives conditioned on sentiment.",
+    "actual": "The application has no feature that solicits, incentivizes, imports or displays consumer reviews; the front page and tenant pages show no reviews or ratings.",
+    "affected_files": [
+      "src/components/front-page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep review|testimonial|star rating|aggregateRating across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Apply this rule before adding any review request or display feature.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: no review solicitation, display or incentive feature exists in the application."
+  },
+  {
+    "finding_id": "F-FED-008-003-APP",
+    "requirement_id": "FED-008-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants",
+    "expected": "Review rule: insider review disclosure.",
+    "actual": "The application has no feature that solicits, incentivizes, imports or displays consumer reviews; the front page and tenant pages show no reviews or ratings.",
+    "affected_files": [
+      "src/components/front-page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep review|testimonial|star rating|aggregateRating across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Apply this rule before adding any review request or display feature.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: no review solicitation, display or incentive feature exists in the application."
+  },
+  {
+    "finding_id": "F-FED-008-004-APP",
+    "requirement_id": "FED-008-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Review rule: company-controlled review sites.",
+    "actual": "The application has no feature that solicits, incentivizes, imports or displays consumer reviews; the front page and tenant pages show no reviews or ratings.",
+    "affected_files": [
+      "src/components/front-page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep review|testimonial|star rating|aggregateRating across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Apply this rule before adding any review request or display feature.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: no review solicitation, display or incentive feature exists in the application."
+  },
+  {
+    "finding_id": "F-FED-008-005-APP",
+    "requirement_id": "FED-008-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Review rule: review suppression.",
+    "actual": "The application has no feature that solicits, incentivizes, imports or displays consumer reviews; the front page and tenant pages show no reviews or ratings.",
+    "affected_files": [
+      "src/components/front-page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep review|testimonial|star rating|aggregateRating across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Apply this rule before adding any review request or display feature.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: no review solicitation, display or incentive feature exists in the application."
+  },
+  {
+    "finding_id": "F-FED-008-006-APP",
+    "requirement_id": "FED-008-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "Disclose material connections in testimonials/endorsements.",
+    "actual": "No testimonials or endorsements appear in Volteira's front page or tenant pages in source.",
+    "affected_files": [
+      "src/components/front-page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep testimonial across src: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Disclose any compensation if Pacific Plains Electric or others are featured as endorsers.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: no endorsements or testimonials are published by the application."
+  },
+  {
+    "finding_id": "F-FED-008-007-APP",
+    "requirement_id": "FED-008-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Pacific Plains Electric, Contractor tenants",
+    "expected": "No non-disparagement or review-penalty clauses in form contracts or Volteira terms.",
+    "actual": "Volteira fills the tenant's own contract document and adds only payment terms and the down-payment notice (contract-template.ts:1-16; payment-plan.ts:57, 255); the SMS terms page has no review clause. Tenant-uploaded contract text is not screened for such clauses, and Volteira has no platform terms.",
+    "affected_files": [
+      "src/lib/contract-template.ts:1-16",
+      "src/lib/payment-plan.ts:250-256",
+      "src/app/legal/[org]/terms/page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep disparag|review in contract-template.ts and terms page: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Warn on or refuse contract templates containing non-disparagement/review-penalty language; keep any future Volteira terms free of them.",
+    "priority": "P3",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-008-008-APP",
+    "requirement_id": "FED-008-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "No fictitious former-price claims; total price including mandatory fees disclosed.",
+    "actual": "No former-price or sale claims found. The booking page shows the diagnostic fee and the late-cancellation fee next to the agreement (public-booking-flow.tsx:505-507). Evidence is code-read only.",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx:505-507"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep 'regular price|% off|was $' across public components: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Verify on the rendered booking and pay pages that total charges are shown before payment.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-008-009-APP",
+    "requirement_id": "FED-008-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "'Free' offers state terms at the outset; no free estimate if a fee is required.",
+    "actual": "The front page advertises 'Create free account' (front-page.tsx:274, 372) while account/page.tsx:98 notes membership is free only until a monthly price is set in Stripe; no terms of the free offer appear near the claim. No 'free estimate' wording found.",
+    "affected_files": [
+      "src/components/front-page.tsx:274",
+      "src/components/front-page.tsx:372",
+      "src/app/account/page.tsx:98"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/front-page.tsx:274",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "State next to 'free' what is free and when charges would begin; require notice before any conversion to paid.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-FED-011-001-APP",
+    "requirement_id": "FED-011-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "Not directed to children; terms state services are for adults; delete child data on knowledge.",
+    "actual": "The product is a B2B tool and booking for property owners; nothing is directed to children. No terms or policy state the service is for adults, and there is no process for deleting a child's data.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:39-60",
+      "src/app/legal/[org]/terms/page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add an adults-only statement to the policies and terms.",
+    "priority": "P3",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-011-002-APP",
+    "requirement_id": "FED-011-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Determine which sales are door-to-door; support a flag for in-home sales that triggers cancellation-notice workflows.",
+    "actual": "Estimates, change orders and contracts can be presented and signed in person at the customer's home on the job page (contract-send.ts:54), but there is no in-home-sale flag, no determination, and no cancellation workflow. The e-sign consent even refers to 'any notice of your right to cancel' (esign-consent.ts:28) that the product never generates.",
+    "affected_files": [
+      "src/lib/contract-send.ts:54",
+      "src/lib/esign-consent.ts:28",
+      "src/lib/contract-template.ts:1-40"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep 'right to cancel|notice of cancellation|three business days' in contract code: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Get counsel's determination; add an 'sold at the residence' flag that inserts the cancellation statement and Notice of Cancellation and holds work/payment until the period ends.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-011-003-APP",
+    "requirement_id": "FED-011-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Contract/receipt states the buyer's right to cancel within three business days, near the signature, in 10-point bold.",
+    "actual": "No contract or estimate generated by Volteira contains the cancellation statement; only payment terms and the down-payment notice are added.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:56-57",
+      "src/lib/payment-plan.ts:250-256",
+      "src/lib/contract-template.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts:57",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:71",
+        "collected_at": "2026-11-25",
+        "method": "CT-DEPOSIT-004 passes but covers only the down-payment notice"
+      }
+    ],
+    "test_ids": [
+      "CT-DEPOSIT-004"
+    ],
+    "test_result": "passed",
+    "remediation": "Insert the prescribed statement on in-home sales (FED-011-002) and test its presence and placement.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-011-004-APP",
+    "requirement_id": "FED-011-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
+    "expected": "Notice of Cancellation form in duplicate, oral notice, and refunds within 10 business days of a valid cancellation.",
+    "actual": "No Notice of Cancellation form, oral-notice prompt or cancellation-refund workflow exists; refunds are manual (invoice-refund.ts) and not tied to a cancellation deadline.",
+    "affected_files": [
+      "src/lib/invoice-refund.ts",
+      "src/lib/contract-signing.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep 'notice of cancellation' across src: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Generate a completed Notice of Cancellation with the transaction date and deadline, prompt the technician to give oral notice, and track cancellation refunds against the 10-business-day deadline.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-FED-011-005-APP",
+    "requirement_id": "FED-011-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Pacific Plains Electric, Contractor tenants",
+    "expected": "GLBA privacy notices and opt-out if a financial institution.",
+    "actual": "No GLBA notice; card payments for the tenant's own services via Stripe are the excepted case.",
+    "affected_files": [
+      "src/lib/payment-plan.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record the determination with FED-004-003.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on whether any tenant regularly extends consumer credit, which is not known."
+  },
+  {
+    "finding_id": "F-FED-011-006-APP",
+    "requirement_id": "FED-011-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Volteira as service provider, Pacific Plains Electric, Contractor tenants",
+    "expected": "Incident response plan mapping state breach laws, FTC Safeguards (if applicable), Stripe/PCI reporting and tenant notice timelines.",
+    "actual": "No incident response plan or breach procedure exists in docs/ or docs/security/ (searched for breach/incident).",
+    "affected_files": [
+      "docs/security/REMEDIATION.md",
+      "docs/security/MULTI-TENANT-READINESS.md"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs: no plan",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Write and test an incident response plan with the CA-004 clocks, tenant notice commitments and vendor contacts.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-001-001-APP",
+    "requirement_id": "CA-001-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC",
+    "expected": "Annual documented CCPA threshold determination for Shadam LLC.",
+    "actual": "No determination exists in the repository.",
+    "affected_files": [
+      "compliance/registry/california.json"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search: no CCPA determination record",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "File the annual determination with figures and sources.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on Shadam LLC's revenue and California consumer counts, which are not documented."
+  },
+  {
+    "finding_id": "F-CA-001-002-APP",
+    "requirement_id": "CA-001-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira as service provider",
+    "expected": "Per-data-flow documentation of whether Volteira acts as service provider or for its own purposes; no use of tenant customer data for Volteira's own purposes.",
+    "actual": "No data-flow role documentation exists. Customer data flows to xAI (live call audio), Anthropic (assistant), Google (geocoding, calendar, drive), Twilio, Resend and Stripe, with no recorded role or purpose limitation.",
+    "affected_files": [
+      "src/lib/grok-voice.ts",
+      "src/lib/claude.ts",
+      "src/lib/geocoding.ts",
+      "src/lib/google-drive.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "vendor endpoint inventory across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Write the data-flow role map and commit Volteira to service-provider-only processing.",
+    "priority": "P2",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-001-003-APP",
+    "requirement_id": "CA-001-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Pacific Plains Electric, Contractor tenants",
+    "expected": "Tenants document whether they meet CCPA thresholds; Volteira supplies a self-assessment checklist.",
+    "actual": "No tenant self-assessment exists in the app (settings/legal only edits SMS legal-page fields).",
+    "affected_files": [
+      "src/app/settings/legal/page.tsx",
+      "src/lib/tenant-legal.ts:7-19"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/tenant-legal.ts",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a tenant CCPA self-assessment checklist to settings.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on each tenant's revenue and consumer counts (e.g., Pacific Plains Electric), which are not documented."
+  },
+  {
+    "finding_id": "F-CA-001-004-APP",
+    "requirement_id": "CA-001-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira as service provider, Contractor tenants",
+    "expected": "Tenant agreement/DPA with CCPA service-provider terms.",
+    "actual": "There is no tenant agreement: signup and onboarding present no terms (no 'terms'/'agree' in src/app/signup or src/app/onboarding), and no DPA exists in the repository.",
+    "affected_files": [
+      "src/app/signup",
+      "src/app/onboarding"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep terms|agree in signup/onboarding: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Draft tenant terms with a CCPA service-provider addendum and require acceptance at signup.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-001-005-APP",
+    "requirement_id": "CA-001-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira as service provider, Third-party vendor, Payment processor, Messaging provider",
+    "expected": "Subprocessor list with role and data categories; written flow-down contracts.",
+    "actual": "No subprocessor list exists; the tenant privacy policy names only a carrier and software/hosting/database providers while the code uses Twilio, Stripe, Resend, xAI, Anthropic, Google APIs and Vercel.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:82-87"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "vendor endpoint inventory across src",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Publish a subprocessor list and file each vendor's DPA (including AI no-training terms).",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-001-006-APP",
+    "requirement_id": "CA-001-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Notice at collection at every collection point (booking, signup, voice line, SMS intake).",
+    "actual": "The booking page links the tenant privacy policy only inside the optional SMS box (public-booking-flow.tsx:533-538); the voice line gives only a recording notice; signup and SMS intake give no notice; the policy has no per-category retention.",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx:533-538",
+      "src/lib/voice-intake.ts:19",
+      "src/app/legal/[org]/privacy/page.tsx:93-99"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/public-booking-flow.tsx:533-538",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "If applicable, add notices at each collection point and per-category retention.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-007-APP",
+    "requirement_id": "CA-001-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
+    "expected": "Per-category retention disclosure and enforced retention schedule.",
+    "actual": "Policy gives only general criteria (privacy/page.tsx:93-99); there is no retention schedule or purge job, and 'delete' only archives (customers/actions.ts:47-53).",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:93-99",
+      "src/app/customers/actions.ts:13-53"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:93-99",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Define and implement a retention schedule with purge jobs.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-008-APP",
+    "requirement_id": "CA-001-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "CCPA privacy policy contents (categories, sources, purposes, recipients, rights, annual update).",
+    "actual": "The tenant policy lacks sources, CCPA rights descriptions, request methods and recipients by category; Volteira has no policy of its own.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:39-117"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:39-117",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add CCPA sections to a tenant template and create Volteira's own policy.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-009-APP",
+    "requirement_id": "CA-001-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira as service provider",
+    "expected": "Right to know/access with portable export.",
+    "actual": "Only report CSV exports for staff exist (reports/export/route.ts); there is no per-customer data export.",
+    "affected_files": [
+      "src/app/reports/export/route.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/reports/export/route.ts",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a per-customer export (JSON/CSV) covering all tables and files.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-010-APP",
+    "requirement_id": "CA-001-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira as service provider",
+    "expected": "Right to delete, including service providers.",
+    "actual": "No customer deletion feature: only pending-review contacts can be 'deleted' and that sets archived_at (customers/actions.ts:47-53); Twilio recordings, storage files and vendor copies are not deleted.",
+    "affected_files": [
+      "src/app/customers/actions.ts:13-53"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/customers/actions.ts:13-53",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Build a deletion workflow with statutory exceptions and vendor deletion requests.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-011-APP",
+    "requirement_id": "CA-001-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira as service provider",
+    "expected": "Right to correct.",
+    "actual": "Customer details are editable by staff (customer-details-save.ts); no request workflow or denial documentation.",
+    "affected_files": [
+      "src/lib/customer-details-save.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/customer-details-save.ts",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a correction-request log.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-012-APP",
+    "requirement_id": "CA-001-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Two or more request methods, including toll-free number or email for online-only.",
+    "actual": "The policy offers the tenant phone/email/mail contact (privacy/page.tsx:102-116); no designated CCPA request method or web form.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:102-116"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:102-116",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Designate request methods and a web form.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-013-APP",
+    "requirement_id": "CA-001-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira as service provider",
+    "expected": "10-business-day confirmation and 45-day response with a tracked log.",
+    "actual": "No request log or deadline tracking exists; policy promises only 'a reasonable time' (privacy/page.tsx:103-106).",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:102-106"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:102-106",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a request log with deadline tracking.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-014-APP",
+    "requirement_id": "CA-001-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira platform",
+    "expected": "Verification of requests and authorized agents.",
+    "actual": "No verification procedure exists.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Define verification proportionate to data sensitivity.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-017-APP",
+    "requirement_id": "CA-001-017",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira as service provider",
+    "expected": "Identify and limit sensitive PI use.",
+    "actual": "Card data is handled by Stripe hosted pages (pay.stripe.com links); technician arrival uses coordinates (src/lib/arrival.ts); SMS contents and call audio/transcripts are stored. No SPI inventory.",
+    "affected_files": [
+      "src/lib/arrival.ts",
+      "src/lib/call-record.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/arrival.ts",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Inventory SPI and confirm uses are within 7027(m) permitted purposes.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-018-APP",
+    "requirement_id": "CA-001-018",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Non-discrimination; financial incentive notice if any.",
+    "actual": "No incentive programs or price differences tied to PI exist in code.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Keep incentives out or add notices.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-020-APP",
+    "requirement_id": "CA-001-020",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "24-month request records and training.",
+    "actual": "No request records exist.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Create the request log with 24-month retention.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-021-APP",
+    "requirement_id": "CA-001-021",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Cybersecurity audit applicability.",
+    "actual": "No determination.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record annual determination.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed. The cybersecurity-audit and risk-assessment triggers also depend on consumer volumes not documented."
+  },
+  {
+    "finding_id": "F-CA-001-022-APP",
+    "requirement_id": "CA-001-022",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Risk assessment applicability.",
+    "actual": "No determination; voice AI processes call audio and SMS content.",
+    "affected_files": [
+      "src/lib/grok-voice.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/grok-voice.ts",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record determination; complete assessment if applicable.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed. The cybersecurity-audit and risk-assessment triggers also depend on consumer volumes not documented."
+  },
+  {
+    "finding_id": "F-CA-001-024-APP",
+    "requirement_id": "CA-001-024",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
+    "expected": "Reasonable security to limit private-action exposure.",
+    "actual": "Same evidence as CA-003-002: RLS on all tables and passing tenant tests, but open MT-03 HIGH and no MFA/incident plan.",
+    "affected_files": [
+      "docs/security/REMEDIATION.md:5-25"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/REMEDIATION.md:5-25",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      },
+      {
+        "type": "database-check",
+        "location": "pg_class public schema",
+        "collected_at": "2026-11-25",
+        "method": "95 of 95 public tables have RLS enabled"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "See CA-003-002.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-025-APP",
+    "requirement_id": "CA-001-025",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Workforce and B2B contact notices.",
+    "actual": "No notice for tenant owners/staff (Volteira users); no Volteira privacy policy exists.",
+    "affected_files": [
+      "src/app/signup"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/signup",
+        "collected_at": "2026-11-25",
+        "method": "Code read / search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Cover workforce/B2B data in Volteira's policy.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "Applicability depends on whether Shadam LLC (and each tenant) meets a CCPA 'business' threshold (revenue, consumer counts), which is not documented anywhere and was not assumed."
+  },
+  {
+    "finding_id": "F-CA-001-015-APP",
+    "requirement_id": "CA-001-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Inventory sale/sharing (pixels, ad tags, analytics); Do Not Sell or Share link if selling/sharing.",
+    "actual": "No analytics, ad pixels or tag managers appear in source (no gtag, posthog, @vercel/analytics, fbq, GTM); the tenant policy states no sale or sharing. Not verified by a network scan, and the CSP allows scripts from any https origin (csp.ts:21), so a tenant-site or future script would not be blocked.",
+    "affected_files": [
+      "src/lib/csp.ts:21",
+      "src/app/legal/[org]/privacy/page.tsx:75-87"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep gtag|posthog|@vercel/analytics|fbq|googletagmanager|hotjar|clarity|mixpanel across src and package.json: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Capture a network observation of public pages; tighten script-src to known origins.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-001-016-APP",
+    "requirement_id": "CA-001-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator, Volteira platform",
+    "expected": "Honor Global Privacy Control as an opt-out of sale/sharing.",
+    "actual": "No Sec-GPC handling exists, but no sale or sharing was found (CA-001-015).",
+    "affected_files": [
+      "src/proxy.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep Sec-GPC|globalPrivacyControl: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add GPC handling before any third-party tracking is introduced.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable on current evidence: the requirement applies to businesses that sell or share PI, and no sale/sharing trackers were found in source (subject to CA-001-015 network verification)."
+  },
+  {
+    "finding_id": "F-CA-001-019-APP",
+    "requirement_id": "CA-001-019",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
+    "expected": "Symmetric, non-manipulative consent and request flows.",
+    "actual": "The SMS box is separate, optional and unchecked (public-booking-flow.tsx:511-541). But consent is also inferred without any choice when staff enter a number (manual-sms-consent.ts:278-326), and the required booking agreement bundles 'may contact me by phone or email' with the fee (public-booking-flow.tsx:505-507).",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx:505-541",
+      "src/lib/manual-sms-consent.ts:278-326"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/public-booking-flow.tsx:511",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Offer the customer an explicit choice on every consent path; separate contact consent from the fee agreement.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-001-023-APP",
+    "requirement_id": "CA-001-023",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira platform",
+    "expected": "ADMT for significant decisions: notice, opt-out, access.",
+    "actual": "No feature makes significant decisions (financial/lending, housing, education, employment, healthcare); AI books service visits and triages urgency, with the owner approving binding actions.",
+    "affected_files": [
+      "src/lib/booking-safety.ts",
+      "src/lib/supervised-actions.ts:13-30"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/supervised-actions.ts",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Re-check if AI is used for hiring technicians or credit decisions.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: no automated decisionmaking technology is used for a significant decision category."
+  },
+  {
+    "finding_id": "F-CA-001-026-APP",
+    "requirement_id": "CA-001-026",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC",
+    "expected": "Data broker registration check.",
+    "actual": "Volteira collects PI through direct tenant relationships or as their processor and sells none.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:75-87"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:75",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record the determination annually.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: Shadam has a direct relationship or acts as a service provider and does not sell PI of consumers it has no relationship with."
+  },
+  {
+    "finding_id": "F-CA-002-001-APP",
+    "requirement_id": "CA-002-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Identify each property's operator; each posts a CalOPPA policy; Volteira supplies a tenant template and an unremovable footer slot.",
+    "actual": "A tenant template exists (/legal/[org]/privacy, filled from tenant_legal_pages). Volteira's own site and app (front page, signup, login, app shell) have no privacy policy at all, though signup collects owner names and emails. There is no footer slot; the tenant policy is linked only inside the SMS checkbox text.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx",
+      "src/lib/tenant-legal.ts:33-67",
+      "src/components/front-page.tsx",
+      "src/app/signup"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "find src/app -path '*privacy*': only /legal/[org]/privacy",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Publish a Shadam/Volteira privacy policy and link it on the front page, signup and app; add a persistent privacy footer link on every tenant public page.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-002-002-APP",
+    "requirement_id": "CA-002-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Policy conspicuously linked from the homepage/first significant page and reasonably accessible in the app.",
+    "actual": "Volteira's homepage, signup and app have no privacy link. The tenant booking page links the policy only in small text inside the optional SMS consent box (public-booking-flow.tsx:533-538), not as a conspicuous page-level link.",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx:533-538",
+      "src/components/front-page.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -i privacy in front-page.tsx, signup, login, book: none outside the SMS box",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a conspicuous 'Privacy Policy' link to every page footer and at signup/sign-in.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-003-APP",
+    "requirement_id": "CA-002-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Policy lists categories of PII (including payment info, call recordings/transcripts) and categories of third parties (payment processor, messaging, AI providers, hosting).",
+    "actual": "The policy lists contact, service, message and consent records (privacy/page.tsx:45-51) but omits call recordings and transcripts (recorded record-from-answer-dual, twilio-sip.ts:63) and payment data, and names only a messaging carrier and software/hosting/database providers (82-87), omitting the payment processor, email provider and AI providers.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:45-51",
+      "src/app/legal/[org]/privacy/page.tsx:82-87",
+      "src/lib/twilio-sip.ts:63"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:45",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add call recordings/transcripts and payment information to categories; list payment, email, AI voice/text, mapping and hosting providers as third-party categories.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-004-APP",
+    "requirement_id": "CA-002-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Describe the process to review and request changes to PII.",
+    "actual": "'Your choices' says customers can ask to correct details or get a copy by contacting the business (privacy/page.tsx:102-106). Code-read only; no rendered check.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:102-106"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:102",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Describe how requests are made and handled.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-005-APP",
+    "requirement_id": "CA-002-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "State how users are notified of material policy changes.",
+    "actual": "The policy has no statement about notification of changes.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:34-117"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx",
+        "collected_at": "2026-11-25",
+        "method": "Full read of policy text"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a change-notification section and follow it.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-006-APP",
+    "requirement_id": "CA-002-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Display the policy's effective date.",
+    "actual": "Shows 'Last updated' from tenant_legal_pages.updated_at (privacy/page.tsx:36), which changes whenever a tenant edits any field and not when the policy text in code changes, so it is not a reliable effective date.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:36"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:36",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Version the policy text with a fixed effective date constant bumped when wording changes.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-007-APP",
+    "requirement_id": "CA-002-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Disclose how the operator responds to Do Not Track signals.",
+    "actual": "No DNT disclosure in the tenant policy, and Volteira has no policy.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:34-117"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx",
+        "collected_at": "2026-11-25",
+        "method": "grep -i 'do not track' : none"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a DNT statement (e.g., no cross-site tracking, so DNT changes nothing).",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-008-APP",
+    "requirement_id": "CA-002-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Disclose whether other parties may collect PII about online activities across sites; keep consistent with a tag scan.",
+    "actual": "No third-party tracking disclosure in the policy (neither that none occurs nor that Stripe checkout/others may collect). Source shows no analytics trackers, but the disclosure is required either way.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:34-117",
+      "src/lib/csp.ts:21"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx",
+        "collected_at": "2026-11-25",
+        "method": "Full read"
+      },
+      {
+        "type": "source-reference",
+        "location": "tracker grep: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add a third-party tracking statement and verify it against a network scan.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-009-APP",
+    "requirement_id": "CA-002-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator, Volteira platform",
+    "expected": "Operate in accordance with the posted policy.",
+    "actual": "Practice contradicts the policy: texts are sent on owner-entered, verbal (phone) and inbound-text consent and with no record at all, while the policy says texts are only sent to people who ticked the booking box and that phone booking does not sign anyone up (privacy/page.tsx:62-73); undisclosed recipients (xAI, Anthropic, Stripe, Resend, Google) receive data.",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:62-73",
+      "src/lib/booking-notifications.ts:287",
+      "src/lib/manual-sms-consent.ts:278-326",
+      "src/lib/messaging-rules.ts:101-108"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:67",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "counts: customers=6 (5 with phone), messaging_consent rows=1 (inbound_text), outbound messages=4, orgs=1",
+        "collected_at": "2026-11-25",
+        "method": "select count(*) only"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Align policy and practice (see FED-004-001) and add a release check that reconciles them.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-002-010-APP",
+    "requirement_id": "CA-002-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Minors' privacy rights applicability check.",
+    "actual": "B2B tool and adult homeowner bookings; nothing directed to minors.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "Product scope review",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record the determination.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: the service is not directed to minors and there is no indication of actual knowledge of minor users."
+  },
+  {
+    "finding_id": "F-CA-003-001-APP",
+    "requirement_id": "CA-003-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
+    "expected": "Dispose of customer records (rows, files, recordings, backups, vendor copies) by making PI unreadable when no longer retained.",
+    "actual": "No disposal capability: 'delete' only sets archived_at and only for pending-review contacts (customers/actions.ts:13-53); there is no purge job, no deletion of Twilio recordings, storage objects or vendor copies.",
+    "affected_files": [
+      "src/app/customers/actions.ts:13-53",
+      "src/app/api/twilio/recordings/[recordingSid]/route.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep purge|retention|deleteCustomer across src: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Implement retention-driven hard deletion across database, storage, Twilio recordings and vendor copies, with a deletion log.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-003-002-APP",
+    "requirement_id": "CA-003-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
+    "expected": "Reasonable security procedures for PI.",
+    "actual": "RLS on 95/95 public tables, tenant reference guard triggers, signed webhooks and tenant path tests pass; but MT-03 HIGH remains open (REMEDIATION.md:13), the readiness decision is NOT READY (line 5), and no MFA enforcement or incident plan exists.",
+    "affected_files": [
+      "docs/security/REMEDIATION.md:5-25",
+      "src/lib/twilio.ts:493-518"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "pg_class public schema",
+        "collected_at": "2026-11-25",
+        "method": "95 of 95 public tables have RLS enabled"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:149",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:163",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "CT-TENANT-001",
+      "CT-WEBHOOK-001"
+    ],
+    "test_result": "passed",
+    "remediation": "Close MT-03, enforce MFA for owners/admins, adopt an incident plan.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-003-003-APP",
+    "requirement_id": "CA-003-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Third-party vendor, Payment processor, Messaging provider",
+    "expected": "Contracts requiring third parties to maintain reasonable security (tenant agreement and subprocessor contracts).",
+    "actual": "No tenant agreement exists in the product; vendor contracts are not documented in the repository.",
+    "affected_files": [
+      "src/app/signup"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search for DPA/subprocessor/terms: none",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Put security clauses in tenant terms and file vendor DPAs.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-003-004-APP",
+    "requirement_id": "CA-003-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Map the program to CIS Critical Security Controls; MFA on consumer-facing accounts holding sensitive data.",
+    "actual": "No CIS mapping exists in docs/security; no MFA enforcement found for owner or admin accounts.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep mfa|totp|aal2 across src: no enforcement",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Create a CIS Controls mapping and enforce MFA.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-001-APP",
+    "requirement_id": "CA-004-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Contractor tenants",
+    "expected": "Written definition of reportable incidents and covered PI.",
+    "actual": "No written definition or incident classification exists.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add the definition to an incident response plan.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-002-APP",
+    "requirement_id": "CA-004-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Process to notify California residents within 30 calendar days.",
+    "actual": "No breach notification process or clock tracking exists.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Define the notification workflow with the 30-day clock.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-004-003-APP",
+    "requirement_id": "CA-004-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Notice template with required title, headings and content.",
+    "actual": "No 'Notice of Data Breach' template exists.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add the statutory-format template.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-004-APP",
+    "requirement_id": "CA-004-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Credential-only breach alternate notice process.",
+    "actual": "No procedure for account-credential breaches (owner/staff passwords via Supabase auth).",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add the credential-breach notice procedure (no notice to the compromised email).",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-005-APP",
+    "requirement_id": "CA-004-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "AG sample notice submission for breaches over 500 residents.",
+    "actual": "No AG submission step exists.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add the AG submission step and deadline.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-006-APP",
+    "requirement_id": "CA-004-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Volteira as service provider, Shadam LLC, Third-party vendor",
+    "expected": "Service provider notifies data owner (tenant) immediately; tenant terms set the commitment; subprocessors owe the same.",
+    "actual": "No tenant terms with an incident-notification commitment and no tenant notification procedure exist.",
+    "affected_files": [
+      "docs/security",
+      "src/app/signup"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Commit to immediate tenant notice in tenant terms and the plan; obtain matching vendor commitments.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-007-APP",
+    "requirement_id": "CA-004-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Substitute notice procedure under statutory conditions.",
+    "actual": "No substitute-notice procedure exists.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Add substitute-notice conditions and steps to the plan.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-004-008-APP",
+    "requirement_id": "CA-004-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Incident response plan with roles, clocks, templates, annual test, and an incident decision log.",
+    "actual": "No incident response plan or incident log exists.",
+    "affected_files": [
+      "docs/security"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -ri 'breach|incident response' docs src: no plan, template or log",
+        "collected_at": "2026-11-25",
+        "method": "File search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Write, adopt and test an incident response plan with a decision log.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-006-001-APP",
+    "requirement_id": "CA-006-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Volteira platform, Messaging provider",
+    "expected": "No falsified headers, unauthorized third-party domains or misleading subject lines; authenticated tenant domains.",
+    "actual": "Same as FED-003-002: From header names the business and is sanitized (tested); subjects are factual transactional subjects; domain authentication not verified. No commercial email is sent.",
+    "affected_files": [
+      "src/lib/booking-confirmation.ts:698-708",
+      "src/lib/email.ts:91-106"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/booking-confirmation.test.ts:182",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "booking-confirmation.test.ts: a business name cannot break the From header apart"
+    ],
+    "test_result": "passed",
+    "remediation": "Capture SPF/DKIM/DMARC evidence for the sending domain.",
+    "priority": "P3",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-006-002-APP",
+    "requirement_id": "CA-006-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Unsolicited commercial email restriction.",
+    "actual": "No commercial email is sent.",
+    "affected_files": [
+      "src/lib/email.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "sendEmail callers review",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Apply relationship/consent and unsubscribe controls before any marketing email.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: no commercial email advertisements are sent by the application."
+  },
+  {
+    "finding_id": "F-CA-006-003-APP",
+    "requirement_id": "CA-006-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Shadam LLC, Volteira platform, Messaging provider",
+    "expected": "No text message advertisements to California mobiles unless an exception applies; transactional texts kept separate.",
+    "actual": "No marketing text feature exists, but free-form inbox, MCP send_text and AI-proposed texts are not classified, so advertising content is not prevented (see FED-002-002).",
+    "affected_files": [
+      "src/lib/customer-text.ts:55-80",
+      "src/lib/mcp-supervised-tools.ts:56"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep marketing scope usage: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Classify and block or gate advertising texts.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-006-004-APP",
+    "requirement_id": "CA-006-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Shadam LLC",
+    "expected": "No unsolicited fax advertisements.",
+    "actual": "The application has no fax capability.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -i fax across src: no fax sending",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Require legal review before any fax feature.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: no fax sending feature exists."
+  },
+  {
+    "finding_id": "F-CA-006-005-APP",
+    "requirement_id": "CA-006-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Volteira platform, Shadam LLC, Messaging provider",
+    "expected": "Clear disclosure at the start that the call is recorded and transcribed (including by an AI assistant), before recording/transcribing; applied to outbound calls and transfers; logged.",
+    "actual": "Every inbound and outbound AI greeting says 'This call may be recorded or transcribed' before the caller speaks (tested on both the Gather and xAI paths). Gaps: Twilio starts recording at answer (record-from-answer-dual, twilio-sip.ts:63) and xAI receives audio before the notice finishes; the notice does not say an AI assistant/third-party vendor processes the call; the delivery of the disclosure is not logged per call.",
+    "affected_files": [
+      "src/lib/voice-intake.ts:19-61",
+      "src/lib/grok-voice.ts:171-178",
+      "src/lib/twilio-sip.ts:63-66"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/voice-intake.test.ts:51",
+        "collected_at": "2026-11-25"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/grok-voice.test.ts:31",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "voice-intake.test.ts: every caller is told the call may be recorded, before they say anything",
+      "grok-voice.test.ts: every caller is told the call may be recorded, in the first thing said"
+    ],
+    "test_result": "passed",
+    "remediation": "Say the notice (including AI processing) via TwiML <Say> before bridging to xAI and before recording starts; log disclosure delivery per call; obtain counsel confirmation that continuing is consent.",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-006-006-APP",
+    "requirement_id": "CA-006-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Volteira platform, Shadam LLC",
+    "expected": "Treat all cellular/cordless calls as covered; all-party consent via the CA-006-005 disclosure before recording or transcribing.",
+    "actual": "The same notice is given on all calls regardless of phone type (tested), but recording starts at answer before the notice is spoken (twilio-sip.ts:63).",
+    "affected_files": [
+      "src/lib/twilio-sip.ts:63-66",
+      "src/lib/voice-intake.ts:44-61"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/voice-intake.test.ts:51",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "voice-intake.test.ts: every caller is told the call may be recorded, before they say anything"
+    ],
+    "test_result": "passed",
+    "remediation": "Start recording only after the notice (record after <Say>, or start recording via API after disclosure).",
+    "priority": "P1",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-006-007-APP",
+    "requirement_id": "CA-006-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Volteira platform, Third-party vendor, Contractor tenants",
+    "expected": "Assess AI/transcription vendors as potential third-party eavesdroppers; contractually bar their own use.",
+    "actual": "xAI receives live call audio through the SIP bridge (twilio/xai/route.ts:42-46) and Anthropic receives SMS/assistant content; no vendor-use assessment or contract terms are in the repository.",
+    "affected_files": [
+      "src/app/api/twilio/xai/route.ts:42-46",
+      "src/lib/grok-voice.ts",
+      "src/lib/claude.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/twilio/xai/route.ts:42",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Obtain and file xAI and Anthropic data-use/no-training terms; assess under capability and extension tests.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "status_reason": "Vendor contracts and data-use terms (xAI, Anthropic, Twilio) are not in the repository, so whether vendors may use content for their own purposes cannot be verified."
+  },
+  {
+    "finding_id": "F-CA-006-008-APP",
+    "requirement_id": "CA-006-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator, Third-party vendor",
+    "expected": "Inventory chat widgets, session replay and keystroke capture; remove or gate behind consent.",
+    "actual": "No chat widget, session replay or keystroke-capture script was found in source or package.json; not confirmed by a network scan, and CSP script-src allows any https origin (csp.ts:21).",
+    "affected_files": [
+      "src/lib/csp.ts:21"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep hotjar|clarity|fullstory|intercom|drift|posthog: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record a network observation of public pages; restrict script-src.",
+    "priority": "P3",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-006-009-APP",
+    "requirement_id": "CA-006-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants, Website operator",
+    "expected": "Inventory pixels/analytics capturing IP or device IDs; avoid by default.",
+    "actual": "No pixels or analytics found in source (see CA-001-015); Google Maps JS loads only on internal staff pages (job-map.tsx, route-builder.tsx). Not confirmed by network scan.",
+    "affected_files": [
+      "src/components/job-map.tsx:116",
+      "src/lib/csp.ts:21"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "tracker grep across src: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Confirm with a network scan of tenant and Volteira public pages.",
+    "priority": "P3",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-006-010-APP",
+    "requirement_id": "CA-006-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Record SB 690 status; keep 631/632/632.7 controls.",
+    "actual": "Legislative tracking item; no application behavior depends on it beyond the recording controls in CA-006-005/006.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "compliance/registry/california.json CA-006-010",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Track chaptered text in the registry refresh.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not an application control: a legal-status record; the related recording controls are assessed under CA-006-005 and CA-006-006."
+  },
+  {
+    "finding_id": "F-CA-006-011-APP",
+    "requirement_id": "CA-006-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "responsible_party": "Volteira platform, Contractor tenants, Shadam LLC",
+    "expected": "AI assistants communicating online to incentivize a purchase clearly and conspicuously disclose they are bots.",
+    "actual": "The SMS assistant opens 'Hi Jane, this is Maya from Pacific Plains Electric' and offers a paid diagnostic visit (website-intake.test.ts:94-107); it admits being a virtual assistant only if the customer 'sincerely asks' (sms-intake.ts:689; voice: grok-voice.ts:197). The messaging_settings.ai_disclosure_text column ('You are chatting with an automated assistant.') is never used by any code.",
+    "affected_files": [
+      "src/lib/sms-intake.ts:689",
+      "src/lib/grok-voice.ts:197",
+      "src/lib/voice-intake.ts:44-61",
+      "src/lib/website-intake.ts"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (1529 tests, 1529 pass, 0 fail)",
+        "collected_at": "2026-11-25",
+        "method": "Ran full unit suite read-only"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/website-intake.test.ts:94",
+        "collected_at": "2026-11-25",
+        "method": "Passing test asserts the opener presents as 'Maya' with no bot disclosure"
+      },
+      {
+        "type": "database-check",
+        "location": "public.messaging_settings (1 row)",
+        "collected_at": "2026-11-25",
+        "method": "a2p_campaign_id set, a2p_brand_id set, a2p_registered_at NULL, quiet hours 21:00-08:00, ai_enabled false"
+      }
+    ],
+    "test_ids": [
+      "website-intake.test.ts: the first text says who is writing, the fee up front, and how to stop"
+    ],
+    "test_result": "passed",
+    "remediation": "Disclose in the first AI text (and voice greeting) that it is an automated assistant, using ai_disclosure_text; test it.",
+    "priority": "P1",
+    "legal_review_required": true
+  },
+  {
+    "finding_id": "F-CA-007-001-APP",
+    "requirement_id": "CA-007-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Shadam LLC, Website operator",
+    "expected": "Full and equal access to booking, payments, signing and portal flows.",
+    "actual": "No accessibility test evidence; typed-signature alternative exists (CT-SIGN-003).",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx",
+      "e2e/navigation.spec.ts"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/compliance-tests/regulatory-rules.test.ts:102",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [
+      "CT-SIGN-003"
+    ],
+    "test_result": "passed",
+    "remediation": "Audit customer flows against WCAG 2.2 AA.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "status_reason": "No accessibility audit, automated scan or assistive-technology test results exist; conformance cannot be determined from source."
+  },
+  {
+    "finding_id": "F-CA-007-002-APP",
+    "requirement_id": "CA-007-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Shadam LLC, Website operator",
+    "expected": "Assess Unruh website-only intent exposure.",
+    "actual": "No accessibility evidence or legal assessment documented.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search: no assessment",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Counsel to assess nexus of tenant sites to physical services.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "No accessibility audit, automated scan or assistive-technology test results exist; conformance cannot be determined from source. Exposure also depends on legal assessment of nexus, not documented."
+  },
+  {
+    "finding_id": "F-CA-007-003-APP",
+    "requirement_id": "CA-007-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Shadam LLC",
+    "expected": "Track statutory damages exposure per property.",
+    "actual": "No exposure tracking.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repo search: none",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record properties and exposure after an audit.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "No accessibility audit, automated scan or assistive-technology test results exist; conformance cannot be determined from source."
+  },
+  {
+    "finding_id": "F-CA-007-004-APP",
+    "requirement_id": "CA-007-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "responsible_party": "Contractor tenants, Shadam LLC",
+    "expected": "Disabled Persons Act full and equal access.",
+    "actual": "Same as CA-007-001.",
+    "affected_files": [
+      "src/components/public-booking-flow.tsx"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "e2e/navigation.spec.ts: no a11y checks",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Apply CA-007-005 remediation.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "status_reason": "No accessibility audit, automated scan or assistive-technology test results exist; conformance cannot be determined from source."
+  },
+  {
+    "finding_id": "F-CA-007-005-APP",
+    "requirement_id": "CA-007-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "responsible_party": "Volteira platform, Website operator, Contractor tenants",
+    "expected": "WCAG 2.1 AA (target 2.2 AA) for public sites and customer flows; published accessibility statement with contact; triage of barriers.",
+    "actual": "No accessibility statement or contact method exists anywhere (demonstrably missing); conformance is untested.",
+    "affected_files": [
+      "src/app/legal/[org]/layout.tsx",
+      "src/components/public-booking-flow.tsx",
+      "e2e/navigation.spec.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep -i accessib across src/app: no statement",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Publish an accessibility statement with a contact and triage SLA; add axe checks and a manual audit.",
+    "priority": "P2",
+    "legal_review_required": false
+  },
+  {
+    "finding_id": "F-CA-011-001-APP",
+    "requirement_id": "CA-011-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC, Contractor tenants",
+    "expected": "Shine the Light disclosure or no-sharing policy, if 20+ employees.",
+    "actual": "The tenant policy states no sharing for third parties' marketing (privacy/page.tsx:75-81), consistent with code (no data sale paths found).",
+    "affected_files": [
+      "src/app/legal/[org]/privacy/page.tsx:75-81"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/legal/[org]/privacy/page.tsx:77",
+        "collected_at": "2026-11-25"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Record employee counts annually.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "status_reason": "Applicability depends on whether Shadam or a tenant has 20 or more employees, which is not documented."
+  },
+  {
+    "finding_id": "F-CA-011-002-APP",
+    "requirement_id": "CA-011-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "informational",
+    "confidence": "medium",
+    "responsible_party": "Shadam LLC",
+    "expected": "Document use of third-party generative AI without training or substantial modification.",
+    "actual": "The code calls xAI and Anthropic hosted models through their APIs with prompts and tools only; no fine-tuning, training or file-upload-for-training calls exist.",
+    "affected_files": [
+      "src/lib/claude.ts",
+      "src/lib/xai-text.ts",
+      "src/lib/grok-voice.ts"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep fine-tun|training|/v1/files across src/lib: none",
+        "collected_at": "2026-11-25",
+        "method": "Code search"
+      }
+    ],
+    "test_ids": [],
+    "test_result": "not-run",
+    "remediation": "Write the one-line determination into the compliance record.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: Shadam does not train, fine-tune or substantially modify a generative AI system; it uses third-party hosted models via API (counsel review flagged)."
+  }
+]

@@ -1,0 +1,78 @@
+Fixture Electric                                                                                 CONTRACT
+Lic. 0000000                                                                                     Job #9999
+1 Fixture Way
+Sampletown, CA 90000
+(555) 010-0000 · office@fixture.invalid
+
+
+CUSTOMER                                                           JOB
+
+Test Customer                                                      Job #9999
+100 Example St                                                     100 Example St
+Sampletown, CA 90000                                               Sampletown, CA 90000
+(555) 010-0001                                                     Scheduled Dec 1, 2026
+customer@example.invalid                                           Contract date Nov 25, 2026
+
+
+
+
+WORK AGREEMENT
+This agreement is made on Nov 25, 2026 between Fixture Electric ("the Contractor")
+and Test Customer ("the Customer") for panel upgrade work at
+100 Example St, Sampletown, CA 90000, booked as job 9999 and scheduled for Dec 1, 2026.
+
+SCOPE OF WORK
+The contractor will replace the main electrical panel with a 200 A panel (synthetic fixture text).
+
+PRICE
+Total: $8,000.00
+Diagnostic fee: $800.00, due on signing
+
+The total is the full price of the work. A diagnostic fee already paid counts
+toward it and is not charged again.
+
+The price above covers the scope of work described. Work found to be necessary
+beyond that scope will be quoted separately and will not begin without your
+approval.
+
+PAYMENT
+Payments are due as set out in the payment schedule.
+
+ACCESS AND CONDITIONS
+The Customer agrees to provide access to the working area and to the electrical
+service on the scheduled date. Concealed conditions found once work has begun —
+existing wiring that does not meet code, undisclosed alterations, damage behind
+finished surfaces — will be reported before any additional work is carried out.
+
+PAYMENT SCHEDULE
+1. Deposit $800.00 due on signing.
+2. Payment 2 $3,200.00 (40%) due 2026-12-05.
+3. Balance $4,000.00 due on completion of the work.
+Progress payments are for work performed or materials delivered.
+
+THE DOWN PAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS
+LESS.
+S I G N AT U R E S
+
+Signed for Fixture Electric by Fixture Owner, Owner on Nov 25, 2026, 9:00 AM PST.
+Signed electronically by Test Customer on Nov 25, 2026, 10:00 AM PST.
+
+
+
+Test Customer                                                Fixture Owner
+Customer signature                                           Contractor signature
+Test Customer                                                Fixture Electric
+
+Test Customer                                                Fixture Owner, Owner
+Printed name                                                 Printed name
+
+Nov 25, 2026, 10:00 AM PST                                   Nov 25, 2026, 9:00 AM PST
+Date                                                         Date
+
+Document fingerprint 0000 1111 2222 3333
+
+
+
+
+Fixture Electric · (555) 010-0000 · Lic. 0000000
+

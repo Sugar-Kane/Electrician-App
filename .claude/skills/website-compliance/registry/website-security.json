@@ -1,0 +1,1727 @@
+{
+  "register": "website-security",
+  "baseline_version": "2026-11-24",
+  "generated_at": "2026-11-24T23:52:11Z",
+  "requirements": [
+    {
+      "id": "WEB-SEC-001",
+      "title": "HTTP requests redirect to HTTPS",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Transport security",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V4.1.2; OWASP ASVS 5.0.0 V12.2.1",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Plain-HTTP requests to every hostname (apex and www) receive a 301/308 redirect to the same host over HTTPS before any content is served.",
+        "API endpoints do not silently accept plain HTTP."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "HTTP request without following redirects, per hostname"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "SEC-004-006"
+      ],
+      "notes": "ASVS levels: V4.1.2=L2, V12.2.1=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-002",
+      "title": "TLS certificate is valid and publicly trusted",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Transport security",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V12.2.2",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Certificate chains to a public CA, matches every hostname, is not expired and has more than 14 days remaining (alert at 30)."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Certificate subject, issuer and expiry per hostname"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [],
+      "notes": "ASVS levels: V12.2.2=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-003",
+      "title": "Only protocol versions 1.2 and 1.3 of Transport Layer Security are accepted",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Transport security",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V12.1.1; OWASP ASVS 5.0.0 V12.1.2",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Handshakes with SSL 3.0, TLS 1.0 and TLS 1.1 fail; only recommended cipher suites with forward secrecy are offered."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Protocol/cipher scan output (e.g. testssl.sh or nmap ssl-enum-ciphers)"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "Vercel terminates TLS for Volteira-hosted domains; the result depends on the hosting provider's configuration. ASVS levels: V12.1.1=L1, V12.1.2=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-004",
+      "title": "Strict-Transport-Security (HSTS) is sent with max-age of at least one year",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Transport security",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.1",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Every HTTPS response carries Strict-Transport-Security with max-age >= 31536000.",
+        "includeSubDomains is used when all subdomains are HTTPS-only; the decision is documented."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Strict-Transport-Security header per crawled page"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-003-014"
+      ],
+      "notes": "next.config.ts sends max-age=63072000 without includeSubDomains, by design, because tenant domains are configured by tenants. ASVS levels: V3.4.1=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-005",
+      "title": "Apex domain is on the browser preload list (optional)",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Transport security",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.7.4",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Optional hardening: the registrable domain is submitted to the HSTS preload list once includeSubDomains and preload are safe for every subdomain."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "hstspreload.org status"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "informational",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.7.4=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-006",
+      "title": "Content-Security-Policy is present on every HTML response",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.3",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "An enforced (not report-only) Content-Security-Policy header is sent on every HTML page, including error pages and public token pages."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Content-Security-Policy header per crawled page"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "SEC-003-014"
+      ],
+      "notes": "ASVS levels: V3.4.3=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-007",
+      "title": "CSP blocks inline scripts without a nonce or hash",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.3; OWASP ASVS 5.0.0 V3.2.2",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent.",
+        "object-src 'none' and base-uri 'none' or 'self' are set; form-action is restricted where practical."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "CSP directive analysis",
+        "Browser console free of CSP violations on key flows"
+      ],
+      "automated_test_ids": [
+        "src/lib/csp.test.ts"
+      ],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.4.3=L2, V3.2.2=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-008",
+      "title": "Content policy violation reporting is configured",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.7",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "The policy names a report-to/report-uri endpoint and reports are reviewed."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Policy header showing reporting endpoint"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.4.7=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-009",
+      "title": "Clickjacking protection via frame-ancestors or X-Frame-Options",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.6",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Production responses send CSP frame-ancestors 'none' (or an explicit allowlist) and X-Frame-Options DENY for older browsers; booking and consent pages cannot be framed by other sites."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Header capture per crawled page",
+        "Attempted framing from a test origin"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.4.6=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-010",
+      "title": "X-Content-Type-Options: nosniff on all responses",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.4",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Every response, including static assets and downloads, carries X-Content-Type-Options: nosniff."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Header capture"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.4.4=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-011",
+      "title": "Referrer-Policy limits URL leakage",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.5",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Referrer-Policy is strict-origin-when-cross-origin or stricter on all pages; pages whose path contains a capability token use no-referrer or same-origin."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Header capture on public token pages"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-SEC-015"
+      ],
+      "notes": "ASVS levels: V3.4.5=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-012",
+      "title": "Permissions-Policy restricts powerful browser features",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "recommended-control",
+      "citation": "NIST CSF 2.0 PR.PS-01",
+      "official_source_url": "https://github.com/usnistgov/oscal-content/tree/main/nist.gov/CSF/v2.0",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "A Permissions-Policy header disables camera, microphone, geolocation, payment and USB except on the origins/pages that need them (e.g. microphone for dictation, geolocation for arrival)."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Header capture"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [],
+      "notes": "OWASP ASVS 5.0.0 has no requirement specific to Permissions-Policy; it is cited as configuration-management hardening under NIST CSF 2.0 PR.PS-01. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com (usnistgov OSCAL content), which is not on this pass's approved official-host list. The NIST CSF 2.0 text on nist.gov hosts (nvlpubs.nist.gov, csrc.nist.gov) was refused by the proxy (HTTP 403), and www.nist.gov/cyberframework has no PR.PS-01 text. The values from the 2026-11-24 review were left unchanged and were not reconfirmed."
+    },
+    {
+      "id": "WEB-SEC-013",
+      "title": "Cross-Origin-Opener-Policy isolates top-level pages",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.8",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "HTML responses send Cross-Origin-Opener-Policy: same-origin (or same-origin-allow-popups where Stripe/OAuth popups need it)."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Header capture"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.4.8=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-014",
+      "title": "No mixed content (insecure sub-resources) on secure pages",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Response headers",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V12.2.1",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "No page loads scripts, styles, images, frames or form actions over http://."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "DOM/network inspection of crawled pages"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "ASVS levels: V12.2.1=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-015",
+      "title": "Cookies set Secure, HttpOnly and SameSite attributes",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.3.1; OWASP ASVS 5.0.0 V3.3.2; OWASP ASVS 5.0.0 V3.3.4",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Every cookie set by the sites has Secure and an explicit SameSite; session cookies not needed by scripts are HttpOnly.",
+        "Script-readable auth cookies (e.g. Supabase SSR) are a documented exception."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Cookie jar after visiting public pages and after a synthetic sign-in"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-001-014"
+      ],
+      "notes": "ASVS levels: V3.3.1=L1, V3.3.2=L2, V3.3.4=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-016",
+      "title": "No session tokens or personal data in URLs",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V14.2.1",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Query strings and paths do not carry passwords, API keys, session tokens, phone numbers or email addresses.",
+        "Where a capability token must be in the path (invoice, pay, booking, contract, MCP), compensating controls apply: high entropy, no-referrer, not in sitemaps, redacted from analytics and logs."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "code-review"
+      ],
+      "required_evidence": [
+        "URL inventory from crawl and form submissions"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "SEC-001-017",
+        "SEC-005-012"
+      ],
+      "notes": "ASVS levels: V14.2.1=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-017",
+      "title": "No secret keys in client-side JavaScript",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V13.3.1; OWASP ASVS 5.0.0 V3.5.7; OWASP MCP Top 10 2025 (beta) MCP01:2025",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Downloaded JS bundles and HTML contain no secret credentials: Stripe sk_live_/sk_test_/rk_live_ keys, whsec_ webhook secrets, Supabase service_role JWTs (role claim service_role) or sb_secret_ keys, Twilio auth tokens, Resend re_ keys, AI provider keys, OAuth client secrets.",
+        "Publishable values are expected and acceptable: Stripe pk_live_/pk_test_, Supabase anon JWT (role claim anon) or sb_publishable_ key, Supabase project URL, browser Maps keys restricted by referrer."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Bundle scan output listing each key-like string and its classification"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "critical",
+      "related_ids": [
+        "SEC-002-008"
+      ],
+      "notes": "ASVS levels: V13.3.1=L2, V3.5.7=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-018",
+      "title": "Publishable keys exposed in the browser are restricted",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V13.3.2",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Browser-exposed keys are limited to what they need: Maps keys restricted by HTTP referrer and API, Supabase anon key backed by RLS (see SEC-002-006), Stripe publishable key only."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "Provider console restriction screenshots"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-002-006"
+      ],
+      "notes": "ASVS levels: V13.3.2=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-019",
+      "title": "No debug output, source maps or version banners",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V13.4.2; OWASP ASVS 5.0.0 V13.4.6",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Production serves no development overlays or verbose debug output; JavaScript source maps are not publicly retrievable unless a documented decision allows it.",
+        "X-Powered-By and similar version headers are removed (Next.js poweredByHeader: false)."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "X-Powered-By header",
+        "Requests for *.js.map"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [],
+      "notes": "ASVS levels: V13.4.2=L2, V13.4.6=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-020",
+      "title": "Error pages are generic",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V16.5.1",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "404 and 500 responses show a branded generic page without stack traces, framework internals, SQL or file paths."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Responses for a nonexistent path and malformed parameters"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-003-013"
+      ],
+      "notes": "ASVS levels: V16.5.1=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-021",
+      "title": "Sensitive pages send Cache-Control: no-store",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V14.3.2; OWASP ASVS 5.0.0 V14.2.2; OWASP ASVS 5.0.0 V14.2.5",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Authenticated pages and public token pages (invoices, contracts, payment, booking confirmation) send Cache-Control: no-store (or private, no-cache) and are not cached by the CDN."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Cache-Control and x-vercel-cache headers on token pages"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "ASVS levels: V14.3.2=L2, V14.2.2=L2, V14.2.5=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-022",
+      "title": "No exposed repositories, environment files, backups or directory listings",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V13.4.1; OWASP ASVS 5.0.0 V13.4.3; OWASP ASVS 5.0.0 V13.4.5; OWASP ASVS 5.0.0 V13.4.7",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Requests for /.git/HEAD, /.env, /.env.local, backup/archive files, /server/ build internals and directory paths return 404.",
+        "Public storage buckets do not allow listing; robots.txt and sitemaps do not reveal private or tokenized paths."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Probe results list"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "SEC-004-008",
+        "SEC-004-016"
+      ],
+      "notes": "ASVS levels: V13.4.1=L1, V13.4.3=L2, V13.4.5=L2, V13.4.7=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-023",
+      "title": "Unneeded HTTP methods (TRACE) are disabled",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V13.4.4; OWASP ASVS 5.0.0 V4.1.4",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "TRACE is not supported; endpoints answer only the methods they implement."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Responses to TRACE and unexpected methods"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [],
+      "notes": "ASVS levels: V13.4.4=L2, V4.1.4=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-024",
+      "title": "Cross-origin resource sharing does not trust arbitrary origins",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Session and data exposure",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.4.2",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Requests with a foreign Origin are not reflected in Access-Control-Allow-Origin; wildcard is never combined with credentials."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Responses to requests with Origin: https://example.invalid"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-003-015"
+      ],
+      "notes": "ASVS levels: V3.4.2=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-025",
+      "title": "Public forms show rate limiting or bot protection",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V2.4.1; OWASP ASVS 5.0.0 V6.3.1; OWASP API Security Top 10 2023 API4:2023",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Booking, intake/quote, sign-in, sign-up and password-reset forms have observable anti-automation (429 after a threshold, CAPTCHA/turnstile, or progressive delay).",
+        "Testing uses a small number of requests against synthetic data only (no load testing)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "code-review"
+      ],
+      "required_evidence": [
+        "Response to a short burst of synthetic submissions",
+        "Bot-protection script presence"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "ASVS levels: V2.4.1=L2, V6.3.1=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-026",
+      "title": "Forms reject cross-site submissions (CSRF)",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.5.1; OWASP ASVS 5.0.0 V3.5.3",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "State-changing form posts from a foreign origin are rejected (Server Action origin check or anti-forgery token); state never changes on GET."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Result of a cross-origin POST from a test page using synthetic data"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "SEC-003-005"
+      ],
+      "notes": "ASVS levels: V3.5.1=L1, V3.5.3=L1. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-027",
+      "title": "Public upload fields restrict file type and size",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V5.2.1; OWASP ASVS 5.0.0 V5.3.1; OWASP ASVS 5.0.0 V5.4.2",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Public upload inputs declare accepted types; the server rejects other types and oversize files; uploaded files are served from a separate storage origin with safe headers."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "code-review"
+      ],
+      "required_evidence": [
+        "Upload attempt with a disallowed type (synthetic file)",
+        "Headers of a served upload"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-003-009"
+      ],
+      "notes": "ASVS levels: V5.2.1=L1, V5.3.1=L1, V5.4.2=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-028",
+      "title": "Third-party scripts are inventoried and integrity-protected",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V3.6.1; OWASP Top 10:2025 A03:2025",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "An inventory lists every third-party script host, purpose and owner; static versioned CDN assets use Subresource Integrity; dynamic vendor scripts (Stripe.js, analytics) have a documented justification."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "Network log of third-party hosts",
+        "Inventory document"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "ASVS levels: V3.6.1=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-029",
+      "title": "No JavaScript libraries with known vulnerabilities",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V15.2.1; OWASP ASVS 5.0.0 V3.7.1; OWASP Top 10:2025 A03:2025",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Client-side libraries detectable from outside (and lockfile versions for Volteira) have no known high/critical vulnerabilities."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "retire.js or Lighthouse library report",
+        "npm audit for Volteira"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-004-011"
+      ],
+      "notes": "ASVS levels: V15.2.1=L1, V3.7.1=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-030",
+      "title": "Analytics receive no personal data or capability URLs",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V14.2.3",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Analytics, pixels and session-replay tools do not receive form field values, phone/email, or URLs containing capability tokens; replay tools mask inputs."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Network capture of analytics payloads during synthetic form use"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [],
+      "notes": "Also relevant to CCPA/CPRA sharing and CIPA claims tracked in the website-california register. ASVS levels: V14.2.3=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-031",
+      "title": "Public forms collect only necessary personal information",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V14.2.6; OWASP ASVS 5.0.0 V14.1.1",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "Each public form field has a stated purpose; optional fields are marked; sensitive data (SSN, full DOB, card numbers) is never requested on Volteira or tenant forms."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "Form field inventory with purposes"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [],
+      "notes": "Supports the data-minimization principle in Cal. Civ. Code 1798.100(c); the legal duty is tracked in the california register. ASVS levels: V14.2.6=L3, V14.1.1=L2. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-032",
+      "title": "Sign-in and reset forms do not reveal whether an account exists",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "technical-standard",
+      "citation": "OWASP ASVS 5.0.0 V6.3.8",
+      "official_source_url": "https://github.com/OWASP/ASVS/tree/v5.0.0_release/5.0/en",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "The same message and similar timing are returned for existing and non-existing emails on sign-in, sign-up and password reset."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "Response comparison using synthetic addresses"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "SEC-001-007"
+      ],
+      "notes": "ASVS levels: V6.3.8=L3. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com, which is not on this pass's approved official-host list, and OWASP's own ASVS site (owasp.org redirects to asvs.owasp.org) was refused by this session's proxy (HTTP 403). So ASVS 5.0.0 was not re-read today. The source_verified/last_verified values from the 2026-11-24 review were left unchanged and were not reconfirmed against an approved host."
+    },
+    {
+      "id": "WEB-SEC-033",
+      "title": "security.txt vulnerability contact is published",
+      "register": "website-security",
+      "jurisdiction": "Standard",
+      "category": "Forms and third-party content",
+      "requirement_type": "recommended-control",
+      "citation": "NIST CSF 2.0 ID.RA-08",
+      "official_source_url": "https://github.com/usnistgov/oscal-content/tree/main/nist.gov/CSF/v2.0",
+      "last_verified": "2026-11-24",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Applies to every public hostname of the audited sites; checked from outside without source code unless website_verifiable is false."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric"
+      ],
+      "required_behavior": [
+        "/.well-known/security.txt is served over HTTPS with Contact and Expires fields that are current."
+      ],
+      "verification_methods": [
+        "automated-test"
+      ],
+      "required_evidence": [
+        "Fetched security.txt"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "SEC-004-017",
+        "IETF RFC RFC 9116"
+      ],
+      "notes": "Mappings to IETF RFC in related_ids could not be read on 2026-11-24 (host not reachable) and are unverified. Source verification 2026-11-25: NOT RE-VERIFIED (earlier status left unchanged). The source is on github.com (usnistgov OSCAL content), which is not on this pass's approved official-host list. The NIST CSF 2.0 text on nist.gov hosts (nvlpubs.nist.gov, csrc.nist.gov) was refused by the proxy (HTTP 403), and www.nist.gov/cyberframework has no PR.PS-01 text. The values from the 2026-11-24 review were left unchanged and were not reconfirmed."
+    },
+    {
+      "id": "WEB-SEC-034",
+      "title": "Card data is entered only on Stripe-hosted pages (SAQ A)",
+      "register": "website-security",
+      "jurisdiction": "Contractual",
+      "category": "Payment page scope",
+      "requirement_type": "contractual",
+      "citation": "PCI DSS v4.0.1 SAQ A eligibility criteria (v4.0.1)",
+      "official_source_url": "https://www.pcisecuritystandards.org/document_library/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies to pages that start card payments (invoice pay, booking deposit, checkout)."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [
+          "Card payments via Stripe Checkout/Connect"
+        ],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "No Volteira or tenant page renders card-number fields; payments redirect to Stripe Checkout or use Stripe-hosted elements entirely in Stripe iframes, so the merchant site does not store, process or transmit cardholder data."
+      ],
+      "verification_methods": [
+        "browser-assisted"
+      ],
+      "required_evidence": [
+        "DOM inspection of pay/checkout flows (synthetic test mode)",
+        "Stripe AOC on file"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [],
+      "notes": "Official source could not be fetched on 2026-11-24 from this session; citation is from prior knowledge and must be re-verified before an audit relies on it (audits mark this BLUE). Source verification 2026-11-25: NOT VERIFIED. The PCI SSC document library on pcisecuritystandards.org loads its documents with JavaScript, and the PCI DSS v4.0.1 text is behind a license agreement, so the standard was not read."
+    },
+    {
+      "id": "WEB-SEC-035",
+      "title": "Pages that start payment are protected from script tampering",
+      "register": "website-security",
+      "jurisdiction": "Contractual",
+      "category": "Payment page scope",
+      "requirement_type": "contractual",
+      "citation": "PCI DSS v4.0.1 SAQ A eligibility criterion on script attacks (v4.0.1, 2025 revision); PCI DSS v4.0.1 Requirement 6.4.3; PCI DSS v4.0.1 Requirement 11.6.1",
+      "official_source_url": "https://www.pcisecuritystandards.org/document_library/",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Applies to pages that start card payments (invoice pay, booking deposit, checkout)."
+        ],
+        "business_types": [
+          "volteira.com and app hosts (SaaS marketing site, public booking/invoice/contract pages; Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)",
+          "Contractor tenant public pages and custom domains served by Volteira"
+        ],
+        "transaction_types": [
+          "Card payments via Stripe Checkout/Connect"
+        ],
+        "thresholds": [],
+        "exceptions": []
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Volteira platform",
+        "Pacific Plains Electric",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "Pages that redirect to or embed Stripe payment are protected from unauthorized script changes (nonce CSP, script inventory, change detection), so the merchant can attest the site is not susceptible to script attacks."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "CSP on payment pages",
+        "Script inventory",
+        "Change-detection evidence"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [],
+      "notes": "Prior knowledge: the January 2025 SAQ A revision removed Requirements 6.4.3 and 11.6.1 from SAQ A and added an eligibility criterion that the merchant confirm its site is not susceptible to script attacks. Re-verify against the current SAQ A before relying on it. Official source could not be fetched on 2026-11-24 from this session; citation is from prior knowledge and must be re-verified before an audit relies on it (audits mark this BLUE). Source verification 2026-11-25: NOT VERIFIED. The PCI SSC document library on pcisecuritystandards.org loads its documents with JavaScript, and the PCI DSS v4.0.1 text is behind a license agreement, so the standard was not read."
+    }
+  ]
+}

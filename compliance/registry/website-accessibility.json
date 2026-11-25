@@ -1,0 +1,2701 @@
+{
+  "register": "website-accessibility",
+  "baseline_version": "2026-11-24",
+  "generated_at": "2026-11-24T23:44:15+00:00",
+  "requirements": [
+    {
+      "id": "WCAG-101-001",
+      "title": "SC 1.1.1 Non-text Content",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.1.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Every image, icon, image button, CAPTCHA and other non-text content that conveys meaning has a text alternative serving the same purpose; decorative images are hidden from assistive technology."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:aria-meter-name",
+        "axe:aria-progressbar-name",
+        "axe:image-alt",
+        "axe:input-image-alt",
+        "axe:object-alt",
+        "axe:role-img-alt",
+        "axe:svg-img-alt"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Inspect alt text of logos, service photos, icon-only buttons and form image controls for meaningful, accurate equivalents. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.1.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-102-001",
+      "title": "SC 1.2.1 Audio-only and Video-only (Prerecorded)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.2.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/audio-only-and-video-only-prerecorded.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages embed prerecorded audio-only or video-only media. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Prerecorded audio-only content has a transcript; prerecorded video-only content has a transcript or audio track, unless it is a labelled media alternative for text."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:audio-caption"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Locate embedded media and confirm a transcript or equivalent alternative is offered. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.2.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-102-002",
+      "title": "SC 1.2.2 Captions (Prerecorded)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.2.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages embed prerecorded video with audio (e.g., product demos, testimonial videos). Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Prerecorded synchronized media has accurate captions for all audio content."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:video-caption"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Play each video and check captions exist, are synchronized and accurate (auto-captions alone are usually inadequate). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.2.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-102-003",
+      "title": "SC 1.2.3 Audio Description or Media Alternative (Prerecorded)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.2.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/audio-description-or-media-alternative-prerecorded.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages embed prerecorded synchronized media. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Prerecorded synchronized media provides audio description or a full text media alternative."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Check whether visual-only information in videos is described in audio or in a text alternative. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.2.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-102-004",
+      "title": "SC 1.2.4 Captions (Live)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.2.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/captions-live.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages carry live synchronized audio/video (e.g., live webinars streamed on the site). Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Captions are provided for all live audio content in synchronized media."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Identify live streams and confirm real-time captions are available. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.2.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-102-005",
+      "title": "SC 1.2.5 Audio Description (Prerecorded)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.2.5",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/audio-description-prerecorded.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages embed prerecorded synchronized media with visual information not conveyed by audio. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Audio description is provided for all prerecorded video content in synchronized media."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Check demos/testimonial videos for on-screen text or actions that are not spoken, and confirm an audio-described version. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.2.5' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-103-001",
+      "title": "SC 1.3.1 Info and Relationships",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.3.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/info-and-relationships.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Structure and relationships conveyed visually (headings, lists, tables, form field groupings, required-field indicators) are programmatically determinable."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:aria-hidden-body",
+        "axe:aria-required-children",
+        "axe:aria-required-parent",
+        "axe:definition-list",
+        "axe:dlitem",
+        "axe:list",
+        "axe:listitem",
+        "axe:p-as-heading",
+        "axe:table-fake-caption",
+        "axe:td-has-header",
+        "axe:td-headers-attr",
+        "axe:th-has-data-cells"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Review heading structure, fieldset/legend for radio groups (e.g., service type), table markup, and programmatic labels with a screen reader. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.3.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-103-002",
+      "title": "SC 1.3.2 Meaningful Sequence",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.3.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/meaningful-sequence.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "When reading order affects meaning, a correct reading sequence is programmatically determinable."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Linearize the page (disable CSS / screen-reader reading order) and confirm content order still makes sense. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.3.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-103-003",
+      "title": "SC 1.3.3 Sensory Characteristics",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.3.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/sensory-characteristics.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Instructions do not rely solely on shape, color, size, visual location, orientation or sound (e.g., not only 'click the green button on the right')."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Read form and booking instructions for sensory-only references. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.3.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-103-004",
+      "title": "SC 1.3.4 Orientation",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.3.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/orientation.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Content does not restrict display to a single portrait or landscape orientation unless essential."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:css-orientation-lock"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Rotate a phone/tablet viewport and confirm forms and checkout work in both orientations. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.3.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-103-005",
+      "title": "SC 1.3.5 Identify Input Purpose",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.3.5",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/identify-input-purpose.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages collect user information (name, email, phone, address, payment). Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Inputs collecting information about the user expose their purpose programmatically (valid HTML autocomplete tokens such as name, email, tel, street-address, postal-code)."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:autocomplete-valid"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Confirm each personal-data field in quote, booking and checkout forms has the correct autocomplete token. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.3.5' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-001",
+      "title": "SC 1.4.1 Use of Color",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Color is not the only visual means of conveying information, indicating an action, prompting a response or distinguishing an element (e.g., errors, required fields, links in text)."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:link-in-text-block"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Check error states, required markers, availability calendars and in-text links in grayscale. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-002",
+      "title": "SC 1.4.2 Audio Control",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/audio-control.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages auto-play audio longer than 3 seconds. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Audio that plays automatically for more than 3 seconds can be paused/stopped or its volume controlled independently of system volume."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:no-autoplay-audio"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Load pages with sound on and confirm no uncontrollable auto-playing audio. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-003",
+      "title": "SC 1.4.3 Contrast (Minimum)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Text and images of text have a contrast ratio of at least 4.5:1 (3:1 for large text), except incidental text and logotypes."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:color-contrast"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Spot-check text over images/gradients, placeholder text, disabled-looking buttons and consent/disclosure fine print, which automation often cannot evaluate. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-004",
+      "title": "SC 1.4.4 Resize Text",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Text can be resized up to 200 percent without assistive technology and without loss of content or functionality."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:meta-viewport"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Zoom browser to 200% and confirm forms, disclosures and checkout remain usable; confirm viewport meta does not block zoom. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-005",
+      "title": "SC 1.4.5 Images of Text",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.5",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/images-of-text.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Real text is used instead of images of text except where customizable or essential (logotypes)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Look for pricing tables, banners or disclosures rendered as images. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.5' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-010",
+      "title": "SC 1.4.10 Reflow",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.10",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Set viewport to 320 CSS px (or 1280px at 400% zoom) and check for horizontal scrolling or clipped form controls. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.10' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-011",
+      "title": "SC 1.4.11 Non-text Contrast",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.11",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "User interface component boundaries/states and meaningful graphics have at least 3:1 contrast against adjacent colors."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Measure contrast of input borders, checkbox outlines (incl. consent checkboxes), focus indicators and icon buttons. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.11' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-012",
+      "title": "SC 1.4.12 Text Spacing",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.12",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "No loss of content or functionality occurs when users set line height 1.5, paragraph spacing 2x, letter spacing 0.12em and word spacing 0.16em."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:avoid-inline-spacing"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Apply a text-spacing bookmarklet/stylesheet and check for clipped or overlapping text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.12' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-104-013",
+      "title": "SC 1.4.13 Content on Hover or Focus",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 1.4.13",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Additional content shown on hover or focus (tooltips, menus) is dismissible, hoverable and persistent."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Trigger tooltips/menus with mouse and keyboard; confirm Esc dismisses and pointer can move onto the content. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 1.4.13' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-201-001",
+      "title": "SC 2.1.1 Keyboard",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.1.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/keyboard.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "All functionality, including quote forms, date/time pickers, payment fields, signature capture and consent controls, is operable through a keyboard interface without specific timings."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:frame-focusable-content",
+        "axe:scrollable-region-focusable",
+        "axe:server-side-image-map"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Complete each key flow (contact, booking, checkout, e-sign, cookie choices) using only the keyboard. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.1.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-201-002",
+      "title": "SC 2.1.2 No Keyboard Trap",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.1.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/no-keyboard-trap.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Tab into every widget and iframe and confirm focus can leave it. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.1.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-201-004",
+      "title": "SC 2.1.4 Character Key Shortcuts",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.1.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Site implements single-character keyboard shortcuts. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Single-character key shortcuts can be turned off, remapped, or are active only on focus."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Identify any single-key shortcuts (e.g., in app demos or chat widgets) and confirm a way to disable/remap. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.1.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-202-001",
+      "title": "SC 2.2.1 Timing Adjustable",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.2.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Site imposes time limits (session timeouts, booking slot holds, checkout expiry). Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Users can turn off, adjust (to at least 10x) or extend time limits with at least 20 seconds warning, unless an exception applies."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:meta-refresh"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Identify time limits in booking holds and checkout sessions and confirm warning/extension. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.2.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-202-002",
+      "title": "SC 2.2.2 Pause, Stop, Hide",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.2.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Moving, blinking, scrolling or auto-updating content that starts automatically and lasts more than 5 seconds can be paused, stopped or hidden."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:blink",
+        "axe:marquee"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Check carousels, testimonial sliders, animated hero sections and tickers for pause controls. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.2.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-203-001",
+      "title": "SC 2.3.1 Three Flashes or Below Threshold",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.3.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "No content flashes more than three times in any one-second period, or the flash is below the general and red flash thresholds."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Review animations and videos for flashing; use a photosensitive epilepsy analysis tool if needed. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.3.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-001",
+      "title": "SC 2.4.1 Bypass Blocks",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "A mechanism (skip link, landmarks, headings) is available to bypass blocks of content repeated on multiple pages."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:bypass"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Confirm a working skip link or proper landmarks/headings on each template. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-002",
+      "title": "SC 2.4.2 Page Titled",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/page-titled.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Each page has a title that describes its topic or purpose."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:document-title"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Check <title> of each page (home, services, quote, booking, checkout, privacy) is unique and descriptive. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-003",
+      "title": "SC 2.4.3 Focus Order",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Focusable components receive focus in an order that preserves meaning and operability, including when modals and step-by-step forms open."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Tab through multi-step booking/checkout and modals; confirm focus moves logically and into/out of dialogs. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-004",
+      "title": "SC 2.4.4 Link Purpose (In Context)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "The purpose of each link can be determined from the link text alone or with its programmatic context."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:area-alt",
+        "axe:link-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Review 'Learn more'/'Click here' links and icon links (e.g., social, privacy) for accessible names. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-005",
+      "title": "SC 2.4.5 Multiple Ways",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.5",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/multiple-ways.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "More than one way is available to locate a page within a set of pages (navigation, search, sitemap, links), except for process steps."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Confirm navigation plus at least one other way (sitemap, footer links, search). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.5' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-006",
+      "title": "SC 2.4.6 Headings and Labels",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.6",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Headings and labels describe topic or purpose."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Review form labels and section headings for clarity (e.g., 'Phone number for appointment updates'). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.6' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-007",
+      "title": "SC 2.4.7 Focus Visible",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.7",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Tab through all interactive elements and confirm a visible focus indicator everywhere (outline:none overrides are common failures). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.7' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-204-011",
+      "title": "SC 2.4.11 Focus Not Obscured (Minimum)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.4.11",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "amendment_notes": "New in WCAG 2.2.",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "When a component receives keyboard focus, it is not entirely hidden by author-created content such as sticky headers, cookie banners or chat launchers."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Tab through pages with the cookie banner, sticky header and chat widget present; confirm the focused element is never fully covered. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.4.11' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-205-001",
+      "title": "SC 2.5.1 Pointer Gestures",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.5.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/pointer-gestures.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Functionality using multipoint or path-based gestures (pinch, swipe, signature path) can also be operated with a single pointer without a path-based gesture, unless essential."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Check carousels, maps and signature capture for single-pointer alternatives (e.g., typed signature option, arrow buttons). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.5.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-205-002",
+      "title": "SC 2.5.2 Pointer Cancellation",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.5.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/pointer-cancellation.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "For single-pointer functionality, activation occurs on the up-event or can be aborted/undone (no irreversible down-event actions)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Press-and-drag off buttons such as 'Pay' and 'Submit' and confirm the action is not triggered on mousedown. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.5.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-205-003",
+      "title": "SC 2.5.3 Label in Name",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.5.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/label-in-name.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "For components with visible text labels, the accessible name contains the visible label text."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:label-content-name-mismatch"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Compare visible labels with accessible names for buttons and inputs (speech-control users rely on this). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.5.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-205-004",
+      "title": "SC 2.5.4 Motion Actuation",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.5.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/motion-actuation.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Site uses device motion or user motion to trigger functions. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Functionality operated by device or user motion can also be operated by UI components and motion response can be disabled."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Identify any shake/tilt features and confirm UI alternatives. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.5.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-205-007",
+      "title": "SC 2.5.7 Dragging Movements",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.5.7",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "amendment_notes": "New in WCAG 2.2.",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Functionality that uses dragging (sliders, drag-to-reorder, drag-to-select time slots, drawn signatures) can be achieved with a single pointer without dragging, unless essential."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Check sliders, schedulers and signature pads for click/tap or typed alternatives. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.5.7' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-205-008",
+      "title": "SC 2.5.8 Target Size (Minimum)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 2.5.8",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "amendment_notes": "New in WCAG 2.2.",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential)."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:target-size"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Measure small targets such as consent checkboxes, calendar day cells, close buttons and footer links. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 2.5.8' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-301-001",
+      "title": "SC 3.1.1 Language of Page",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.1.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/language-of-page.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "The default human language of each page is programmatically determinable (valid lang attribute on html)."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:html-has-lang",
+        "axe:html-lang-valid",
+        "axe:html-xml-lang-mismatch"
+      ],
+      "manual_review_required": false,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Confirm lang attribute matches the page language (e.g., en-US; es for Spanish pages). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.1.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-301-002",
+      "title": "SC 3.1.2 Language of Parts",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.1.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/language-of-parts.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages contain passages in a language other than the page default (e.g., Spanish disclosures). Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "The human language of each passage or phrase that differs from the page language is programmatically determinable."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:valid-lang"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Find mixed-language passages and confirm lang attributes on them. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.1.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-302-001",
+      "title": "SC 3.2.1 On Focus",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.2.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/on-focus.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Receiving focus does not initiate a change of context."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Tab through fields and confirm no unexpected navigation, submission or popups on focus. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.2.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-302-002",
+      "title": "SC 3.2.2 On Input",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.2.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/on-input.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Changing a setting of a UI component does not automatically cause a change of context unless the user was advised beforehand."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Change selects/radios (service type, date) and confirm no unannounced page change or submission. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.2.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-302-003",
+      "title": "SC 3.2.3 Consistent Navigation",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.2.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/consistent-navigation.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Navigational mechanisms repeated on multiple pages occur in the same relative order each time unless the user changes them."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Compare header/footer navigation order across templates. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.2.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-302-004",
+      "title": "SC 3.2.4 Consistent Identification",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.2.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/consistent-identification.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Components with the same functionality within a set of pages are identified consistently."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Check that repeated controls (e.g., 'Book now', search, phone link) have consistent labels/icons. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.2.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-302-006",
+      "title": "SC 3.2.6 Consistent Help",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.2.6",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/consistent-help.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "amendment_notes": "New in WCAG 2.2.",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Help mechanisms (contact details, phone, chat, FAQ link) are repeated on multiple pages. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Where human contact details, contact mechanisms, self-help options or automated contact mechanisms are repeated across pages, they appear in the same relative order."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Compare location/order of phone number, contact link and chat launcher across pages including quote and checkout. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.2.6' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-303-001",
+      "title": "SC 3.3.1 Error Identification",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.3.1",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "When an input error is automatically detected, the item in error is identified and the error is described to the user in text."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Submit forms with missing/invalid fields and confirm text errors identify each field and are announced. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.3.1' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-303-002",
+      "title": "SC 3.3.2 Labels or Instructions",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.3.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Labels or instructions are provided when content requires user input, including format requirements and required-field indication."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:form-field-multiple-labels"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Review every form field (phone format, date, consent checkbox) for visible labels/instructions. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.3.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-303-003",
+      "title": "SC 3.3.3 Error Suggestion",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.3.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "When an input error is detected and suggestions for correction are known, they are provided to the user unless that would jeopardize security or purpose."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Trigger format errors (phone, email, ZIP) and confirm specific correction hints. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.3.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-303-004",
+      "title": "SC 3.3.4 Error Prevention (Legal, Financial, Data)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.3.4",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Pages create legal commitments or financial transactions (payments, deposits, subscriptions, signed contracts) or modify/delete user data. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Submissions that cause legal commitments or financial transactions are reversible, checked for input errors with a chance to correct, or confirmed/reviewed before finalizing."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Walk through checkout, deposit payment, subscription sign-up and e-signature and confirm a review/confirm step or reversal mechanism. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.3.4' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-303-007",
+      "title": "SC 3.3.7 Redundant Entry",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.3.7",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "amendment_notes": "New in WCAG 2.2.",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Multi-step processes ask for information previously entered in the same process. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Information previously entered by or provided to the user that is required again in the same process is auto-populated or available to select, except where essential or for security."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Complete multi-step quote/booking/checkout and confirm details (address, name) are not re-typed unnecessarily. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.3.7' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-303-008",
+      "title": "SC 3.3.8 Accessible Authentication (Minimum)",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 3.3.8",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "amendment_notes": "New in WCAG 2.2.",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites).",
+          "Applies only where: Site has a login, account creation, customer portal or verification step. Otherwise record as not applicable with evidence."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "No authentication step requires a cognitive function test (remembering a password, solving a puzzle/CAPTCHA, transcribing a code) unless an alternative, an assistive mechanism (password managers, paste allowed), object/personal-content recognition exception applies."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Attempt sign-in with a password manager and paste; check OTP fields allow paste/autofill; check CAPTCHAs for non-cognitive alternatives. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 3.3.8' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-401-002",
+      "title": "SC 4.1.2 Name, Role, Value",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level A",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 4.1.2",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/name-role-value.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "All user interface components (including custom widgets, consent toggles, date pickers, accordions, embedded payment fields) expose name, role, states and values programmatically and notify changes."
+      ],
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "axe-core scan output (JSON) per audited template, recording axe-core version",
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [
+        "axe:area-alt",
+        "axe:aria-allowed-attr",
+        "axe:aria-braille-equivalent",
+        "axe:aria-command-name",
+        "axe:aria-conditional-attr",
+        "axe:aria-deprecated-role",
+        "axe:aria-hidden-body",
+        "axe:aria-hidden-focus",
+        "axe:aria-input-field-name",
+        "axe:aria-prohibited-attr",
+        "axe:aria-required-attr",
+        "axe:aria-roledescription",
+        "axe:aria-roles",
+        "axe:aria-tab-name",
+        "axe:aria-toggle-field-name",
+        "axe:aria-tooltip-name",
+        "axe:aria-valid-attr",
+        "axe:aria-valid-attr-value",
+        "axe:button-name",
+        "axe:duplicate-id-aria",
+        "axe:frame-title",
+        "axe:frame-title-unique",
+        "axe:input-button-name",
+        "axe:input-image-alt",
+        "axe:label",
+        "axe:link-name",
+        "axe:nested-interactive",
+        "axe:select-name",
+        "axe:summary-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe covers only part of this criterion; a pass is not conformance. Manual check: Inspect custom components with a screen reader and the accessibility tree. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 4.1.2' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    },
+    {
+      "id": "WCAG-401-003",
+      "title": "SC 4.1.3 Status Messages",
+      "register": "website-accessibility",
+      "jurisdiction": "Standard",
+      "category": "Level AA",
+      "requirement_type": "technical-standard",
+      "citation": "WCAG 2.2 SC 4.1.3",
+      "official_source_url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2023-10-05",
+      "applicability": {
+        "criteria": [
+          "Applies to every page and process audited for WCAG 2.2 Level AA conformance (both target sites)."
+        ],
+        "business_types": [
+          "Any public website"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Status messages (form submitted, errors summary, 'slot reserved', payment processing) are programmatically determinable through role or properties so they are announced without receiving focus."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Manual test notes per audited page/flow with browser, viewport and assistive technology used",
+        "Screenshots or recordings of each failure or pass decision"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-001",
+        "WEB-CA-023"
+      ],
+      "notes": "WCAG is a W3C technical standard, not a statute. It is used here as the conformance baseline referenced by DOJ guidance and courts for ADA Title III / Unruh website claims (see WEB-FED-001..004, WEB-CA-023). axe rule mapping derived from the wcag tags of axe-core 4.12.1 (node_modules/axe-core) on 2026-11-24; axe-core has no rule tagged for this criterion; verification is manual. Manual check: Submit forms and trigger async updates with a screen reader running and confirm announcements. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.w3.org (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the W3C 'Understanding SC 4.1.3' page on w3.org (loaded, conformance level matches) and checked the normative success criterion text and any thresholds against the WCAG 2.2 Recommendation on w3.org (current edition dated 12 December 2024). Understanding documents are non-normative; the Recommendation is the normative source."
+    }
+  ]
+}

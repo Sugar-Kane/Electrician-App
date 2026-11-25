@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "volteira/compliance/requirement.schema.json",
+  "title": "Compliance requirement",
+  "description": "One independently verifiable obligation or control. Registers hold requirements only; assessment statuses live in audit findings, never here.",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "register",
+    "jurisdiction",
+    "category",
+    "requirement_type",
+    "citation",
+    "official_source_url",
+    "last_verified",
+    "source_verified",
+    "applicability",
+    "responsible_parties",
+    "required_behavior",
+    "verification_methods",
+    "required_evidence",
+    "automated_test_ids",
+    "manual_review_required",
+    "legal_review_required",
+    "website_verifiable",
+    "backend_verification_required",
+    "risk_severity"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[A-Z]+(-[A-Z0-9]+)*-[0-9]{3}(-[0-9]{3})?$", "description": "Stable unique ID, e.g. CSLB-004-001. Never reused or renumbered." },
+    "title": { "type": "string", "minLength": 3 },
+    "register": {
+      "enum": [
+        "federal",
+        "california",
+        "california-contractors",
+        "website-federal",
+        "website-california",
+        "website-contractors",
+        "website-accessibility",
+        "website-security",
+        "application-security"
+      ]
+    },
+    "jurisdiction": { "enum": ["Federal", "California", "Standard", "Contractual"] },
+    "category": { "type": "string" },
+    "requirement_type": {
+      "enum": [
+        "statutory",
+        "regulatory",
+        "contractual",
+        "technical-standard",
+        "recommended-control",
+        "guidance",
+        "pending-legislation",
+        "future-effective",
+        "legal-interpretation-required"
+      ],
+      "description": "Recommended controls and standards are never labelled as law."
+    },
+    "citation": { "type": "string", "description": "Exact statutory or regulatory citation, or standard and clause." },
+    "official_source_url": { "type": "string", "description": "Official source. Empty only when source_verified is false." },
+    "last_verified": { "type": "string", "description": "YYYY-MM-DD the source was read, or empty when not verified." },
+    "source_verified": { "type": "boolean", "description": "False when the official text could not be read; audits must then mark the requirement BLUE." },
+    "effective_date": { "type": "string" },
+    "amendment_notes": { "type": "string" },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "criteria": { "type": "array", "items": { "type": "string" } },
+        "business_types": { "type": "array", "items": { "type": "string" } },
+        "transaction_types": { "type": "array", "items": { "type": "string" } },
+        "thresholds": { "type": "array", "items": { "type": "string" } },
+        "exceptions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "responsible_parties": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "Shadam LLC",
+          "Volteira platform",
+          "Volteira as service provider",
+          "Pacific Plains Electric",
+          "Contractor tenants",
+          "Website operator",
+          "Third-party vendor",
+          "Payment processor",
+          "Messaging provider",
+          "Authorized users"
+        ]
+      }
+    },
+    "required_behavior": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "enforcement_exposure": { "type": "string" },
+    "verification_methods": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["automated-test", "browser-assisted", "database-assisted", "code-review", "document-inspection", "manual", "operational", "legal-review"] }
+    },
+    "required_evidence": { "type": "array", "items": { "type": "string" } },
+    "automated_test_ids": { "type": "array", "items": { "type": "string" } },
+    "manual_review_required": { "type": "boolean" },
+    "legal_review_required": { "type": "boolean" },
+    "website_verifiable": { "type": "boolean" },
+    "backend_verification_required": { "type": "boolean" },
+    "risk_severity": { "enum": ["critical", "high", "medium", "low", "informational"] },
+    "related_ids": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string" }
+  }
+}

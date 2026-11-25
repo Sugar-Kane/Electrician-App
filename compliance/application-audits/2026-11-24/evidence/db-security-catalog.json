@@ -1,0 +1,454 @@
+{
+  "description": "Read-only catalog inspection of Supabase project wyyzptlciccewyxxjkyx for the SEC-001..SEC-006 application-security audit. Contains schema metadata, policy text, function names and counts only; no customer rows, no secrets.",
+  "audit_id": "APP-2026-11-24",
+  "collected_at": "2026-11-24/25 (UTC)",
+  "method": "Supabase MCP execute_sql (catalog queries only: pg_class, pg_policies, pg_proc, information_schema, storage.buckets, pg_trigger, pg_default_acl, counts) and get_advisors(type=security).",
+  "queries": {
+    "q1_public_tables_rls_disabled": {
+      "sql": "select relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind in ('r','p') and not relrowsecurity",
+      "result": [],
+      "public_table_count": 95,
+      "force_rls_table_count": 0
+    },
+    "q2_policy_counts_per_table": {
+      "rls_on_zero_policies": [
+        "booking_calendar_connections",
+        "booking_calendar_events",
+        "organization_ai_keys",
+        "task_work"
+      ],
+      "policies_using_true": [
+        {
+          "table": "site_videos",
+          "policy": "Anyone can see the front page videos",
+          "cmd": "SELECT",
+          "roles": [
+            "anon",
+            "authenticated"
+          ],
+          "qual": "true"
+        }
+      ],
+      "policies_referencing_user_metadata": [],
+      "update_policies_without_with_check": [],
+      "anon_table_grants_public": [
+        "site_videos",
+        "tenant_legal_pages"
+      ],
+      "note": "Several policies list role 'public' (e.g. invoices, payments, contracts, technicians) but anon holds table privileges only on site_videos and tenant_legal_pages, so anon cannot reach them."
+    },
+    "q3_security_definer_functions": {
+      "count_public_private": 178,
+      "lacking_search_path_in_proconfig": [],
+      "anon_executable": [
+        "public.get_invoice_label_by_link",
+        "private.set_job_admin_fee",
+        "private.add_admin_fee_to_line",
+        "public.organization_invitation_preview",
+        "public.accept_organization_invitation",
+        "private.customer_address_as_service_address",
+        "public.get_estimate_by_link",
+        "public.create_public_booking_intake",
+        "public.pending_invitation_for_me",
+        "public.organization_roster",
+        "private.sync_job_document_folder",
+        "public.get_public_booking_confirmation",
+        "public.list_public_booking_slots",
+        "public.get_public_booking_page",
+        "public.get_booking_page_by_host",
+        "private.write_supervised_audit",
+        "private.link_activity_event",
+        "public.accept_booking_fee",
+        "public.get_phone_booking_confirmation",
+        "private.sync_inventory_quantity",
+        "public.list_public_journal_posts",
+        "public.get_verified_host_for_slug",
+        "public.list_journal_organizations",
+        "public.get_public_journal_post",
+        "public.get_booking_payment_intent",
+        "public.decline_change_order",
+        "public.get_invoice_adjustments_by_link",
+        "public.get_public_contract",
+        "public.sign_contract_in_app",
+        "public.get_booking_confirmation_locale",
+        "private.notify_task_assignee",
+        "public.get_invoice_by_link",
+        "private.tasks_job_same_business",
+        "private.sync_task_reminder",
+        "private.task_work_due",
+        "private.add_built_in_assistant",
+        "private.stop_task_executions"
+      ],
+      "public_secdef_executable_by_authenticated": 97,
+      "authenticated_executable_without_auth_uid_or_membership_helper_in_body": "52 (mostly token/slug public RPCs and admin_* RPCs gated by private.is_platform_admin/is_platform_owner/running_operation/case_for_change); sampled sources: admin_stray_document_files (is_platform_owner), admin_apply_delivery_status/admin_retry_text_result (private.running_operation), admin_case_link (private.case_for_change), sweep_expired_impersonations (no caller check; only ends already-expired sessions)",
+      "service_only_functions_not_executable_by_authenticated": [
+        "apply_change_order",
+        "attach_public_booking_checkout",
+        "claim_supervised_actions",
+        "claim_task_work",
+        "confirm_public_booking_payment",
+        "create_supervised_proposal",
+        "decide_supervised_proposal_for",
+        "expire_public_booking_checkout",
+        "expire_public_booking_hold",
+        "finish_supervised_action",
+        "mark_phone_deposit_paid",
+        "record_automation_event",
+        "record_stripe_refund",
+        "settle_booking_refund",
+        "settle_invoice_online_payment",
+        "settle_invoice_refund",
+        "sign_contract_as_contractor_for",
+        "store_document_provider_credential",
+        "task_worker_token_ok",
+        "website_intake"
+      ]
+    },
+    "q4_storage_buckets": [
+      {
+        "id": "business-documents",
+        "public": false,
+        "file_size_limit": 52428800,
+        "allowed_mime_types": null
+      },
+      {
+        "id": "public-branding",
+        "public": true,
+        "file_size_limit": 2097152,
+        "allowed_mime_types": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/svg+xml"
+        ]
+      }
+    ],
+    "q4b_storage_objects_policies": [
+      {
+        "policy": "Organization members can read business documents",
+        "cmd": "SELECT",
+        "roles": [
+          "authenticated"
+        ],
+        "qual": "bucket_id='business-documents' AND private.is_org_member(private.storage_object_organization_id(name))"
+      },
+      {
+        "policy": "Organization members can upload business documents",
+        "cmd": "INSERT",
+        "with_check": "bucket_id='business-documents' AND private.is_org_member(private.storage_object_organization_id(name))"
+      },
+      {
+        "policy": "Organization members can update business documents",
+        "cmd": "UPDATE",
+        "qual_and_with_check": "bucket_id='business-documents' AND private.is_org_member(private.storage_object_organization_id(name))"
+      },
+      {
+        "policy": "Organization admins can delete business documents",
+        "cmd": "DELETE",
+        "qual": "bucket_id='business-documents' AND private.is_org_admin(private.storage_object_organization_id(name))"
+      }
+    ],
+    "q5_views_public": [],
+    "q6_membership_helpers": {
+      "private.is_org_member": "auth.uid() is not null and exists(organization_members where organization_id=target and user_id=auth.uid())",
+      "private.is_org_admin": "role in ('owner','admin')",
+      "private.can_manage_members": "organizations.created_by=auth.uid() OR role in ('owner','admin')"
+    },
+    "q7_tenant_guards": {
+      "tables_with_organization_id": 88,
+      "tables_with_keep_tenant_owner_or_reference_guard_trigger": 89,
+      "guard_functions": [
+        "private.keep_tenant_owner (organization_id immutable)",
+        "private.guard_tenant_references",
+        "guard_owner_invitation",
+        "guard_owner_membership"
+      ]
+    },
+    "q8_organizations_delete_policy": {
+      "policy": "Owners can delete organizations",
+      "qual_as_deparsed": "EXISTS (SELECT 1 FROM organization_members membership WHERE membership.organization_id = membership.id AND membership.user_id = auth.uid() AND membership.role='owner')",
+      "observation": "Unqualified id resolved to membership.id, so the predicate compares the membership row with itself; effectively denies every delete (fails closed) rather than checking organizations.id."
+    },
+    "q9_organization_subscriptions": {
+      "policies": [
+        {
+          "p": "Organization admins can add subscriptions",
+          "cmd": "INSERT",
+          "with_check": "private.is_org_admin(organization_id)"
+        },
+        {
+          "p": "Organization admins can update subscriptions",
+          "cmd": "UPDATE",
+          "qual": "private.is_org_admin(organization_id)",
+          "with_check": "private.is_org_admin(organization_id)"
+        },
+        {
+          "p": "Organization admins can remove subscriptions",
+          "cmd": "DELETE",
+          "qual": "private.is_org_admin(organization_id)"
+        },
+        {
+          "p": "Organization members can view subscription status",
+          "cmd": "SELECT"
+        }
+      ],
+      "authenticated_table_privileges": [
+        "INSERT",
+        "SELECT",
+        "UPDATE",
+        "DELETE",
+        "TRUNCATE",
+        "REFERENCES",
+        "TRIGGER"
+      ],
+      "authenticated_column_update_privileges": [
+        "cancel_at_period_end",
+        "created_at",
+        "current_period_end",
+        "id",
+        "organization_id",
+        "plan",
+        "provider",
+        "seats",
+        "status",
+        "stripe_customer_id",
+        "stripe_price_id",
+        "stripe_subscription_id",
+        "trial_ends_at",
+        "updated_at"
+      ],
+      "triggers": [
+        "set_updated_at",
+        "keep_tenant_owner"
+      ],
+      "source_migration": "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:185-229"
+    },
+    "q10_stripe_connect_accounts": {
+      "write_policies": "INSERT/UPDATE/DELETE: private.is_org_admin(organization_id)",
+      "authenticated_update_columns": [
+        "charges_enabled",
+        "created_at",
+        "currently_due",
+        "details_submitted",
+        "disabled_reason",
+        "eventually_due",
+        "fee_payer",
+        "id",
+        "last_synced_at",
+        "onboarding_completed_at",
+        "onboarding_status",
+        "organization_id",
+        "past_due",
+        "payouts_enabled",
+        "stripe_account_id",
+        "updated_at"
+      ],
+      "unique": [
+        "organization_id",
+        "stripe_account_id"
+      ]
+    },
+    "q11_audit_tables": {
+      "authenticated_privileges": "INSERT/SELECT/UPDATE/DELETE/TRUNCATE granted on activity_events, mcp_call_log, platform_admin_audit, impersonation_sessions, contract_signers, automation_events, invoice_revisions, messaging_consent; supervised_action_audit SELECT only",
+      "policies": {
+        "activity_events": [
+          "INSERT (is_org_member)",
+          "SELECT (is_org_member)"
+        ],
+        "mcp_call_log": [
+          "SELECT owners/admins"
+        ],
+        "platform_admin_audit": [
+          "SELECT admins"
+        ],
+        "supervised_action_audit": [
+          "SELECT admins"
+        ],
+        "invoice_revisions": [
+          "SELECT members"
+        ],
+        "messaging_consent": [
+          "INSERT",
+          "SELECT",
+          "UPDATE",
+          "DELETE (all is_org_member)"
+        ],
+        "contract_signers": [
+          "ALL own row (user_id=auth.uid() and member)"
+        ]
+      },
+      "triggers": {
+        "supervised_action_audit": "refuse_audit_update",
+        "contracts": [
+          "keep_contractor_signature",
+          "keep_signed_contract_figures",
+          "keep_signed_contract_text"
+        ]
+      },
+      "columns": {
+        "activity_events": [
+          "id",
+          "organization_id",
+          "actor_user_id",
+          "event_type",
+          "label",
+          "entity_type",
+          "entity_id",
+          "metadata",
+          "created_at",
+          "customer_id",
+          "booking_request_id",
+          "job_id"
+        ],
+        "mcp_call_log": [
+          "id",
+          "organization_id",
+          "method",
+          "tool_name",
+          "arguments",
+          "result_text",
+          "is_error",
+          "http_status",
+          "duration_ms",
+          "created_at",
+          "session_key",
+          "booking_request_id",
+          "job_id"
+        ],
+        "platform_admin_audit": [
+          "id",
+          "admin_user_id",
+          "action",
+          "organization_id",
+          "detail",
+          "created_at"
+        ],
+        "supervised_action_audit": [
+          "id",
+          "organization_id",
+          "proposal_id",
+          "event",
+          "from_status",
+          "to_status",
+          "actor_id",
+          "actor_kind",
+          "via",
+          "content_hash",
+          "attempt",
+          "detail",
+          "created_at"
+        ],
+        "messaging_consent": [
+          "id",
+          "organization_id",
+          "customer_id",
+          "channel",
+          "scope",
+          "opted_in_at",
+          "opted_out_at",
+          "source",
+          "proof_text",
+          "captured_by",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    },
+    "q12_capability_token_columns": {
+      "defaults": {
+        "organization_invitations.token": "gen_random_uuid()",
+        "contracts.public_token": "gen_random_uuid()",
+        "booking_requests.public_token": "gen_random_uuid()",
+        "job_payment_plan_items.pay_token": "gen_random_uuid()"
+      },
+      "uuid_typed_tokens": [
+        "estimates.preview_token",
+        "invoices.preview_token",
+        "contracts.signature_send_token"
+      ],
+      "stored_secrets": {
+        "booking_calendar_connections.encrypted_refresh_token": "text (encrypted at app layer)",
+        "organization_ai_keys.encrypted_key": "text",
+        "website_intake_keys.key_hash": "hash",
+        "vault.secrets_count": 4
+      }
+    },
+    "q13_stripe_webhook_events": {
+      "columns": [
+        "stripe_event_id",
+        "organization_id",
+        "stripe_account_id",
+        "event_type",
+        "object_id",
+        "processing_status",
+        "attempts",
+        "last_error",
+        "received_at",
+        "processed_at",
+        "updated_at"
+      ],
+      "unique": "stripe_webhook_events_pkey (stripe_event_id)",
+      "app_references": "none found in src/ (grep stripe_webhook_events)"
+    },
+    "q14_default_acl_public": {
+      "postgres_tables": "postgres=arwdDxtm, authenticated=arwdDxtm, service_role=arwdDxtm (anon removed)",
+      "postgres_functions": "EXECUTE to anon, authenticated, service_role by default",
+      "supabase_admin_tables": "anon=arwdDxtm, authenticated=arwdDxtm"
+    },
+    "q15_auth_counts": {
+      "auth_users": 2,
+      "auth_mfa_factors": 0,
+      "auth_mfa_factors_verified": 0
+    },
+    "q16_cron_jobs": [
+      "volteira-supervised-worker */5 * * * *",
+      "volteira-mcp-call-log-retention 17 3 * * *"
+    ],
+    "q17_extensions": [
+      "plpgsql 1.0",
+      "pg_stat_statements 1.11",
+      "uuid-ossp 1.1",
+      "pgcrypto 1.3",
+      "supabase_vault 0.3.1",
+      "pg_cron 1.6.4",
+      "pg_net 0.20.4"
+    ],
+    "q18_functions_calling_net_http_or_dblink_in_public_private": [],
+    "q19_auth_users_triggers": []
+  },
+  "advisors_security": {
+    "collected_at": "2026-11-25",
+    "lint_counts": {
+      "rls_enabled_no_policy (INFO)": 1,
+      "anon_security_definer_function_executable (WARN)": 1,
+      "authenticated_security_definer_function_executable (WARN)": 1,
+      "auth_leaked_password_protection (WARN)": 1
+    },
+    "lints": [
+      {
+        "name": "rls_enabled_no_policy",
+        "level": "INFO",
+        "detail": null,
+        "cache_key": null
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "level": "WARN",
+        "detail": null,
+        "cache_key": null
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "level": "WARN",
+        "detail": null,
+        "cache_key": null
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "level": "WARN",
+        "detail": null,
+        "cache_key": null
+      }
+    ]
+  }
+}

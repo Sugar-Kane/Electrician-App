@@ -1,0 +1,1772 @@
+{
+  "register": "website-federal",
+  "baseline_version": "2026-11-24",
+  "generated_at": "2026-11-24T23:46:30+00:00",
+  "requirements": [
+    {
+      "id": "WEB-FED-001",
+      "title": "ADA Title III: Accessible contact and quote-request forms",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Accessibility (ADA Title III)",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
+      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
+          "Website-only coverage is legal-interpretation-dependent by circuit."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "People with disabilities can perceive, operate and complete contact and quote-request forms with assistive technology on equal terms (auxiliary aids and services; effective communication).",
+        "WCAG 2.2 AA criteria for forms pass on every contact/quote form; alternative contact (phone/email) is offered.",
+        "Conformance is assessed against the WCAG 2.2 Level A/AA baseline in the website-accessibility register."
+      ],
+      "enforcement_exposure": "DOJ enforcement and private suits for injunctive relief and attorney fees (42 U.S.C. 12188); in California, an ADA violation is also an Unruh Act violation with statutory damages (see WEB-CA-023).",
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "axe-core scan of the flow",
+        "keyboard-only and screen-reader (NVDA/VoiceOver) walkthrough recording",
+        "list of third-party widgets in the flow and their accessibility conformance statements (VPAT/ACR)"
+      ],
+      "automated_test_ids": [
+        "axe:label",
+        "axe:color-contrast",
+        "axe:autocomplete-valid",
+        "axe:button-name",
+        "axe:aria-input-field-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WCAG-101-001",
+        "WCAG-103-001",
+        "WCAG-103-005",
+        "WCAG-201-001",
+        "WCAG-204-003",
+        "WCAG-204-007",
+        "WCAG-303-001",
+        "WCAG-303-002",
+        "WCAG-401-002",
+        "WEB-CA-023"
+      ],
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the DOJ 'Guidance on Web Accessibility and the ADA' on ada.gov (March 18, 2022), which applies Title III effective-communication duties to websites and lists accessible forms, labels, error identification, keyboard access and contrast; 42 USC 12182 (uscode.house.gov) and 28 CFR 36.201/36.303 (eCFR API) were read under FED-005. Applying it to contact/quote forms is how the guidance is applied here; WCAG 2.2 AA is the register's chosen technical target."
+    },
+    {
+      "id": "WEB-FED-002",
+      "title": "ADA Title III: Accessible online scheduling/booking",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Accessibility (ADA Title III)",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
+      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
+          "Website-only coverage is legal-interpretation-dependent by circuit."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "People with disabilities can perceive, operate and complete online appointment scheduling and booking widgets (including third-party embedded schedulers) with assistive technology on equal terms (auxiliary aids and services; effective communication).",
+        "Date/time pickers, slot selection and confirmation are keyboard and screen-reader operable; third-party schedulers are covered as part of the operator's service.",
+        "Conformance is assessed against the WCAG 2.2 Level A/AA baseline in the website-accessibility register."
+      ],
+      "enforcement_exposure": "DOJ enforcement and private suits for injunctive relief and attorney fees (42 U.S.C. 12188); in California, an ADA violation is also an Unruh Act violation with statutory damages (see WEB-CA-023).",
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "axe-core scan of the flow",
+        "keyboard-only and screen-reader (NVDA/VoiceOver) walkthrough recording",
+        "list of third-party widgets in the flow and their accessibility conformance statements (VPAT/ACR)"
+      ],
+      "automated_test_ids": [
+        "axe:label",
+        "axe:color-contrast",
+        "axe:autocomplete-valid",
+        "axe:button-name",
+        "axe:aria-input-field-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WCAG-101-001",
+        "WCAG-103-001",
+        "WCAG-103-005",
+        "WCAG-201-001",
+        "WCAG-204-003",
+        "WCAG-204-007",
+        "WCAG-303-001",
+        "WCAG-303-002",
+        "WCAG-401-002",
+        "WEB-CA-023"
+      ],
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the DOJ 'Guidance on Web Accessibility and the ADA' on ada.gov (March 18, 2022), which applies Title III effective-communication duties to websites and lists accessible forms, labels, error identification, keyboard access and contrast; 42 USC 12182 (uscode.house.gov) and 28 CFR 36.201/36.303 (eCFR API) were read under FED-005. Applying it to booking widgets is how the guidance is applied here; WCAG 2.2 AA is the register's chosen technical target."
+    },
+    {
+      "id": "WEB-FED-003",
+      "title": "ADA Title III: Accessible checkout and payment",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Accessibility (ADA Title III)",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
+      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
+          "Website-only coverage is legal-interpretation-dependent by circuit."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "People with disabilities can perceive, operate and complete checkout, diagnostic-fee/deposit payment and subscription purchase flows (including embedded or redirected Stripe Checkout/Elements) with assistive technology on equal terms (auxiliary aids and services; effective communication).",
+        "Payment fields, error messages, review/confirm step and receipts are accessible; operator confirms the payment processor UI conforms or provides an accessible alternative.",
+        "Conformance is assessed against the WCAG 2.2 Level A/AA baseline in the website-accessibility register."
+      ],
+      "enforcement_exposure": "DOJ enforcement and private suits for injunctive relief and attorney fees (42 U.S.C. 12188); in California, an ADA violation is also an Unruh Act violation with statutory damages (see WEB-CA-023).",
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "axe-core scan of the flow",
+        "keyboard-only and screen-reader (NVDA/VoiceOver) walkthrough recording",
+        "list of third-party widgets in the flow and their accessibility conformance statements (VPAT/ACR)"
+      ],
+      "automated_test_ids": [
+        "axe:label",
+        "axe:color-contrast",
+        "axe:autocomplete-valid",
+        "axe:button-name",
+        "axe:aria-input-field-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WCAG-101-001",
+        "WCAG-103-001",
+        "WCAG-103-005",
+        "WCAG-201-001",
+        "WCAG-204-003",
+        "WCAG-204-007",
+        "WCAG-303-001",
+        "WCAG-303-002",
+        "WCAG-401-002",
+        "WEB-CA-023"
+      ],
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the DOJ 'Guidance on Web Accessibility and the ADA' on ada.gov (March 18, 2022), which applies Title III effective-communication duties to websites and lists accessible forms, labels, error identification, keyboard access and contrast; 42 USC 12182 (uscode.house.gov) and 28 CFR 36.201/36.303 (eCFR API) were read under FED-005. Applying it to checkout/payment flows is how the guidance is applied here; WCAG 2.2 AA is the register's chosen technical target."
+    },
+    {
+      "id": "WEB-FED-004",
+      "title": "ADA Title III: Accessible electronic signature",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Accessibility (ADA Title III)",
+      "requirement_type": "legal-interpretation-required",
+      "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
+      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
+          "Website-only coverage is legal-interpretation-dependent by circuit."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "People with disabilities can perceive, operate and complete electronic signature and contract acceptance flows with assistive technology on equal terms (auxiliary aids and services; effective communication).",
+        "Signature capture offers a non-drawing alternative (typed name/click-to-sign), documents to sign are accessible text (not image-only PDFs), and consent checkboxes are labelled.",
+        "Conformance is assessed against the WCAG 2.2 Level A/AA baseline in the website-accessibility register."
+      ],
+      "enforcement_exposure": "DOJ enforcement and private suits for injunctive relief and attorney fees (42 U.S.C. 12188); in California, an ADA violation is also an Unruh Act violation with statutory damages (see WEB-CA-023).",
+      "verification_methods": [
+        "automated-test",
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "axe-core scan of the flow",
+        "keyboard-only and screen-reader (NVDA/VoiceOver) walkthrough recording",
+        "list of third-party widgets in the flow and their accessibility conformance statements (VPAT/ACR)"
+      ],
+      "automated_test_ids": [
+        "axe:label",
+        "axe:color-contrast",
+        "axe:autocomplete-valid",
+        "axe:button-name",
+        "axe:aria-input-field-name"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WCAG-101-001",
+        "WCAG-103-001",
+        "WCAG-103-005",
+        "WCAG-201-001",
+        "WCAG-204-003",
+        "WCAG-204-007",
+        "WCAG-303-001",
+        "WCAG-303-002",
+        "WCAG-401-002",
+        "WEB-CA-023"
+      ],
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the DOJ 'Guidance on Web Accessibility and the ADA' on ada.gov (March 18, 2022), which applies Title III effective-communication duties to websites and lists accessible forms, labels, error identification, keyboard access and contrast; 42 USC 12182 (uscode.house.gov) and 28 CFR 36.201/36.303 (eCFR API) were read under FED-005. Applying it to e-signature flows is how the guidance is applied here; WCAG 2.2 AA is the register's chosen technical target."
+    },
+    {
+      "id": "WEB-FED-005",
+      "title": "Accessibility statement and alternative contact channel",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Accessibility (ADA Title III)",
+      "requirement_type": "recommended-control",
+      "citation": "DOJ Guidance on Web Accessibility and the ADA (2022); supports 28 CFR 36.303",
+      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
+          "Website-only coverage is legal-interpretation-dependent by circuit."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alternative format.",
+        "Offer an equivalent non-web way to request a quote/booking/payment (e.g., staffed phone line) with comparable hours and pricing."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshot of footer link and accessibility statement",
+        "test of listed phone/email contact"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "notes": "Not itself a legal requirement; recommended because it reduces exposure and supports effective-communication obligations. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read the DOJ guidance on ada.gov: it notes that websites giving the public a way to report accessibility problems let owners fix issues, and it covers alternatives. The accessibility statement contents (named standard, known limitations) and the equivalent phone channel are recommended practices, not DOJ mandates."
+    },
+    {
+      "id": "WEB-FED-006",
+      "title": "ESIGN consumer consent disclosures before electronic records",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Electronic signatures and records",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 7001(c)(1)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "The site or its signing flow provides to a consumer, electronically, information that a statute or regulation requires be provided or made available in writing (e.g., California home improvement contract copies and notices under B&P 7159).",
+          "Not triggered by a quote form or by B2B (non-consumer) SaaS contracts alone."
+        ],
+        "business_types": [
+          "pacificplainselectric.com where contracts/notices are signed or delivered online",
+          "volteira.com only if consumer-facing required written disclosures are delivered electronically"
+        ],
+        "transaction_types": [
+          "Online e-signature of consumer contracts",
+          "Electronic delivery of legally required consumer disclosures"
+        ]
+      },
+      "responsible_parties": [
+        "Pacific Plains Electric",
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "Before consent, give a clear and conspicuous statement of: the right to receive the record on paper; the right to withdraw consent and any conditions/consequences/fees of withdrawal; whether consent covers only this transaction or categories of records; how to withdraw and how to update contact information; how to obtain a paper copy and any fee.",
+        "State the hardware and software requirements to access and retain the electronic records.",
+        "Obtain the consumer's affirmative consent electronically in a manner that reasonably demonstrates the consumer can access information in the electronic form that will be used (e.g., opening a PDF in the same format).",
+        "Consent screen appears before the signing ceremony, not buried in general terms of use."
+      ],
+      "enforcement_exposure": "Failure means the electronic record may not satisfy the underlying writing requirement (e.g., B&P 7159 contract copy), risking unenforceability and regulatory discipline.",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "database-assisted",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "screenshots of the ESIGN disclosure and consent step",
+        "copy of the e-sign vendor's consumer disclosure text",
+        "audit trail record showing consent timestamp, IP/user agent and disclosure version"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-007",
+        "WEB-FED-004",
+        "WEB-CA-025",
+        "WEB-CSLB-009"
+      ],
+      "notes": "Browser-observable: the presence and content of the disclosure/consent step. Backend: stored consent record. Federal ESIGN 7001(c) applies to consumer disclosures even where California UETA governs the transaction generally (UETA 1633.3/ESIGN 7002 preemption analysis needed). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 7001(c)(1)(A)-(D) on uscode.house.gov. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-007",
+      "title": "Signed electronic records can be retained and reproduced",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Electronic signatures and records",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 7001(d), (e)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "The site or its signing flow provides to a consumer, electronically, information that a statute or regulation requires be provided or made available in writing (e.g., California home improvement contract copies and notices under B&P 7159).",
+          "Not triggered by a quote form or by B2B (non-consumer) SaaS contracts alone."
+        ],
+        "business_types": [
+          "pacificplainselectric.com where contracts/notices are signed or delivered online",
+          "volteira.com only if consumer-facing required written disclosures are delivered electronically"
+        ],
+        "transaction_types": [
+          "Online e-signature of consumer contracts",
+          "Electronic delivery of legally required consumer disclosures"
+        ]
+      },
+      "responsible_parties": [
+        "Pacific Plains Electric",
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "After signing, the consumer can download/print a complete, accurate copy of the signed contract and any required notices (e.g., PDF), and the copy is retained accurately for later reference.",
+        "Required records are not provided in a form that cannot be retained (e.g., view-only screen that disappears)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "database-assisted"
+      ],
+      "required_evidence": [
+        "test signing producing a downloadable PDF",
+        "emailed copy received by test signer",
+        "retention policy for signed records"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-006",
+        "WEB-CSLB-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 7001(d) and (e) on uscode.house.gov. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-008",
+      "title": "TCPA PEWC: clear and conspicuous marketing-text disclosure at phone collection",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Telemarketing and SMS consent",
+      "requirement_type": "regulatory",
+      "citation": "47 U.S.C. 227(b)(1)(A)(iii); 47 CFR 64.1200(a)(2), (f)(9)",
+      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
+          "Marketing (telemarketing/advertising) texts require prior express written consent; purely informational/transactional texts (appointment reminders, arrival notices, receipts) require prior express consent."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "transaction_types": [
+          "Phone number collection on quote/booking/contact forms",
+          "SMS opt-in widgets"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Messaging provider"
+      ],
+      "required_behavior": [
+        "Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Pacific Plains Electric' / 'Volteira') to send marketing text messages/calls using automated technology to the number provided.",
+        "Disclosure is legible (size/contrast), visible without scrolling away from the control, and written in plain language.",
+        "Marketing consent is separate from consent for transactional/informational messages."
+      ],
+      "enforcement_exposure": "Private right of action $500 per message, trebled to $1,500 for willful/knowing violations (47 U.S.C. 227(b)(3)); class-action risk.",
+      "verification_methods": [
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "screenshot of each phone-collection form with the disclosure text",
+        "page HTML capture with timestamp",
+        "disclosure text version history"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "WEB-FED-009",
+        "WEB-FED-010",
+        "WEB-FED-011",
+        "WEB-FED-012",
+        "WEB-FED-013"
+      ],
+      "notes": "The FCC 'one-to-one consent' amendment to 64.1200(f)(9) was vacated by the Eleventh Circuit (Insurance Marketing Coalition v. FCC, Jan. 2025) before taking effect; naming the specific seller in the consent remains best practice. Post-Facebook v. Duguid (2021) ATDS scope is narrow, but many SMS platforms and state laws (e.g., Florida/Oklahoma mini-TCPAs) still make PEWC the prudent standard. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 47 CFR 64.1200(a)(2) and (f)(9) (prior express written consent identifying the seller and number) via the eCFR API; 47 USC 227(b)(1)(A)(iii) on uscode.house.gov."
+    },
+    {
+      "id": "WEB-FED-009",
+      "title": "TCPA PEWC: consent is not a condition of purchase",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Telemarketing and SMS consent",
+      "requirement_type": "regulatory",
+      "citation": "47 CFR 64.1200(f)(9)(i)(B)",
+      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
+          "Marketing (telemarketing/advertising) texts require prior express written consent; purely informational/transactional texts (appointment reminders, arrival notices, receipts) require prior express consent."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "transaction_types": [
+          "Phone number collection on quote/booking/contact forms",
+          "SMS opt-in widgets"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Disclosure states that consent to marketing messages is not required to purchase goods or services.",
+        "The quote/booking/checkout form can be submitted with the marketing-consent control left unselected (the form actually works without consent)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screen recording of form submitted successfully without marketing consent",
+        "screenshot of 'not a condition of purchase' text"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "critical",
+      "related_ids": [
+        "WEB-FED-008"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 47 CFR 64.1200(f)(9)(i)(B) via the eCFR API: disclosure that signing is not a condition of purchase."
+    },
+    {
+      "id": "WEB-FED-010",
+      "title": "TCPA PEWC: signature/affirmative act and consent record",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Telemarketing and SMS consent",
+      "requirement_type": "regulatory",
+      "citation": "47 CFR 64.1200(f)(9) (written agreement bearing signature; E-SIGN-compliant electronic signature permitted)",
+      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
+          "Marketing (telemarketing/advertising) texts require prior express written consent; purely informational/transactional texts (appointment reminders, arrival notices, receipts) require prior express consent."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "transaction_types": [
+          "Phone number collection on quote/booking/contact forms",
+          "SMS opt-in widgets"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Messaging provider"
+      ],
+      "required_behavior": [
+        "Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled into 'I agree to the Terms' are not used.",
+        "The consent record (phone number, disclosure text/version, timestamp, page URL, IP/user agent, method) is stored and retrievable."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "database-assisted",
+        "code-review"
+      ],
+      "required_evidence": [
+        "DOM capture showing checkbox default state",
+        "sample consent record from the database for a test submission"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "WEB-FED-008",
+        "WEB-FED-006"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 47 CFR 64.1200(f)(9) and (f)(9)(ii) via the eCFR API: written agreement bearing signature; e-signatures valid under federal or state law. Unchecked-box design is a control."
+    },
+    {
+      "id": "WEB-FED-011",
+      "title": "TCPA: transactional/informational texting consent scoped and described",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Telemarketing and SMS consent",
+      "requirement_type": "regulatory",
+      "citation": "47 U.S.C. 227(b)(1)(A)(iii); 47 CFR 64.1200(a)(1)",
+      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
+          "Marketing (telemarketing/advertising) texts require prior express written consent; purely informational/transactional texts (appointment reminders, arrival notices, receipts) require prior express consent."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "transaction_types": [
+          "Phone number collection on quote/booking/contact forms",
+          "SMS opt-in widgets"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Messaging provider"
+      ],
+      "required_behavior": [
+        "Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoices) so consent is knowing and within scope.",
+        "Informational consent is not used to send marketing content; mixed-content messages are treated as marketing."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "screenshot of transactional SMS disclosure",
+        "sample message templates by category"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-008",
+        "WEB-FED-013"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 47 CFR 64.1200(a)(1) via the eCFR API and 47 USC 227(b)(1)(A)(iii) on uscode.house.gov: prior express consent for autodialed/artificial-voice calls (including texts) to wireless numbers. Describing message types is a design control."
+    },
+    {
+      "id": "WEB-FED-012",
+      "title": "SMS program disclosures required by carriers/CTIA (10DLC)",
+      "register": "website-federal",
+      "jurisdiction": "Contractual",
+      "category": "Telemarketing and SMS consent",
+      "requirement_type": "contractual",
+      "citation": "CTIA Messaging Principles and Best Practices; carrier/The Campaign Registry 10DLC campaign requirements; messaging provider (e.g., Twilio) acceptable use policy",
+      "official_source_url": "",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Site opts users into A2P SMS sent over US carrier networks via 10DLC/toll-free numbers."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Messaging provider"
+      ],
+      "required_behavior": [
+        "Opt-in point shows program/brand name, message types, 'Message frequency varies' (or stated frequency), 'Msg & data rates may apply', 'Reply HELP for help, STOP to cancel', and links to Terms and Privacy Policy.",
+        "Privacy policy states mobile numbers/SMS opt-in data are not shared with or sold to third parties for their marketing purposes (carrier campaign-vetting expectation).",
+        "Opt-in is not pre-checked and is not required to submit the form."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "screenshot of opt-in language",
+        "privacy policy SMS clause",
+        "10DLC campaign registration sample/opt-in description"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "notes": "Industry/contractual requirement, not federal law; non-compliance leads to campaign rejection, filtering or suspension. No official URL recorded: the current CTIA Messaging Principles document location could not be confirmed and was not fetched. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. No official_source_url, so there was nothing on an approved official host to read."
+    },
+    {
+      "id": "WEB-FED-013",
+      "title": "TCPA opt-out (revocation) instructions and honoring any reasonable method",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Telemarketing and SMS consent",
+      "requirement_type": "regulatory",
+      "citation": "47 CFR 64.1200(a)(10) (revocation of consent by any reasonable means; honor within 10 business days)",
+      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2025-04-11",
+      "amendment_notes": "Revocation rule (FCC 24-24) effective April 11, 2025. The 'revoke-all' scope provision of 64.1200(a)(10) was delayed by waiver (reported to January 31, 2027) and the FCC later adopted amendments narrowing it and allowing callers to designate an exclusive revocation method; secondary sources report differing effective dates (one reports November 25, 2026). Confirm against the Federal Register/FCC Public Notice.",
+      "applicability": {
+        "criteria": [
+          "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
+          "Marketing (telemarketing/advertising) texts require prior express written consent; purely informational/transactional texts (appointment reminders, arrival notices, receipts) require prior express consent."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "transaction_types": [
+          "Phone number collection on quote/booking/contact forms",
+          "SMS opt-in widgets"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Messaging provider"
+      ],
+      "required_behavior": [
+        "Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method.",
+        "Revocation requests received by text reply (STOP, quit, end, revoke, opt out, cancel, unsubscribe), web form, email or phone are honored within 10 business days; at most one confirmation text without marketing content is sent."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "operational",
+        "database-assisted"
+      ],
+      "required_evidence": [
+        "screenshot of opt-out instructions",
+        "test: send STOP from a test number and capture confirmation and suppression record",
+        "suppression list entry with timestamp"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "WEB-FED-008",
+        "WEB-FED-011"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 47 CFR 64.1200(a)(10) and (a)(12) via the eCFR API: any reasonable method, the listed keywords, no exclusive means, 10 business days, one confirmation text without marketing."
+    },
+    {
+      "id": "WEB-FED-014",
+      "title": "CAN-SPAM: commercial emails after signup have truthful headers/subjects, ad identification and postal address",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Email marketing",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 7704(a)(1)-(2), (a)(5); 16 CFR 316",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site offers an email newsletter/marketing signup or sends commercial electronic mail messages (primary purpose commercial advertisement or promotion)."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Transactional or relationship messages are subject only to the no-false-header rule."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Emails sent to addresses collected by the site have accurate From/Reply-To/routing information and non-deceptive subject lines.",
+        "Commercial messages include a valid physical postal address of the sender and clear identification as an advertisement (unless the recipient gave affirmative consent).",
+        "Signup form describes what emails will be sent and does not misrepresent frequency or content."
+      ],
+      "enforcement_exposure": "FTC civil penalties per violating email (inflation-adjusted, over $50,000 per email).",
+      "verification_methods": [
+        "browser-assisted",
+        "operational"
+      ],
+      "required_evidence": [
+        "test subscription with a seeded inbox",
+        "full headers and body of first marketing email received"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "notes": "CAN-SPAM does not require opt-in consent at signup; the browser-observable part is the signup representation, the rest is verified by subscribing a test address. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 7704(a)(1)-(2) and (a)(5) on uscode.house.gov and 16 CFR Part 316 via the eCFR API. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-015",
+      "title": "CAN-SPAM: working unsubscribe honored within 10 business days",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Email marketing",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 7704(a)(3)-(4), (a)(5)(A)(ii); 16 CFR 316.5",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site offers an email newsletter/marketing signup or sends commercial electronic mail messages (primary purpose commercial advertisement or promotion)."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "Transactional or relationship messages are subject only to the no-false-header rule."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Each commercial email has a clear and conspicuous opt-out mechanism that works for at least 30 days after sending.",
+        "Opt-out requires no fee, no login, and no information beyond email address and preferences; it is honored within 10 business days and the address is not sold or transferred."
+      ],
+      "verification_methods": [
+        "operational",
+        "database-assisted"
+      ],
+      "required_evidence": [
+        "unsubscribe test with timestamped confirmation",
+        "suppression list record",
+        "absence of further marketing email after 10 business days"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-014"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 7704(a)(3)-(4) and (a)(5)(A)(ii) on uscode.house.gov and 16 CFR 316.5 via the eCFR API. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-016",
+      "title": "FTC Act 5: accurate, non-misleading pricing representations",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 45(a); FTC Guides Against Deceptive Pricing (16 CFR 233)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site advertises prices, 'starting at' rates, free trials, free estimates, discounts or fees."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Advertised prices, 'from' prices, plan prices and fees (e.g., diagnostic/trip fee, setup fee, per-seat fee) match what customers are actually charged at checkout or on invoice.",
+        "'Free' offers (free estimate, free trial) disclose any conditions clearly and close to the claim; former-price/comparison claims are genuine.",
+        "Material limitations (service area, minimums, after-hours surcharges) are disclosed clearly before the customer commits."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "screenshots of each advertised price",
+        "checkout/invoice amounts for the same offer",
+        "price list or rate card"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-026",
+        "WEB-CA-028",
+        "WEB-CSLB-007"
+      ],
+      "notes": "FTC Rule on Unfair or Deceptive Fees (16 CFR 464, effective May 12, 2025) covers only live-event tickets and short-term lodging and does not apply to these sites; California SB 478 (WEB-CA-028) is the binding all-in pricing rule here. 16 CFR 233 Guides are interpretive guidance. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 45(a) on uscode.house.gov and 16 CFR 233.1 (former prices) via the eCFR API; 16 CFR 251.1 ('free' terms at the outset) also read under FED-008-009. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-017",
+      "title": "FTC Act 5: objective performance and product claims substantiated",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Advertising and pricing",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 45(a); FTC Policy Statement Regarding Advertising Substantiation (1984)",
+      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section45&num=0&edition=prelim",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "Site makes objective claims (time/money saved, '#1', ratings, AI capabilities, 'same-day service', response times, 'licensed/insured')."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Every express or implied objective claim has a reasonable basis (competent and reliable evidence) on file before it is published; AI-capability claims describe what the product actually does."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "inventory of claims with screenshots",
+        "substantiation file per claim"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-026",
+        "WEB-CSLB-005"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. The FTC Policy Statement Regarding Advertising Substantiation is on ftc.gov, which returned a bot-block page to this session. 15 USC 45(a) was read but does not itself state the reasonable-basis standard."
+    },
+    {
+      "id": "WEB-FED-018",
+      "title": "Reviews: no fake or false consumer reviews or celebrity testimonials",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "regulatory",
+      "citation": "16 CFR 465.2",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2024-10-21",
+      "applicability": {
+        "criteria": [
+          "Site displays customer reviews, testimonials, star ratings, review widgets, social-media follower/like counts, or solicits reviews."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Site does not display reviews or testimonials by people who do not exist, did not use the service, or that misrepresent the reviewer's experience (including AI-generated reviews).",
+        "Operator does not procure or disseminate such reviews."
+      ],
+      "enforcement_exposure": "Civil penalties for knowing violations under FTC Act 5(m)(1)(A) (over $50,000 per violation, inflation-adjusted).",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of review/testimonial displays and sources",
+        "review platform export vs. displayed reviews",
+        "review solicitation templates"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "WEB-FED-024",
+        "WEB-FED-025"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 465.2 via the eCFR API (current as of 2026-11-23)."
+    },
+    {
+      "id": "WEB-FED-019",
+      "title": "Reviews: no incentives conditioned on review sentiment",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "regulatory",
+      "citation": "16 CFR 465.4",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2024-10-21",
+      "applicability": {
+        "criteria": [
+          "Site displays customer reviews, testimonials, star ratings, review widgets, social-media follower/like counts, or solicits reviews."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Any review-request page, email or text does not offer compensation or incentives conditioned, expressly or implicitly, on writing a positive (or negative) review."
+      ],
+      "enforcement_exposure": "Civil penalties for knowing violations under FTC Act 5(m)(1)(A) (over $50,000 per violation, inflation-adjusted).",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of review/testimonial displays and sources",
+        "review platform export vs. displayed reviews",
+        "review solicitation templates"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-024",
+        "WEB-FED-025"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 465.4 via the eCFR API (current as of 2026-11-23)."
+    },
+    {
+      "id": "WEB-FED-020",
+      "title": "Reviews: insider reviews and testimonials disclosed",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "regulatory",
+      "citation": "16 CFR 465.5",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2024-10-21",
+      "applicability": {
+        "criteria": [
+          "Site displays customer reviews, testimonials, star ratings, review widgets, social-media follower/like counts, or solicits reviews."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Reviews or testimonials by officers, managers, employees, agents or their relatives clearly disclose the material connection, or are not displayed."
+      ],
+      "enforcement_exposure": "Civil penalties for knowing violations under FTC Act 5(m)(1)(A) (over $50,000 per violation, inflation-adjusted).",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of review/testimonial displays and sources",
+        "review platform export vs. displayed reviews",
+        "review solicitation templates"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-024",
+        "WEB-FED-025"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 465.5 via the eCFR API (current as of 2026-11-23)."
+    },
+    {
+      "id": "WEB-FED-021",
+      "title": "Reviews: company-controlled review sites not presented as independent",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "regulatory",
+      "citation": "16 CFR 465.6",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2024-10-21",
+      "applicability": {
+        "criteria": [
+          "Site displays customer reviews, testimonials, star ratings, review widgets, social-media follower/like counts, or solicits reviews."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Any review/comparison site or 'top electricians'/'best software' page controlled by the operator is not represented as independent."
+      ],
+      "enforcement_exposure": "Civil penalties for knowing violations under FTC Act 5(m)(1)(A) (over $50,000 per violation, inflation-adjusted).",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of review/testimonial displays and sources",
+        "review platform export vs. displayed reviews",
+        "review solicitation templates"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-024",
+        "WEB-FED-025"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 465.6 via the eCFR API (current as of 2026-11-23)."
+    },
+    {
+      "id": "WEB-FED-022",
+      "title": "Reviews: no review suppression or misrepresentation of displayed reviews",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "regulatory",
+      "citation": "16 CFR 465.7",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2024-10-21",
+      "applicability": {
+        "criteria": [
+          "Site displays customer reviews, testimonials, star ratings, review widgets, social-media follower/like counts, or solicits reviews."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Displayed reviews are not filtered to show only positive ones unless the display says so; negative reviews are not suppressed by threats, intimidation or false accusations.",
+        "Aggregate ratings shown reflect all (or a disclosed subset of) reviews."
+      ],
+      "enforcement_exposure": "Civil penalties for knowing violations under FTC Act 5(m)(1)(A) (over $50,000 per violation, inflation-adjusted).",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of review/testimonial displays and sources",
+        "review platform export vs. displayed reviews",
+        "review solicitation templates"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-024",
+        "WEB-FED-025"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 465.7 via the eCFR API (current as of 2026-11-23)."
+    },
+    {
+      "id": "WEB-FED-023",
+      "title": "Reviews: no fake social media influence indicators",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "regulatory",
+      "citation": "16 CFR 465.8",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2024-10-21",
+      "applicability": {
+        "criteria": [
+          "Site displays customer reviews, testimonials, star ratings, review widgets, social-media follower/like counts, or solicits reviews."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Site does not display purchased or bot-generated follower counts, likes, views or similar indicators that the operator knew or should have known were fake."
+      ],
+      "enforcement_exposure": "Civil penalties for knowing violations under FTC Act 5(m)(1)(A) (over $50,000 per violation, inflation-adjusted).",
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of review/testimonial displays and sources",
+        "review platform export vs. displayed reviews",
+        "review solicitation templates"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-024",
+        "WEB-FED-025"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 465.8 (misuse of fake indicators of social media influence) via the eCFR API (current as of 2026-11-23)."
+    },
+    {
+      "id": "WEB-FED-024",
+      "title": "Endorsement Guides: material connections clearly disclosed",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "guidance",
+      "citation": "16 CFR 255.5 (FTC Guides Concerning the Use of Endorsements and Testimonials in Advertising)",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site displays endorsements or testimonials, affiliate/partner links, influencer content, or statements by people with a material connection to the operator."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Endorsements by employees, partners, affiliates, paid or gifted reviewers, or customers given discounts disclose the connection clearly and conspicuously, close to the endorsement (not only on a separate page)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of endorsements with disclosures",
+        "list of endorser relationships"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-020"
+      ],
+      "notes": "The Guides are interpretive guidance (not binding rules); deceptive endorsements are enforced under FTC Act 5. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR Part 255 including 255.5 (disclosure of material connections) via the eCFR API."
+    },
+    {
+      "id": "WEB-FED-025",
+      "title": "Endorsement Guides: testimonials reflect typical results or disclose them",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Reviews and endorsements",
+      "requirement_type": "guidance",
+      "citation": "16 CFR 255.2",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site displays endorsements or testimonials, affiliate/partner links, influencer content, or statements by people with a material connection to the operator."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Testimonials claiming specific results (e.g., 'saved $40k in year one', 'cut my electric bill in half') reflect results generally achieved, or clearly disclose what results consumers can generally expect; 'results not typical' alone is insufficient."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection"
+      ],
+      "required_evidence": [
+        "screenshots of results testimonials",
+        "substantiation of generally expected results"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "medium",
+      "related_ids": [
+        "WEB-FED-017"
+      ],
+      "notes": "Interpretive guidance enforced under FTC Act 5. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR 255.2 via the eCFR API: consumer endorsements on key attributes are likely taken as representative of what consumers can generally expect unless that is clearly disclosed."
+    },
+    {
+      "id": "WEB-FED-026",
+      "title": "Privacy representations match observed site behavior",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Privacy representations",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 45(a)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site publishes a privacy policy, cookie banner or other privacy statements."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "Statements such as 'we do not sell or share your data', 'we do not use tracking cookies', 'your phone number is only used for appointment updates' are true when compared with network requests, cookies, pixels and SDKs the site actually loads.",
+        "Third parties receiving form data or behavioral data (analytics, ad pixels, chat, session replay, scheduling, payment) are disclosed consistently with the policy."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "automated-test",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "HAR capture of page loads and form submissions",
+        "cookie and localStorage inventory",
+        "privacy policy text snapshot",
+        "tag manager container export"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-027",
+        "WEB-CA-008",
+        "WEB-CA-010"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 45(a) on uscode.house.gov (deceptive acts unlawful). Testing claims against network traffic is the verification method. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-027",
+      "title": "Consent/cookie controls honored as represented",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Privacy representations",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 45(a)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site shows a cookie/consent banner or preference center."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ]
+      },
+      "responsible_parties": [
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "When a visitor declines or has not yet accepted non-essential cookies, the corresponding tags (ad pixels, analytics, session replay) do not load or set identifiers, matching the banner's representations.",
+        "Choices persist across pages and visits as stated."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "automated-test"
+      ],
+      "required_evidence": [
+        "HAR/cookie capture before consent, after reject, after accept",
+        "screenshots of banner states"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-026",
+        "WEB-CA-012",
+        "WEB-CA-016"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 45(a) on uscode.house.gov. Honoring banner choices is applying the deception standard to consent representations. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-028",
+      "title": "ROSCA: material terms disclosed before billing information is obtained",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Subscriptions and negative options",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 8403(1)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site sells a recurring subscription or free-trial-to-paid plan online with a negative option feature (Volteira SaaS plans)."
+        ],
+        "business_types": [
+          "volteira.com"
+        ],
+        "exceptions": [
+          "Applicability to purchases by businesses rather than individual consumers requires legal review; FTC has applied ROSCA broadly."
+        ],
+        "transaction_types": [
+          "Online subscription sign-up",
+          "Free trial converting to paid"
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "Before the customer enters payment information, the checkout clearly and conspicuously discloses: that charges recur, the amount and frequency, when a free trial ends and billing starts, any price change after promotion, the cancellation deadline and how to cancel."
+      ],
+      "enforcement_exposure": "FTC civil penalties and consumer redress (ROSCA violation treated as violation of an FTC trade regulation rule).",
+      "verification_methods": [
+        "browser-assisted",
+        "database-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screenshots of checkout before card entry",
+        "plan/pricing page snapshot"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-030",
+        "WEB-CA-031",
+        "WEB-CA-033"
+      ],
+      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 8403(1) on uscode.house.gov. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-029",
+      "title": "ROSCA: express informed consent before charging",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Subscriptions and negative options",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 8403(2)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site sells a recurring subscription or free-trial-to-paid plan online with a negative option feature (Volteira SaaS plans)."
+        ],
+        "business_types": [
+          "volteira.com"
+        ],
+        "exceptions": [
+          "Applicability to purchases by businesses rather than individual consumers requires legal review; FTC has applied ROSCA broadly."
+        ],
+        "transaction_types": [
+          "Online subscription sign-up",
+          "Free trial converting to paid"
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "The customer gives express informed consent to the recurring charge through an affirmative act (e.g., unchecked checkbox or clearly labelled 'Start subscription — $X/month' button) separate from general terms acceptance."
+      ],
+      "enforcement_exposure": "FTC civil penalties and consumer redress (ROSCA violation treated as violation of an FTC trade regulation rule).",
+      "verification_methods": [
+        "browser-assisted",
+        "database-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "DOM capture of consent control",
+        "consent record for test subscription"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-030",
+        "WEB-CA-031",
+        "WEB-CA-033"
+      ],
+      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 8403(2) on uscode.house.gov. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-030",
+      "title": "ROSCA: simple mechanism to stop recurring charges",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Subscriptions and negative options",
+      "requirement_type": "statutory",
+      "citation": "15 U.S.C. 8403(3)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site sells a recurring subscription or free-trial-to-paid plan online with a negative option feature (Volteira SaaS plans)."
+        ],
+        "business_types": [
+          "volteira.com"
+        ],
+        "exceptions": [
+          "Applicability to purchases by businesses rather than individual consumers requires legal review; FTC has applied ROSCA broadly."
+        ],
+        "transaction_types": [
+          "Online subscription sign-up",
+          "Free trial converting to paid"
+        ]
+      },
+      "responsible_parties": [
+        "Shadam LLC",
+        "Website operator",
+        "Payment processor"
+      ],
+      "required_behavior": [
+        "A simple online cancellation path (account settings 'Cancel subscription') exists that is at least as easy as sign-up, without forced calls/chats or obstruction."
+      ],
+      "enforcement_exposure": "FTC civil penalties and consumer redress (ROSCA violation treated as violation of an FTC trade regulation rule).",
+      "verification_methods": [
+        "browser-assisted",
+        "database-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "screen recording of online cancellation",
+        "count of steps sign-up vs cancel"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CA-030",
+        "WEB-CA-031",
+        "WEB-CA-033"
+      ],
+      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 15 USC 8403(3) on uscode.house.gov ('simple mechanisms'). 'At least as easy as sign-up' is a design target. URL changed from the uscode.house.gov view.xhtml form, which now returns 'Page Not Found' while the site runs in a temporary format, to the working OLRC section page that was read."
+    },
+    {
+      "id": "WEB-FED-031",
+      "title": "COPPA applicability determination",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Children's privacy",
+      "requirement_type": "regulatory",
+      "citation": "15 U.S.C. 6501-6506; 16 CFR 312",
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-312",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "effective_date": "2025-06-23",
+      "amendment_notes": "Amended COPPA Rule published April 22, 2025; effective June 23, 2025; general compliance date April 22, 2026 (per prior knowledge; not verified).",
+      "applicability": {
+        "criteria": [
+          "Applies only if the site is directed to children under 13 (in whole or part) or the operator has actual knowledge it collects personal information from a child under 13."
+        ],
+        "business_types": [
+          "volteira.com (SaaS marketing site, Shadam LLC)",
+          "pacificplainselectric.com (California electrical contractor, Pacific Plains Electric)"
+        ],
+        "exceptions": [
+          "General-audience B2B SaaS and home-services sites are ordinarily not child-directed."
+        ]
+      },
+      "responsible_parties": [
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Document the determination that neither site is child-directed (subject matter, visuals, language, ads) and that no age-gated child data is knowingly collected.",
+        "If COPPA applies: post a compliant children's privacy notice, obtain verifiable parental consent before collection, and meet the amended rule's requirements (separate consent for third-party disclosure, written data retention policy, security program)."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "document-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "applicability memo",
+        "screenshots showing general-audience content",
+        "privacy policy children's section"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "low",
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 16 CFR Part 312 via the eCFR API and 15 USC 6502 on uscode.house.gov (actual knowledge / directed to children)."
+    },
+    {
+      "id": "WEB-FED-032",
+      "title": "Reg Z: triggering terms in financing ads require full disclosures",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Consumer financing advertising",
+      "requirement_type": "regulatory",
+      "citation": "12 CFR 1026.24(d)",
+      "official_source_url": "https://www.ecfr.gov/current/title-12/section-1026.24",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site advertises closed-end consumer credit for personal/household purposes (e.g., 'Finance your panel upgrade for $99/month', 'as low as X% APR', partner financing such as Hearth/GreenSky/Synchrony)."
+        ],
+        "business_types": [
+          "pacificplainselectric.com if financing is advertised"
+        ],
+        "exceptions": [
+          "Business-purpose credit (B2B SaaS) is outside Regulation Z."
+        ]
+      },
+      "responsible_parties": [
+        "Pacific Plains Electric",
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "If an ad states any triggering term — the amount or percentage of a down payment, the number of payments or period of repayment, the amount of any payment, or the amount of any finance charge — it also clearly and conspicuously states: the down payment amount or percentage; the terms of repayment (over the full term); and the 'annual percentage rate' (using that term) and whether it may increase after consummation.",
+        "Applies to any person advertising the credit, including the contractor, not only the creditor."
+      ],
+      "enforcement_exposure": "CFPB/FTC enforcement; state UDAP claims.",
+      "verification_methods": [
+        "browser-assisted",
+        "manual",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "screenshots of every financing mention with surrounding disclosures",
+        "lender-provided approved ad copy"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-033"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 12 CFR 1026.24(d)(1)-(2) via the eCFR API: triggering terms (downpayment, number/period of payments, payment amount, finance charge) require downpayment, repayment terms and APR (and whether it may increase)."
+    },
+    {
+      "id": "WEB-FED-033",
+      "title": "Reg Z: advertised rates stated as APR; 'actually available' terms",
+      "register": "website-federal",
+      "jurisdiction": "Federal",
+      "category": "Consumer financing advertising",
+      "requirement_type": "regulatory",
+      "citation": "12 CFR 1026.24(a)-(c)",
+      "official_source_url": "https://www.ecfr.gov/current/title-12/section-1026.24",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site advertises closed-end consumer credit for personal/household purposes (e.g., 'Finance your panel upgrade for $99/month', 'as low as X% APR', partner financing such as Hearth/GreenSky/Synchrony)."
+        ],
+        "business_types": [
+          "pacificplainselectric.com if financing is advertised"
+        ],
+        "exceptions": [
+          "Business-purpose credit (B2B SaaS) is outside Regulation Z."
+        ]
+      },
+      "responsible_parties": [
+        "Pacific Plains Electric",
+        "Website operator",
+        "Third-party vendor"
+      ],
+      "required_behavior": [
+        "Any rate of finance charge in an advertisement is stated as an 'annual percentage rate' (APR); a simple annual or periodic rate, if stated, is not more conspicuous than the APR (12 CFR 1026.24(c)).",
+        "Advertised specific credit terms are terms that actually are or will be arranged or offered by the creditor (12 CFR 1026.24(a))."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "screenshots of rate claims",
+        "lender program terms"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-FED-032"
+      ],
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. Read 12 CFR 1026.24 via the eCFR API. APR wording and conspicuousness are in (c); 'actually available terms' is in (a), so the citation now reads (a)-(c). The clause about 'same as cash'/'0%' promotions stating required conditions has no counterpart in 1026.24 (closed-end), so the requirement as written isn't fully supported. Correction 2026-11-25 (after source verification): required_behavior narrowed to what the official text read on 2026-11-25 supports; unsupported parts removed. Source now verified for the narrowed requirement."
+    }
+  ]
+}

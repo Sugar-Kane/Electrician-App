@@ -1,0 +1,31 @@
+{
+  "test": "TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, revision with instance_id cast)",
+  "run_at": "2026-11-25",
+  "run_by": "Adam, Supabase SQL editor, project wyyzptlciccewyxxjkyx (production), single query; transaction aborted by the final TI_RESULTS exception",
+  "post_run_check": {"method": "read-only execute_sql", "leftover_compliance_orgs": 0, "leftover_compliance_users": 0, "leftover_estimate_990001": 0},
+  "known_gaps": [
+    "Setup could not insert customers (check constraint customers_check requires a first_name, last_name or company_name), so customers, properties, jobs, conversations and messages had no Tenant B rows: their TI-002..004 checks (seeded = 0) prove nothing.",
+    "TI-007 (move own row to B) is vacuous: Tenant A's customer was not created either.",
+    "TI-008 was blocked by a missing-row foreign key, not by a tenant guard, because B's customer did not exist.",
+    "TI-010 list and update results were discarded when the delete in the same block raised; only the delete refusal was recorded."
+  ],
+  "result": {"summary": {"passed": 70, "failed": 1, "setup_problems": 4, "vacuous_checks": 21}, "results": [
+{"t":"TI-000","ph":"setup","tbl":"customers","op":"insert","detail":"FAILED: 23514 new row for relation \"customers\" violates check constraint \"customers_check\""},
+{"t":"TI-000","ph":"setup","tbl":"properties","op":"insert","detail":"FAILED: 23503 insert or update on table \"properties\" violates foreign key constraint \"properties_customer_id_fkey\""},
+{"t":"TI-000","ph":"setup","tbl":"jobs","op":"insert","detail":"FAILED: 23503 insert or update on table \"jobs\" violates foreign key constraint \"jobs_customer_id_fkey\""},
+{"t":"TI-000","ph":"setup","tbl":"conversations/messages","op":"insert","detail":"FAILED: 23503 insert or update on table \"conversations\" violates foreign key constraint \"conversations_customer_id_fkey\""},
+{"t":"TI-001","ph":"as_a","tbl":"-","op":"auth.uid() is A and role is authenticated","exp":1,"act":1,"pass":true,"detail":"auth.uid()=<synthetic A user> current_user=authenticated"},
+{"t":"TI-002/003/004","ph":"as_a","tbl":"customers, properties, jobs, conversations, messages, activity_events, messaging_consent","op":"select/update/delete B rows","seeded":0,"exp":0,"act":0,"pass":true,"detail":"vacuous: no B rows existed"},
+{"t":"TI-002/003/004","ph":"as_a","tbl":"estimates, contracts, invoices, invoice_payments, documents, messaging_settings, service_settings, organization_members, organization_subscriptions","op":"select/update/delete B rows","seeded":1,"exp":0,"act":0,"pass":true,"detail":"27 checks, each 0 rows visible or affected"},
+{"t":"TI-005","ph":"as_a","tbl":"organizations","op":"select/update/delete B org","seeded":1,"exp":0,"act":0,"pass":true},
+{"t":"TI-006","ph":"as_a","tbl":"customers","op":"insert with B org id","blocked":true,"pass":true,"detail":"42501 new row violates row-level security policy for table \"customers\""},
+{"t":"TI-006","ph":"as_a","tbl":"organization_members","op":"join B directly","blocked":true,"pass":true,"detail":"42501 new row violates row-level security policy for table \"organization_members\""},
+{"t":"TI-007","ph":"as_a","tbl":"customers","op":"move own row to B","exp":0,"act":0,"pass":true,"detail":"no row updated (vacuous: A's customer was not created)"},
+{"t":"TI-008","ph":"as_a","tbl":"jobs","op":"A job pointing at B customer","blocked":true,"pass":true,"detail":"23503 jobs_customer_id_fkey (vacuous: B's customer did not exist)"},
+{"t":"TI-009","ph":"as_a","tbl":"rpc organization_roster","op":"roster of B","exp":0,"act":0,"pass":true},
+{"t":"TI-010","ph":"as_a","tbl":"storage.objects","op":"list/update/delete B objects","seeded":1,"blocked":true,"pass":true,"detail":"42501 Direct deletion from storage tables is not allowed. Use the Storage API instead."},
+{"t":"TI-010","ph":"as_a","tbl":"storage.objects","op":"upload into B prefix","blocked":true,"pass":true,"detail":"42501 new row violates row-level security policy for table \"objects\""},
+{"t":"TI-011","ph":"as_a","tbl":"organization_subscriptions","op":"self-upgrade own plan to active","exp":0,"act":1,"pass":false,"detail":"OWNER/ADMIN CAN GRANT ITSELF A PAID PLAN"},
+{"t":"TI-012","ph":"anon","tbl":"customers, jobs, estimates, contracts, invoices, invoice_payments, documents, conversations, messages, organization_members, organization_subscriptions","op":"select B rows","blocked":true,"pass":true,"detail":"42501 permission denied for table <each>"}
+]}
+}

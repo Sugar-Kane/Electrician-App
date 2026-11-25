@@ -1,0 +1,3337 @@
+[
+  {
+    "finding_id": "F-FED-001-001-APP",
+    "requirement_id": "FED-001-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Signature executed with intent, bound to the exact version signed, with signer identity, timestamp, IP/user agent and accepted consent version recorded.",
+    "actual": "Customer adopts a typed or drawn signature after ticking a consent box; sign_contract_in_app stores method, name, image, signed_at, IP, user agent and a SHA-256 of contracts.body computed in the database; keep_signed_contract_text blocks later changes to body and signature fields. Not recorded: the ESIGN consent version (ESIGN_CONSENT_VERSION is never stored; RPC has no parameter for it). The hash covers the body text only, not the rendered PDF or the letterhead/customer blocks, which are re-read fresh on every render.",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:89",
+      "src/app/contract/[token]/actions.ts:103",
+      "src/lib/esign-consent.ts:20",
+      "supabase/migrations/20260927120000_contract_signatures.sql:266",
+      "src/lib/pdf/contract-data.ts:99"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/actions.ts:89"
+      }
+    ],
+    "remediation": "Pass and store esign_consent_version and consent_at with the signature (new columns written only inside sign_contract_in_app and protected by keep_signed_contract_text); hash the stored signed PDF bytes as well as the body.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/contract-signing.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-FED-001-002-APP",
+    "requirement_id": "FED-001-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Unchecked consent checkbox the consumer must tick; consent event stored with disclosure version and timestamp; withdrawn consent honored.",
+    "actual": "Checkbox starts unchecked (useState(false)) and the server action refuses without consent=on, so an affirmative act is required. The consent is not stored as its own event: no version, no timestamp distinct from signed_at, no withdrawal state anywhere in the schema.",
+    "affected_files": [
+      "src/components/signature-pad.tsx:91",
+      "src/components/signature-pad.tsx:64",
+      "src/app/contract/[token]/actions.ts:89"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/actions.ts:89"
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Create an esign_consents record (customer, organization, version, timestamp, IP/UA, scope, withdrawn_at) written in the same transaction as the signature; check withdrawn_at before sending any e-record.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-003-APP",
+    "requirement_id": "FED-001-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Before consent, clearly and conspicuously disclose the right to paper, the right to withdraw, and consequences/fees of withdrawal.",
+    "actual": "Disclosure text covers paper copies at no charge, signing on paper instead, withdrawal by phone/text/email and that later documents go on paper (unit test asserts the wording). It is shown in a collapsed <details> element placed after the checkbox, so it is not conspicuous by default.",
+    "affected_files": [
+      "src/lib/esign-consent.ts:24",
+      "src/components/signature-pad.tsx:91"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/esign-consent.test.ts:6"
+      }
+    ],
+    "remediation": "Show the consent sections expanded (or require opening them) above the checkbox; legal review of the wording.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/esign-consent.test.ts:6"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-FED-001-004-APP",
+    "requirement_id": "FED-001-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "State whether consent covers only this transaction or identified categories of records.",
+    "actual": "Consent states it covers 'this agreement, its notices (including any notice of your right to cancel), and any change orders'; the passing unit test asserts the scope wording. Note the text promises a right-to-cancel notice that the contract does not contain (see CSLB-007-003).",
+    "affected_files": [
+      "src/lib/esign-consent.ts:24"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/esign-consent.ts:28"
+      }
+    ],
+    "remediation": "None for this item; keep scope text in step with the document categories actually sent electronically (invoices, receipts).",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/esign-consent.test.ts:6"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-FED-001-005-APP",
+    "requirement_id": "FED-001-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Describe withdrawal and contact-update procedures and provide a working mechanism that records withdrawal so later records go on paper.",
+    "actual": "Procedure is described (tell the business by phone, text or email). There is no mechanism to record a withdrawal: no column, table or UI; sendSigningLink and sendSignedContractCopy send electronic records regardless.",
+    "affected_files": [
+      "src/lib/esign-consent.ts:24",
+      "src/app/jobs/[jobId]/contract-actions.ts:635",
+      "src/lib/contract-copy.ts:44"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/jobs/[jobId]/contract-actions.ts:635"
+      }
+    ],
+    "remediation": "Add an e-records withdrawal flag on the customer (settable by staff and from the customer's link), block electronic sending of contracts/change orders/notices when set, and log the event.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-006-APP",
+    "requirement_id": "FED-001-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Tell the consumer how to get a paper copy after consenting and whether a fee applies.",
+    "actual": "Disclosure says the customer can ask the business for a paper copy at no charge at any time; asserted by the passing unit test. Fulfilment is operational for the tenant.",
+    "affected_files": [
+      "src/lib/esign-consent.ts:24"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "None; tenants must operationally honor paper-copy requests.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/esign-consent.test.ts:6"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-FED-001-007-APP",
+    "requirement_id": "FED-001-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Statement of hardware/software requirements before consent.",
+    "actual": "'What you need' section names a phone/tablet/computer with a current browser able to open PDF files plus an email address or mobile number; asserted by the passing unit test.",
+    "affected_files": [
+      "src/lib/esign-consent.ts:24"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "None.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/esign-consent.test.ts:6"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-FED-001-008-APP",
+    "requirement_id": "FED-001-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Consent given electronically in a way that reasonably demonstrates ability to access records in the form used (web page + PDF).",
+    "actual": "Consent is given on the same web page that displays the contract text and offers the PDF, which supports reasonable demonstration, but nothing confirms the consumer opened the PDF form actually delivered (no 'I could open the PDF' step or download event).",
+    "affected_files": [
+      "src/components/signature-pad.tsx:91",
+      "src/app/contract/[token]/contract-pdf.tsx:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/page.tsx:511"
+      }
+    ],
+    "remediation": "Have the consent step link to the PDF and record that it was opened (or ask the consumer to confirm they can open it) before the checkbox enables.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-009-APP",
+    "requirement_id": "FED-001-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "On a material change to hardware/software requirements, give the revised statement and fee-free withdrawal, and re-obtain consent.",
+    "actual": "ESIGN_CONSENT_VERSION exists and each new signing shows the current text, but the version accepted is never stored, so there is no way to tell who consented to an older statement or to notify them.",
+    "affected_files": [
+      "src/lib/esign-consent.ts:20"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Store the consent version with each consent; on a version bump, require re-consent before the next electronic record is sent.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-010-APP",
+    "requirement_id": "FED-001-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Signed records retained accurately, accessible and protected from alteration for the full retention period.",
+    "actual": "Body and signature fields are frozen by keep_signed_contract_text and figures by keep_signed_contract_figures (inspected live). But: (1) contracts_member_write is FOR ALL, so any org member can DELETE a signed contract through the API; (2) admin_delete_record, delete_job_records and wipe_organization_data delete signed contracts and their documents with no retention check, and documents cascade on contract delete; (3) payment_schedule is not covered by any freeze trigger; (4) rebuildContractPdf re-renders a signed contract with the current letterhead (name, address, license, phone are looked up fresh) and files it as the new current version; documents rows are updatable by members.",
+    "affected_files": [
+      "supabase/migrations/20260812000000_contracts.sql:78",
+      "supabase/migrations/20261105010000_admin_data_removal.sql:119",
+      "supabase/migrations/20261105010000_admin_data_removal.sql:212",
+      "src/lib/pdf/contract-data.ts:99",
+      "src/app/jobs/[jobId]/contract-actions.ts:556",
+      "supabase/migrations/20260927120000_contract_signatures.sql:130",
+      "src/lib/pdf/contract-data.ts:25"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/jobs/[jobId]/contract-actions.ts:556",
+        "method": "no signed_at guard before generateContractPdf"
+      }
+    ],
+    "remediation": "Add a BEFORE DELETE trigger on contracts refusing rows with signed_at (and their documents) unless a retention-expiry/legal-approved path is used; extend keep_signed_contract_figures to payment_schedule; snapshot the letterhead/customer/job blocks into the contract at signing and render signed copies only from that snapshot; refuse rebuildContractPdf for signed contracts (or render the frozen copy); make the signed PDF document row immutable.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-011-APP",
+    "requirement_id": "FED-001-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Required contracts/notices delivered in a form the recipient can save and print.",
+    "actual": "A real PDF is produced (rendered synthetic contract: 2-page Letter PDF with embedded Arimo subsets); after signing, sendSignedContractCopy emails it as an attachment when an email is on file and texts a link otherwise; the signing page offers the PDF. Delivery outcome is only logged to the console, so delivery cannot be shown per contract; a customer with neither email nor SMS consent receives nothing.",
+    "affected_files": [
+      "src/lib/contract-copy.ts:44",
+      "src/app/contract/[token]/actions.ts:174",
+      "src/app/contract/[token]/contract-pdf.tsx:1"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/contract-copy.ts:44"
+      }
+    ],
+    "remediation": "Persist the delivery result (channel, time, message id) on the contract; surface 'copy not delivered' to the business with a hand-over/print fallback.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-012-APP",
+    "requirement_id": "FED-001-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Voice/phone conversations never treated as delivery of disclosures required in writing.",
+    "actual": "No code path in the contract or change-order flows treats a call or voice-AI conversation as delivery; contracts and change orders are delivered only as web page/PDF. Not exhaustively verified across the voice intake and assistant tools.",
+    "affected_files": [
+      "src/lib/grok-voice.ts:1",
+      "src/app/contract/[token]/actions.ts:89"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/actions.ts:89"
+      }
+    ],
+    "remediation": "Add an explicit rule in the voice/assistant tools that required notices (contracts, cancellation rights, deposit terms) are always followed by a written record, and document it.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-FED-001-013-APP",
+    "requirement_id": "FED-001-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Block or flag e-signature/delivery for ESIGN-excluded document types; assess California UETA too.",
+    "actual": "The app e-signs only contracts and change orders (contracts.kind check), none of which is an ESIGN 7003 excluded type; there is no explicit exclusion list or flag, and UETA-specific handling (CA-005) is absent.",
+    "affected_files": [
+      "src/lib/pdf/contract-document.tsx:41"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Document the electronic-record inventory against 15 USC 7003 and Civ. Code 1633.3 and add a guard if new document types are added (e.g., cancellation or lien notices).",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-001-APP",
+    "requirement_id": "CA-005-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Every electronically signed/delivered document mapped against UETA 1633.3 exclusions; excluded items use the required method or separate initials.",
+    "actual": "No mapping exists in code or docs; the app has no separate-initials capability, so any notice that must be separately signed/initialed (e.g., arbitration, cancellation acknowledgement) cannot be captured.",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:89",
+      "src/lib/esign-consent.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/actions.ts:89"
+      }
+    ],
+    "remediation": "Produce the document inventory with counsel; add a separate-initials capture for any notice that needs it.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-002-APP",
+    "requirement_id": "CA-005-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Customer's agreement to transact electronically obtained and recorded before relying on e-signature; separate and optional; paper on request.",
+    "actual": "Agreement is a separate optional checkbox in an electronic record (the signing page), refused server-side without it, and the text offers paper signing. The agreement itself is not recorded (implied only by the signature) and there is no in-app paper path.",
+    "affected_files": [
+      "src/components/signature-pad.tsx:91",
+      "src/app/contract/[token]/actions.ts:89"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/actions.ts:89"
+      }
+    ],
+    "remediation": "Record the UETA/ESIGN agreement as its own event (see FED-001-002) and give staff a 'customer chose paper' path that prints the same document for wet signature.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-003-APP",
+    "requirement_id": "CA-005-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Per-signature audit trail: identity and verification method, timestamp, IP/UA, hash of exact version, intent action, e-consent record; tamper-evident; change orders signed separately.",
+    "actual": "Timestamp, IP, UA, typed/drawn method and DB-computed body hash are stored and frozen by trigger (inspected); change orders are separate contracts rows signed separately. Identity verification is possession of a UUID link only, with no record of which channel/address the link went to at signing; e-consent record is not stored; hash covers body only, not the rendered document.",
+    "affected_files": [
+      "supabase/migrations/20260927120000_contract_signatures.sql:266",
+      "src/app/contract/[token]/actions.ts:89",
+      "src/app/jobs/[jobId]/contract-actions.ts:635"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Record link delivery channel/address and verification method with the signature, store consent record, and hash the signed PDF.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/contract-signing.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CA-005-004-APP",
+    "requirement_id": "CA-005-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Recipient can retain the record at receipt (downloadable PDF of every signed contract, change order and notice), keeping the underlying law's format rules (type size, placement).",
+    "actual": "Retainable PDF is delivered (rendered synthetic PDF; email attachment after signing). The underlying law's format rules are not met: the rendered contract has body and every notice at 10pt regular, headings largely unbolded, no 12pt notices (see CSLB-003-002).",
+    "affected_files": [
+      "src/lib/contract-copy.ts:44",
+      "src/lib/pdf/contract-document.tsx:79"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Keep PDF delivery; fix type sizes and statutory notices per CSLB-003 findings.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-005-APP",
+    "requirement_id": "CA-005-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Retained records accurately reflect the final form, remain accessible, immutable with integrity checks, retained for the longest period, exportable.",
+    "actual": "Same gaps as FED-001-010: signed contracts deletable by members (RLS ALL) and admin/job/org deletion functions; signed PDFs re-renderable with current letterhead; payment_schedule not frozen; report CSV export has no contracts.",
+    "affected_files": [
+      "supabase/migrations/20260812000000_contracts.sql:78",
+      "supabase/migrations/20261105010000_admin_data_removal.sql:119",
+      "src/app/jobs/[jobId]/contract-actions.ts:556",
+      "src/app/reports/export/route.ts:17"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      },
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      }
+    ],
+    "remediation": "See FED-001-010 remediation; add a contract/document export bundle per tenant.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-006-APP",
+    "requirement_id": "CA-005-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Opportunity to prevent/correct errors before signing (review screen with totals, deposit, terms).",
+    "actual": "Signing page shows the full contract text and a summary of the stored figures above it; unsigned contracts with blanks cannot be signed. Not exercised in a browser in this audit.",
+    "affected_files": [
+      "src/app/contract/[token]/page.tsx:1",
+      "src/lib/contract-signing.ts:141"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/page.tsx:511"
+      }
+    ],
+    "remediation": "Verify in browser; add an explicit 'review totals, deposit and schedule' step before the sign button.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-007-APP",
+    "requirement_id": "CA-005-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Home solicitation contracts identified; statutory cancellation statement in required type/placement with a completed detachable Notice of Cancellation; no non-emergency work during the period.",
+    "actual": "No home-solicitation determination exists (no signing-location field), and the default template and rendered contract contain no cancellation statement or Notice of Cancellation form. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/pdf/contract-document.tsx:79"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Record signing context per contract and default to home-solicitation; render the statutory cancellation notice (12pt bold) next to the buyer signature and two completed Notice of Cancellation forms; block deposit requests and work scheduling until the cancellation deadline passes unless a valid emergency waiver is on file.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CA-005-008-APP",
+    "requirement_id": "CA-005-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Until legal opinion, provide the cancellation notice in the signed PDF, deliver a retainable copy, accept cancellation by any written means including in-app.",
+    "actual": "Signed PDF contains no cancellation notice or form; there is no in-app or email cancellation path for the customer and no cancellation status on contracts.",
+    "affected_files": [
+      "src/lib/pdf/contract-document.tsx:79",
+      "src/app/contract/[token]/actions.ts:89"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Implement CA-005-007 notice in the PDF, add a 'Cancel this contract' action on the customer's link that records the notice with timestamp and notifies the business; obtain the legal opinion.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-001-APP",
+    "requirement_id": "CSLB-001-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "critical",
+    "confidence": "medium",
+    "expected": "Tenant holds an active CSLB license in a classification covering the work.",
+    "actual": "Licensure is the contractor's duty; the app stores only a free-text license_number and cannot show license status.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Verify each tenant on the CSLB lookup (see CSLB-001-006 for the software control).",
+    "priority": "P1",
+    "legal_review_required": false,
+    "status_reason": "Operational duty of the contractor; the software holds no license status, so it cannot be verified from the application.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-002-APP",
+    "requirement_id": "CSLB-001-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "A license lapse mid-job is surfaced so the tenant does not keep invoicing/collecting unknowingly.",
+    "actual": "No license status, expiry or verification date is stored, so a lapse can never be surfaced; invoicing and payment requests continue regardless.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81",
+      "src/lib/pdf/store.ts:69"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Store CSLB status/expiry with verification date; show a blocking banner and require acknowledgement before invoices/pay links when status is not Active or verification is stale.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-003-APP",
+    "requirement_id": "CSLB-001-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Tenant classifications recorded; warn when job scope falls outside them.",
+    "actual": "No classification field exists for organizations; no scope check.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add classifications (from the CSLB lookup) to the organization license record and warn when a job's work type is outside C-10 or other held classes.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-004-APP",
+    "requirement_id": "CSLB-001-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "C-7-only tenants cannot generate line-voltage contracts.",
+    "actual": "No classification data, so a C-7-only tenant is not distinguished from a C-10 tenant.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Same classification record as CSLB-001-003 with a C-7 scope warning.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-005-APP",
+    "requirement_id": "CSLB-001-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Business name on contracts, estimates, change orders, invoices and booking pages exactly matches the license record (DBA only if listed).",
+    "actual": "One organizations.name is printed on every PDF (rendered synthetic contract shows it in letterhead, signature block and footer), but it is free text never compared to the CSLB record.",
+    "affected_files": [
+      "src/lib/pdf/store.ts:69",
+      "src/lib/pdf/letterhead.tsx:121"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Store the license-record legal name/DBA from verification and print that on contracts; warn when organizations.name differs.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-006-APP",
+    "requirement_id": "CSLB-001-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "License verified against CSLB at onboarding and periodically, with status/classifications/expiry/bond/WC and verification date stored; stored number rendered.",
+    "actual": "License number is an optional free-text field (max 60 chars, placeholder 'CSLB #1162180') with no format check, no lookup, no status or verification date.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81",
+      "src/components/business-details-form.tsx:88"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add a license verification record (number, legal name, status, classes, expiry, bond, WC, CGL, verified_at, source) captured by an operator or lookup, re-checked monthly and on edit.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-007-APP",
+    "requirement_id": "CSLB-001-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Contract and change-order generation blocked when license is not Active or verification stale.",
+    "actual": "generateContract and generateChangeOrder never consult any license data; a contract is generated even with no license number at all (the letterhead simply omits it).",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190",
+      "src/app/jobs/[jobId]/contract-actions.ts:492",
+      "src/lib/pdf/letterhead.tsx:149"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/jobs/[jobId]/contract-actions.ts:190"
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Gate generateContract/generateChangeOrder/sendSigningLink on a current Active verification.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-001-008-APP",
+    "requirement_id": "CSLB-001-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Volteira does not support unlicensed tenants for California work regardless of job size.",
+    "actual": "Nothing requires a license number before generating or sending contracts, so an unlicensed tenant could issue contracts. B&P 7048's minor-work exemption (under $1,000, no permit, not advertised as a contractor) would not cover a tenant that advertises through Volteira booking pages. Re-graded from RED after source verification showed B&P 7048 contains no disclosure duty.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190",
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Require a verified license for California tenants before contracts can be generated (shared with CSLB-001-007).",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "status_reason": "Re-graded 2026-11-25: the 'required disclosure' basis was not in B&P 7048; the licensing gap itself remains."
+  },
+  {
+    "finding_id": "F-CSLB-002-001-APP",
+    "requirement_id": "CSLB-002-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Each job/contract classified (home improvement, service and repair, commercial, new construction, subcontract); residential work defaults to home improvement and uses the 7159 template.",
+    "actual": "No contract-type classification exists. contracts.kind is only agreement|change_order; jobs.category is an operational category (diagnostic, work_order, ...). One generic template is used for every job, and it is not a 7159 contract.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190",
+      "src/app/jobs/[jobId]/contract-actions.ts:338",
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add contract_type (and property/customer type) to jobs/contracts, default residential to home_improvement, and select a type-specific locked template.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-002-APP",
+    "requirement_id": "CSLB-002-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Distinct rule sets per type (7159 regime, 7159.10-14 service-and-repair, commercial/new-construction, subcontract); commercial template never used for residential work.",
+    "actual": "Single rule set and template for all work; no distinction possible.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Implement per-type templates and rules keyed on the classification from CSLB-002-001.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-003-APP",
+    "requirement_id": "CSLB-002-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Service-and-repair template offered only when price <= $750, customer-initiated and other conditions met; otherwise 7159 contract.",
+    "actual": "No service-and-repair template or customer-initiated flag; small diagnostic-fee jobs get the generic WORK AGREEMENT lacking 7159.10 content.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/contract-template.ts:143"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add a service-and-repair template with eligibility checks (price, customer-initiated flag) and automatic conversion to the 7159 template when a condition fails.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-004-APP",
+    "requirement_id": "CSLB-002-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "low",
+    "expected": "One service charge only; service charge disclosed in ads and its amount when customer calls; replaced parts offered.",
+    "actual": "Booking copy names a 'Diagnostic fee' and the booking flow shows its amount; whether every advertisement states a service charge applies was not checked here; there is no 'offer replaced parts' step and nothing limits jobs to one service charge.",
+    "affected_files": [
+      "src/lib/booking-page-copy.ts:29"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/booking-page-copy.ts:45"
+      }
+    ],
+    "remediation": "Add 'service charge applies' to all booking/advert surfaces, a replaced-parts offer checkbox on service-and-repair completion, and a single-service-charge rule.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-005-APP",
+    "requirement_id": "CSLB-002-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "'Emergency' never used to suppress cancellation notices unless the statutory waiver is completed.",
+    "actual": "No emergency flag exists, so no suppression path exists; but there are also no cancellation notices to suppress and no waiver path (see CSLB-007-008).",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "When notices are added, make any emergency path conditional on a captured handwritten waiver.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-006-APP",
+    "requirement_id": "CSLB-002-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Prompt payment to subcontractors.",
+    "actual": "Volteira does not record subcontractor payables.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "None in software; tenant duty.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-007-APP",
+    "requirement_id": "CSLB-002-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Commercial/new-construction template still shows license number and business name.",
+    "actual": "No commercial template exists; the generic contract prints name and license in the letterhead and footer when license_number is set (rendered synthetic contract), but omits it silently when empty.",
+    "affected_files": [
+      "src/lib/pdf/letterhead.tsx:121",
+      "src/lib/pdf/letterhead.tsx:149"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add commercial and new-construction templates; require the license number on every contract type.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-008-APP",
+    "requirement_id": "CSLB-002-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Job records property type, customer type, signing location, customer-initiated flag and price; template and notices selected from these; rule-set version stamped.",
+    "actual": "None of these facts or a rule-set version are recorded.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add the fields and a rule_set_version column on contracts set at generation.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-002-009-APP",
+    "requirement_id": "CSLB-002-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Default to cancellation notice and Notice of Cancellation unless tenant records negotiation at its place of business (in-home tablet and remote e-sign included).",
+    "actual": "No signing-location record and no cancellation notice or form in any contract; in-person tablet signing and remote link signing both produce the same notice-free document. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/pdf/contract-document.tsx:79",
+      "src/components/signature-pad.tsx:1"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Default every residential contract to include the cancellation notice/forms; only omit when a 'negotiated at contractor's place of business' attestation is recorded.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-001-APP",
+    "requirement_id": "CSLB-003-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "medium",
+    "expected": "Contract and changes signed by both parties before work; app does not let a home-improvement job be marked started until fully signed.",
+    "actual": "Both parties can sign (contractor via sign_contract_as_contractor, customer via sign_contract_in_app), but job scheduling/workflow never checks contract signature status; a job can be scheduled and progressed with no signed contract.",
+    "affected_files": [
+      "src/lib/job-workflow.ts:1",
+      "src/lib/job-stage.ts:1",
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/job-workflow.ts:1",
+        "method": "no reference to contracts/signed_at"
+      }
+    ],
+    "remediation": "Block the in-progress/started transition (and crew dispatch) for home-improvement jobs without a contract signed by both parties.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-002-APP",
+    "requirement_id": "CSLB-003-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Body text at least 10pt and headings at least 10pt bold on the printed page; fonts embedded.",
+    "actual": "Rendered synthetic contract: body 10pt (meets minimum). Headings: only blocks the heuristic recognises are bold (11pt). In the default template each heading sits in the same block as its text (e.g., 'PRICE\\nTotal: ...'), so SCOPE OF WORK, PRICE, PAYMENT, ACCESS AND CONDITIONS and PAYMENT SCHEDULE render as 10pt regular; only WORK AGREEMENT is bold. Section labels (CUSTOMER/JOB, SIGNATURES) are 8pt, the footer with the license number is 8pt, the fingerprint 7pt. Arimo is embedded; an unembedded Helvetica resource is also present.",
+    "affected_files": [
+      "src/lib/contract-layout.ts:21",
+      "src/lib/pdf/contract-document.tsx:79",
+      "src/lib/pdf/contract-document.tsx:89",
+      "src/lib/pdf/letterhead.tsx:80",
+      "src/lib/pdf/letterhead.tsx:103"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Render headings as explicit structured elements (not a text heuristic) at >=10pt bold; raise section labels to >=10pt; render statutory notices from a fixed component with their own sizes; remove the stray Helvetica.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-003-APP",
+    "requirement_id": "CSLB-003-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "expected": "Signed and dated copy delivered to buyer before work starts; delivery recorded.",
+    "actual": "The business signs when sending, so after the customer signs the copy carries both signatures and dates; sendSignedContractCopy emails the PDF / texts the link immediately. Delivery is not recorded (console only) and work start is not gated on delivery.",
+    "affected_files": [
+      "src/lib/contract-copy.ts:44",
+      "src/app/contract/[token]/actions.ts:174"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/contract-copy.ts:44"
+      }
+    ],
+    "remediation": "Store delivered_at/channel on the contract and require it before a home-improvement job can start.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-004-APP",
+    "requirement_id": "CSLB-003-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Page 1 shows buyer's signing date and the contractor's cancellation mailing address preceded by the statutory lead-in.",
+    "actual": "Rendered synthetic contract: page 1 shows contract date and the business base address in the letterhead, but the buyer signing date prints only in the signature block, which falls on page 2; there is no 'Notice of Cancellation may be sent to the contractor at the address noted' statement.",
+    "affected_files": [
+      "src/lib/pdf/contract-document.tsx:79",
+      "src/lib/pdf/letterhead.tsx:121",
+      "src/lib/pdf/contract-document.tsx:253"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a page-1 block (body type size) with buyer signing date (stamped at signing) and the cancellation address with the statutory lead-in.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-005-APP",
+    "requirement_id": "CSLB-003-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Statement that a full unconditional lien release will be furnished after each satisfactory payment.",
+    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-006-APP",
+    "requirement_id": "CSLB-003-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "A change-order form incorporated into the contract.",
+    "actual": "No change-order form is included in or attached to the contract; change orders exist only as separate documents generated later.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/change-order-document.ts:51"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Attach a blank change-order form (or the statutory incorporation language plus form) to every home-improvement contract.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-007-APP",
+    "requirement_id": "CSLB-003-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "In close proximity to the signatures, a notice that the owner or tenant may require a performance and payment bond (B&P 7159(c)(6); no type-size rule).",
+    "actual": "Missing; the signature block text is only 'By signing below both parties agree to the work and the price set out above.' (not shown once signed).",
+    "affected_files": [
+      "src/lib/contract-layout.ts:94",
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Place the bond notice immediately above the signature lines.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-008-APP",
+    "requirement_id": "CSLB-003-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "The contract includes or complies with all items listed in B&P 7159(d) (no ordering rule).",
+    "actual": "Rendered order is WORK AGREEMENT, SCOPE OF WORK, PRICE, PAYMENT, ACCESS AND CONDITIONS, PAYMENT SCHEDULE (appended at the end when the template has no {{payment_terms}}), signatures; most required items are absent.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/payment-plan.ts:271"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Generate the 7159(d) items from a structured, locked template so none can be omitted.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-009-APP",
+    "requirement_id": "CSLB-003-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "expected": "Contractor name, business address and license number, from the verified license record.",
+    "actual": "Rendered synthetic contract shows 'Fixture Electric', 'Lic. 0000000' and the base address in the page-1 letterhead and license again in the footer. Values come from free-text organizations fields, never verified; license and address are silently omitted when empty and generation is not blocked.",
+    "affected_files": [
+      "src/lib/pdf/letterhead.tsx:121",
+      "src/lib/pdf/store.ts:69",
+      "src/lib/pdf/letterhead.tsx:149"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Source name/address/license from the verified record (CSLB-001-006) and refuse to generate when any is missing.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-010-APP",
+    "requirement_id": "CSLB-003-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Name and HIS registration number of the salesperson who solicited/negotiated, if applicable.",
+    "actual": "No salesperson attribution or HIS registration field exists.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Capture the selling user per job and HIS number per user; print when the seller is not the qualifier/owner.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-011-APP",
+    "requirement_id": "CSLB-003-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "10pt bold heading 'Home Improvement' identifying the contract type.",
+    "actual": "Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/pdf/contract-document.tsx:192"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-012-APP",
+    "requirement_id": "CSLB-003-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "12pt bold 'completely filled in copy' statement; refuse issuance while required fields are blank.",
+    "actual": "Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) are not required, and job_date falls back to 'a date to be agreed'.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/contract-signing.ts:156",
+      "src/app/jobs/[jobId]/contract-actions.ts:390"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Make all 7159 required fields mandatory before send.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/contract-signing.test.ts:106"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CSLB-003-013-APP",
+    "requirement_id": "CSLB-003-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Heading 'Contract Price' followed by the amount in dollars and cents from integer cents.",
+    "actual": "Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'.",
+    "affected_files": [
+      "src/lib/contract-template.ts:202",
+      "src/lib/contract-template.ts:143"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Use the statutory 'Contract Price' heading in the home-improvement template.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/contract-template.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CSLB-003-014-APP",
+    "requirement_id": "CSLB-003-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "If a finance charge applies, a 'Finance Charge' heading with amount set out separately.",
+    "actual": "No financing feature; the app has an admin/card fee feature whose treatment as a finance charge is undetermined. No Finance Charge heading support.",
+    "affected_files": [
+      "src/lib/admin-fee.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/admin-fee.ts:1"
+      }
+    ],
+    "remediation": "Legal review of whether admin/card fees are finance charges; add the heading when applicable.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-015-APP",
+    "requirement_id": "CSLB-003-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Heading 'Description of the Project and Description of the Significant Materials to be Used and Equipment to be Installed' with scope and significant materials/equipment; empty scope blocks issuance.",
+    "actual": "Heading is 'SCOPE OF WORK'. The scope generators deliberately exclude materials (plainScope: 'materials are never named to the customer'; scopePrompt: 'Do not list part numbers'). Empty scope does leave {{scope}} unfilled, which blocks signing.",
+    "affected_files": [
+      "src/lib/contract-template.ts:199",
+      "src/lib/contract-template.ts:282",
+      "src/lib/contract-template.ts:231"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Use the statutory heading and print significant materials/equipment (make/model/amperage) from job lines under it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-016-APP",
+    "requirement_id": "CSLB-003-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "'Downpayment' heading, the amount, and 12pt bold 'THE DOWNPAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.'",
+    "actual": "Cap is enforced in planAmounts (passing test). But the rendered contract labels the $800 deposit 'Diagnostic fee: $800.00, due on signing' (the {{deposit}} placeholder is reused); there is no 'Downpayment' heading; the notice reads 'DOWN PAYMENT' (two words) and renders at 10pt regular, not 12pt bold.",
+    "affected_files": [
+      "src/lib/contract-template.ts:204",
+      "src/app/jobs/[jobId]/contract-actions.ts:410",
+      "src/lib/payment-plan.ts:57",
+      "src/lib/payment-plan.ts:244"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Render a 'Downpayment' heading with the amount and the verbatim notice in 12pt bold from a fixed component; stop labelling a down payment as a diagnostic fee.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts:14"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CSLB-003-017-APP",
+    "requirement_id": "CSLB-003-017",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "'Schedule of Progress Payments' heading; each payment in dollars and cents tied to specific work/materials; 12pt bold 'Do not pay ahead of the work...' statement.",
+    "actual": "Rendered block is headed 'PAYMENT SCHEDULE' with 'Payment 2 $3,200.00 (40%) due 2026-12-05' - tied to a calendar date, not to work performed; the 'Do not pay ahead of the work' statement is absent (only 'Progress payments are for work performed or materials delivered.'), all at 10pt regular.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:214",
+      "src/lib/payment-plan.ts:244"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Require a work/milestone description per progress payment, use the statutory heading, add the verbatim 12pt bold statement, and disallow date-only progress payments for home-improvement contracts.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts:143"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CSLB-003-018-APP",
+    "requirement_id": "CSLB-003-018",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Statement of what constitutes substantial commencement; 'Approximate Start Date' heading and date.",
+    "actual": "Missing; the template only says 'scheduled for {{job_date}}', which falls back to 'a date to be agreed'.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/app/jobs/[jobId]/contract-actions.ts:400"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Require an approximate start date.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-019-APP",
+    "requirement_id": "CSLB-003-019",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "'Approximate Completion Date' heading and date.",
+    "actual": "Missing; no completion date field and the scope prompt forbids promising a completion date.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/contract-template.ts:240"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a required approximate completion date and heading.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-020-APP",
+    "requirement_id": "CSLB-003-020",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "If applicable, 'List of Documents to be Incorporated into the Contract' naming attachments.",
+    "actual": "Missing; no way to list incorporated documents (estimate, drawings, permit).",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add the heading and a list built from documents the tenant marks as incorporated.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-021-APP",
+    "requirement_id": "CSLB-003-021",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "'Note about Extra Work and Change Orders' heading and statutory statement.",
+    "actual": "Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'.",
+    "affected_files": [
+      "src/lib/contract-template.ts:209",
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-022-APP",
+    "requirement_id": "CSLB-003-022",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "'Commercial General Liability Insurance (CGL)' notice with the correct statement from stored tenant data; never defaults to 'carries insurance'.",
+    "actual": "Missing; no CGL data is stored.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Store CGL status/insurer/phone per tenant and render the matching statutory statement.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-023-APP",
+    "requirement_id": "CSLB-003-023",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "'Workers' Compensation Insurance' notice matching the CSLB record.",
+    "actual": "Missing; no workers' compensation data is stored.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Store WC status from verification and render the matching statement.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-024-APP",
+    "requirement_id": "CSLB-003-024",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Notice of buyer's rights regarding extra/change-order work.",
+    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-025-APP",
+    "requirement_id": "CSLB-003-025",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "'Mechanics Lien Warning' heading and full statutory text verbatim.",
+    "actual": "Missing from the default template and the rendered contract; no statutory text exists anywhere in src.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/pdf/contract-document.tsx:79"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-026-APP",
+    "requirement_id": "CSLB-003-026",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "12pt 'Information about the Contractors State License Board (CSLB)' notice.",
+    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-027-APP",
+    "requirement_id": "CSLB-003-027",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Record reasons for schedule changes; any statutory delay statement confirmed by counsel.",
+    "actual": "No dedicated reschedule-reason capture found in src/lib; activity history may record reschedules without reasons. Statutory delay statement not present.",
+    "affected_files": [
+      "src/lib/activity.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/activity.ts:1"
+      }
+    ],
+    "remediation": "Capture a reason when an approximate start/completion date changes; legal confirmation of any required statement.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-028-APP",
+    "requirement_id": "CSLB-003-028",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "UETA agreement captured before e-signing; legal confirmation of electronic copy and Notice of Cancellation; audit trail retained.",
+    "actual": "Consent checkbox required server-side; audit trail (time, IP, UA, body hash) frozen by trigger but deletable with the contract (RLS ALL, admin deletion functions); no Notice of Cancellation exists to evaluate; consent not stored.",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:89",
+      "supabase/migrations/20260927120000_contract_signatures.sql:266",
+      "supabase/migrations/20260812000000_contracts.sql:78"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      }
+    ],
+    "remediation": "Store consent; protect signed rows from deletion; obtain the legal opinion once notices exist.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-029-APP",
+    "requirement_id": "CSLB-003-029",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Translated contract (Civ. 1632) where negotiated in a covered language; cancellation notice in the language of the presentation.",
+    "actual": "Contracts are English-only; customer-language.ts records a preferred language but it is not used by contract generation, and no translated statutory text exists.",
+    "affected_files": [
+      "src/lib/customer-language.ts:1",
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/customer-language.ts:1",
+        "method": "no reference to contracts"
+      }
+    ],
+    "remediation": "Use the customer's language to select a counsel-approved translated template and notices (Spanish first).",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-030-APP",
+    "requirement_id": "CSLB-003-030",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Arbitration clause, if any, titled 'ARBITRATION OF DISPUTES', 10pt bold, with statutory legend and separate buyer initials.",
+    "actual": "The default template has no arbitration clause. Tenant-pasted templates may include one, and the app can neither format it as required nor capture separate initials.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/contract-layout.ts:21"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Detect arbitration language in tenant templates and refuse it unless rendered via a compliant arbitration component with separate initials.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-031-APP",
+    "requirement_id": "CSLB-003-031",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Templates and tenant-editable terms contain no cancellation waivers or contradictions of statutory notices.",
+    "actual": "Default template contains no waiver. Tenant templates are free text saved without any content check.",
+    "affected_files": [
+      "src/app/settings/contract/actions.ts:39",
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Lint tenant templates for waiver/contradicting language and keep statutory notices outside the editable template.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-006-001-APP",
+    "requirement_id": "CSLB-006-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "expected": "Change order in writing and signed before work; no start or invoicing of change-order work until both parties sign.",
+    "actual": "A change order is applied to invoices only once approved (check constraint change_orders_applied_only_when_approved), and approval comes from the customer's signature trigger (approve_signed_change_order) or the 'contract_revision' path for unsigned contracts - inspected live. Work start on change-order items is not tracked or gated, and the contractor's signature on the change order is not required by the database for approval.",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:151",
+      "src/lib/change-orders-server.ts:1",
+      "src/lib/change-order-document.ts:51"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Require the contractor signature as well before approval; block scheduling/marking done of change-order items until approved.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/change-order-apply.test.ts",
+      "src/lib/change-order-math.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CSLB-006-002-APP",
+    "requirement_id": "CSLB-006-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Each change order states scope, amount added/subtracted in dollars and cents, and the effect on progress payments and/or completion date.",
+    "actual": "changeOrderDocument prints what is changing, items and price lines with cents and the revised total, then 'Everything else that was agreed stays the same' - it never states the effect on the payment schedule or completion date.",
+    "affected_files": [
+      "src/lib/change-order-document.ts:51",
+      "src/lib/change-order-document.ts:100"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/change-order-document.ts:51"
+      },
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Add a required 'Effect on schedule of payments and completion date' section computed from the recalculated plan.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-006-003-APP",
+    "requirement_id": "CSLB-006-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Change order PDF references base contract ID/date, prior total, change amount, new total and revised payment schedule.",
+    "actual": "References the job and contract signing date, prior amount, net change and revised total; no contract identifier and no revised payment schedule.",
+    "affected_files": [
+      "src/lib/change-order-document.ts:51"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/change-order-document.ts:51"
+      }
+    ],
+    "remediation": "Add the base contract reference and revised schedule block.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-006-004-APP",
+    "requirement_id": "CSLB-006-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "low",
+    "expected": "After a priced change order, the revised schedule still satisfies the down-payment cap and no-payment-ahead rule.",
+    "actual": "planAmounts enforces the cap against the current total (tested) and matchesSignedSchedule stops automatic requests for a plan that differs from the signed one; whether the plan is re-validated when a change order lowers the total was not proven, and date-based progress payments remain possible.",
+    "affected_files": [
+      "src/lib/payment-plan.ts:51",
+      "src/lib/payment-plan.ts:188"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm test (node --test src/**/*.test.ts)",
+        "collected_at": "2026-11-25",
+        "method": "1529 tests, 1529 pass, 0 fail"
+      }
+    ],
+    "remediation": "Re-run planAmounts on every applied change order and refuse plans whose paid-ahead amount exceeds completed work.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/payment-plan.test.ts:14",
+      "src/lib/payment-plan.test.ts:122"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-CSLB-006-005-APP",
+    "requirement_id": "CSLB-006-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "A change order pushing a service-and-repair contract above $750 forces re-documentation under 7159.",
+    "actual": "No service-and-repair type exists, so no conversion is possible.",
+    "affected_files": [
+      "src/lib/change-order-document.ts:51"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Implement with CSLB-002-003.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-001-APP",
+    "requirement_id": "CSLB-007-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Home solicitation contracts identified and 1689.6-1689.14 applied.",
+    "actual": "No identification; no cancellation regime.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "See CSLB-002-009.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-002-APP",
+    "requirement_id": "CSLB-007-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Three business days (five for 65+) cancellation; senior status asked; deadline computed in business days.",
+    "actual": "No senior-buyer question, no deadline computation, no cancellation notice; deposit pay link is sent immediately after signing (after() in signContract).",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:89",
+      "src/app/contract/[token]/actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/contract/[token]/actions.ts:190"
+      }
+    ],
+    "remediation": "Ask 65+ at signing, compute and store the deadline, print the three/five-day version, and hold deposit requests and work until it passes.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-003-APP",
+    "requirement_id": "CSLB-007-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "'Three-Day Right to Cancel' notice verbatim in 12pt bold near the owner's signature, acknowledged by signature/date.",
+    "actual": "Absent from template and rendered contract, although the e-sign consent text tells the customer the agreement includes 'any notice of your right to cancel'.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/esign-consent.ts:28"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-004-APP",
+    "requirement_id": "CSLB-007-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Completed 'Notice of Cancellation' form in duplicate, detachable, with transaction date and deadline; electronic send option.",
+    "actual": "Absent.",
+    "affected_files": [
+      "src/lib/pdf/contract-document.tsx:79"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Render two filled Notice of Cancellation pages in the PDF and an in-app cancellation button.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-005-APP",
+    "requirement_id": "CSLB-007-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Cancellation notice and form in the language of the oral presentation.",
+    "actual": "No notice in any language; contracts English-only.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Provide translated notices (see CSLB-003-029).",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-006-APP",
+    "requirement_id": "CSLB-007-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Contracts missing a compliant notice treated as cancellable and surfaced to the tenant.",
+    "actual": "No notion of cancellability; contracts without notices are presented as final.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Flag every signed residential contract lacking the notice as 'cancellation right open' on the job.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-007-APP",
+    "requirement_id": "CSLB-007-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Record a cancellation and refund all payments (including deposit via Stripe) within 10 days with an audit trail.",
+    "actual": "contracts.status has no 'cancelled by buyer' state (draft|sent|signed|void); there is no buyer cancellation record or deadline-tracked refund workflow tied to contracts.",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:89"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add buyer cancellation (status, received_at, method), a 10-day refund task with automatic Stripe refund of all payments, and audit logging.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-008-APP",
+    "requirement_id": "CSLB-007-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Emergency waiver only via the buyer's separate dated handwritten statement captured (e.g., photo/upload); no typed/checkbox waiver.",
+    "actual": "No waiver capture path exists.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add an emergency waiver upload tied to the contract and require it before early work on a home-solicitation contract.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-009-APP",
+    "requirement_id": "CSLB-007-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Work on a compliant service-and-repair contract may start once the buyer has the signed copy.",
+    "actual": "Not modeled: no service-and-repair type and no start gating, so the software neither supports nor misapplies this permission.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Implement with CSLB-002-003 (allow start after delivered_at for compliant S&R contracts).",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-010-APP",
+    "requirement_id": "CSLB-007-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Seven-Day Right to Cancel for disaster-related repair contracts where applicable.",
+    "actual": "No disaster flag or seven-day notice.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add a disaster-repair flag that switches to the seven-day notice after legal confirmation.",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-011-APP",
+    "requirement_id": "CSLB-007-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Right to Cancel notice and forms included in every home-improvement contract unless place-of-business negotiation recorded; tenant cannot remove them by editing.",
+    "actual": "Notices are not included and everything printed in the body is the tenant-editable template. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193",
+      "src/lib/pdf/contract-document.tsx:79",
+      "src/app/settings/contract/actions.ts:39"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-007-012-APP",
+    "requirement_id": "CSLB-007-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Federal Cooling-Off Rule notice/form for covered home sales, not conflicting with California's.",
+    "actual": "No cancellation notice of any kind.",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Use a combined notice satisfying both 16 CFR 429 and Civ. 1689.7 after legal review.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-008-001-APP",
+    "requirement_id": "CSLB-008-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "expected": "Full statutory Mechanics Lien Warning in every home-improvement contract.",
+    "actual": "Absent (see CSLB-003-025).",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-008-002-APP",
+    "requirement_id": "CSLB-008-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Preliminary 20-day notice served where required.",
+    "actual": "Volteira does not serve preliminary notices.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "None in software.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-008-003-APP",
+    "requirement_id": "CSLB-008-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Lien recording deadlines met.",
+    "actual": "Volteira provides no lien workflow.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Optional: reminders.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-008-004-APP",
+    "requirement_id": "CSLB-008-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Volteira-generated lien waivers reproduce the statutory forms.",
+    "actual": "Volteira does not generate conditional or unconditional waiver and release forms (no lien release code in src).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib",
+        "method": "grep for lien/release found no generator"
+      }
+    ],
+    "remediation": "If waiver generation is added, use the statutory forms verbatim.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "Not applicable: the application generates no lien waiver or release documents.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-008-005-APP",
+    "requirement_id": "CSLB-008-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "No unconditional release auto-issued on unsettled (ACH processing) payments.",
+    "actual": "No release is ever issued by the app.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib",
+        "method": "grep for lien/release found no generator"
+      }
+    ],
+    "remediation": "If added, issue conditional releases until settlement.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "Not applicable: the application issues no lien releases.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-008-006-APP",
+    "requirement_id": "CSLB-008-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Lien release statement in home-improvement contracts.",
+    "actual": "Absent (see CSLB-003-005).",
+    "affected_files": [
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-009-001-APP",
+    "requirement_id": "CSLB-009-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "License number on estimates, contracts, change orders, websites, booking pages and marketing messages.",
+    "actual": "Contracts and change orders (same ContractDocument) and invoices print it in the letterhead and footer when set (rendered synthetic contract shows 'Lic. 0000000' twice). It is optional and omitted silently when empty; estimates, booking pages and outbound marketing were not verified in this slice.",
+    "affected_files": [
+      "src/lib/pdf/letterhead.tsx:121",
+      "src/lib/pdf/letterhead.tsx:222"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Make license number mandatory and render it on estimates, booking pages, website footer and marketing templates; add a check that every outbound template includes it.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-009-002-APP",
+    "requirement_id": "CSLB-009-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "No public booking/website page published for a tenant whose license is not verified.",
+    "actual": "No verification exists (CSLB-001-006), so publication cannot depend on it.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Gate public booking/website publication on a current verification.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-009-003-APP",
+    "requirement_id": "CSLB-009-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "'Licensed, bonded and insured' claims derived from verified data.",
+    "actual": "No such badge is generated from data; the AI writing tool accepts free-text claims (journal-manager placeholder suggests 'say we are licensed and insured') with no verification.",
+    "affected_files": [
+      "src/components/journal-manager.tsx:179"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/journal-manager.tsx:179"
+      }
+    ],
+    "remediation": "Block or require verification before AI/marketing text claims licensed/bonded/insured.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-009-004-APP",
+    "requirement_id": "CSLB-009-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "expected": "Advertisements disclose that a service charge applies; amount given when the customer calls.",
+    "actual": "Booking copy shows a 'Diagnostic fee' and its amount on the booking flow; other advertising surfaces and phone scripts not verified in this slice.",
+    "affected_files": [
+      "src/lib/booking-page-copy.ts:29"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/booking-page-copy.ts:47"
+      }
+    ],
+    "remediation": "Add explicit 'a service charge applies' wording to all advertising surfaces and the voice script.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-009-005-APP",
+    "requirement_id": "CSLB-009-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "One source of truth for the license number used by every template; tests/review confirm none omit it.",
+    "actual": "organizations.license_number via businessLetterhead feeds both invoice and contract PDFs; no test asserts presence and estimates/booking pages use other paths.",
+    "affected_files": [
+      "src/lib/pdf/store.ts:69",
+      "src/lib/pdf/letterhead.tsx:121"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add a shared licenseLine source for all outbound surfaces and a test that each renders it.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-009-006-APP",
+    "requirement_id": "CSLB-009-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Advertised business name matches license.",
+    "actual": "Same as CSLB-001-005: single free-text name, never compared with the license record.",
+    "affected_files": [
+      "src/lib/pdf/store.ts:69"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "See CSLB-001-005.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-010-001-APP",
+    "requirement_id": "CSLB-010-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Electricians employed by C-10 contractors are state-certified.",
+    "actual": "Certification of workers is the employer's duty; the app stores no certification data.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Tenant duty; see CSLB-010-006.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-010-002-APP",
+    "requirement_id": "CSLB-010-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Trainees registered, enrolled and supervised 1:1.",
+    "actual": "Not tracked by the app.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant duty.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-010-003-APP",
+    "requirement_id": "CSLB-010-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Exemptions identified by legal review before reliance.",
+    "actual": "Not represented in the app.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant/legal duty.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-010-004-APP",
+    "requirement_id": "CSLB-010-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "No employment of uncertified electricians.",
+    "actual": "Not represented in the app.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant duty.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-010-005-APP",
+    "requirement_id": "CSLB-010-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Tenants can record HIS registration for selling users; warning when an unregistered sales user is attributed as salesperson.",
+    "actual": "No HIS field or salesperson attribution exists.",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add HIS number per member and salesperson per job with a warning when missing.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-010-006-APP",
+    "requirement_id": "CSLB-010-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "high",
+    "expected": "Field users' DIR certification/trainee data stored; warn/block on uncertified, expired or unsupervised dispatch.",
+    "actual": "Only a generic 'certification' document type exists; no roster fields or dispatch check.",
+    "affected_files": [
+      "src/lib/crew-week.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add certification number/type/expiry per technician and a dispatch warning.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-011-001-APP",
+    "requirement_id": "CSLB-011-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Permits obtained and inspections scheduled.",
+    "actual": "Contractor duty; the app does not obtain permits.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant duty.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-011-002-APP",
+    "requirement_id": "CSLB-011-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "No willful disregard of building laws.",
+    "actual": "Contractor conduct; not visible to software.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant duty.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-011-003-APP",
+    "requirement_id": "CSLB-011-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "medium",
+    "expected": "Tenant can record final inspection sign-off and optionally hold the final invoice until recorded.",
+    "actual": "No final-inspection field or hold found (no final_inspection/inspection_result in src or migrations).",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:190"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add an inspection sign-off on the job and an optional final-invoice hold.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-011-004-APP",
+    "requirement_id": "CSLB-011-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "informational",
+    "confidence": "medium",
+    "expected": "Jobs store permit number, jurisdiction, issue date and inspection results; contract can reference the permit.",
+    "actual": "Only a 'permit' document type exists for uploads; no structured permit fields, and the template comments treat {{permit_number}} as something 'this app does not track'.",
+    "affected_files": [
+      "src/lib/contract-template.ts:82"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Add structured permit fields and a {{permit_number}} placeholder.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-001-APP",
+    "requirement_id": "CSLB-012-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "$25,000 contractor bond on file; bond status recorded and cancelled bond blocks contracts.",
+    "actual": "Bond filing is the licensee's duty; the app records no bond status (platform part covered by CSLB-001-006/007 RED).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Record bond status in the license verification record.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software (bond filing); the platform's bond-status tracking is absent and is reported under CSLB-001-006/007.",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-002-APP",
+    "requirement_id": "CSLB-012-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Bond of qualifying individual on file where required.",
+    "actual": "Not tracked.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant duty.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-003-APP",
+    "requirement_id": "CSLB-012-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "medium",
+    "expected": "Workers' compensation certificate or exemption on file with CSLB; contract statement matches.",
+    "actual": "Filing is the licensee's duty; the contract has no WC statement (reported under CSLB-003-023).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      }
+    ],
+    "remediation": "Tenant duty; see CSLB-003-023.",
+    "priority": "none",
+    "legal_review_required": false,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-004-APP",
+    "requirement_id": "CSLB-012-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "LLC liability insurance and worker bond maintained.",
+    "actual": "Not tracked.",
+    "affected_files": [],
+    "evidence": [],
+    "remediation": "Tenant duty.",
+    "priority": "none",
+    "legal_review_required": true,
+    "status_reason": "operational; outside the software",
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-005-APP",
+    "requirement_id": "CSLB-012-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "CGL statement matches current insurance; re-confirmation prompted at expiry.",
+    "actual": "No CGL statement or insurance data exists.",
+    "affected_files": [
+      "src/app/settings/business/actions.ts:81"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production information_schema.columns for public.contracts and public.organizations",
+        "collected_at": "2026-11-25",
+        "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Store CGL policy/expiry and prompt re-confirmation (see CSLB-003-022).",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-006-APP",
+    "requirement_id": "CSLB-012-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Executed contracts, change orders, notices, audit trails, invoices, payments, refunds retained >= 5 years after completion and producible.",
+    "actual": "Signed contracts and their documents can be deleted by any org member through RLS (contracts_member_write FOR ALL) and by admin_delete_record / delete_job_records / wipe_organization_data with no retention check (inspected live); documents cascade on contract and organization deletion.",
+    "affected_files": [
+      "supabase/migrations/20260812000000_contracts.sql:78",
+      "supabase/migrations/20261105010000_admin_data_removal.sql:119",
+      "supabase/migrations/20261105010000_admin_data_removal.sql:212"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      }
+    ],
+    "remediation": "Add a retention policy: refuse deletion of signed contracts, change orders and payment records within five years of job completion (DB trigger), and route data-removal requests through a retention check.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-007-APP",
+    "requirement_id": "CSLB-012-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "expected": "Legal hold on tenant/customer/job blocks retention deletion and customer deletion requests.",
+    "actual": "No legal-hold concept in src or migrations.",
+    "affected_files": [
+      "supabase/migrations/20261105010000_admin_data_removal.sql:119"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      }
+    ],
+    "remediation": "Add legal_hold flags checked by every deletion function.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-008-APP",
+    "requirement_id": "CSLB-012-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "expected": "Departing tenant can export all contracts and payment records; retention or custody confirmed.",
+    "actual": "The reports CSV export covers report datasets only (no contracts or signed PDFs); wipe_organization_data deletes contracts and documents without an export/custody step.",
+    "affected_files": [
+      "src/app/reports/export/route.ts:17",
+      "supabase/migrations/20261105010000_admin_data_removal.sql:119"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      }
+    ],
+    "remediation": "Add a full tenant archive export (contracts, signed PDFs, audit trail, change orders, payments) and require it or retention before organization wipe.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-012-009-APP",
+    "requirement_id": "CSLB-012-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Executed PDF and hash stored immutably; later edits do not alter the executed document; amendments only via signed change orders.",
+    "actual": "Body, signature fields and total/deposit are frozen by triggers (inspected live). Not frozen: payment_schedule column; the signed PDF, which rebuildContractPdf (no signed check) re-renders with current letterhead/customer/job data and files as the new current version; the documents row (members may update, admins delete); and the contract row itself (deletable).",
+    "affected_files": [
+      "src/app/jobs/[jobId]/contract-actions.ts:556",
+      "src/lib/pdf/contract-data.ts:99",
+      "src/lib/pdf/contract-data.ts:25",
+      "supabase/migrations/20260927120000_contract_signatures.sql:130",
+      "supabase/migrations/20260812000000_contracts.sql:78"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
+        "collected_at": "2026-11-25",
+        "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "database-check",
+        "location": "production pg_policies: contracts_member_write (cmd ALL, any org member, no signed_at condition); documents 'Organization admins can remove documents' (DELETE) and 'members can update documents' (UPDATE); functions private.delete_job_records, private.wipe_organization_data, public.admin_delete_record each 'delete from public.contracts' with no signed_at / retention check; documents.contract_id FK ON DELETE CASCADE",
+        "collected_at": "2026-11-25",
+        "method": "pg_policies, pg_constraint, pg_proc.prosrc search (definitions only)"
+      }
+    ],
+    "remediation": "Freeze payment_schedule; snapshot all printed data at signing; store the signed PDF hash and make that document row immutable; refuse re-render/delete of signed contracts.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-CSLB-003-032-APP",
+    "requirement_id": "CSLB-003-032",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "expected": "Contract and change orders carry the 7159(c)(7) subcontractor-use Yes/No checkbox and disclaimer.",
+    "actual": "Not present: the default template and the rendered synthetic contract (evidence/contracts-default-contract-synthetic.txt) contain no subcontractor-use checkbox or disclaimer, and change orders carry none.",
+    "affected_files": [
+      "src/lib/contract-layout.ts:94",
+      "src/lib/contract-template.ts:193"
+    ],
+    "evidence": [
+      {
+        "type": "rendered-document",
+        "location": "compliance/application-audits/2026-11-24/evidence/contracts-default-contract-synthetic.pdf (text: contracts-default-contract-synthetic.txt; script: contracts-render-script.mjs.txt)",
+        "collected_at": "2026-11-25",
+        "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
+        "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      }
+    ],
+    "remediation": "Add the 7159(c)(7) checkbox and disclaimer to the locked California home-improvement statutory block and to change orders, wording verbatim after legal sign-off.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  }
+]

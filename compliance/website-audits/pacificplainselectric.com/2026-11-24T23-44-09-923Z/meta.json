@@ -1,0 +1,26 @@
+{
+  "audit_id": "WEB-pacificplainselectric.com-2026-11-24",
+  "kind": "website",
+  "target": "pacificplainselectric.com",
+  "website_url": "https://pacificplainselectric.com/",
+  "started_at": "2026-11-24T23:44:09.923Z",
+  "finished_at": "2026-11-24T23:45:49.659Z",
+  "environment": "public website (outside-in)",
+  "profile": "contractor",
+  "collects_personal_info": true,
+  "collects_phone": true,
+  "offers_subscription": false,
+  "legal_baseline_version": "2026-11-24",
+  "skill_version": "website-compliance 1.0.0",
+  "tool_version": "1.0.0",
+  "axe_version": "4.12.1",
+  "pages_discovered": 40,
+  "pages_tested": 40,
+  "pages_excluded": [],
+  "missing_registers": [],
+  "limitations": [
+    "Outside-in audit of public pages only: no login, no form submission, no payment, no booking.",
+    "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
+    "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
+  ]
+}

@@ -1,0 +1,3562 @@
+[
+  {
+    "finding_id": "F-SEC-001-001-APP",
+    "requirement_id": "SEC-001-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Authorized users",
+    "expected": "Every user can enroll a TOTP/WebAuthn factor from account settings; AAL checked server-side; MFA encouraged.",
+    "actual": "No MFA anywhere in the application: no enroll/challenge/verify calls, no aal checks (grep mfa|totp|aal over src returns no auth usage). Production auth.mfa_factors has 0 rows. Local supabase/config.toml has [auth.mfa.totp] enroll_enabled = false.",
+    "affected_files": [
+      "src/app/account/page.tsx:384",
+      "src/lib/request-context.ts:52",
+      "supabase/config.toml:317"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/ (grep -rniE 'mfa|totp|aal|challengeAndVerify' returns only unrelated getPlatformFacts)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q15_auth_counts",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "config",
+        "location": "supabase/config.toml:312-331",
+        "collected_at": "2026-11-25",
+        "method": "file read",
+        "limitations": "Local CLI config, not the production Auth dashboard setting."
+      }
+    ],
+    "remediation": "Enable TOTP (and WebAuthn when available) in Supabase Auth; add an Account > Security enrollment flow using supabase.auth.mfa.enroll/challenge/verify; read the aal claim server-side in currentContext(); nudge enrollment on sign-up and the account page.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-002-APP",
+    "requirement_id": "SEC-001-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Contractor tenants, Authorized users",
+    "expected": "Owners, admins and platform admins need an aal2 session for privileged actions (billing, members, export, MCP connections, admin console).",
+    "actual": "MFA does not exist, so no role is required to use it. Platform admin access is gated by private.is_platform_admin() only; no admin_* RPC or server action checks aal (catalog: checks_aal=false for every admin_* function). Owner-only actions (Stripe Connect start, team management, MCP credentials, report export) have no step-up.",
+    "affected_files": [
+      "src/app/settings/payments/start/route.ts:25",
+      "src/app/settings/team/actions.ts:37",
+      "src/app/reports/export/route.ts:20",
+      "src/lib/admin-console.ts:996"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql",
+        "limitations": "aal search done on function source text; no function body references 'aal'."
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/admin-trace.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25",
+        "limitations": "Covers admin trace logging/reason, not MFA."
+      }
+    ],
+    "remediation": "After SEC-001-001, add a requireAal2() helper used by admin layout/actions, owner/admin server actions and the admin_* RPCs (check auth.jwt()->>'aal' = 'aal2' in SQL); record any tenant-level relaxation in platform_admin_audit.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/admin-trace.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-003-APP",
+    "requirement_id": "SEC-001-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Minimum 8 (15 recommended), at least 64 accepted, no composition rules, Supabase minimum matches policy.",
+    "actual": "App enforces 10 characters on password change and reset (server-side: src/lib/password-reset.ts MIN_NEW_PASSWORD_LENGTH=10, account/actions.ts:449) but sign-up enforces 8 only in the browser (auth-form.tsx minLength=8) and calls supabase.auth.signUp directly, so the real floor at sign-up is the Supabase Auth setting. Local config.toml has minimum_password_length = 6; the production value is not visible. No composition rules, paste allowed, no forced rotation.",
+    "affected_files": [
+      "src/components/auth-form.tsx:37",
+      "src/lib/password-reset.ts:21",
+      "src/app/account/actions.ts:449",
+      "supabase/config.toml:182"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/auth-form.tsx:37,53",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/password-reset.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "config",
+        "location": "supabase/config.toml:182",
+        "collected_at": "2026-11-25",
+        "method": "file read",
+        "limitations": "Local only; production Auth minimum not inspected (dashboard)."
+      }
+    ],
+    "remediation": "Set Supabase Auth minimum password length to at least 10 (matching change/reset) in the production dashboard and in config.toml; document the policy; optionally move sign-up to a server action so length and breach checks are enforced server-side.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/password-reset.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-004-APP",
+    "requirement_id": "SEC-001-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Sign-up, reset and change passwords checked against a breached corpus server-side; lookup failure is logged.",
+    "actual": "HIBP k-anonymity check (src/lib/pwned-password.ts) runs server-side on reset and change, but at sign-up only in the browser (bypassable by calling Supabase Auth directly). It fails open silently: catch returns false with no log. Supabase leaked-password protection is disabled (advisor auth_leaked_password_protection WARN).",
+    "affected_files": [
+      "src/lib/pwned-password.ts:46",
+      "src/components/auth-form.tsx:43",
+      "src/app/reset-password/actions.ts:27",
+      "src/app/account/actions.ts:458"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/pwned-password.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#advisors_security",
+        "collected_at": "2026-11-25",
+        "method": "Supabase get_advisors(type=security)",
+        "limitations": "auth_leaked_password_protection WARN present"
+      }
+    ],
+    "remediation": "Enable Supabase leaked-password protection (or move sign-up to a server action that runs passwordIsBreached); log (without the password or hash) when the HIBP lookup fails or times out.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/pwned-password.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-005-APP",
+    "requirement_id": "SEC-001-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Password change requires current password; email/phone/MFA/payout/ownership changes require recent re-authentication.",
+    "actual": "Password change sends current_password to supabase.auth.updateUser (account/actions.ts:462). Email change calls updateUser({ email }) with no re-authentication (account/actions.ts:89; relies on Supabase double-confirmation). Stripe Connect payout onboarding (settings/payments/start) and owner role changes have no recent-auth check. Local config secure_password_change = false.",
+    "affected_files": [
+      "src/app/account/actions.ts:89",
+      "src/app/account/actions.ts:462",
+      "src/app/settings/payments/start/route.ts:25"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:80-120,440-470",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Require re-authentication (supabase.auth.reauthenticate nonce or password re-entry within N minutes) before email change, payout onboarding, ownership transfer and future MFA factor changes; enable secure email change in Supabase Auth.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-006-APP",
+    "requirement_id": "SEC-001-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Sign-in, OTP, reset and magic-link rate limited per account and IP; values documented; lockout not abusable.",
+    "actual": "Sign-in and reset go directly from the browser to Supabase Auth (auth-form.tsx:66, forgot-password-form.tsx:42); there is no app-level limit and no CAPTCHA. Protection therefore rests on Supabase Auth rate limits, which are dashboard settings not visible to this audit. No documentation of the values exists in docs/security.",
+    "affected_files": [
+      "src/components/auth-form.tsx:66",
+      "src/components/forgot-password-form.tsx:42",
+      "supabase/config.toml:197"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/auth-form.tsx:66",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "config",
+        "location": "supabase/config.toml:197-216",
+        "collected_at": "2026-11-25",
+        "method": "file read",
+        "limitations": "Local defaults only; production Auth rate limits and CAPTCHA are dashboard-only."
+      }
+    ],
+    "remediation": "Export or screenshot the production Supabase Auth rate-limit and CAPTCHA settings, document them, and consider enabling Turnstile/hCaptcha on sign-up, sign-in and reset.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Supabase Auth rate limits and CAPTCHA are configured in the dashboard and could not be inspected read-only; no app-level limiter exists to assess."
+  },
+  {
+    "finding_id": "F-SEC-001-007-APP",
+    "requirement_id": "SEC-001-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Same message and comparable timing for existing and non-existing accounts in sign-in, sign-up and reset; invites do not reveal other memberships.",
+    "actual": "Sign-in maps 'invalid login' to a generic message, but other Supabase error messages are shown verbatim (auth-form.tsx:73), so a sign-up error such as 'User already registered' would be displayed when email confirmation is off. Reset uses Supabase resetPasswordForEmail (generic by design). Invitation acceptance returns states such as wrong_email/accepted/revoked only to the token holder; organization_invitation_preview is anon-executable and returns invitation details to any token holder.",
+    "affected_files": [
+      "src/components/auth-form.tsx:73",
+      "src/components/forgot-password-form.tsx:42"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/components/auth-form.tsx:53-73",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Map every sign-up/sign-in auth error to fixed generic text; keep email confirmation on in production (verify in dashboard) so signUp returns an obfuscated user for existing emails.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-008-APP",
+    "requirement_id": "SEC-001-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Single-use, short-lived Supabase reset links completing on Volteira's origin; no hints; reset does not bypass MFA.",
+    "actual": "Reset completes only for a session whose amr includes 'recovery' within one hour (password-reset.ts mayResetPassword, tested); callback uses getSafeNextPath. No hints/questions. Because MFA does not exist, 'reset does not bypass MFA' cannot be satisfied yet; link lifetime/single use is a Supabase setting not inspected.",
+    "affected_files": [
+      "src/lib/password-reset.ts:26",
+      "src/app/reset-password/actions.ts:30",
+      "src/app/auth/callback/route.ts:16"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/password-reset.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/reset-password/actions.ts:30-33",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "When MFA ships, require aal2 (or a factor challenge) after recovery before updateUser({password}) for users with factors; document the Supabase OTP expiry setting.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/password-reset.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-009-APP",
+    "requirement_id": "SEC-001-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "Documented, identity-proofed, logged recovery for lost MFA factors; users can revoke their own factors.",
+    "actual": "No MFA, no factor management UI, and no documented recovery procedure in docs/security.",
+    "affected_files": [
+      "src/app/account/page.tsx:384"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/* (no MFA recovery procedure)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q15_auth_counts",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Write a lost-factor recovery runbook (identity proofing at least as strong as enrollment, performed by platform staff, logged to platform_admin_audit) and ship self-service factor revocation with MFA.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-010-APP",
+    "requirement_id": "SEC-001-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Email after password change, email change, MFA change and new-device sign-in for owners; no secret in the email.",
+    "actual": "The app sends no such notifications itself. Supabase can send password-changed / email-changed notifications, but in local config.toml the [auth.email.notification.password_changed] template is commented out; the production setting is not visible. No new-device sign-in notice exists.",
+    "affected_files": [
+      "supabase/config.toml:267"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "supabase/config.toml:267-270",
+        "collected_at": "2026-11-25",
+        "method": "file read",
+        "limitations": "Local only; production email notification settings are dashboard-only."
+      }
+    ],
+    "remediation": "Enable Supabase security notification emails (password changed, email changed, MFA factor enrolled/removed) in production; add a new-device sign-in notice for owners.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Supabase Auth notification settings are dashboard-only; app code sends none."
+  },
+  {
+    "finding_id": "F-SEC-001-011-APP",
+    "requirement_id": "SEC-001-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Documented inactivity timeout and absolute session lifetime; privileged roles no longer than technicians.",
+    "actual": "Local config.toml shows jwt_expiry 3600, refresh token rotation on, reuse interval 10s, and [auth.sessions] timebox/inactivity_timeout commented out (none). Production values and any per-role policy are not documented in the repo.",
+    "affected_files": [
+      "supabase/config.toml:165",
+      "supabase/config.toml:287"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "supabase/config.toml:165-174,287-291",
+        "collected_at": "2026-11-25",
+        "method": "file read",
+        "limitations": "Local only; production session time-box/inactivity are dashboard settings (Pro plan)."
+      }
+    ],
+    "remediation": "Decide and document session time-box and inactivity limits; set them in Supabase Auth; consider shorter lifetimes for owner/admin and platform admin sessions.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Production Supabase session settings are dashboard-only and not documented."
+  },
+  {
+    "finding_id": "F-SEC-001-012-APP",
+    "requirement_id": "SEC-001-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Server code authorizes with verified identity (getUser/getClaims); sign-out revokes the refresh token server-side; new session per authentication.",
+    "actual": "currentUser() and the proxy use supabase.auth.getClaims() (signature-verified JWT) and API routes such as recordings use getUser(). signOut() calls supabase.auth.signOut() whose default scope is global (revokes refresh tokens). Revocation after sign-out was not exercised; getClaims trusts a still-valid access token until expiry (1h in local config).",
+    "affected_files": [
+      "src/lib/request-context.ts:52",
+      "src/lib/supabase/proxy.ts:323",
+      "src/app/account/actions.ts:472",
+      "src/app/api/twilio/recordings/[recordingSid]/route.ts:18"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/request-context.ts:41-63",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/account/actions.ts:472-476",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add a test or documented manual check that a refresh token is rejected after sign-out; keep access-token lifetime short; consider getUser() (server round-trip) on high-risk actions.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-013-APP",
+    "requirement_id": "SEC-001-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Contractor tenants",
+    "expected": "Removed member loses access on next request; disabled accounts lose all refresh tokens; sign out other sessions; admins can terminate sessions.",
+    "actual": "Membership is re-read on every request (currentContext queries organization_members; RLS helpers check membership per query), so removal takes effect immediately even with a valid JWT (active-business.test.ts covers the chooser). There is no 'sign out other sessions' control after password change and no platform-admin session termination.",
+    "affected_files": [
+      "src/lib/request-context.ts:83",
+      "src/lib/active-business.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/active-business.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q6_membership_helpers",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Add 'sign out everywhere' (signOut({scope:'others'})) on Account > Security and after password change; add a platform-admin action using auth.admin.signOut for a user; pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed) covers removed-member access at the DB layer.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/active-business.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-014-APP",
+    "requirement_id": "SEC-001-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Auth cookies Secure with explicit SameSite; HttpOnly where possible; host-only, not shared with tenant domains.",
+    "actual": "Supabase auth cookies are set by @supabase/ssr defaults (script-readable by design, SameSite=Lax, path /); the app passes the library options through unchanged (supabase/proxy.ts:316). Tenant custom domains are rewritten before updateSession so no auth cookies are set on them (proxy.ts:62-75). The residual XSS risk of script-readable cookies is mitigated by the nonce CSP but not documented. App-set cookies (OAuth state) use httpOnly, secure, sameSite=lax.",
+    "affected_files": [
+      "src/lib/supabase/proxy.ts:316",
+      "src/proxy.ts:62",
+      "src/app/api/integrations/google-calendar/connect/route.ts:15"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/supabase/proxy.ts:305-321",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/proxy.ts:51-77",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Document the @supabase/ssr cookie attributes and the CSP compensating control; verify in a browser that production cookies carry Secure; set cookieOptions { secure: true, sameSite: 'lax' } explicitly.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-015-APP",
+    "requirement_id": "SEC-001-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "One document listing every authentication pathway with consistent strength controls.",
+    "actual": "docs/security/source-inventory.md and public-paths.ts (tested) enumerate public routes, and each pathway was found in code: password, email OTP/recovery, invitation tokens, capability links (invoice/estimate/contract/booking/pay), MCP URL tokens, website intake API keys (hashed), Google OAuth, Stripe/Twilio/xAI webhook signatures, supervised-worker bearer token. No single document lists them with their controls.",
+    "affected_files": [
+      "src/lib/public-paths.ts:57",
+      "docs/security/source-inventory.md:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/public-paths.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/api/** (26 route handlers reviewed)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Write docs/security/auth-pathways.md listing each pathway, credential type, entropy, lifetime, revocation and rate limit; keep public-paths.test.ts in sync.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/public-paths.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-016-APP",
+    "requirement_id": "SEC-001-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "Platform admin by server-side allowlist with aal2; PI masked by default; unmasking/trace logged with reason; quarterly review.",
+    "actual": "Platform admin is a server-side allowlist (platform_admins table, private.is_platform_admin checked inside every admin_* RPC; RPCs not executable by anon). Masking and trace/impersonation logging with reason are implemented and tested (admin-mask, admin-trace, admin-removal-rules tests pass; impersonation_sessions carry reason and expiry). Missing: aal2 requirement (no MFA) and any documented quarterly admin review.",
+    "affected_files": [
+      "src/lib/admin-console.ts:996",
+      "src/lib/request-context.ts:192"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/admin-mask.test.ts, src/lib/admin-trace.test.ts, src/lib/admin-removal-rules.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Require aal2 for the admin area (see SEC-001-002) and record a quarterly review of platform_admins membership.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/admin-mask.test.ts",
+      "src/lib/admin-trace.test.ts",
+      "src/lib/admin-removal-rules.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-001-017-APP",
+    "requirement_id": "SEC-001-017",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Capability tokens from a CSPRNG with >=128 bits, one document each, revocable, Referrer-Policy limits leakage, logs redact tokens.",
+    "actual": "Tokens are gen_random_uuid() UUIDv4 (122 random bits, CSPRNG) in uuid columns: contracts.public_token, booking_requests.public_token, job_payment_plan_items.pay_token, invoices/estimates.preview_token, invitations.token. Each maps to one record. Referrer-Policy strict-origin-when-cross-origin is set globally. Gaps: below the 128-bit target and UUID-typed; no expiry/rotation on most; booking pay route logs the token (booking/[token]/pay/route.ts:104).",
+    "affected_files": [
+      "next.config.ts:200",
+      "src/app/booking/[token]/pay/route.ts:104"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q12_capability_token_columns",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "source-reference",
+        "location": "next.config.ts:198-200",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Move to 256-bit random tokens (encode(gen_random_bytes(32),'base64url') in text columns) for new links; add revoke/rotate and expiry after purpose ends; remove the token from the booking pay log line.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-001-018-APP",
+    "requirement_id": "SEC-001-018",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "OAuth state (and PKCE) bound to user and business; minimum scopes; refresh tokens encrypted server-side and tenant-scoped.",
+    "actual": "Google Drive and Calendar flows create a signed state containing organization and user (createDocumentOAuthState), store it in an httpOnly cookie, compare on callback and re-check the signed-in user and owner/admin membership. Calendar refresh token stored encrypted (booking_calendar_connections.encrypted_refresh_token, RLS deny-all); Drive credential stored via service-only store_document_provider_credential. No PKCE; scopes include openid email + calendar/drive scopes (not reviewed for minimality).",
+    "affected_files": [
+      "src/app/api/integrations/google-drive/callback/route.ts:44",
+      "src/app/api/integrations/google-calendar/callback/route.ts:17",
+      "src/app/api/integrations/google-calendar/connect/route.ts:16"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/integrations/google-drive/callback/route.ts:37-64",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q12_capability_token_columns",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Add PKCE (code_challenge S256) to both Google flows; document the scopes and why each is needed.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-002-001-APP",
+    "requirement_id": "SEC-002-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "RLS enabled on every Data API table; FORCE RLS considered; Tenant A sees zero Tenant B rows in every table; new tables enable RLS.",
+    "actual": "All 95 public tables have relrowsecurity = true (none disabled); 0 tables use FORCE RLS. Four tables have RLS with zero policies (booking_calendar_connections, booking_calendar_events, organization_ai_keys, task_work), which denies all non-service access. No views. The behavioural two-tenant check has not been run. Run 2 (2026-11-25): as Tenant A, 0 Tenant B rows were visible in all 14 seeded tables plus the organization row and storage objects (customers, properties, jobs, estimates, contracts, invoices, invoice_payments, documents, conversations, messages, both settings tables, organization_members, organization_subscriptions). Remaining ~80 tables were not exercised, so 'every table' is not yet shown.",
+    "affected_files": [
+      "supabase/migrations/20261117130000_tenant_relationship_and_storage_guards.sql:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q1_public_tables_rls_disabled",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q2_policy_counts_per_table",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Run compliance/tests/tenant-isolation/two-tenant-rollback.sql (TI-002) on a branch/copy and attach results; add a CI check that fails when a migration creates a public table without enable row level security.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "passed",
+    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+  },
+  {
+    "finding_id": "F-SEC-002-002-APP",
+    "requirement_id": "SEC-002-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Policies check organization membership via organization_members, never user_metadata; no USING (true) on tenant data; A affects zero B rows.",
+    "actual": "Policies use private.is_org_member / is_org_admin / can_edit_billing (membership via organization_members and auth.uid()); none reference user_metadata. Only USING (true) policy is site_videos (marketing videos, not tenant data). Defect: 'Owners can delete organizations' compares membership.organization_id = membership.id (unqualified id bound to the subquery table), so it never matches and owners cannot delete (fails closed, but not the intended rule). Run 2 (2026-11-25): Tenant A updated and deleted 0 Tenant B rows in all 14 seeded tables and the organization row. Not exercised for the remaining tables or for non-owner roles.",
+    "affected_files": [
+      "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:185"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q2_policy_counts_per_table",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q6_membership_helpers",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q8_organizations_delete_policy",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Run TI-002..TI-005; fix the organizations delete policy to compare membership.organization_id = organizations.id in a new migration.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "passed",
+    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+  },
+  {
+    "finding_id": "F-SEC-002-003-APP",
+    "requirement_id": "SEC-002-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "INSERT/UPDATE WITH CHECK requires membership of the new organization_id; organization_id immutable after insert; A cannot insert into or move rows to B.",
+    "actual": "No UPDATE policy lacks WITH CHECK; INSERT policies check membership of the new organization_id. 89 tables carry zz_tenant_owner_immutable (keep_tenant_owner raises when organization_id changes) and zz_tenant_references_guard (cross-tenant references refused). The prior audit's local harness (scripts/security/tenant-isolation-test.sql) is not part of npm test and has not been run against the live schema in this audit. Run 2 (2026-11-25): inserting a customer with B's organization_id and joining B's membership were refused by RLS (42501); moving A's own customer to B was refused by the tenant guard ('A customers row cannot move to another business'); a job pointing at B's customer was refused ('refers to a record that belongs to another business'). Exercised on customers, organization_members and jobs only.",
+    "affected_files": [
+      "supabase/migrations/20261117130000_tenant_relationship_and_storage_guards.sql:1",
+      "scripts/security/tenant-isolation-test.sql:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q7_tenant_guards",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q2_policy_counts_per_table",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed); TI-006, TI-007, TI-008"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Run TI-006..TI-008 and record results; wire scripts/security/replay-migrations.sh + tenant-isolation-test.sql into a pre-release job.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "scripts/security/tenant-isolation-test.sql",
+      "TI-001"
+    ],
+    "test_result": "passed",
+    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+  },
+  {
+    "finding_id": "F-SEC-002-004-APP",
+    "requirement_id": "SEC-002-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Every SECURITY DEFINER function pins search_path, checks membership for tenant data, and EXECUTE is revoked where not needed.",
+    "actual": "All 178 SECURITY DEFINER functions in public/private set search_path in proconfig. Service-only money/worker RPCs (settle_*, record_stripe_refund, claim_*, website_intake, etc.) are not executable by authenticated. Default ACL for functions in public still grants EXECUTE to anon and authenticated, and 37 SECURITY DEFINER functions are anon-executable (token/slug public RPCs plus private trigger helpers); 52 authenticated-executable ones have no auth.uid()/membership helper in their own body and rely on token checks or private.* gate helpers (sampled: correctly gated). sweep_expired_impersonations is callable by any signed-in user (low impact).",
+    "affected_files": [
+      "supabase/migrations/20261111010000_security_role_and_rpc_hardening.sql:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q14_default_acl_public",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#advisors_security",
+        "collected_at": "2026-11-25",
+        "method": "Supabase get_advisors(type=security)",
+        "limitations": "anon/authenticated security_definer_function_executable WARN"
+      }
+    ],
+    "remediation": "Change default privileges (alter default privileges in schema public revoke execute on functions from anon, authenticated); revoke anon EXECUTE from private.* trigger helpers; run TI-009 and extend it to each anon RPC with another tenant's identifiers.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+    ],
+    "test_result": "not-run"
+  },
+  {
+    "finding_id": "F-SEC-002-005-APP",
+    "requirement_id": "SEC-002-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GRAY",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Views over tenant tables use security_invoker or are not exposed.",
+    "actual": "There are no views or materialized views in schema public.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q5_views_public",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Keep a migration lint that requires WITH (security_invoker = true) on any future public view.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "No views exist in the exposed schema (catalog query returned none)."
+  },
+  {
+    "finding_id": "F-SEC-002-006-APP",
+    "requirement_id": "SEC-002-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Anon key alone returns no tenant data except deliberately public minimal data; public flows use token-validating RPCs.",
+    "actual": "anon holds table privileges only on site_videos and tenant_legal_pages (published pages only). Other anon access is through SECURITY DEFINER RPCs that take a token/slug (get_invoice_by_link, get_public_contract, sign_contract_in_app, decline_change_order, list_public_booking_slots, create_public_booking_intake, etc.). Their outputs were not inspected field by field, and anon behaviour has not been exercised. Run 2 (2026-11-25): anon was refused (42501 permission denied) on 11 tenant tables. Public token RPCs were not exercised.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q2_policy_counts_per_table",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed); TI-012"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Run TI-012; review each anon RPC's return columns for minimisation; revoke anon EXECUTE on private.* helpers.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "passed",
+    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+  },
+  {
+    "finding_id": "F-SEC-002-007-APP",
+    "requirement_id": "SEC-002-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Tenant buckets private; keys start with server-generated org id; storage policies check membership of path org; short signed URLs after authz.",
+    "actual": "business-documents is private with storage.objects policies keyed on private.storage_object_organization_id(name) membership (delete admin-only). documents.storage_path has CHECK private.is_owned_object_path(storage_path, organization_id, 3). isOwnedObjectPath guards every service-role sign/download (tested). Signed URLs are 60s for most paths, 1h for avatars. public-branding is public by design. Behavioural storage test not run. Run 2 (2026-11-25): as Tenant A, listing and updating B's storage.objects metadata returned 0 rows, deleting was refused, and inserting an object under B's folder was refused by storage RLS. Signed URLs and Storage API downloads were not exercised.",
+    "affected_files": [
+      "src/lib/tenant-storage-path.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q4_storage_buckets",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q4b_storage_objects_policies",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/tenant-storage-path.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed); TI-010"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Run TI-010 (list/overwrite/delete/upload into B prefix as A); set allowed_mime_types on business-documents.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/tenant-storage-path.test.ts",
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "passed",
+    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+  },
+  {
+    "finding_id": "F-SEC-002-008-APP",
+    "requirement_id": "SEC-002-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Service-role key never public; admin client modules server-only; every admin query filtered by server-derived organization_id.",
+    "actual": "getSupabaseAdmin() reads SUPABASE_SECRET_KEY (not NEXT_PUBLIC) and imports 'server-only'. 83 modules call it (list in scratch admin_callers). Spot checks: webhooks resolve org from verified data (Twilio by receiving number, Stripe by connected account cross-check, intake by hashed key); OAuth callback re-checks membership before admin writes; report export uses currentContext().organizationId. Not every one of 83 callers was traced. SUPABASE_SECRET_KEY is targeted to Production and Preview in Vercel.",
+    "affected_files": [
+      "src/lib/supabase/admin.ts:1",
+      "src/lib/job-prepayment-pay.ts:537",
+      "src/app/api/integrations/google-drive/callback/route.ts:53"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/supabase/admin.ts:1-40",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "names and targets only"
+      }
+    ],
+    "remediation": "Trace and document each getSupabaseAdmin caller's tenant source (reachable unauthenticated? scoped how?) in docs/security; add an ESLint rule that flags admin-client queries without .eq('organization_id', ...).",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-002-009-APP",
+    "requirement_id": "SEC-002-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Every handler taking an ID resolves it within the caller's active organization; replay with B IDs gives 404/403.",
+    "actual": "Spot-checked handlers scope by context: messages/[messageId]/photos filters organization_id = context.organizationId; recordings/[recordingSid] relies on RLS (any of the user's orgs, not only the active one); proposals decision/reconcile and materials-chat use currentContext. RLS backs user-client queries. Service-role handlers were not exhaustively replayed with foreign IDs.",
+    "affected_files": [
+      "src/app/api/messages/[messageId]/photos/[index]/route.ts:11",
+      "src/app/api/twilio/recordings/[recordingSid]/route.ts:24"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/**/route.ts (26 handlers reviewed)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add an HTTP-level two-tenant replay suite on a non-production project; scope the recordings lookup to the active organization.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-002-010-APP",
+    "requirement_id": "SEC-002-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Documented permission matrix; role checked server-side; technicians cannot do owner-only actions; admins cannot grant themselves paid features.",
+    "actual": "Billing role rule is enforced in DB (can_edit_billing) and tested; owner-only invites guarded by triggers; exports gated by canExportReports. But organization_subscriptions lets any owner/admin INSERT/UPDATE/DELETE their own row including status and plan (policies 'Organization admins can add/update/remove subscriptions', authenticated UPDATE on every column, no guard trigger). src/lib/ai-allowance.ts:18-24 reads that status with the service role and paidPlanActive() makes AI use unlimited, so an admin can grant itself a paid plan (and unlimited AI spend) without paying. Similarly stripe_connect_accounts is admin-writable for charges_enabled/payouts_enabled/fee_payer/stripe_account_id. No permission matrix document. Confirmed on the production database by run 2 (TI-011, 2026-11-25): Tenant A's owner changed its own organization_subscriptions.status from canceled to active (1 row updated) without paying.",
+    "affected_files": [
+      "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:189",
+      "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229",
+      "src/lib/ai-allowance.ts:18",
+      "src/lib/stripe-subscription.ts:37"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q9_organization_subscriptions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q10_stripe_connect_accounts",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/billing-permission.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "TI-011 (self-upgrade) not executed; finding based on inspected policy, grants and triggers."
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Drop the INSERT/UPDATE/DELETE policies on organization_subscriptions and revoke insert/update/delete from authenticated (only the Stripe webhook via service role writes it); likewise restrict stripe_connect_accounts writes to service role (sync from Stripe account.updated); write and publish the role permission matrix.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/billing-permission.test.ts",
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "failed",
+    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+  },
+  {
+    "finding_id": "F-SEC-002-011-APP",
+    "requirement_id": "SEC-002-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Responses carry only the fields each role needs; explicit selects.",
+    "actual": "Many loaders use explicit column lists, but technicians are allowed to see all billing ('Technicians can still see it all', billing-permission.ts:4) and RLS SELECT policies are member-wide. No role-based field minimisation layer was found; not exhaustively reviewed.",
+    "affected_files": [
+      "src/lib/billing-permission.ts:4"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/billing-permission.ts:1-20",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Define which fields technicians need (costs, margins, payout data) and restrict them in loaders/RLS (column-level grants or views with security_invoker).",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-002-012-APP",
+    "requirement_id": "SEC-002-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "anon/authenticated hold only needed privileges; default privileges reviewed; least-privilege tenant roles.",
+    "actual": "authenticated has full INSERT/UPDATE/DELETE/TRUNCATE table grants on every public table (default ACL from postgres grants arwdDxtm), so least privilege rests entirely on RLS. Where policies are broad this is exploitable: owners/admins can write organization_subscriptions (status/plan) and stripe_connect_accounts (charges_enabled, payouts_enabled, fee_payer); members can update/delete messaging_consent and stripe_customers. Function default ACL grants EXECUTE to anon and authenticated. Confirmed on the production database by run 2 (TI-011, 2026-11-25): the authenticated role could update organization_subscriptions.status directly.",
+    "affected_files": [
+      "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q9_organization_subscriptions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q10_stripe_connect_accounts",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q14_default_acl_public",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Revoke TRUNCATE and write privileges from authenticated on service-owned tables (organization_subscriptions, stripe_connect_accounts, stripe_webhook_events, audit tables); alter default privileges to stop granting EXECUTE to anon; show owner count per tenant to owners.",
+    "priority": "P0",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "failed"
+  },
+  {
+    "finding_id": "F-SEC-002-013-APP",
+    "requirement_id": "SEC-002-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Random, single-use, expiring invites bound to invited email; no escalation above inviter; revoked invites stop; B token cannot join A.",
+    "actual": "accept_organization_invitation requires signed-in user, matching confirmed email, not revoked/accepted/expired, with FOR UPDATE; invitations expire (14 days); guard_owner_invitation/guard_owner_membership stop non-owners creating owner invites/memberships; re-invite revokes prior. Token is UUIDv4. An admin can still invite another admin (equal role). Not exercised in a two-tenant test; invitation link origin falls back to Host header only when NEXT_PUBLIC_APP_URL is unset (it is set in Vercel).",
+    "affected_files": [
+      "src/app/settings/team/actions.ts:37",
+      "supabase/migrations/20260810040000_organization_invitations.sql:121"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20260810040000_organization_invitations.sql:9-160",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add a database test for invite acceptance (wrong email, expired, revoked, technician creating owner invite); use 256-bit tokens.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+    ],
+    "test_result": "not-run"
+  },
+  {
+    "finding_id": "F-SEC-002-014-APP",
+    "requirement_id": "SEC-002-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Selected business is a hint; membership re-validated every request; removed user with stale cookie sees nothing.",
+    "actual": "BUSINESS_COOKIE is validated as a UUID and only honoured when chooseMembership finds a current membership (tested); RLS checks membership on every query; impersonation read from DB, not cookie. DB-level removed-member scenario not yet run.",
+    "affected_files": [
+      "src/lib/request-context.ts:96",
+      "src/lib/request-context.ts:121",
+      "src/lib/active-business.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/active-business.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q6_membership_helpers",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Run compliance/tests/tenant-isolation/two-tenant-rollback.sql with a removed-member variant (delete A's membership, keep JWT) and record the result.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/active-business.test.ts",
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-002-015-APP",
+    "requirement_id": "SEC-002-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Stripe by connected account / stored IDs, Twilio by owned number, Resend by stored message ID; metadata org ids cross-checked.",
+    "actual": "Stripe connected-account events (pay links) cross-check event.account against the business's stored account before acting (job-prepayment-pay.ts:537-545). Platform subscription events trust metadata.organization_id first (stripe-subscription.ts:14) - acceptable only because Volteira creates those objects on its own account. Twilio routes resolve the tenant by receiving number after signature verification. No Resend inbound webhook exists. Risk: stripe_account_id is admin-writable in stripe_connect_accounts (unique, so cannot steal a registered account, but can point at an unregistered one).",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:537",
+      "src/lib/stripe-subscription.ts:14",
+      "src/app/api/twilio/recording/route.ts:60"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/stripe/webhook/route.ts:41-140",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q10_stripe_connect_accounts",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Make stripe_connect_accounts service-role-write only; for subscription events prefer stored stripe_subscription_id/customer mapping over metadata; add a signed-event replay test across two tenants.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-002-016-APP",
+    "requirement_id": "SEC-002-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Public booking pages resolve tenant from verified domain/slug and show only public fields; cannot book into another tenant.",
+    "actual": "Custom hosts resolved via bookingHostFor (string match) then get_booking_page_by_host / get_verified_host_for_slug (verified domain mapping); tenant-domain.test.ts passes (18 tests). Public RPC outputs not field-reviewed; cross-tenant booking attempt not executed.",
+    "affected_files": [
+      "src/proxy.ts:51",
+      "src/lib/tenant-domain.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/tenant-domain.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Add a DB test that calls create_public_booking_intake with A's slug and B's identifiers and expects refusal; review returned columns.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/tenant-domain.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-002-017-APP",
+    "requirement_id": "SEC-002-017",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Search, dashboards, reports and CSV exports filter by organization in the query.",
+    "actual": "reports/export uses currentContext().organizationId passed into buildReportExport (service role) and gates on canExportReports(role). Search and dashboards use the RLS client. Not exercised with two tenants.",
+    "affected_files": [
+      "src/app/reports/export/route.ts:18",
+      "src/app/reports/export/route.ts:31"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/reports/export/route.ts:17-31",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/csv.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Add an export test with two seeded tenants asserting zero foreign rows.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/csv.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-002-018-APP",
+    "requirement_id": "SEC-002-018",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Documented tenant offboarding/deletion covering rows, storage, MCP, OAuth, Stripe/Twilio; retention stated; no cross-tenant effect.",
+    "actual": "No offboarding/deletion procedure exists in docs. The organizations DELETE policy is broken (never matches), so owners cannot delete via the app; platform admin data actions exist (admin/organizations/[id]/data-actions.ts) but no documented complete deletion or retention statement.",
+    "affected_files": [
+      "src/app/admin/organizations/[id]/data-actions.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q8_organizations_delete_policy",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "source-reference",
+        "location": "docs/security/* (no offboarding procedure)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Write a tenant offboarding runbook (export, delete rows/objects, revoke MCP and OAuth credentials, disconnect Stripe/Twilio numbers, retained records and legal holds, backup retention) and fix the delete policy.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-002-019-APP",
+    "requirement_id": "SEC-002-019",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
+    "responsible_party": "Volteira platform, Volteira as service provider",
+    "expected": "Repeatable two-tenant test over every table/view/RPC/bucket as A, B and anon, run before each migration release.",
+    "actual": "No such test runs automatically: there is no CI (.github absent) and npm test covers pure functions only. scripts/security/tenant-isolation-test.sql (prior audit) and the new compliance/tests/tenant-isolation/two-tenant-rollback.sql exist but neither has been run in this audit or on a schedule. A repeatable two-tenant test now exists (compliance/tests/tenant-isolation/two-tenant-rollback.sql) and was run on 2026-11-25 (72 passed, 1 failed). It covers 17 tables, the roster RPC and storage as owner and anon, but it is manual, not run before each migration release, and does not cover every table, view, RPC or role.",
+    "affected_files": [
+      "scripts/security/tenant-isolation-test.sql:1",
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repository root (no .github/workflows)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "reproduction-steps",
+        "location": "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+        "collected_at": "2026-11-25",
+        "method": "SQL written, not executed",
+        "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      }
+    ],
+    "remediation": "Run compliance/tests/tenant-isolation/two-tenant-rollback.sql on a Supabase branch before each release that changes migrations, fail the release on any passed=false row, and keep the output as evidence.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_ids": [
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
+    ],
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-25: a repeatable two-tenant test now exists and has been run, but it is manual and partial."
+  },
+  {
+    "finding_id": "F-SEC-003-001-APP",
+    "requirement_id": "SEC-003-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "supabase-js builders or parameterized SQL; EXECUTE uses format %I/%L or USING; no raw input in .or()/.filter().",
+    "actual": "Application data access uses supabase-js builders. guard_tenant_references uses pg_catalog.format for dynamic SQL. .or()/.filter() call sites embedding user search text were not exhaustively reviewed.",
+    "affected_files": [
+      "src/lib/supabase/flexible.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src (supabase-js builders); private.guard_tenant_references uses format()",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Grep every .or(/.filter( call and escape user input (or switch to ilike with bound values); add a lint rule.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-002-APP",
+    "requirement_id": "SEC-003-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "React text nodes for user content; no innerHTML on untrusted data; email/PDF/SMS encode values.",
+    "actual": "No innerHTML/document.write found; only dangerouslySetInnerHTML is JSON-LD. Email HTML templates and PDFs (react-pdf) were not audited for escaping of customer values.",
+    "affected_files": [
+      "src/components/journal-structured-data.tsx:96"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep dangerouslySetInnerHTML|innerHTML over src",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Review email HTML builders (invitationEmail, invoice emails) for HTML-escaping of customer-supplied strings and add a test for one template.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-003-APP",
+    "requirement_id": "SEC-003-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Every dangerouslySetInnerHTML listed with source; JSON-LD escapes '<' and U+2028/2029; user/AI HTML sanitized.",
+    "actual": "Two uses, both in journal-structured-data.tsx via safeJsonLd(); json-ld.test.ts and journal-diagrams.test.ts pass.",
+    "affected_files": [
+      "src/components/journal-structured-data.tsx:96",
+      "src/components/journal-structured-data.tsx:101"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/json-ld.test.ts, src/lib/journal-diagrams.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/components/journal-structured-data.tsx:96-101",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Keep the list in docs; require review for any new dangerouslySetInnerHTML.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/json-ld.test.ts",
+      "src/lib/journal-diagrams.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-004-APP",
+    "requirement_id": "SEC-003-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "No raw HTML in chat/markdown; link schemes allowlisted; no auto-loaded external images.",
+    "actual": "The chat-markdown parser (src/lib/chat-markdown.ts) recognises only bold, inline code and bullet lines and returns plain text segments, so model text has no link or HTML path by design (source review). Its 10 passing tests cover that parsing, not HTML escaping, link schemes or external images, and the React renderer (src/components/ui/chat-markdown.tsx) is untested.",
+    "affected_files": [
+      "src/lib/chat-markdown.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/chat-markdown.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Add tests that feed raw HTML, javascript:/data: links and markdown images through parseChatMarkdown and the renderer and assert they come out as inert text.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/chat-markdown.test.ts"
+    ],
+    "test_result": "passed",
+    "status_reason": "QA review 2026-11-25: GREEN withdrawn. The cited chat-markdown tests cover bold, inline code, bullets and headings only; none exercises raw HTML, link schemes or images."
+  },
+  {
+    "finding_id": "F-SEC-003-005-APP",
+    "requirement_id": "SEC-003-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Server Actions use framework Origin check, allowedOrigins not widened; cookie-auth route handlers verify Origin; no state change on GET.",
+    "actual": "experimental.serverActions.allowedOrigins is not set (default same-origin check). Invoice and plan pay routes are POST. But /booking/[token]/pay is a GET that starts a Stripe checkout session (state change on GET, token-authenticated not cookie), and auth/callback GET exchanges codes (expected). Cookie-authenticated route handlers (settings/payments/start, integrations connect) do not check Origin.",
+    "affected_files": [
+      "next.config.ts:164",
+      "src/app/booking/[token]/pay/route.ts:34",
+      "src/app/settings/payments/start/route.ts:21"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "next.config.ts:164-181",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/booking/[token]/pay/route.ts:34-104",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Make booking pay a POST (form button) and add an Origin check helper for cookie-authenticated route handlers that change state.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-006-APP",
+    "requirement_id": "SEC-003-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "User/webhook-influenced fetches allowlist hosts, block private ranges, no redirects to disallowed hosts; Twilio media from Twilio hosts only.",
+    "actual": "Twilio recording and message media fetch helpers restrict to Twilio hosts (twilio-recording, message-media tests pass). Other outbound fetches (geocoding, Google APIs, HIBP) use fixed hosts. Website intake / AI web tools were not fully reviewed for URL fetching.",
+    "affected_files": [
+      "src/lib/twilio.ts:1",
+      "src/lib/message-media.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/twilio-recording.test.ts, src/lib/message-media.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Inventory every fetch() whose URL contains request/AI data and route them through one allowlisting helper with redirect: 'manual'.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/twilio-recording.test.ts",
+      "src/lib/message-media.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-007-APP",
+    "requirement_id": "SEC-003-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Server-generated storage keys; '..', '/', control chars rejected; filenames sanitized in headers.",
+    "actual": "isOwnedObjectPath refuses traversal, '.', empty segments, backslashes, '%' and control characters (8 passing tests) and documents.storage_path has DB CHECK private.is_owned_object_path. Content-Disposition for recordings uses a regex-validated SID.",
+    "affected_files": [
+      "src/lib/tenant-storage-path.ts:1",
+      "src/app/api/twilio/recordings/[recordingSid]/route.ts:44"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/tenant-storage-path.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q4b_storage_objects_policies",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Apply the same sanitizer to attachment filenames in outbound emails if not already.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/tenant-storage-path.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-008-APP",
+    "requirement_id": "SEC-003-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "next/redirect params accept same-origin relative paths only; OAuth redirect URIs exact-match.",
+    "actual": "getSafeNextPath resolves against a fixed base and rejects other origins (used by login and auth/callback). Google redirect_uri is built from configured origin. No unit test covers getSafeNextPath ('//evil' etc.).",
+    "affected_files": [
+      "src/lib/auth-redirect.ts:1",
+      "src/app/auth/callback/route.ts:16"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/lib/auth-redirect.ts:1-12",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Confirm Supabase Auth redirect allowlist and Google OAuth redirect URIs are exact-match in their consoles.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-009-APP",
+    "requirement_id": "SEC-003-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Documented per-upload limits; server/bucket enforce size and MIME; magic bytes checked; SVG rejected/sanitized; signed upload URLs tenant-bound.",
+    "actual": "business-documents bucket has a 50MB limit but allowed_mime_types = null; public-branding allows image/svg+xml (public bucket, SVG not sanitized at bucket level). site-videos and attachment-kinds tests pass for those uploads. Server Action body limit 4MB.",
+    "affected_files": [
+      "next.config.ts:180"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q4_storage_buckets",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/site-videos.test.ts, src/lib/attachment-kinds.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Set allowed_mime_types on business-documents; remove image/svg+xml from public-branding or sanitize SVG server-side; document limits per upload.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/site-videos.test.ts",
+      "src/lib/attachment-kinds.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-010-APP",
+    "requirement_id": "SEC-003-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "Untrusted files from storage origin with nosniff and attachment disposition; documented AV decision.",
+    "actual": "Documents are served through Supabase signed URLs (storage origin); app sets X-Content-Type-Options nosniff globally. No documented antivirus decision.",
+    "affected_files": [
+      "next.config.ts:201"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "next.config.ts:201",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Record an AV-scanning decision with compensating controls; use download disposition for non-image signed URLs.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-011-APP",
+    "requirement_id": "SEC-003-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Server-side schema validation in actions/routes/RPCs; integer cents; negative/overflow/refund>paid rejected.",
+    "actual": "Money rules are integer cents and tested (money-input, invoice-math, invoice-refund); DB constraints such as invoice_payments.amount_cents > 0 exist. Validation is hand-written per action (no schema library); not uniformly reviewed.",
+    "affected_files": [
+      "src/lib/money-input.ts:1",
+      "src/lib/invoice-math.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/money-input.test.ts, src/lib/invoice-math.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Adopt a schema validator (zod is already an override dependency) for server action inputs.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/money-input.test.ts",
+      "src/lib/invoice-math.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-012-APP",
+    "requirement_id": "SEC-003-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Explicit field copying; organization_id, role, status, totals, paid flags never from client unless authorized.",
+    "actual": "Reviewed actions copy explicit fields. inviteTeammate takes organizationId from the form but RLS/can_manage_members enforces it. Because authenticated holds UPDATE on all columns, a client calling PostgREST directly can set status/plan on organization_subscriptions and charges_enabled on stripe_connect_accounts (see SEC-002-010).",
+    "affected_files": [
+      "src/app/settings/team/actions.ts:41"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q9_organization_subscriptions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Use column-level UPDATE grants or guard triggers for status/total/paid columns on tenant tables.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-013-APP",
+    "requirement_id": "SEC-003-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Generic client errors; fail closed on authz/payment errors; global error boundary.",
+    "actual": "src/app/error.tsx exists; actions return fixed messages. Fail-open choices: passwordIsBreached returns false on error; AI allowance allows use when count fails (ai-allowance.ts comment). xAI route returns 'XAI_WEBHOOK_SECRET is not set' to callers.",
+    "affected_files": [
+      "src/app/error.tsx:1",
+      "src/lib/pwned-password.ts:58",
+      "src/app/api/xai/voice/route.ts:51"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/xai/voice/route.ts:48-53",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Log fail-open events; return a generic 403 body from webhooks.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-014-APP",
+    "requirement_id": "SEC-003-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "HSTS, nosniff, Referrer-Policy, frame-ancestors on every route; nonce CSP with object-src 'none' and base-uri.",
+    "actual": "next.config.ts headers() sets HSTS (2y), nosniff, strict-origin-when-cross-origin, X-Frame-Options DENY and CSP frame-ancestors 'none' for /:path*; src/proxy.ts sets per-request nonce CSP with strict-dynamic, object-src 'none', base-uri 'self' (report-only on previews). csp.test.ts passes. Note: script-src keeps 'unsafe-eval' for Google Maps; HSTS lacks includeSubDomains by design.",
+    "affected_files": [
+      "next.config.ts:183",
+      "src/proxy.ts:41",
+      "src/lib/csp.ts:17"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/csp.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "next.config.ts:183-207",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/proxy.ts:41-49",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "network-observation",
+        "location": "compliance/website-audits/volteira.com/headers-2026-11-24.txt",
+        "collected_at": "2026-11-24",
+        "method": "Live response headers of https://www.volteira.com/ (x-matched-path /welcome): HSTS max-age=63072000, nosniff, strict-origin-when-cross-origin, X-Frame-Options DENY, enforced nonce CSP with strict-dynamic, object-src none, base-uri self, frame-ancestors none",
+        "limitations": "Added in QA review 2026-11-25. One public route only; authenticated app routes and API responses were not captured."
+      }
+    ],
+    "remediation": "Verify live response headers on production once; consider limiting 'unsafe-eval'.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/csp.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-015-APP",
+    "requirement_id": "SEC-003-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "No Access-Control-Allow-Origin by default; fixed allowlist where needed.",
+    "actual": "No route sets Access-Control-Allow-* (grep over src returns nothing), so browsers enforce same-origin. Live headers not captured.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep Access-Control-Allow over src: no matches",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Capture response headers from representative /api routes (including preflight OPTIONS) and confirm no Access-Control-Allow-* header is returned.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "QA review 2026-11-25: GREEN withdrawn. The only evidence is a source grep (absence of code); no API response headers were observed."
+  },
+  {
+    "finding_id": "F-SEC-003-016-APP",
+    "requirement_id": "SEC-003-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Per-IP/tenant/token limits on intake, booking, holds, SMS, AI, Twilio callbacks and MCP; money/message limits enforced and alerting.",
+    "actual": "Only AI has a server-side monthly allowance (ai-allowance.ts, 429 in materials-chat). No per-IP or per-token limiter exists for public booking intake, booking holds, website intake, MCP token route, invoice/contract token pages or SMS sends; no alerting when limits hit. The AI allowance itself can be bypassed by an admin flipping organization_subscriptions.status (SEC-002-010).",
+    "affected_files": [
+      "src/app/api/jobs/[jobNumber]/materials-chat/route.ts:62",
+      "src/app/api/intake/website/route.ts:38",
+      "src/app/api/mcp/[token]/route.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep rate.?limit|429 over src (only AI allowance)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add a shared limiter (e.g. Vercel Firewall rate-limit rules or Upstash/DB token bucket) for public POSTs, token routes, MCP and SMS sends, with alerts; close the subscription-status bypass.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-017-APP",
+    "requirement_id": "SEC-003-017",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Payment processor",
+    "expected": "constructEvent over raw body with tolerance; idempotent by event ID; amounts/account validated; correct endpoint secret.",
+    "actual": "Webhook reads request.text() and verifies with stripe.webhooks.constructEvent (default 300s tolerance), trying platform then Connect secret; 400 on missing/invalid signature. Connected events cross-check event.account. Idempotency is per object (checkout/refund keys) not per event ID: stripe_webhook_events table exists with unique stripe_event_id but no code references it. No test covers the route.",
+    "affected_files": [
+      "src/app/api/stripe/webhook/route.ts:27",
+      "src/app/api/stripe/webhook/route.ts:41"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/stripe/webhook/route.ts:27-56",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q13_stripe_webhook_events",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Record event.id in stripe_webhook_events (insert ... on conflict do nothing) before processing; add a signature-verification unit test.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-003-018-APP",
+    "requirement_id": "SEC-003-018",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Messaging provider",
+    "expected": "Every Twilio route validates X-Twilio-Signature against the exact URL and params before acting; STOP only on verified requests.",
+    "actual": "All nine Twilio webhook routes (inbound, voice, status, recording, transfer, xai, website-callback, /amd, /status) call verifyTwilioSignature (HMAC-SHA1, timingSafeEqual, candidate URLs) and return 403 before acting; recordings/[recordingSid] is a user-authenticated GET, not a webhook. twilio-webhook-url and sms-confirmation-webhook tests pass.",
+    "affected_files": [
+      "src/lib/twilio.ts:493",
+      "src/app/api/twilio/inbound/route.ts:36"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/twilio-webhook-url.test.ts, src/lib/sms-confirmation-webhook.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/api/twilio/*/route.ts",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add a test of verifyTwilioSignature against Twilio's published signing example (valid, tampered and missing signature) and a route-level test that an unsigned request gets 403 with no side effects.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/twilio-webhook-url.test.ts",
+      "src/lib/sms-confirmation-webhook.test.ts"
+    ],
+    "test_result": "passed",
+    "status_reason": "QA review 2026-11-25: GREEN withdrawn. The cited tests build candidate webhook URLs and stub verifyTwilioSignature to return true (sms-confirmation-webhook.test.ts:47); no test checks that a bad or missing signature is refused. Route coverage rests on code review."
+  },
+  {
+    "finding_id": "F-SEC-003-019-APP",
+    "requirement_id": "SEC-003-019",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Messaging provider, Third-party vendor",
+    "expected": "Resend/xAI/other callbacks verify signatures with timestamp tolerance; worker/cron secrets compared in constant time.",
+    "actual": "xAI voice webhook verifies webhook-id/timestamp/signature (xai-webhook.test.ts passes). Operations worker compares VOLTEIRA_SUPERVISED_WORKER_TOKEN with timingSafeEqual. Website intake uses hashed bearer keys. No Resend inbound webhook exists. XAI_WEBHOOK_SECRET is not present among Vercel env var names, so the xAI route rejects every call (fails closed) and leaks the misconfiguration text.",
+    "affected_files": [
+      "src/app/api/xai/voice/route.ts:33",
+      "src/app/api/operations/worker/route.ts:23"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/xai-webhook.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "names only; XAI_WEBHOOK_SECRET absent"
+      }
+    ],
+    "remediation": "Set XAI_WEBHOOK_SECRET in Production (or remove the route); return a generic 403 body.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/xai-webhook.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-020-APP",
+    "requirement_id": "SEC-003-020",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Provider event IDs stored uniquely; duplicates do not double-apply; stale/out-of-order events rejected.",
+    "actual": "Payment recording is keyed on checkout/refund IDs (comments and RPC design: 'a retry never records a payment twice'); stripe_webhook_events (unique event id) is unused by code. Twilio status updates are not keyed on an event id; out-of-order handling not verified.",
+    "affected_files": [
+      "src/lib/job-prepayment-pay.ts:521",
+      "src/app/api/stripe/webhook/route.ts:56"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q13_stripe_webhook_events",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/invoice-payment.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Use stripe_webhook_events for event-level dedupe; add a replay test for paid->refunded->paid ordering.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/invoice-payment.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-021-APP",
+    "requirement_id": "SEC-003-021",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "critical",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Payment processor",
+    "expected": "Money flows transactional with locks/conditional updates; refunds <= paid; deposit once.",
+    "actual": "Settlement RPCs are service-only SECURITY DEFINER functions; refund/payment/plan/change-order rules are unit-tested (invoice-refund, invoice-payment, payment-plan, change-order-apply all pass). Concurrency (double submit) has not been exercised against the database.",
+    "affected_files": [
+      "src/lib/invoice-refund-server.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/invoice-refund.test.ts, src/lib/invoice-payment.test.ts, src/lib/payment-plan.test.ts, src/lib/change-order-apply.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q3_security_definer_functions",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Add a DB concurrency test (two sessions settling the same refund/payment) on a branch.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/invoice-refund.test.ts",
+      "src/lib/invoice-payment.test.ts",
+      "src/lib/payment-plan.test.ts",
+      "src/lib/change-order-apply.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-022-APP",
+    "requirement_id": "SEC-003-022",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "CSV cells starting with = + - @ tab CR escaped.",
+    "actual": "csvCell prefixes such cells with an apostrophe (csv.ts:21); csv.test.ts passes.",
+    "affected_files": [
+      "src/lib/csv.ts:21"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/csv.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "None.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/csv.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-003-023-APP",
+    "requirement_id": "SEC-003-023",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "No header/recipient injection; templates not from user input; safe regexes; prototype-pollution guards.",
+    "actual": "Email goes through Resend API JSON (no raw headers); invite email validates address with a simple anchored regex. Not exhaustively reviewed for regex backtracking or object merges.",
+    "affected_files": [
+      "src/app/settings/team/actions.ts:50",
+      "src/lib/email.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/settings/team/actions.ts:44-53",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Run a ReDoS linter (eslint-plugin-regexp) and review spreads of request JSON into objects.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-001-APP",
+    "requirement_id": "SEC-004-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "Preview/dev use non-production Supabase, Stripe test keys and non-production Twilio; production secrets scoped to Production; previews protected.",
+    "actual": "Vercel env names show SUPABASE_SECRET_KEY, TWILIO_AUTH_TOKEN, TWILIO_ACCOUNT_SID, ANTHROPIC_API_KEY, RESEND_API_KEY, MCP_SESSION_SECRET, DOCUMENT_SYNC_ENCRYPTION_KEY and GOOGLE_MAPS_SERVER_KEY targeted to both Production and Preview; only one Supabase project is in use (wyyzptlciccewyxxjkyx), so preview deployments run against production data with the service-role key. Stripe has separate preview keys (integration-managed). Deployment Protection status not inspected.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "names/targets only; values not decrypted",
+        "limitations": "Cannot confirm preview Supabase URL value; inference from shared secret target and single project."
+      }
+    ],
+    "remediation": "Create a non-production Supabase project/branch for Preview, re-scope production-only secrets to Production, use Twilio test credentials in Preview, and confirm Vercel Deployment Protection on previews.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-002-APP",
+    "requirement_id": "SEC-004-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "Inventory of every secret with owner, location and rotation interval; secrets only in Vercel/Supabase.",
+    "actual": "Secrets live in Vercel (mostly 'sensitive' type) and Supabase Vault (4 secrets). No inventory document with owner and rotation interval. BLOB_READ_WRITE_TOKEN is stored as non-sensitive 'encrypted' type across all environments and Vercel flags it 'readable-secret'. Location/type only recorded; no value read.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "names/targets/types only"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q12_capability_token_columns",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Write docs/security/secrets-inventory.md (name, purpose, owner, store, environments, rotation interval); convert BLOB_READ_WRITE_TOKEN to Sensitive.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-003-APP",
+    "requirement_id": "SEC-004-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "Rotation procedure per secret, executed after departures or exposure.",
+    "actual": "No rotation procedure or record exists in the repository.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/* (no rotation procedure)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Document zero-downtime rotation steps per secret (Stripe webhook roll, Supabase key rotation, Twilio secondary token) and log each rotation.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-004-APP",
+    "requirement_id": "SEC-004-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor, Payment processor, Messaging provider",
+    "expected": "Restricted Stripe keys, Twilio API keys/subaccounts, scoped Resend keys.",
+    "actual": "Env names show STRIPE_SECRET_KEY (full secret key naming), TWILIO_AUTH_TOKEN (account auth token, not an API key), RESEND_API_KEY. Whether these are restricted/scoped is only visible in provider dashboards.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "names only"
+      }
+    ],
+    "remediation": "Confirm in Stripe/Twilio/Resend dashboards; move to Stripe restricted keys and Twilio API key/secret where possible.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Key scopes are provider-dashboard settings; values were not and must not be decrypted."
+  },
+  {
+    "finding_id": "F-SEC-004-005-APP",
+    "requirement_id": "SEC-004-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Secret scanning/push protection; .env ignored; never-secret hook for agents; found secrets rotated.",
+    "actual": ".gitignore excludes .env*; .claude/settings.json runs .claude/never-secret/hooks/run.sh on every PostToolUse. GitHub secret scanning/push protection status not visible (no gh access used).",
+    "affected_files": [
+      ".gitignore:34",
+      ".claude/settings.json:1"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": ".claude/settings.json",
+        "collected_at": "2026-11-25",
+        "method": "file read"
+      },
+      {
+        "type": "config",
+        "location": ".gitignore:33-35",
+        "collected_at": "2026-11-25",
+        "method": "file read"
+      }
+    ],
+    "remediation": "Confirm GitHub secret scanning and push protection are on for the repository.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-006-APP",
+    "requirement_id": "SEC-004-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "TLS with certificate validation everywhere; no TLS bypass; DB tooling uses SSL.",
+    "actual": "No rejectUnauthorized:false or NODE_TLS_REJECT_UNAUTHORIZED in src/scripts; HSTS set; all providers called over https. DB tooling SSL mode not documented.",
+    "affected_files": [
+      "next.config.ts:204"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "grep rejectUnauthorized|NODE_TLS_REJECT over src, scripts: none",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Document sslmode=require for direct DB connections (scripts/security).",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-007-APP",
+    "requirement_id": "SEC-004-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "Provider encryption at rest confirmed; stored credentials hashed or encrypted.",
+    "actual": "Stored credentials: website_intake_keys.key_hash (hashed), booking_calendar_connections.encrypted_refresh_token and organization_ai_keys.encrypted_key (app-layer encryption with DOCUMENT_SYNC_ENCRYPTION_KEY presumed), Vault for worker token. Supabase at-rest encryption is vendor-attested and not evidenced here.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q12_capability_token_columns",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Attach Supabase/Vercel SOC 2 encryption-at-rest evidence; document the app-layer cipher and key handling.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Provider at-rest encryption needs vendor attestation (SOC 2) not available in the repo."
+  },
+  {
+    "finding_id": "F-SEC-004-008-APP",
+    "requirement_id": "SEC-004-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Only marketing buckets public; customer files private; public buckets hold no PI.",
+    "actual": "business-documents public=false; public-branding public=true (2MB image-only, tenant logos). Inspected via storage.buckets.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q4_storage_buckets",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Confirm public-branding object listing is not permitted for anon and remove SVG from its MIME list.",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-009-APP",
+    "requirement_id": "SEC-004-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "Daily backups and PITR with RPO/RTO; storage backup strategy; annual restore test.",
+    "actual": "MIGRATION-RUNBOOK.md requires a PITR/backup before migrations but records none; no restore test documented. PITR/backup settings are Supabase dashboard settings.",
+    "affected_files": [
+      "docs/security/MIGRATION-RUNBOOK.md:9"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/MIGRATION-RUNBOOK.md:5-10",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Confirm plan backups/PITR in the Supabase dashboard, document RPO/RTO, and perform and record a restore to a non-production project.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Backup and PITR configuration is only visible in the Supabase dashboard; no restore record exists."
+  },
+  {
+    "finding_id": "F-SEC-004-010-APP",
+    "requirement_id": "SEC-004-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "Alerts for runtime errors, auth anomalies, webhook signature failures, SMS/AI spend and advisors to a named person; logs shipped off-platform.",
+    "actual": "No alerting configuration or log drain is evidenced in the repository; webhook signature failures return 403 without counting/alerting; no documented owner. (Vercel drains not inspected.)",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "repository (no alerting/drain config)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Configure a Vercel log drain and alerts (signature failures, 5xx spikes, SMS/AI spend), and schedule Supabase advisor review.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-011-APP",
+    "requirement_id": "SEC-004-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "npm audit/Dependabot on every PR and weekly; remediation timeframes; SBOM/lockfile.",
+    "actual": "npm audit --omit=dev: 0 vulnerabilities (2026-11-25). package-lock.json committed. No CI or Dependabot (.github absent) and no documented remediation timeframes.",
+    "affected_files": [
+      "package-lock.json:1"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "npm audit --omit=dev --json",
+        "collected_at": "2026-11-25",
+        "method": "read-only audit",
+        "limitations": "Point-in-time."
+      }
+    ],
+    "remediation": "Add Dependabot/CI audit with documented SLAs (critical 7d, high 30d).",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-012-APP",
+    "requirement_id": "SEC-004-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Lockfile committed, npm ci, dependency review; CI actions pinned.",
+    "actual": "Lockfile committed; most runtime deps pinned exactly, but @anthropic-ai/sdk, @react-pdf/renderer and pdfjs-dist use caret ranges. No CI to pin. Vercel installs from lockfile.",
+    "affected_files": [
+      "package.json:12"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "package.json:12-30",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Pin remaining caret ranges; document dependency review for new packages.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-013-APP",
+    "requirement_id": "SEC-004-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Third-party vendor",
+    "expected": "Hooks/scripts reviewed like production code; third-party skills/MCP pinned and inventoried; no prod secrets; no prod DB write by default.",
+    "actual": ".claude/settings.json runs a vendored never-secret hook on every tool use; .claude/COMMANDS.md inventories skills. Agent sessions have Supabase MCP connected to the production project with apply_migration/execute_sql available (write-capable by default). Hook code was not reviewed line by line.",
+    "affected_files": [
+      ".claude/settings.json:1",
+      ".claude/never-secret/hooks/run.sh:1"
+    ],
+    "evidence": [
+      {
+        "type": "config",
+        "location": ".claude/settings.json",
+        "collected_at": "2026-11-25",
+        "method": "file read"
+      }
+    ],
+    "remediation": "Restrict the Supabase MCP connection to read-only (or a branch) by default; record review of the never-secret hook version.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-014-APP",
+    "requirement_id": "SEC-004-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "medium",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC, Third-party vendor",
+    "expected": "Vendor list with data shared, criticality, SOC2/ISO and DPA status, reviewed annually.",
+    "actual": "No vendor inventory in the repository.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs (no vendor inventory)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Create the vendor register (Supabase, Vercel, Stripe, Twilio, Resend, xAI, Anthropic, Google, GitHub, Documenso).",
+    "priority": "P3",
+    "legal_review_required": true,
+    "test_result": "not-applicable",
+    "status_reason": "Contract/DPA and attestation status are held outside the repository."
+  },
+  {
+    "finding_id": "F-SEC-004-015-APP",
+    "requirement_id": "SEC-004-015",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "critical",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "MFA and named least-privilege accounts on all consoles; prompt offboarding; quarterly review.",
+    "actual": "Console MFA and membership for Vercel, Supabase, Stripe, Twilio, Resend, GitHub and registrar cannot be checked read-only from here.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "team metadata not inspected"
+      }
+    ],
+    "remediation": "Export member lists with MFA status from each console and record a quarterly review.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Console account settings are not visible through code or read-only tools used."
+  },
+  {
+    "finding_id": "F-SEC-004-016-APP",
+    "requirement_id": "SEC-004-016",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "No debug, no public source maps, no .git/.env served, no internal docs endpoints.",
+    "actual": "productionBrowserSourceMaps not set (default off); no debug routes found; public/ has only icons. Live probing of /.git and /.env not performed.",
+    "affected_files": [
+      "next.config.ts:140"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "next.config.ts",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Run a quick external check of production for /.env, /.git/config and source maps.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-004-017-APP",
+    "requirement_id": "SEC-004-017",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Shadam LLC",
+    "expected": "Published disclosure policy and security.txt; acknowledgement times.",
+    "actual": "No public/.well-known/security.txt and no disclosure policy page.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "public/ (no .well-known/security.txt)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Publish /.well-known/security.txt with a contact and a short disclosure policy.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-005-001-APP",
+    "requirement_id": "SEC-005-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Audit records carry actor id and type, org, UTC time, resource type/id, action, outcome and correlation id; human and agent both recorded.",
+    "actual": "activity_events has organization_id, actor_user_id, event_type, entity_type/entity_id, created_at, but no actor type, outcome or request id; members can INSERT arbitrary rows (any actor_user_id). supervised_action_audit is the strongest (actor_id, actor_kind, via, from/to status, content_hash). platform_admin_audit lacks outcome. mcp_call_log has is_error/http_status but no actor.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Define one audit schema (actor_id, actor_type, organization_id, resource, action, outcome, request_id); write it server-side only (revoke INSERT from authenticated, set actor from auth.uid()).",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-005-002-APP",
+    "requirement_id": "SEC-005-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "BLUE",
+    "severity": "high",
+    "confidence": "low",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Sign-ins, failures, MFA, resets, revocations, lockouts logged and retained/exportable.",
+    "actual": "The app logs no auth events; reliance is on the Supabase Auth audit log, whose retention/export was not inspected.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src (no auth event logging)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Confirm Supabase auth audit retention and export it to the log drain.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable",
+    "status_reason": "Supabase auth audit log configuration and retention are dashboard/plan settings."
+  },
+  {
+    "finding_id": "F-SEC-005-003-APP",
+    "requirement_id": "SEC-005-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Denied actions, BOLA attempts, invalid tokens and invalid webhook signatures logged with actor/target.",
+    "actual": "Webhook signature failures return 403 without logging (e.g. twilio/inbound route.ts:36-44); RLS denials and invalid capability tokens are not logged; a few console.error lines exist for mismatched Stripe accounts only.",
+    "affected_files": [
+      "src/app/api/twilio/inbound/route.ts:36",
+      "src/lib/job-prepayment-pay.ts:544"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/api/**/route.ts",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Log (rate-limited) authorization failures and invalid signatures with route, tenant and reason.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-005-004-APP",
+    "requirement_id": "SEC-005-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Invites, removals, role changes, ownership, admin access, unmasking, impersonation logged and visible.",
+    "actual": "Platform admin actions, unmasking and impersonation are written to platform_admin_audit / impersonation_sessions with reason (admin-trace test passes). Tenant-side invites, removals and role changes were not found writing an audit event visible to owners.",
+    "affected_files": [
+      "src/app/settings/team/actions.ts:37"
+    ],
+    "evidence": [
+      {
+        "type": "test-result",
+        "location": "src/lib/admin-trace.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      },
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Write activity_events (server-side) for invitation create/revoke/accept, member removal and role change.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/admin-trace.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-005-APP",
+    "requirement_id": "SEC-005-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Contractor tenants",
+    "expected": "Consent records capture customer, tenant, channel, disclosure version, source, time, withdrawal keyword; append-only.",
+    "actual": "messaging_consent has customer, channel, scope, opted_in/out timestamps, source, proof_text, captured_by, but no disclosure version, and it is mutable: RLS grants any member UPDATE and DELETE ('Organization members can update/delete messaging_consent') and there is no immutability trigger (only updated_at). sms-consent.test.ts passes for the rule logic only.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/sms-consent.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Make consent append-only: drop UPDATE/DELETE policies, add a consent_events table with disclosure version, record withdrawals as new rows.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/sms-consent.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-006-APP",
+    "requirement_id": "SEC-005-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Bulk views, exports, recording playback and admin record access logged with actor/tenant/scope.",
+    "actual": "reports/export and twilio/recordings serve data without writing any audit event; admin views log through platform_admin_audit.",
+    "affected_files": [
+      "src/app/reports/export/route.ts:17",
+      "src/app/api/twilio/recordings/[recordingSid]/route.ts:9"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/reports/export/route.ts",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/app/api/twilio/recordings/[recordingSid]/route.ts",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Write an audit event for each export (report, range, row count) and each recording playback.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-005-007-APP",
+    "requirement_id": "SEC-005-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Contractor tenants",
+    "expected": "Send/view/consent/sign/countersign events with identity, time, IP/UA, version and hash; not editable by tenants.",
+    "actual": "Contracts store signed_body_hash; triggers keep_signed_contract_text/figures/keep_contractor_signature block edits after signing; contract signing captures client IP (contract/[token]/actions.ts:57-62). Tests pass. contract_signers is writable by the signer's own user row (ALL policy), and send/view events were not confirmed.",
+    "affected_files": [
+      "src/app/contract/[token]/actions.ts:57"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/contract-signatures.test.ts, src/lib/esign-consent.test.ts, src/lib/contract-signing.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Confirm view/send events are recorded; restrict contract_signers updates after signature.",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_ids": [
+      "src/lib/contract-signatures.test.ts",
+      "src/lib/esign-consent.test.ts",
+      "src/lib/contract-signing.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-008-APP",
+    "requirement_id": "SEC-005-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform, Contractor tenants",
+    "expected": "Financial changes logged with actor, cents before/after and outcome.",
+    "actual": "invoice_revisions stores previous/next, subtotal_delta_cents, credit_due_cents and created_by; activity timeline and refund tests pass. Payment records and discount edits were not all confirmed to log before/after. invoice_revisions is SELECT-only by RLS for members (good).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/activity-timeline.test.ts, src/lib/invoice-refund.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Extend revision logging to manual payments, discounts and deposit applications.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/activity-timeline.test.ts",
+      "src/lib/invoice-refund.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-009-APP",
+    "requirement_id": "SEC-005-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Deletions of customers/jobs/files/messages/tenants and consumer deletion requests logged without PI.",
+    "actual": "Members can DELETE customers (policy) and no deletion audit event was found.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q2_policy_counts_per_table",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Add delete triggers that write a PI-free audit row (table, id, actor, time).",
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-005-010-APP",
+    "requirement_id": "SEC-005-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "GREEN",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Every AI proposal, reviewer, decision, result and tool recorded, including rejected/failed.",
+    "actual": "supervised_action_audit records proposal_id, event, from/to status, actor_id, actor_kind, via, content_hash, attempt; refuse_audit_update trigger blocks edits; authenticated has SELECT only. supervised-actions and supervised-executor tests pass (10+6), plus supabase/tests/supervised-actions.test.sql exists.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/supervised-actions.test.ts, src/lib/supervised-executor.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "None; keep. (AI/MCP depth covered by the SEC-007 auditor.)",
+    "priority": "none",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/supervised-actions.test.ts",
+      "src/lib/supervised-executor.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-011-APP",
+    "requirement_id": "SEC-005-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "Each MCP request logs connection id, org, tool, redacted args, outcome, latency; visible to owner.",
+    "actual": "mcp_call_log has organization_id, method, tool_name, redacted arguments, is_error/http_status, duration_ms, session_key; owners/admins can read; retention cron. No explicit connection/credential id column. mcp-log-redaction tests pass.",
+    "affected_files": [
+      "src/lib/mcp-log.ts:1"
+    ],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/mcp-log-redaction.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Add the credential/connection id to each row (details in SEC-007 findings).",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/mcp-log-redaction.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-012-APP",
+    "requirement_id": "SEC-005-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "No passwords, tokens (incl. path tokens), keys or full bodies in logs; contacts masked; path-token logs controlled.",
+    "actual": "src/app/booking/[token]/pay/route.ts:104 logs the booking capability token via console.error (Vercel runtime logs). Capability and MCP tokens are in URL paths, so Vercel request logs contain them; no retention/access statement. MCP log redaction is tested.",
+    "affected_files": [
+      "src/app/booking/[token]/pay/route.ts:104"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "src/app/booking/[token]/pay/route.ts:104",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "test-result",
+        "location": "src/lib/mcp-log-redaction.test.ts, src/lib/admin-mask.test.ts",
+        "collected_at": "2026-11-25",
+        "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
+      }
+    ],
+    "remediation": "Remove the token from that log line; document Vercel log retention/access; move tokens out of paths (fragment or POST) where practical.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_ids": [
+      "src/lib/mcp-log-redaction.test.ts",
+      "src/lib/admin-mask.test.ts"
+    ],
+    "test_result": "passed"
+  },
+  {
+    "finding_id": "F-SEC-005-013-APP",
+    "requirement_id": "SEC-005-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "YELLOW",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "App roles cannot UPDATE/DELETE audit rows; tenants read only their own; retention documented.",
+    "actual": "RLS has no UPDATE/DELETE policies on activity_events, mcp_call_log, platform_admin_audit, invoice_revisions, so those are effectively append-only for authenticated (table grants exist but RLS blocks); supervised_action_audit also has a refuse_audit_update trigger. But members can INSERT forged activity_events, messaging_consent is fully mutable, TRUNCATE is granted to authenticated (TRUNCATE is not subject to RLS but needs the privilege - granted), and retention is documented only for mcp_call_log.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "database-check",
+        "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q11_audit_tables",
+        "collected_at": "2026-11-25",
+        "method": "read-only catalog query via Supabase MCP execute_sql"
+      }
+    ],
+    "remediation": "Revoke TRUNCATE/UPDATE/DELETE (and INSERT where server-written) on audit tables from authenticated; document retention for each.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-005-014-APP",
+    "requirement_id": "SEC-005-014",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "medium",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira platform",
+    "expected": "User values encoded in logs; inventory of what each layer logs.",
+    "actual": "No logging inventory document; console logging uses structured objects in places.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs (no logging inventory)",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Write a logging inventory (Vercel, Supabase, app tables, providers) with retention.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-001-APP",
+    "requirement_id": "SEC-006-001",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Written IR plan with lead/backup, contacts, severities, runbooks; reviewed annually.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/, SECURITY_REMEDIATION_REPORT.md, README.md",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Write docs/security/incident-response.md naming the incident lead and backup, contacts (counsel, insurer, vendors), severity levels and runbooks.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-002-APP",
+    "requirement_id": "SEC-006-002",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Single intake for alerts and reports; time-bound triage; declaration criteria.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). No security.txt intake and no alerting.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Define one intake (security@ address + alerts) and written declaration criteria with triage time targets.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-003-APP",
+    "requirement_id": "SEC-006-003",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Classification by severity, tenants, data types (1798.82(h) PI, payment, credentials), encryption state.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add a classification matrix including Cal. Civ. Code 1798.82(h) data elements and encryption-key exposure.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-004-APP",
+    "requirement_id": "SEC-006-004",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Severity thresholds escalate to leadership, counsel, law enforcement, insurers.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Document escalation thresholds and contacts.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-005-APP",
+    "requirement_id": "SEC-006-005",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Runbooks preserve logs, PITR point and investigator actions before changes; retention adequate.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Log retention is not documented and no drain exists.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add an evidence-preservation runbook (Vercel/Supabase log export, PITR timestamp, action log).",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-006-APP",
+    "requirement_id": "SEC-006-006",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Runbooks for leaked secret, compromised account, cross-tenant exposure, MCP/AI misuse, webhook abuse.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Partial building blocks exist (MCP credential revocation, AI kill-switch env flags such as VOLTEIRA_PHASE2_* ), but no runbooks.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      },
+      {
+        "type": "config",
+        "location": "Vercel project prj_JfToYGRzKQ9KOtoXOp7l5WADFmrw env var names/targets (filter_project_envs, values not decrypted)",
+        "collected_at": "2026-11-25",
+        "method": "names only"
+      }
+    ],
+    "remediation": "Write the five containment runbooks referencing existing kill switches and revocation paths.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-007-APP",
+    "requirement_id": "SEC-006-007",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "critical",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Workflow to decide 1798.82 notification, draft compliant notices, track timing, AG sample copy >500 residents; other states and contracts.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "With counsel, create a breach-notification workflow and notice templates meeting Cal. Civ. Code 1798.82 headings and AG submission rules.",
+    "priority": "P0",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-008-APP",
+    "requirement_id": "SEC-006-008",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Volteira as service provider, Shadam LLC, Contractor tenants",
+    "expected": "Immediate notice to affected contractor tenants; duty reflected in tenant terms.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Tenant terms were not found to state the notice duty.",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/, src/app/legal",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add tenant-notification steps and a service-provider breach-notice clause (1798.82(b)) to tenant terms.",
+    "priority": "P1",
+    "legal_review_required": true,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-009-APP",
+    "requirement_id": "SEC-006-009",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform, Third-party vendor",
+    "expected": "Vendor security contacts and escalation recorded; vendor notices monitored.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Record vendor security contacts and subscribe to status/security feeds.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-010-APP",
+    "requirement_id": "SEC-006-010",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "high",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Recovery verifies backup integrity, confirms clean restore, declares end with documentation.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). No restore test record (see SEC-004-009).",
+    "affected_files": [
+      "docs/security/MIGRATION-RUNBOOK.md:9"
+    ],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/security/MIGRATION-RUNBOOK.md",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add recovery steps and criteria; perform a restore drill.",
+    "priority": "P1",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-011-APP",
+    "requirement_id": "SEC-006-011",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "low",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Status updates through approved channels.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Define status communication channels and templates.",
+    "priority": "P3",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-012-APP",
+    "requirement_id": "SEC-006-012",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies to the Volteira multi-tenant application in production.",
+    "responsible_party": "Shadam LLC, Volteira platform",
+    "expected": "Annual tabletop; lessons update the plan.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Schedule a tabletop (cross-tenant exposure, leaked service-role key) within 90 days.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  },
+  {
+    "finding_id": "F-SEC-006-013-APP",
+    "requirement_id": "SEC-006-013",
+    "audit_id": "APP-2026-11-24",
+    "target": "Volteira application",
+    "status": "RED",
+    "severity": "medium",
+    "confidence": "high",
+    "applicability": "Applies while Volteira (or a tenant through Volteira) accepts card payments via Stripe-hosted pages (SAQ A eligibility assumed).",
+    "responsible_party": "Shadam LLC, Volteira platform, Payment processor",
+    "expected": "IR plan covers payment page/redirect compromise and Stripe/card-brand notification.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "affected_files": [],
+    "evidence": [
+      {
+        "type": "source-reference",
+        "location": "docs/",
+        "collected_at": "2026-11-25",
+        "method": "code-review"
+      }
+    ],
+    "remediation": "Add a payment-incident runbook covering Stripe Checkout redirect integrity and Stripe notification.",
+    "priority": "P2",
+    "legal_review_required": false,
+    "test_result": "not-applicable"
+  }
+]
