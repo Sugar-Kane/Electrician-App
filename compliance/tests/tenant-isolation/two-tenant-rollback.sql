@@ -90,12 +90,12 @@ grant usage on sequence _ti_results_seq_seq to authenticated, anon;
 -- real signed-in user.
 insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at,
                         raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-select a_user, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+select a_user, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated',
        'compliance-tenant-a+' || left(a_user::text, 8) || '@example.invalid', now(),
        '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Compliance User A"}'::jsonb, now(), now()
 from _ti_ids
 union all
-select b_user, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+select b_user, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated',
        'compliance-tenant-b+' || left(b_user::text, 8) || '@example.invalid', now(),
        '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Compliance User B"}'::jsonb, now(), now()
 from _ti_ids;
