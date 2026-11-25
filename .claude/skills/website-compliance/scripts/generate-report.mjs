@@ -226,3 +226,22 @@ const template = fs.readFileSync(path.join(path.dirname(new URL(import.meta.url)
 const html = template.replace("/*__DATA__*/null", JSON.stringify(data).replace(/</g, "\\u003c"));
 fs.writeFileSync(path.join(dir, "dashboard.html"), html);
 console.log(`✓ ${findings.length} findings → ${path.join(dir, "report.md")}, report.json, dashboard.html`);
+
+// ---------- History index (one entry per audit; an audit re-generated replaces its own entry) ----------
+const historyFile = path.join(path.dirname(path.resolve(dir)), "history.json");
+const history = fs.existsSync(historyFile) ? readJson(historyFile) : { description: "Index of audits in this folder, oldest first. Each audit folder keeps its own report; nothing here is overwritten except an audit's own entry when its report is regenerated.", audits: [] };
+const entry = {
+  audit_id: meta.audit_id,
+  folder: path.basename(path.resolve(dir)),
+  started_at: meta.started_at,
+  generated_at: report.generated_at,
+  git_commit: meta.git_commit || null,
+  legal_baseline_version: meta.legal_baseline_version,
+  result: websiteResult || (all.RED ? "Not ready: verified failures present" : all.BLUE ? "Incomplete: unverified requirements remain" : "No verified failures"),
+  totals: all,
+  metrics: metrics(all),
+  critical_findings: report.critical_findings.length,
+};
+history.audits = history.audits.filter((a) => a.audit_id !== entry.audit_id).concat(entry).sort((a, b) => String(a.started_at).localeCompare(String(b.started_at)));
+fs.writeFileSync(historyFile, JSON.stringify(history, null, 2) + "\n");
+console.log(`✓ history → ${historyFile}`);

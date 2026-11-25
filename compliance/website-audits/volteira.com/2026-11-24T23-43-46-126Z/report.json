@@ -32,7 +32,7 @@
     "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
     "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
   ],
-  "generated_at": "2026-11-25T14:19:08.212Z",
+  "generated_at": "2026-11-25T14:19:48.923Z",
   "totals": {
     "GREEN": 16,
     "YELLOW": 4,

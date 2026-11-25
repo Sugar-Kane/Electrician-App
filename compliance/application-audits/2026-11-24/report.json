@@ -22,7 +22,7 @@
     "Global (~/.claude) installation of the skills was not performed in this ephemeral container; the canonical copies are in the repository.",
     "Findings are evidence for review, not legal advice or a certification."
   ],
-  "generated_at": "2026-11-25T14:19:15.691Z",
+  "generated_at": "2026-11-25T14:19:48.764Z",
   "totals": {
     "GREEN": 14,
     "YELLOW": 108,

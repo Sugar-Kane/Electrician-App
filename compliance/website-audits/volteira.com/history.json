@@ -1,0 +1,28 @@
+{
+  "description": "Index of audits in this folder, oldest first. Each audit folder keeps its own report; nothing here is overwritten except an audit's own entry when its report is regenerated.",
+  "audits": [
+    {
+      "audit_id": "WEB-volteira.com-2026-11-24",
+      "folder": "2026-11-24T23-43-46-126Z",
+      "started_at": "2026-11-24T23:43:46.126Z",
+      "generated_at": "2026-11-25T14:19:48.923Z",
+      "git_commit": null,
+      "legal_baseline_version": "2026-11-24",
+      "result": "FAIL",
+      "totals": {
+        "GREEN": 16,
+        "YELLOW": 4,
+        "RED": 2,
+        "GRAY": 31,
+        "BLUE": 127,
+        "total": 180
+      },
+      "metrics": {
+        "verified_pass_rate": 72.7,
+        "verification_coverage": 14.8,
+        "overall_verified_applicable_compliance": 10.7
+      },
+      "critical_findings": 0
+    }
+  ]
+}

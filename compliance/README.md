@@ -13,6 +13,7 @@ and never a certification or protection against lawsuits.**
 | `scripts/` | Node tools (no extra dependencies): `validate-requirements`, `run-website-audit`, `evaluate-website`, `generate-report`, `compare-audits`, `refresh-legal-requirements`, `verify-command-registry`, `package-website-skill`, `build-backlog`. |
 | `tests/manifest.json` | Compliance tests → requirement IDs. Unit tests live in `src/compliance-tests/` (run by `npm test`); `tests/tenant-isolation/` holds the rolled-back two-tenant SQL. |
 | `templates/` | Dashboard HTML template; proposed CI workflow (`ci-compliance.yml.example`, not active). |
+| `application-audits/history.json`, `website-audits/<domain>/history.json` | Audit history index, updated by `generate-report.mjs` (an audit's own entry is replaced when it is regenerated; older audits are never touched). |
 | `application-audits/<date>/` | One application audit: `findings/`, `evidence/`, `report.{md,json}`, `dashboard.html`. |
 | `website-audits/<domain>/<timestamp>/` | One website audit: `observations.json`, `screenshots/`, `findings.json`, `report.*`, `dashboard.html`. |
 | `legal-history/` | Dated baseline snapshots and legal verification / change reports. Never overwritten. |

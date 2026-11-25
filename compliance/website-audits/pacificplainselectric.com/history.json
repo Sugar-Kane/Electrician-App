@@ -1,0 +1,28 @@
+{
+  "description": "Index of audits in this folder, oldest first. Each audit folder keeps its own report; nothing here is overwritten except an audit's own entry when its report is regenerated.",
+  "audits": [
+    {
+      "audit_id": "WEB-pacificplainselectric.com-2026-11-24",
+      "folder": "2026-11-24T23-44-09-923Z",
+      "started_at": "2026-11-24T23:44:09.923Z",
+      "generated_at": "2026-11-25T14:19:48.849Z",
+      "git_commit": null,
+      "legal_baseline_version": "2026-11-24",
+      "result": "FAIL",
+      "totals": {
+        "GREEN": 21,
+        "YELLOW": 3,
+        "RED": 5,
+        "GRAY": 4,
+        "BLUE": 147,
+        "total": 180
+      },
+      "metrics": {
+        "verified_pass_rate": 72.4,
+        "verification_coverage": 16.5,
+        "overall_verified_applicable_compliance": 11.9
+      },
+      "critical_findings": 4
+    }
+  ]
+}
