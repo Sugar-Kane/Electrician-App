@@ -1,4 +1,4 @@
--- TI-001 .. TI-012: two-tenant isolation test in ONE rolled-back transaction.
+-- TI-001 .. TI-012: two-tenant isolation test in ONE transaction that always aborts.
 --
 -- STATUS: written for APP-2026-11-24, NOT EXECUTED. Review before running.
 -- Supports: SEC-002-001, -002, -003, -004, -006, -007, -010, -012, -013, -019.
@@ -17,7 +17,7 @@
 --      Tenant B row, plus INSERT-into-B and move-own-row-to-B, plus calls a
 --      few SECURITY DEFINER RPCs with B identifiers.
 --   3. Repeats a SELECT sweep as `anon`.
---   4. Prints every result from a temp table, then ROLLBACK.
+--   4. Raises an exception carrying every result as JSON, which aborts (rolls back) everything.
 --
 -- Safety
 --   - Only synthetic values ('Compliance Tenant A/B', example.invalid emails),
