@@ -1,0 +1,56 @@
+// Throwaway: render the default contract from SYNTHETIC data with the app's own PDF component.
+// Run with cwd = repo root (fonts resolve from process.cwd()).
+import { createJiti } from "/home/user/Electrician-App/node_modules/jiti/lib/jiti.mjs";
+import { writeFileSync } from "node:fs";
+
+const repo = "/home/user/Electrician-App";
+const jiti = createJiti(import.meta.url, { jsx: true, alias: { "@": `${repo}/src` } });
+
+const React = await jiti.import(`${repo}/node_modules/react/index.js`);
+globalThis.React = React.default ?? React;
+const { renderToBuffer } = await jiti.import(`${repo}/node_modules/@react-pdf/renderer/lib/react-pdf.js`);
+const tpl = await jiti.import(`${repo}/src/lib/contract-template.ts`);
+const plan = await jiti.import(`${repo}/src/lib/payment-plan.ts`);
+const doc = await jiti.import(`${repo}/src/lib/pdf/contract-document.tsx`);
+
+const out = process.argv[2];
+const facts = {
+  business_name: "Fixture Electric",
+  business_phone: "(555) 010-0000",
+  customer_name: "Test Customer",
+  service_address: "100 Example St, Sampletown, CA 90000",
+  job_number: "9999",
+  job_date: "Dec 1, 2026",
+  work_type: "panel upgrade",
+  total: "$8,000.00",
+  deposit: "$800.00, due on signing",
+  scope: "The contractor will replace the main electrical panel with a 200 A panel (synthetic fixture text).",
+  today: "Nov 25, 2026",
+};
+const filled = tpl.fillTemplate(tpl.STARTER_TEMPLATE, facts);
+const planned = plan.planAmounts(800000, [
+  { kind: "deposit", amountType: "fixed", amountCents: 80000, due: "on_signing" },
+  { kind: "installment", amountType: "percent", percentBps: 4000, due: "on_date", dueDate: "2026-12-05" },
+  { kind: "final", amountType: "fixed", due: "on_completion" },
+]);
+if (!planned.ok) throw new Error(planned.reason);
+const terms = plan.contractPaymentTerms(planned.payments, (d) => d);
+const body = plan.withPaymentSchedule(filled.body, terms.block);
+
+const business = {
+  name: "Fixture Electric", phone: "(555) 010-0000", email: "office@fixture.invalid",
+  addressLine1: "1 Fixture Way", city: "Sampletown", state: "CA", postalCode: "90000",
+  licenseNumber: "0000000", logo: null,
+};
+const data = {
+  business, kind: "agreement", reference: "Job #9999", createdLabel: "Nov 25, 2026",
+  customer: { name: "Test Customer", addressLines: ["100 Example St", "Sampletown, CA 90000"], phone: "(555) 010-0001", email: "customer@example.invalid" },
+  job: { number: "9999", addressLines: ["100 Example St", "Sampletown, CA 90000"], scheduledLabel: "Scheduled Dec 1, 2026" },
+  body, unfilled: filled.unfilled,
+  signature: { method: "typed", name: "Test Customer", image: "", signedLabel: "Nov 25, 2026, 10:00 AM PST", fingerprint: "0000 1111 2222 3333" },
+  contractorSignature: { method: "typed", name: "Fixture Owner", title: "Owner", image: "", signedLabel: "Nov 25, 2026, 9:00 AM PST" },
+};
+const pdf = await renderToBuffer(doc.ContractDocument({ data }));
+writeFileSync(out, pdf);
+writeFileSync(out.replace(/\.pdf$/, ".body.txt"), body);
+console.log("ok", pdf.length, "unfilled:", filled.unfilled);
