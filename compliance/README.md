@@ -10,14 +10,15 @@ and never a certification or protection against lawsuits.**
 |---|---|
 | `registry/*.json` | Requirement registers: law, standards and contractual rules only. Statuses never live here. 9 registers: `federal`, `california`, `california-contractors`, `website-federal`, `website-california`, `website-contractors`, `website-accessibility` (every WCAG 2.2 A/AA criterion), `website-security`, `application-security`. Plus `cslb-license-lookup.json`. |
 | `schemas/` | JSON schemas for requirements, findings, evidence and reports. |
-| `scripts/` | Node tools (no extra dependencies): `validate-requirements`, `run-website-audit`, `evaluate-website`, `generate-report`, `compare-audits`, `refresh-legal-requirements`, `verify-command-registry`, `package-website-skill`. |
+| `scripts/` | Node tools (no extra dependencies): `validate-requirements`, `run-website-audit`, `evaluate-website`, `generate-report`, `compare-audits`, `refresh-legal-requirements`, `verify-command-registry`, `package-website-skill`, `build-backlog`. |
 | `tests/manifest.json` | Compliance tests → requirement IDs. Unit tests live in `src/compliance-tests/` (run by `npm test`); `tests/tenant-isolation/` holds the rolled-back two-tenant SQL. |
 | `templates/` | Dashboard HTML template; proposed CI workflow (`ci-compliance.yml.example`, not active). |
 | `application-audits/<date>/` | One application audit: `findings/`, `evidence/`, `report.{md,json}`, `dashboard.html`. |
 | `website-audits/<domain>/<timestamp>/` | One website audit: `observations.json`, `screenshots/`, `findings.json`, `report.*`, `dashboard.html`. |
 | `legal-history/` | Dated baseline snapshots and legal verification / change reports. Never overwritten. |
 | `release-gates.{md,json}` | Proposed release gates (not enforced). |
-| `remediation-backlog.md` | P0–P3 fixes for approval. Nothing here is implemented without approval. |
+| `remediation-backlog.md` | P0–P3 fixes for approval, built by `build-backlog.mjs`. Nothing here is implemented without approval. |
+| `legal-review-register.md` | Questions for a California-licensed lawyer, built by `build-backlog.mjs`. |
 
 ## Statuses
 
@@ -57,6 +58,7 @@ node compliance/scripts/generate-report.mjs application compliance/application-a
 node compliance/scripts/compare-audits.mjs --latest compliance/application-audits --release
 node compliance/scripts/refresh-legal-requirements.mjs worklist
 node compliance/scripts/refresh-legal-requirements.mjs snapshot
+node compliance/scripts/build-backlog.mjs compliance/application-audits/<date>
 ```
 
 ## Legal change management
