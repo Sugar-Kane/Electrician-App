@@ -49,7 +49,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Check: find an <a> on the homepage whose text contains 'privacy' (case-insensitive) and verify styling meets one of the (b)(4) options; record which 22577(b) method is satisfied. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Check: find an <a> on the homepage whose text contains 'privacy' (case-insensitive) and verify styling meets one of the (b)(4) options; record which 22577(b) method is satisfied. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-002",
@@ -98,7 +98,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-003",
@@ -147,7 +147,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-004",
@@ -196,7 +196,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-005",
@@ -245,7 +245,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-006",
@@ -295,7 +295,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-007",
@@ -344,7 +344,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-008",
@@ -395,7 +395,7 @@
         "WEB-FED-026",
         "WEB-CA-007"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-009",
@@ -405,9 +405,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.100(a)-(b); 11 CCR 7012",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -449,7 +449,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.100(a)-(b) and 11 CCR 7012 (notice at collection) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-010",
@@ -459,9 +459,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.130(a)(5); 11 CCR 7011",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -504,7 +504,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.130(a)(5) (update at least every 12 months) and 11 CCR 7011 (privacy policy) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-011",
@@ -514,9 +514,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.120, 1798.135(a); 11 CCR 7013, 7015, 7026",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -562,7 +562,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.120, 1798.135(a) and 11 CCR 7013, 7015 (alternative opt-out link) and 7026 (stop within 15 business days) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-012",
@@ -572,9 +572,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.135(b), (e); 11 CCR 7025",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "amendment_notes": "CCPA regulation amendments approved 2025 and effective January 1, 2026 added the display of opt-out-signal processing status (per secondary sources; confirm in 11 CCR 7025). AB 566 (Opt Me Out Act) requires browsers to offer an opt-out preference signal from January 1, 2027.",
       "applicability": {
         "criteria": [
@@ -618,7 +618,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.135(b),(e) and 11 CCR 7025, including (c)(6) requiring the business to display whether it processed the signal (e.g., 'Opt-Out Request Honored') in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-013",
@@ -628,9 +628,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.121, 1798.135(a)(2); 11 CCR 7027",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -673,7 +673,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.121, 1798.135(a)(2) and 11 CCR 7027 in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-014",
@@ -683,9 +683,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.130(a)(1); 11 CCR 7020",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -729,7 +729,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Pacific Plains Electric is not online-only (in-home services), so a toll-free number is required if CCPA applies; Volteira may qualify for the online-only email exception if it operates exclusively online with a direct relationship. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Pacific Plains Electric is not online-only (in-home services), so a toll-free number is required if CCPA applies; Volteira may qualify for the online-only email exception if it operates exclusively online with a direct relationship. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.130(a)(1) and 11 CCR 7020(a)-(b) (email only for exclusively-online businesses with a direct relationship; otherwise two or more methods incl. toll-free number; website method if maintained) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-015",
@@ -739,9 +739,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.130(a)(2); 11 CCR 7004, 7020, 7060-7062",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -789,7 +789,7 @@
         "WEB-CA-014",
         "WEB-CA-016"
       ],
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.130(a)(2) and 11 CCR 7004, 7020, 7060-7062 (verification, authorized agents) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-016",
@@ -799,9 +799,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.140(h), (l); 11 CCR 7004",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -848,7 +848,7 @@
         "WEB-FED-027",
         "WEB-CA-011"
       ],
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.140(h) consent and (l) dark pattern, and 11 CCR 7004 (symmetry in choice) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-017",
@@ -858,9 +858,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.125(b); 11 CCR 7016",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -902,7 +902,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 1798.125(b) and 11 CCR 7016 (notice of financial incentive incl. good-faith estimate of the data's value) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-018",
@@ -912,9 +912,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "11 CCR 7003",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -964,7 +964,7 @@
         "WCAG-104-003",
         "WCAG-301-001"
       ],
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. Read 11 CCR 7003: plain, straightforward language; available in the languages the business ordinarily uses; reasonably accessible to consumers with disabilities in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-019",
@@ -973,10 +973,10 @@
       "jurisdiction": "California",
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "future-effective",
-      "citation": "11 CCR Article 11 (automated decisionmaking technology), as adopted 2025; section numbers to be confirmed against the official text",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "11 CCR Article 11 (automated decisionmaking technology), sections 7200-7222",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2027-01-01",
       "amendment_notes": "CPPA regulations on ADMT, risk assessments and cybersecurity audits approved September 2025 and effective January 1, 2026; ADMT obligations apply from January 1, 2027 for existing uses (per secondary sources).",
       "applicability": {
@@ -1021,7 +1021,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Likely not applicable to quote/booking sites that do not make significant decisions; applicability must be documented. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Likely not applicable to quote/booking sites that do not make significant decisions; applicability must be documented. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: CORRECTED. Read 11 CCR Article 11 (7200-7222) in the CPPA-published CCPA regulations (effective Jan. 1, 2026) and CCPA statute on cppa.ca.gov. Confirmed: 7001(ddd) significant decision, 7220 pre-use notice, 7221(c) two or more opt-out methods, 7222 access. Citation now names sections 7200-7222 in place of 'section numbers to be confirmed'. URL changed from cppa.ca.gov/regulations/ (index page) to the regulations PDF linked from it and read (file named ccpa_statute_eff_20260101.pdf; it contains the regulations)."
     },
     {
       "id": "WEB-CA-020",
@@ -1074,7 +1074,7 @@
         "WEB-CA-007",
         "WEB-FED-027"
       ],
-      "notes": "Courts disagree on whether website vendors are third-party eavesdroppers. SB 690 (2025-2026) was narrowed before passage: per secondary sources the enacted version (reported signed September 30, 2026) removed the proposed 'commercial business purpose' exemption for 631/632/632.7, so interception claims remain available. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Courts disagree on whether website vendors are third-party eavesdroppers. SB 690 (2025-2026) was narrowed before passage: per secondary sources the enacted version (reported signed September 30, 2026) removed the proposed 'commercial business purpose' exemption for 631/632/632.7, so interception claims remain available. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-021",
@@ -1121,7 +1121,7 @@
       "related_ids": [
         "WEB-CA-020"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-022",
@@ -1165,7 +1165,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-023",
@@ -1224,7 +1224,7 @@
         "WEB-FED-004",
         "WEB-CA-024"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-024",
@@ -1270,7 +1270,7 @@
       "related_ids": [
         "WEB-CA-023"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-025",
@@ -1323,7 +1323,7 @@
         "WEB-FED-007",
         "WEB-CSLB-009"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-026",
@@ -1373,7 +1373,7 @@
         "WEB-FED-017",
         "WEB-CA-028"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-027",
@@ -1415,7 +1415,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-028",
@@ -1471,7 +1471,7 @@
         "WEB-FED-016",
         "WEB-CSLB-007"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-029",
@@ -1514,7 +1514,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Subdivision content recalled from prior knowledge; confirm the exact list of required disclosures in the official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Subdivision content recalled from prior knowledge; confirm the exact list of required disclosures in the official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-030",
@@ -1566,7 +1566,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-031",
@@ -1621,7 +1621,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-032",
@@ -1674,7 +1674,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-033",
@@ -1729,7 +1729,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-034",
@@ -1784,7 +1784,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-035",
@@ -1829,7 +1829,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "WEB-CA-036",
@@ -1870,7 +1870,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Liability attaches to use of a bot with intent to mislead about its artificial identity; disclosure provides the statutory safe harbor. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Liability attaches to use of a bot with intent to mislead about its artificial identity; disclosure provides the statutory safe harbor. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     }
   ]
 }

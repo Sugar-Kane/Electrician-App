@@ -11,9 +11,9 @@
       "category": "Privacy - CCPA applicability",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.140(d)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.140",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -61,7 +61,7 @@
         "CA-001-003",
         "CA-002-001"
       ],
-      "notes": "Instructions: Shadam is a small company; do not assume it meets thresholds. The $26,625,000 figure is corroborated by search results pointing to the CPPA announcement of 2024-12-17 (cppa.ca.gov/announcements/2024/20241217.html) and cppa.ca.gov/regulations/cpi_adjustment.html, but neither page was read. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Instructions: Shadam is a small company; do not assume it meets thresholds. The $26,625,000 figure is corroborated by search results pointing to the CPPA announcement of 2024-12-17 (cppa.ca.gov/announcements/2024/20241217.html) and cppa.ca.gov/regulations/cpi_adjustment.html, but neither page was read. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. Civ. Code 1798.140(d) 'business' definition and thresholds read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read. Documentation steps are compliance controls."
     },
     {
       "id": "CA-001-002",
@@ -71,9 +71,9 @@
       "category": "Privacy - CCPA roles",
       "requirement_type": "legal-interpretation-required",
       "citation": "Cal. Civ. Code 1798.140(ag) (service provider), 1798.140(j) (contractor); 11 CCR 7050",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.140",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -114,7 +114,7 @@
         "CA-001-004",
         "CA-001-005"
       ],
-      "notes": "Gray area: CCPA defines service provider as processing 'on behalf of a business'; if the tenant is below thresholds the definitions may not formally apply. Legal review required. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Gray area: CCPA defines service provider as processing 'on behalf of a business'; if the tenant is below thresholds the definitions may not formally apply. Legal review required. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.140(ag) service provider and (j) contractor read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7050 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-003",
@@ -124,9 +124,9 @@
       "category": "Privacy - CCPA applicability",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.140(d)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.140",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -168,7 +168,7 @@
         "CA-001-001",
         "CA-002-001"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.140(d) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read. Tenant self-assessment is a compliance control."
     },
     {
       "id": "CA-001-004",
@@ -178,9 +178,9 @@
       "category": "Privacy - CCPA contracts",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.100(d), 1798.140(ag)(1), 1798.140(j)(1); 11 CCR 7051",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.100",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -218,7 +218,7 @@
         "CA-001-005",
         "CA-003-003"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.100(d), 1798.140(ag)(1) and (j)(1) (including the contractor certification that it understands the restrictions) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7051 contract terms (including notice and subcontractor flow-down) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-005",
@@ -228,9 +228,9 @@
       "category": "Privacy - CCPA contracts",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.140(ag)(2), 1798.100(d); 11 CCR 7051, 7053",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.140",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -266,7 +266,7 @@
         "CA-001-004",
         "CA-006-007"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.140(ag)(2) and 1798.100(d) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7051(b) subcontractor contracts and 7053 third-party contracts read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read. The subprocessor list is a compliance control."
     },
     {
       "id": "CA-001-006",
@@ -276,9 +276,9 @@
       "category": "Privacy - CCPA notices",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.100(a)-(b); 11 CCR 7012",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.100",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -320,7 +320,7 @@
         "CA-001-007",
         "CA-002-003"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.100(a)-(b) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7012 notice at collection read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-007",
@@ -330,9 +330,9 @@
       "category": "Privacy - CCPA data minimization",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.100(a)(3), 1798.100(c); 11 CCR 7002",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.100",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -367,7 +367,7 @@
         "CA-003-001",
         "CA-010-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.100(a)(3) and (c) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7002 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-008",
@@ -377,9 +377,9 @@
       "category": "Privacy - CCPA notices",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.130(a)(5), 1798.110(c), 1798.115(c); 11 CCR 7011",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.130",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -416,7 +416,7 @@
         "CA-002-002",
         "CA-001-017"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.130(a)(5) (update at least once every 12 months), 1798.110(c), 1798.115(c) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7011 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-009",
@@ -426,9 +426,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.100, 1798.110, 1798.115, 1798.130(a)(2)-(3); 11 CCR 7024",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.110",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -463,7 +463,7 @@
         "CA-001-013",
         "CA-001-014"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.110, 1798.115, 1798.130(a)(2)-(3) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7024, including (d) on not disclosing SSNs, ID numbers, financial account numbers, passwords, security answers or biometric data, and the Jan. 1, 2022 look-back read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-010",
@@ -473,9 +473,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.105; 11 CCR 7022",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.105",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -510,7 +510,7 @@
         "CA-003-001",
         "CA-010-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.105 read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7022 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read. Vendor/backup coverage is an implementation control."
     },
     {
       "id": "CA-001-011",
@@ -520,9 +520,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.106; 11 CCR 7023",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.106",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -550,7 +550,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.106 read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7023, which limits the consumer's written statement to 250 words per alleged inaccurate item read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-012",
@@ -560,9 +560,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.130(a)(1); 11 CCR 7020",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.130",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -594,7 +594,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.130(a)(1) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7020(a)-(b): email only for exclusively-online businesses, otherwise two or more methods including a toll-free number, and a website method if one is maintained read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-013",
@@ -604,9 +604,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.130(a)(2); 11 CCR 7021",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.130",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -637,7 +637,7 @@
       "related_ids": [
         "CA-001-020"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.130(a)(2) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7021: confirm within 10 business days, respond within 45 calendar days, one additional 45-day extension read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-014",
@@ -647,9 +647,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.130(a)(2); 11 CCR 7060-7063",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -679,7 +679,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 11 CCR 7060-7063 (verification; deletion of new information collected for verification; authorized agents with signed permission) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed to the CPPA regulations PDF read (the file is named ccpa_statute_eff_20260101.pdf but contains the regulations)."
     },
     {
       "id": "CA-001-015",
@@ -689,9 +689,9 @@
       "category": "Privacy - CCPA opt-out",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.120, 1798.135; 11 CCR 7013, 7026",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.135",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -726,7 +726,7 @@
         "CA-001-016",
         "CA-006-009"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.120 and 1798.135 read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7013 and 7026 (stop within 15 business days; wait at least 12 months before asking to opt back in) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-016",
@@ -736,9 +736,9 @@
       "category": "Privacy - CCPA opt-out",
       "requirement_type": "regulatory",
       "citation": "11 CCR 7025; Cal. Civ. Code 1798.135(b),(e)",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources). Display-of-status requirement reported as part of 2025 package effective 2026-01-01 (unverified).",
       "applicability": {
@@ -778,7 +778,7 @@
         "CA-001-015",
         "CA-002-007"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 11 CCR 7025 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov, including (c)(6): a business must display whether it has processed the opt-out preference signal (e.g., 'Opt-Out Request Honored'), which confirms the item flagged to verify. 1798.135(b),(e) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov. URL changed to the CPPA regulations PDF read (the file is named ccpa_statute_eff_20260101.pdf but contains the regulations)."
     },
     {
       "id": "CA-001-017",
@@ -788,9 +788,9 @@
       "category": "Privacy - CCPA sensitive PI",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.121, 1798.140(ae); 11 CCR 7014, 7027",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.121",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -819,7 +819,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.121 and 1798.140(ae) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7014 and 7027 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-018",
@@ -829,9 +829,9 @@
       "category": "Privacy - CCPA consumer rights",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.125; 11 CCR 7080, 7016",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.125",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -861,7 +861,7 @@
       "related_ids": [
         "CA-009-004"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.125 read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7016 (notice of financial incentive, good-faith estimate of value) and 7080 read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-019",
@@ -871,9 +871,9 @@
       "category": "Privacy - CCPA consent",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.140(h), 1798.140(l); 11 CCR 7004",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.140",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -904,7 +904,7 @@
       "related_ids": [
         "CA-008-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.140(h) consent and (l) dark pattern read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov; 11 CCR 7004 (symmetry in choice) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-020",
@@ -914,9 +914,9 @@
       "category": "Privacy - CCPA operations",
       "requirement_type": "regulatory",
       "citation": "11 CCR 7100, 7101, 7102",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {
@@ -948,7 +948,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 11 CCR 7100 (training), 7101 (records kept at least 24 months) and 7102 (10,000,000-consumer metrics threshold, confirmed) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. URL changed to the CPPA regulations PDF read (the file is named ccpa_statute_eff_20260101.pdf but contains the regulations)."
     },
     {
       "id": "CA-001-021",
@@ -957,10 +957,10 @@
       "jurisdiction": "California",
       "category": "Privacy - CCPA cybersecurity audit",
       "requirement_type": "future-effective",
-      "citation": "Cal. Civ. Code 1798.185(a)(15)(A) (verify subdivision); 11 CCR 7120 et seq. (verify section numbers)",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "Cal. Civ. Code 1798.185(a)(14)(A); 11 CCR 7120-7124",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2026-01-01",
       "amendment_notes": "Regulations approved by OAL in Sept. 2025 (CPPA announcement 2025-09-23 per search results), effective 2026-01-01, with phased audit submission deadlines from 2028.",
       "applicability": {
@@ -991,7 +991,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Approval date and April 1, 2028 tier corroborated by search results summarizing CPPA announcement (cppa.ca.gov/announcements/2025/20250923.html) and law-firm alerts (Foley, White & Case, DLA Piper). Smaller-tier dates and trigger figures are from memory of the final rule and must be verified. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Approval date and April 1, 2028 tier corroborated by search results summarizing CPPA announcement (cppa.ca.gov/announcements/2025/20250923.html) and law-firm alerts (Foley, White & Case, DLA Piper). Smaller-tier dates and trigger figures are from memory of the final rule and must be verified. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: CORRECTED. 11 CCR 7120 (significant-risk tests: 1798.140(d)(1)(C) threshold, or the (d)(1)(A) threshold plus 250,000+ consumers or 50,000+ sensitive-PI consumers) and 7121 (audit deadlines April 1, 2028 / 2029 / 2030 by revenue tier) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. Citation corrected: the statute's cybersecurity-audit rulemaking paragraph is 1798.185(a)(14)(A), not (a)(15)(A), and the audit sections are 11 CCR 7120-7124. URL changed to the CPPA regulations PDF read (the file is named ccpa_statute_eff_20260101.pdf but contains the regulations)."
     },
     {
       "id": "CA-001-022",
@@ -1000,10 +1000,10 @@
       "jurisdiction": "California",
       "category": "Privacy - CCPA risk assessment",
       "requirement_type": "future-effective",
-      "citation": "11 CCR 7150 et seq. (verify section numbers); Cal. Civ. Code 1798.185(a)(15)(B)",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "11 CCR 7150-7157; Cal. Civ. Code 1798.185(a)(14)(B)",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2026-01-01",
       "amendment_notes": "2025 CPPA regulations package effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -1031,7 +1031,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Jan 1, 2026 start and April 1, 2028 attestation date corroborated by search summaries; Dec 31, 2027 catch-up date from memory, verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Jan 1, 2026 start and April 1, 2028 attestation date corroborated by search summaries; Dec 31, 2027 catch-up date from memory, verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: CORRECTED. 11 CCR 7150 (selling/sharing and sensitive PI among significant-risk activities), 7155 (pre-2026 processing assessed by Dec. 31, 2027) and 7157 (submissions by April 1, 2028) read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. Citation corrected: the risk-assessment rulemaking paragraph is 1798.185(a)(14)(B), not (a)(15)(B), and the sections are 11 CCR 7150-7157. URL changed to the CPPA regulations PDF read (the file is named ccpa_statute_eff_20260101.pdf but contains the regulations)."
     },
     {
       "id": "CA-001-023",
@@ -1040,10 +1040,10 @@
       "jurisdiction": "California",
       "category": "Privacy - CCPA ADMT",
       "requirement_type": "future-effective",
-      "citation": "11 CCR 7200 et seq. (verify section numbers); Cal. Civ. Code 1798.185(a)(16)",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "11 CCR 7200-7222; Cal. Civ. Code 1798.185(a)(15)",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2027-01-01",
       "amendment_notes": "ADMT compliance date reported as 2027-01-01 for businesses using ADMT for significant decisions (2025 package).",
       "applicability": {},
@@ -1072,7 +1072,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "2027-01-01 date corroborated by search summaries of CPPA/law-firm sources; scope list from memory of final text, verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "2027-01-01 date corroborated by search summaries of CPPA/law-firm sources; scope list from memory of final text, verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: CORRECTED. 11 CCR 7001(ddd) 'significant decision' (financial or lending services incl. installment payment plans, housing, education, employment/independent contracting, healthcare) and 7200(b) (compliance by Jan. 1, 2027), with 7220-7222 pre-use notice, opt-out and access read in the CPPA-published CCPA regulations (11 CCR 7000 et seq., effective Jan. 1, 2026) on cppa.ca.gov. Citation corrected: the ADMT rulemaking paragraph is 1798.185(a)(15), not (a)(16), and the sections are 11 CCR 7200-7222. Note that 'installment payment plans' fall within financial or lending services. URL changed to the CPPA regulations PDF read (the file is named ccpa_statute_eff_20260101.pdf but contains the regulations)."
     },
     {
       "id": "CA-001-024",
@@ -1082,9 +1082,9 @@
       "category": "Privacy - CCPA security",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.150, 1798.100(e)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.150",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2020-01-01",
       "amendment_notes": "CPI adjustment effective 2025-01-01 per CPPA announcement (unverified).",
       "applicability": {
@@ -1124,7 +1124,7 @@
         "CA-003-002",
         "CA-004-001"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.150 (including the 30-day notice-and-cure for statutory damages) and 1798.100(e) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-025",
@@ -1134,9 +1134,9 @@
       "category": "Privacy - CCPA scope",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.145(m)-(n) (exemptions expired 2023-01-01; verify); 1798.100",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.145",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2023-01-01",
       "amendment_notes": "CCPA as amended by CPRA (Prop. 24), operative 2023-01-01; CPPA regulations at 11 CCR 7000 et seq., updated by the package approved by OAL in Sept. 2025 and effective 2026-01-01 (per secondary sources).",
       "applicability": {},
@@ -1162,7 +1162,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. 1798.145(m) and (n) read in the CPPA-published CCPA statute (effective Jan. 1, 2026) on cppa.ca.gov: each states the subdivision 'shall become inoperative on January 1, 2023', which confirms the item flagged to verify. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA statute PDF read."
     },
     {
       "id": "CA-001-026",
@@ -1172,9 +1172,9 @@
       "category": "Privacy - Data brokers",
       "requirement_type": "statutory",
       "citation": "Cal. Civ. Code 1798.99.80 et seq.",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=CIV&sectionNum=1798.99.80",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/data_broker_reg_delete_act_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "exceptions": [
           "Not a data broker when it has a direct relationship or acts as a service provider"
@@ -1199,7 +1199,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Expected N/A. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Expected N/A. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: verified. Civ. Code 1798.99.80(c) 'data broker' definition, the registration duty, and the 1798.99.86 accessible deletion mechanism, read in the CPPA-published Delete Act text (effective Jan. 1, 2026) on cppa.ca.gov. URL changed from leginfo.legislature.ca.gov (not readable from this session) to the CPPA PDF read."
     },
     {
       "id": "CA-002-001",
@@ -1257,7 +1257,7 @@
         "CA-001-001",
         "CA-001-003"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-002",
@@ -1308,7 +1308,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-003",
@@ -1359,7 +1359,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-004",
@@ -1410,7 +1410,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-005",
@@ -1462,7 +1462,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-006",
@@ -1512,7 +1512,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-007",
@@ -1569,7 +1569,7 @@
       "related_ids": [
         "CA-001-016"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-008",
@@ -1625,7 +1625,7 @@
       "related_ids": [
         "CA-006-009"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-009",
@@ -1677,7 +1677,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-002-010",
@@ -1715,7 +1715,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-003-001",
@@ -1765,7 +1765,7 @@
       "related_ids": [
         "CA-001-010"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-003-002",
@@ -1820,7 +1820,7 @@
         "CA-001-024",
         "CA-003-004"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-003-003",
@@ -1863,7 +1863,7 @@
         "CA-001-004",
         "CA-001-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-003-004",
@@ -1897,7 +1897,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Guidance, not law. URL left empty because the AG report location could not be verified (oag.ca.gov blocked). Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Guidance, not law. URL left empty because the AG report location could not be verified (oag.ca.gov blocked). Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. No official_source_url, so there was nothing on an approved official host to read."
     },
     {
       "id": "CA-004-001",
@@ -1945,7 +1945,7 @@
       "related_ids": [
         "CA-001-024"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-002",
@@ -1988,7 +1988,7 @@
       "related_ids": [
         "CA-004-006"
       ],
-      "notes": "30-day deadline corroborated by multiple law-firm summaries found via search (Sheppard Mullin, Hunton, Orrick, NatLawReview); enacted text not read. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "30-day deadline corroborated by multiple law-firm summaries found via search (Sheppard Mullin, Hunton, Orrick, NatLawReview); enacted text not read. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-003",
@@ -2026,7 +2026,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-004",
@@ -2062,7 +2062,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-005",
@@ -2104,7 +2104,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "15-day AG deadline corroborated by search summaries; enacted text not read. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "15-day AG deadline corroborated by search summaries; enacted text not read. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-006",
@@ -2147,7 +2147,7 @@
       "related_ids": [
         "CA-004-002"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-007",
@@ -2182,7 +2182,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-004-008",
@@ -2219,7 +2219,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Recommended control, not law. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Recommended control, not law. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. No official_source_url, so there was nothing on an approved official host to read."
     },
     {
       "id": "CA-005-001",
@@ -2259,7 +2259,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Search results confirm 1633.3 excludes laws requiring separately signed/initialed disclosures and that an electronic record may not substitute for CCP 1162 notices; full (b)/(c) list not seen. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Search results confirm 1633.3 excludes laws requiring separately signed/initialed disclosures and that an electronic record may not substitute for CCP 1162 notices; full (b)/(c) list not seen. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-002",
@@ -2302,7 +2302,7 @@
       "related_ids": [
         "CA-005-003"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-003",
@@ -2344,7 +2344,7 @@
       "related_ids": [
         "CA-005-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-004",
@@ -2382,7 +2382,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-005",
@@ -2425,7 +2425,7 @@
         "CA-010-005",
         "CA-001-007"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-006",
@@ -2459,7 +2459,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-007",
@@ -2507,7 +2507,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "1689.7 text not retrieved; search did not return its electronic-delivery treatment. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "1689.7 text not retrieved; search did not return its electronic-delivery treatment. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-005-008",
@@ -2542,7 +2542,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-001",
@@ -2591,7 +2591,7 @@
       "related_ids": [
         "CA-006-002"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-002",
@@ -2626,7 +2626,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-003",
@@ -2676,7 +2676,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Pending-legislation check: AB 1865 status not confirmed. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Pending-legislation check: AB 1865 status not confirmed. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-004",
@@ -2709,7 +2709,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Volteira has no fax feature; recorded for completeness. Partial preemption by federal law was litigated; verify current status. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Volteira has no fax feature; recorded for completeness. Partial preemption by federal law was litigated; verify current status. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-005",
@@ -2759,7 +2759,7 @@
         "CA-006-006",
         "CA-006-007"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-006",
@@ -2799,7 +2799,7 @@
       "related_ids": [
         "CA-006-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-007",
@@ -2844,7 +2844,7 @@
         "CA-001-005",
         "CA-006-005"
       ],
-      "notes": "Ambriz v. Google (N.D. Cal., Feb. 10, 2025) applied the capability test to an AI contact-center product at the pleading stage; Popa v. Microsoft (9th Cir., Aug. 2025) addressed Article III standing for session-replay claims. Both per search summaries; opinions not read. Unsettled. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Ambriz v. Google (N.D. Cal., Feb. 10, 2025) applied the capability test to an AI contact-center product at the pleading stage; Popa v. Microsoft (9th Cir., Aug. 2025) addressed Article III standing for session-replay claims. Both per search summaries; opinions not read. Unsettled. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-008",
@@ -2889,7 +2889,7 @@
         "CA-006-009",
         "CA-006-010"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-009",
@@ -2932,7 +2932,7 @@
       "related_ids": [
         "CA-006-010"
       ],
-      "notes": "Litigation trend 2023-2026: courts split on whether ordinary website trackers are 'pen registers' (e.g., Greenley v. Kochava, S.D. Cal. 2023, from memory; verify). Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Litigation trend 2023-2026: courts split on whether ordinary website trackers are 'pen registers' (e.g., Greenley v. Kochava, S.D. Cal. 2023, from memory; verify). Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-010",
@@ -2974,7 +2974,7 @@
         "CA-006-009",
         "CA-006-008"
       ],
-      "notes": "Status as of 2026-11-24 is based on law-firm alerts found by search; leginfo bill page not read. Retroactivity unconfirmed. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Status as of 2026-11-24 is based on law-firm alerts found by search; leginfo bill page not read. Retroactivity unconfirmed. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-006-011",
@@ -3014,7 +3014,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Effective date from memory (SB 1001, 2018); verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Effective date from memory (SB 1001, 2018); verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-007-001",
@@ -3056,7 +3056,7 @@
         "CA-007-002",
         "CA-007-005"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-007-002",
@@ -3092,7 +3092,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "The brief referenced 'Martinez v. Cal. Ct. App. (2024)'; searches found only Martinez v. Cot'n Wash (Ct. App. 2022, No. B314476) and no 2024 or 2025 California Supreme Court decision on this issue. Supreme Court review status not confirmed. Do not cite a 2024 decision until verified. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "The brief referenced 'Martinez v. Cal. Ct. App. (2024)'; searches found only Martinez v. Cot'n Wash (Ct. App. 2022, No. B314476) and no 2024 or 2025 California Supreme Court decision on this issue. Supreme Court review status not confirmed. Do not cite a 2024 decision until verified. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. No official_source_url, so there was nothing on an approved official host to read."
     },
     {
       "id": "CA-007-003",
@@ -3126,7 +3126,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-007-004",
@@ -3162,7 +3162,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-007-005",
@@ -3173,8 +3173,8 @@
       "requirement_type": "technical-standard",
       "citation": "W3C WCAG 2.1 Level AA (or 2.2 AA)",
       "official_source_url": "https://www.w3.org/TR/WCAG21/",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {},
       "responsible_parties": [
         "Volteira platform",
@@ -3204,7 +3204,7 @@
       "related_ids": [
         "CA-007-001"
       ],
-      "notes": "Technical standard used as the benchmark in Unruh/ADA litigation; not itself California law. W3C URL not fetched today. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Reclassified 2026-11-24 by the validator: WCAG is the technical testing baseline for California accessibility claims, not itself California law."
+      "notes": "Technical standard used as the benchmark in Unruh/ADA litigation; not itself California law. W3C URL not fetched today. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Reclassified 2026-11-24 by the validator: WCAG is the technical testing baseline for California accessibility claims, not itself California law. Source verification 2026-11-25: verified. Read WCAG 2.1 on w3.org (W3C Recommendation, current edition dated 06 May 2025). The accessibility statement and triage items are recommended practices, not WCAG success criteria."
     },
     {
       "id": "CA-008-001",
@@ -3256,7 +3256,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Original ARL effective date from memory; verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Original ARL effective date from memory; verify. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-002",
@@ -3306,7 +3306,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-003",
@@ -3358,7 +3358,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-004",
@@ -3408,7 +3408,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-005",
@@ -3461,7 +3461,7 @@
       "related_ids": [
         "CA-001-019"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-006",
@@ -3511,7 +3511,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-007",
@@ -3561,7 +3561,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-008-008",
@@ -3613,7 +3613,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-001",
@@ -3654,7 +3654,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-002",
@@ -3693,7 +3693,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-003",
@@ -3747,7 +3747,7 @@
         "CA-009-004",
         "CA-010-006"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-004",
@@ -3793,7 +3793,7 @@
         "CA-009-003",
         "CA-001-018"
       ],
-      "notes": "CLRA subsection numbers (13), (14), (17) cited from memory; verify text. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "CLRA subsection numbers (13), (14), (17) cited from memory; verify text. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-005",
@@ -3834,7 +3834,7 @@
       "related_ids": [
         "CA-006-011"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-006",
@@ -3870,7 +3870,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-007",
@@ -3908,7 +3908,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Section-level applicability not read; legal review required. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Section-level applicability not read; legal review required. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-009-008",
@@ -3944,7 +3944,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Scope of 17538(d) to services not verified. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Scope of 17538(d) to services not verified. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-010-001",
@@ -3990,7 +3990,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Regulation 1521 text not read; URL pattern inferred from CDTFA law guide paths seen in search results (e.g., /lawguides/vol1/sutr/1698.html). Tax review required. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Regulation 1521 text not read; URL pattern inferred from CDTFA law guide paths seen in search results (e.g., /lawguides/vol1/sutr/1698.html). Tax review required. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. www.cdtfa.ca.gov was refused by this session's egress proxy (HTTP 403), so the regulation text was not read."
     },
     {
       "id": "CA-010-002",
@@ -4025,7 +4025,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Search did not return Regulation 1521's lump-sum vs T&M text; recorded without detail to avoid inventing rules. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Search did not return Regulation 1521's lump-sum vs T&M text; recorded without detail to avoid inventing rules. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. www.cdtfa.ca.gov was refused by this session's egress proxy (HTTP 403), so the regulation text was not read."
     },
     {
       "id": "CA-010-003",
@@ -4065,7 +4065,7 @@
       "related_ids": [
         "CA-010-001"
       ],
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-010-004",
@@ -4099,7 +4099,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-010-005",
@@ -4142,7 +4142,7 @@
         "CA-001-007",
         "CA-005-005"
       ],
-      "notes": "Four-year period and audit extension corroborated by search snippets of CDTFA Publication 116 and the Regulation 1698 law-guide page; pages not read directly. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Four-year period and audit extension corroborated by search snippets of CDTFA Publication 116 and the Regulation 1698 law-guide page; pages not read directly. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. www.cdtfa.ca.gov was refused by this session's egress proxy (HTTP 403), so the regulation text was not read."
     },
     {
       "id": "CA-010-006",
@@ -4184,7 +4184,7 @@
       "related_ids": [
         "CA-009-003"
       ],
-      "notes": "Search: public.law copy (marked verified Oct 2026) still shows the ban; sources disagree on scope of the post-Italian Colors injunction. Network rules are contractual, not California law. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Search: public.law copy (marked verified Oct 2026) still shows the ban; sources disagree on scope of the post-Italian Colors injunction. Network rules are contractual, not California law. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-010-007",
@@ -4217,7 +4217,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. www.cdtfa.ca.gov was refused by this session's egress proxy (HTTP 403), so the regulation text was not read."
     },
     {
       "id": "CA-010-008",
@@ -4253,7 +4253,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Recorded as a question; no rule asserted. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Recorded as a question; no rule asserted. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. www.cdtfa.ca.gov was refused by this session's egress proxy (HTTP 403), so the regulation text was not read."
     },
     {
       "id": "CA-011-001",
@@ -4293,7 +4293,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     },
     {
       "id": "CA-011-002",
@@ -4327,7 +4327,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Section numbers and effective date from memory; verify. Other 2024-2025 California AI statutes (e.g., SB 942 AI Transparency Act for large providers) appear N/A by size and were not researched today. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set."
+      "notes": "Section numbers and effective date from memory; verify. Other 2024-2025 California AI statutes (e.g., SB 942 AI Transparency Act for large providers) appear N/A by size and were not researched today. Official source NOT read: on 2026-11-24 this research session's network policy blocked leginfo.legislature.ca.gov, cppa.ca.gov (and the same policy applies to oag.ca.gov / cdtfa.ca.gov) (DNS failure / proxy CONNECT 403). The URL recorded is the official location of the text, not a page that was read. Audits must treat this requirement as BLUE until the text is read and last_verified is set. Source verification 2026-11-25: NOT VERIFIED. leginfo.legislature.ca.gov could not be read: curl gets a Cloudflare 'Just a moment...' challenge (HTTP 403) and WebFetch got HTTP 403, so this section's official text was not read. No other approved official host publishes it (the CSLB 2026 Law Book on cslb.ca.gov carries only Business and Professions Code text, and CPPA hosts only the CCPA and Delete Act)."
     }
   ]
 }
