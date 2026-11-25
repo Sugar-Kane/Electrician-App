@@ -14,29 +14,29 @@
 | Environment | public website (outside-in) |
 | Legal baseline | 2026-11-24 |
 | Skill / tool | website-compliance 1.0.0 / 1.0.0 |
-| Overall result | FAIL |
+| Overall result | INSUFFICIENT EVIDENCE |
 
 | Scope | Total | 🟢 Green | 🟡 Yellow | 🔴 Red | ⚪ Gray | 🔵 Blue | Verified pass rate | Verification coverage | Overall verified compliance |
 |---|---|---|---|---|---|---|---|---|---|
-| **All requirements** | 180 | 21 | 3 | 5 | 4 | 147 | 72.4% | 16.5% | 11.9% |
-| Legal (statutes, regulations, guidance) | 88 | 4 | 0 | 5 | 4 | 75 | 44.4% | 10.7% | 4.8% |
-| Standards and recommended controls | 92 | 17 | 3 | 0 | 0 | 72 | 85% | 21.7% | 18.5% |
+| **All requirements** | 180 | 13 | 4 | 0 | 5 | 158 | 76.5% | 9.7% | 7.4% |
+| Legal (statutes, regulations, guidance) | 88 | 1 | 1 | 0 | 4 | 82 | 50% | 2.4% | 1.2% |
+| Standards and recommended controls | 92 | 12 | 3 | 0 | 1 | 76 | 80% | 16.5% | 13.2% |
 
 Verified pass rate = Green ÷ (Green + Yellow + Red). Verification coverage = (Green + Yellow + Red) ÷ (Green + Yellow + Red + Blue). Overall verified applicable compliance = Green ÷ (Green + Yellow + Red + Blue). Gray is excluded; "not available" means the denominator is zero.
 
-Critical findings: 4. High-risk findings: 3. Requirements needing legal review: 53.
+Critical findings: 1. High-risk findings: 1. Requirements needing legal review: 53.
 
 ## Scorecards
 
 | Scorecard | Result | Total | 🟢 | 🟡 | 🔴 | ⚪ | 🔵 | Verified pass rate | Coverage |
 |---|---|---|---|---|---|---|---|---|---|
-| Federal website requirements | FAIL | 33 | 1 | 0 | 5 | 3 | 24 | 16.7% | 20% |
+| Federal website requirements | CONDITIONAL PASS | 33 | 0 | 1 | 0 | 3 | 29 | 0% | 3.3% |
 | California website requirements | INSUFFICIENT EVIDENCE | 36 | 0 | 0 | 0 | 1 | 35 | not available | 0% |
-| California contractor website requirements | CONDITIONAL PASS | 21 | 4 | 0 | 0 | 0 | 17 | 100% | 19% |
-| Accessibility (WCAG 2.2 A/AA) | CONDITIONAL PASS | 55 | 6 | 1 | 0 | 0 | 48 | 85.7% | 12.7% |
-| Privacy and tracking | CONDITIONAL PASS | 27 | 1 | 0 | 0 | 1 | 25 | 100% | 3.8% |
-| Customer communications | FAIL | 15 | 0 | 0 | 5 | 0 | 10 | 0% | 33.3% |
-| Cybersecurity baseline (audit policy, not law) | CONDITIONAL PASS | 35 | 10 | 2 | 0 | 0 | 23 | 83.3% | 34.3% |
+| California contractor website requirements | CONDITIONAL PASS | 21 | 1 | 0 | 0 | 0 | 20 | 100% | 4.8% |
+| Accessibility (WCAG 2.2 A/AA) | CONDITIONAL PASS | 55 | 3 | 1 | 0 | 0 | 51 | 75% | 7.3% |
+| Privacy and tracking | INSUFFICIENT EVIDENCE | 27 | 0 | 0 | 0 | 2 | 25 | not available | 0% |
+| Customer communications | CONDITIONAL PASS | 15 | 0 | 1 | 0 | 0 | 14 | 0% | 6.7% |
+| Cybersecurity baseline (audit policy, not law) | CONDITIONAL PASS | 35 | 9 | 2 | 0 | 1 | 23 | 81.8% | 32.4% |
 
 ## Pages
 
@@ -46,15 +46,15 @@ Discovered: 40. Tested: 40. Excluded: 0.
 
 | Status | Severity | Requirement | Title | Actual | Remediation |
 |---|---|---|---|---|---|
-| 🔴 RED | critical | WEB-FED-008 | TCPA PEWC: clear and conspicuous marketing-text disclosure at phone collection | 0/2 phone form(s) show STOP and rates wording near the field | Meet: Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Paci |
-| 🔴 RED | critical | WEB-FED-009 | TCPA PEWC: consent is not a condition of purchase | 0/2 phone form(s) show STOP and rates wording near the field | Meet: Disclosure states that consent to marketing messages is not required to purchase goods or services. |
-| 🔴 RED | critical | WEB-FED-010 | TCPA PEWC: signature/affirmative act and consent record | 0/2 phone form(s) show STOP and rates wording near the field | Meet: Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled in |
-| 🔴 RED | critical | WEB-FED-013 | TCPA opt-out (revocation) instructions and honoring any reasonable method | 0/2 phone form(s) show STOP and rates wording near the field | Meet: Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method. |
-| 🔴 RED | high | WEB-FED-011 | TCPA: transactional/informational texting consent scoped and described | 0/2 phone form(s) show STOP and rates wording near the field | Meet: Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoi |
-| 🟡 YELLOW | high | WEB-SEC-006 | Content-Security-Policy is present on every HTML response | enforced CSP present | Meet: An enforced (not report-only) Content-Security-Policy header is sent on every HTML page, including error pages and public token pages. |
-| 🟡 YELLOW | high | WEB-SEC-007 | CSP blocks inline scripts without a nonce or hash | enforced CSP present | Meet: script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent. |
+| 🟡 YELLOW | critical | WEB-FED-009 | TCPA PEWC: consent is not a condition of purchase | 2/2 phone form(s) mark the texting-consent checkbox as required in HTML, while its wording says consent is optional | Meet: Disclosure states that consent to marketing messages is not required to purchase goods or services. |
+| 🟡 YELLOW | high | WEB-SEC-007 | CSP blocks inline scripts without a nonce or hash | enforced CSP present; script-src allows 'unsafe-inline' without nonce | Meet: script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent. |
 | 🟡 YELLOW | medium | WCAG-205-008 | SC 2.5.8 Target Size (Minimum) | 24 focusable target(s) under 24×24 px (spacing exceptions not evaluated) | Meet: Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential). |
+| 🟡 YELLOW | low | WEB-SEC-012 | Permissions-Policy restricts powerful browser features | Permissions-Policy: camera=(), microphone=(), geolocation=() | Meet: A Permissions-Policy header disables camera, microphone, geolocation, payment and USB except on the origins/pages that need them (e.g. microphone for dictation, geolocation for arrival). |
+| 🔵 BLUE | critical | WEB-FED-008 | TCPA PEWC: clear and conspicuous marketing-text disclosure at phone collection | 0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated (The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.) | Meet: Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Paci |
+| 🔵 BLUE | critical | WEB-FED-010 | TCPA PEWC: signature/affirmative act and consent record | 0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated (The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.) | Meet: Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled in |
+| 🔵 BLUE | critical | WEB-FED-013 | TCPA opt-out (revocation) instructions and honoring any reasonable method | 0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated (The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.) | Meet: Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method. |
 | 🔵 BLUE | critical | WEB-FED-018 | Reviews: no fake or false consumer reviews or celebrity testimonials | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
+| 🔵 BLUE | critical | WEB-CSLB-002 | License active and advertised business name matches CSLB record | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
 | 🔵 BLUE | critical | WEB-CSLB-009 | Online home improvement contract contains statutory contents | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | critical | WEB-CSLB-012 | Online down payment/deposit within statutory limit | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | critical | WEB-SEC-017 | No secret keys in client-side JavaScript | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
@@ -63,7 +63,8 @@ Discovered: 40. Tested: 40. Excluded: 0.
 | 🔵 BLUE | high | WEB-FED-003 | ADA Title III: Accessible checkout and payment | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-FED-004 | ADA Title III: Accessible electronic signature | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-FED-006 | ESIGN consumer consent disclosures before electronic records | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
-| 🔵 BLUE | high | WEB-FED-012 | SMS program disclosures required by carriers/CTIA (10DLC) | 0/2 phone form(s) show STOP and rates wording near the field (Official source not yet verified in this legal baseline (observed: RED).) | Meet: Opt-in point shows program/brand name, message types, 'Message frequency varies' (or stated frequency), 'Msg & data rates may apply', 'Reply HELP for help, STOP to cancel', and links to Terms an |
+| 🔵 BLUE | high | WEB-FED-011 | TCPA: transactional/informational texting consent scoped and described | 0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated (The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.) | Meet: Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoi |
+| 🔵 BLUE | high | WEB-FED-012 | SMS program disclosures required by carriers/CTIA (10DLC) | 0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated (The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.) | Meet: Opt-in point shows program/brand name, message types, 'Message frequency varies' (or stated frequency), 'Msg & data rates may apply', 'Reply HELP for help, STOP to cancel', and links to Terms an |
 | 🔵 BLUE | high | WEB-FED-016 | FTC Act 5: accurate, non-misleading pricing representations | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-FED-017 | FTC Act 5: objective performance and product claims substantiated | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-FED-019 | Reviews: no incentives conditioned on review sentiment | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
@@ -91,6 +92,8 @@ Discovered: 40. Tested: 40. Excluded: 0.
 | 🔵 BLUE | high | WEB-CA-030 | ARL: clear and conspicuous automatic renewal terms before subscribing | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-CA-031 | ARL: affirmative consent to automatic renewal terms and consent record | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-CA-033 | ARL: online cancellation at will without obstruction | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
+| 🔵 BLUE | high | WEB-CSLB-003 | Services advertised fall within license classification(s) | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
+| 🔵 BLUE | high | WEB-CSLB-005 | 'Licensed, bonded and insured' claims accurate | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-CSLB-007 | Diagnostic/service-call fee disclosed transparently before booking or payment | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-CSLB-010 | Buyer receives a legible copy of the signed contract at signing | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-CSLB-011 | Mechanics lien warning included in online contracts | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
@@ -101,8 +104,11 @@ Discovered: 40. Tested: 40. Excluded: 0.
 | 🔵 BLUE | high | WCAG-101-001 | SC 1.1.1 Non-text Content | no automated violations (axe-core found no violation for SC 1.1.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Every image, icon, image button, CAPTCHA and other non-text content that conveys meaning has a text alternative serving the same purpose; decorative images are hidden from assistive technology. |
 | 🔵 BLUE | high | WCAG-103-001 | SC 1.3.1 Info and Relationships | no automated violations (axe-core found no violation for SC 1.3.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Structure and relationships conveyed visually (headings, lists, tables, form field groupings, required-field indicators) are programmatically determinable. |
 | 🔵 BLUE | high | WCAG-104-003 | SC 1.4.3 Contrast (Minimum) | no automated violations (axe-core found no violation for SC 1.4.3, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Text and images of text have a contrast ratio of at least 4.5:1 (3:1 for large text), except incidental text and logotypes. |
+| 🔵 BLUE | high | WCAG-104-010 | SC 1.4.10 Reflow | 0/3 key page(s) scroll sideways at 390px wide (No sideways scroll at 390 CSS px, but SC 1.4.10 is measured at 320 CSS px, which was not tested.) | Meet: Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is e |
 | 🔵 BLUE | high | WCAG-201-001 | SC 2.1.1 Keyboard | no automated violations (axe-core found no violation for SC 2.1.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: All functionality, including quote forms, date/time pickers, payment fields, signature capture and consent controls, is operable through a keyboard interface without specific timings. |
+| 🔵 BLUE | high | WCAG-201-002 | SC 2.1.2 No Keyboard Trap | 0 page(s) where Tab cycled within two elements (An automated 40-step Tab walk found no trap; a full manual keyboard pass is needed before this can pass.) | Meet: Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods. |
 | 🔵 BLUE | high | WCAG-204-003 | SC 2.4.3 Focus Order | no automated violations (axe-core found no violation for SC 2.4.3, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Focusable components receive focus in an order that preserves meaning and operability, including when modals and step-by-step forms open. |
+| 🔵 BLUE | high | WCAG-204-007 | SC 2.4.7 Focus Visible | 0/40 pages had focus targets with no outline or shadow on focus (Automated focus-style heuristic found no missing indicator; a person must confirm focus is visible.) | Meet: Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible. |
 | 🔵 BLUE | high | WCAG-204-011 | SC 2.4.11 Focus Not Obscured (Minimum) | no automated violations (axe-core found no violation for SC 2.4.11, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: When a component receives keyboard focus, it is not entirely hidden by author-created content such as sticky headers, cookie banners or chat launchers. |
 | 🔵 BLUE | high | WCAG-303-001 | SC 3.3.1 Error Identification | no automated violations (axe-core found no violation for SC 3.3.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: When an input error is automatically detected, the item in error is identified and the error is described to the user in text. |
 | 🔵 BLUE | high | WCAG-303-002 | SC 3.3.2 Labels or Instructions | no automated violations (axe-core found no violation for SC 3.3.2, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Labels or instructions are provided when content requires user input, including format requirements and required-field indication. |
@@ -115,6 +121,7 @@ Discovered: 40. Tested: 40. Excluded: 0.
 | 🔵 BLUE | high | WEB-SEC-030 | Analytics receive no personal data or capability URLs | not assessed automatically (Applicability or wording needs legal review; not settled by an automated check.) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-SEC-034 | Card data is entered only on Stripe-hosted pages (SAQ A) | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
 | 🔵 BLUE | high | WEB-SEC-035 | Pages that start payment are protected from script tampering | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
+| 🔵 BLUE | medium | WEB-FED-005 | Accessibility statement and alternative contact channel | accessibility page linked (An accessibility page is linked; its content (commitment, contact method, known limitations) was not reviewed.) | Meet: Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alter |
 | 🔵 BLUE | medium | WEB-FED-007 | Signed electronic records can be retained and reproduced | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | medium | WEB-FED-014 | CAN-SPAM: commercial emails after signup have truthful headers/subjects, ad identification and postal address | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | medium | WEB-FED-015 | CAN-SPAM: working unsubscribe honored within 10 business days | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
@@ -201,31 +208,24 @@ Discovered: 40. Tested: 40. Excluded: 0.
 | 🔵 BLUE | low | WEB-SEC-023 | Unneeded HTTP methods (TRACE) are disabled | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
 | 🔵 BLUE | low | WEB-SEC-033 | security.txt vulnerability contact is published | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
 | 🔵 BLUE | informational | WEB-SEC-005 | Apex domain is on the browser preload list (optional) | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
-| 🟢 GREEN | critical | WEB-CSLB-002 | License active and advertised business name matches CSLB record | licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180 | None. |
 | 🟢 GREEN | high | WEB-CSLB-001 | License number displayed in website advertising | licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180 | None. |
-| 🟢 GREEN | high | WEB-CSLB-003 | Services advertised fall within license classification(s) | licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180 | None. |
-| 🟢 GREEN | high | WEB-CSLB-005 | 'Licensed, bonded and insured' claims accurate | licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180 | None. |
-| 🟢 GREEN | high | WCAG-104-010 | SC 1.4.10 Reflow | 0/3 key page(s) scroll sideways at 390px wide | None. |
-| 🟢 GREEN | high | WCAG-201-002 | SC 2.1.2 No Keyboard Trap | 0 page(s) where Tab cycled within two elements | None. |
-| 🟢 GREEN | high | WCAG-204-007 | SC 2.4.7 Focus Visible | 0/40 pages had focus targets with no outline or shadow on focus | None. |
 | 🟢 GREEN | high | WEB-SEC-001 | HTTP requests redirect to HTTPS | http:// answered 308 → https://pacificplainselectric.com/ | None. |
 | 🟢 GREEN | high | WEB-SEC-002 | TLS certificate is valid and publicly trusted | TLS 1.3; certificate valid to 2027-01-01; issuer YR1 | None. |
+| 🟢 GREEN | high | WEB-SEC-006 | Content-Security-Policy is present on every HTML response | enforced Content-Security-Policy on 40/40 crawled pages | None. |
 | 🟢 GREEN | high | WEB-SEC-009 | Clickjacking protection via frame-ancestors or X-Frame-Options | X-Frame-Options / CSP frame-ancestors per page | None. |
-| 🟢 GREEN | medium | WEB-FED-005 | Accessibility statement and alternative contact channel | accessibility page linked | None. |
 | 🟢 GREEN | medium | WCAG-204-001 | SC 2.4.1 Bypass Blocks | 0 page(s) without a skip link or main landmark | None. |
 | 🟢 GREEN | medium | WEB-SEC-004 | Strict-Transport-Security (HSTS) is sent with max-age of at least one year | Strict-Transport-Security: max-age=31536000; includeSubDomains | None. |
 | 🟢 GREEN | medium | WEB-SEC-010 | X-Content-Type-Options: nosniff on all responses | X-Content-Type-Options: nosniff | None. |
 | 🟢 GREEN | medium | WEB-SEC-011 | Referrer-Policy limits URL leakage | Referrer-Policy: strict-origin-when-cross-origin | None. |
 | 🟢 GREEN | medium | WEB-SEC-014 | No mixed content (insecure sub-resources) on secure pages | 0 insecure sub-resource(s) | None. |
-| 🟢 GREEN | medium | WEB-SEC-015 | Cookies set Secure, HttpOnly and SameSite attributes | no cookies set on public pages | None. |
 | 🟢 GREEN | low | WCAG-204-002 | SC 2.4.2 Page Titled | 0 page(s) without a title | None. |
 | 🟢 GREEN | low | WCAG-301-001 | SC 3.1.1 Language of Page | 0 page(s) without a language | None. |
-| 🟢 GREEN | low | WEB-SEC-012 | Permissions-Policy restricts powerful browser features | present | None. |
 | 🟢 GREEN | low | WEB-SEC-019 | No debug output, source maps or version banners | X-Powered-By: absent | None. |
 | ⚪ GRAY | high | WEB-FED-028 | ROSCA: material terms disclosed before billing information is obtained | no recurring-price wording found (No subscription or recurring charge is offered on the crawled pages.) | None. |
 | ⚪ GRAY | high | WEB-FED-029 | ROSCA: express informed consent before charging | no recurring-price wording found (No subscription or recurring charge is offered on the crawled pages.) | None. |
 | ⚪ GRAY | high | WEB-FED-030 | ROSCA: simple mechanism to stop recurring charges | no recurring-price wording found (No subscription or recurring charge is offered on the crawled pages.) | None. |
 | ⚪ GRAY | high | WEB-CA-012 | CCPA: opt-out preference signal (GPC) honored | no third-party requests on a fresh visit (No third-party requests observed on a fresh visit, so there is nothing for GPC to stop.) | None. |
+| ⚪ GRAY | medium | WEB-SEC-015 | Cookies set Secure, HttpOnly and SameSite attributes | no cookies set on public pages (No cookies are set on the crawled public pages, so there are no cookie attributes to check.) | None. |
 
 ## Limitations
 

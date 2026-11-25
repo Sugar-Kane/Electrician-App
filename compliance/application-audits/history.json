@@ -5,24 +5,24 @@
       "audit_id": "APP-volteira-2026-11-24",
       "folder": "2026-11-24",
       "started_at": "2026-11-24T20:00:00.000Z",
-      "generated_at": "2026-11-25T14:19:48.764Z",
+      "generated_at": "2026-11-25T14:32:06.932Z",
       "git_commit": "25d5faedfa5541b4302fb6d303faad3dd89516d8",
       "legal_baseline_version": "2026-11-25",
       "result": "Not ready: verified failures present",
       "totals": {
-        "GREEN": 14,
-        "YELLOW": 108,
+        "GREEN": 11,
+        "YELLOW": 111,
         "RED": 103,
         "GRAY": 36,
         "BLUE": 158,
         "total": 419
       },
       "metrics": {
-        "verified_pass_rate": 6.2,
+        "verified_pass_rate": 4.9,
         "verification_coverage": 58.7,
-        "overall_verified_applicable_compliance": 3.7
+        "overall_verified_applicable_compliance": 2.9
       },
-      "critical_findings": 43
+      "critical_findings": 44
     }
   ]
 }

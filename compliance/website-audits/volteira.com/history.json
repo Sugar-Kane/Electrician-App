@@ -5,22 +5,22 @@
       "audit_id": "WEB-volteira.com-2026-11-24",
       "folder": "2026-11-24T23-43-46-126Z",
       "started_at": "2026-11-24T23:43:46.126Z",
-      "generated_at": "2026-11-25T14:19:48.923Z",
+      "generated_at": "2026-11-25T14:31:53.023Z",
       "git_commit": null,
       "legal_baseline_version": "2026-11-24",
       "result": "FAIL",
       "totals": {
-        "GREEN": 16,
-        "YELLOW": 4,
+        "GREEN": 11,
+        "YELLOW": 5,
         "RED": 2,
-        "GRAY": 31,
-        "BLUE": 127,
+        "GRAY": 32,
+        "BLUE": 130,
         "total": 180
       },
       "metrics": {
-        "verified_pass_rate": 72.7,
-        "verification_coverage": 14.8,
-        "overall_verified_applicable_compliance": 10.7
+        "verified_pass_rate": 61.1,
+        "verification_coverage": 12.2,
+        "overall_verified_applicable_compliance": 7.4
       },
       "critical_findings": 0
     }

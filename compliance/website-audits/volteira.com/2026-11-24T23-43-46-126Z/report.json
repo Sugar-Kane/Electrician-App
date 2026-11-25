@@ -32,19 +32,19 @@
     "Automated accessibility scans find only part of WCAG; manual and assistive-technology testing were not performed by this script.",
     "Server-side controls (database, consent enforcement, record keeping) cannot be verified from a browser."
   ],
-  "generated_at": "2026-11-25T14:19:48.923Z",
+  "generated_at": "2026-11-25T14:31:53.023Z",
   "totals": {
-    "GREEN": 16,
-    "YELLOW": 4,
+    "GREEN": 11,
+    "YELLOW": 5,
     "RED": 2,
-    "GRAY": 31,
-    "BLUE": 127,
+    "GRAY": 32,
+    "BLUE": 130,
     "total": 180
   },
   "metrics": {
-    "verified_pass_rate": 72.7,
-    "verification_coverage": 14.8,
-    "overall_verified_applicable_compliance": 10.7
+    "verified_pass_rate": 61.1,
+    "verification_coverage": 12.2,
+    "overall_verified_applicable_compliance": 7.4
   },
   "legal_totals": {
     "GREEN": 0,
@@ -60,17 +60,17 @@
     "overall_verified_applicable_compliance": 0
   },
   "standards_totals": {
-    "GREEN": 16,
-    "YELLOW": 4,
+    "GREEN": 11,
+    "YELLOW": 5,
     "RED": 2,
-    "GRAY": 1,
-    "BLUE": 69,
+    "GRAY": 2,
+    "BLUE": 72,
     "total": 92
   },
   "standards_metrics": {
-    "verified_pass_rate": 72.7,
-    "verification_coverage": 24.2,
-    "overall_verified_applicable_compliance": 17.6
+    "verified_pass_rate": 61.1,
+    "verification_coverage": 20,
+    "overall_verified_applicable_compliance": 12.2
   },
   "scorecards": [
     {
@@ -127,36 +127,36 @@
     {
       "name": "Accessibility (WCAG 2.2 A/AA)",
       "totals": {
-        "GREEN": 6,
+        "GREEN": 3,
         "YELLOW": 1,
         "RED": 2,
         "GRAY": 0,
-        "BLUE": 46,
+        "BLUE": 49,
         "total": 55
       },
       "metrics": {
-        "verified_pass_rate": 66.7,
-        "verification_coverage": 16.4,
-        "overall_verified_applicable_compliance": 10.9
+        "verified_pass_rate": 50,
+        "verification_coverage": 10.9,
+        "overall_verified_applicable_compliance": 5.5
       },
       "result": "FAIL"
     },
     {
       "name": "Privacy and tracking",
       "totals": {
-        "GREEN": 1,
+        "GREEN": 0,
         "YELLOW": 0,
         "RED": 0,
-        "GRAY": 1,
+        "GRAY": 2,
         "BLUE": 25,
         "total": 27
       },
       "metrics": {
-        "verified_pass_rate": 100,
-        "verification_coverage": 3.8,
-        "overall_verified_applicable_compliance": 3.8
+        "verified_pass_rate": null,
+        "verification_coverage": 0,
+        "overall_verified_applicable_compliance": 0
       },
-      "result": "CONDITIONAL PASS"
+      "result": "INSUFFICIENT EVIDENCE"
     },
     {
       "name": "Customer communications",
@@ -178,24 +178,26 @@
     {
       "name": "Cybersecurity baseline (audit policy, not law)",
       "totals": {
-        "GREEN": 10,
-        "YELLOW": 2,
+        "GREEN": 8,
+        "YELLOW": 3,
         "RED": 0,
-        "GRAY": 0,
+        "GRAY": 1,
         "BLUE": 23,
         "total": 35
       },
       "metrics": {
-        "verified_pass_rate": 83.3,
-        "verification_coverage": 34.3,
-        "overall_verified_applicable_compliance": 28.6
+        "verified_pass_rate": 72.7,
+        "verification_coverage": 32.4,
+        "overall_verified_applicable_compliance": 23.5
       },
       "result": "CONDITIONAL PASS"
     }
   ],
   "website_result": "FAIL",
   "critical_findings": [],
-  "high_findings": [],
+  "high_findings": [
+    "F-WEB-SEC-007-VOLTEIRACOM"
+  ],
   "legal_review": [
     "WEB-FED-001",
     "WEB-FED-002",
@@ -2632,8 +2634,9 @@
       "responsible_party": "Website operator",
       "expected": "Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
       "legal_review_required": false,
-      "status": "GREEN",
-      "confidence": "high",
+      "status": "BLUE",
+      "status_reason": "No sideways scroll at 390 CSS px, but SC 1.4.10 is measured at 320 CSS px, which was not tested.",
+      "confidence": "medium",
       "actual": "0/1 key page(s) scroll sideways at 390px wide",
       "affected_pages": [],
       "evidence": [
@@ -2645,8 +2648,8 @@
         }
       ],
       "test_ids": [],
-      "test_result": "passed",
-      "remediation": "None.",
+      "test_result": "not-applicable",
+      "remediation": "Meet: Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
       "priority": "none"
     },
     {
@@ -2770,8 +2773,9 @@
       "responsible_party": "Website operator",
       "expected": "Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
       "legal_review_required": false,
-      "status": "GREEN",
-      "confidence": "high",
+      "status": "BLUE",
+      "status_reason": "An automated 40-step Tab walk found no trap; a full manual keyboard pass is needed before this can pass.",
+      "confidence": "medium",
       "actual": "0 page(s) where Tab cycled within two elements",
       "affected_pages": [],
       "evidence": [
@@ -2784,8 +2788,8 @@
         }
       ],
       "test_ids": [],
-      "test_result": "passed",
-      "remediation": "None.",
+      "test_result": "not-applicable",
+      "remediation": "Meet: Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
       "priority": "none"
     },
     {
@@ -3075,8 +3079,9 @@
       "responsible_party": "Website operator",
       "expected": "Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
       "legal_review_required": false,
-      "status": "GREEN",
-      "confidence": "high",
+      "status": "BLUE",
+      "status_reason": "Automated focus-style heuristic found no missing indicator; a person must confirm focus is visible.",
+      "confidence": "medium",
       "actual": "0/3 pages had focus targets with no outline or shadow on focus",
       "affected_pages": [],
       "evidence": [
@@ -3089,8 +3094,8 @@
         }
       ],
       "test_ids": [],
-      "test_result": "passed",
-      "remediation": "None.",
+      "test_result": "not-applicable",
+      "remediation": "Meet: Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
       "priority": "none"
     },
     {
@@ -3835,14 +3840,14 @@
       "legal_review_required": false,
       "status": "GREEN",
       "confidence": "high",
-      "actual": "enforced CSP present",
+      "actual": "enforced Content-Security-Policy on 3/3 crawled pages",
       "affected_pages": [],
       "evidence": [
         {
           "type": "network-observation",
           "location": "observations.json#pages[].headers",
           "collected_at": "2026-11-24T23:44:09.719Z",
-          "method": "response headers",
+          "method": "response headers of crawled pages",
           "limitations": ""
         }
       ],
@@ -3860,9 +3865,9 @@
       "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
       "expected": "script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent. object-src 'none' and base-uri 'none' or 'self' are set; form-action is restricted where practical.",
       "legal_review_required": false,
-      "status": "GREEN",
+      "status": "YELLOW",
       "confidence": "high",
-      "actual": "enforced CSP present",
+      "actual": "enforced CSP present; allows 'unsafe-eval'",
       "affected_pages": [],
       "evidence": [
         {
@@ -3874,9 +3879,9 @@
         }
       ],
       "test_ids": [],
-      "test_result": "passed",
-      "remediation": "None.",
-      "priority": "none"
+      "test_result": "not-applicable",
+      "remediation": "Meet: script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent.",
+      "priority": "P3"
     },
     {
       "finding_id": "F-WEB-SEC-008-VOLTEIRACOM",
@@ -3988,7 +3993,7 @@
       "legal_review_required": false,
       "status": "YELLOW",
       "confidence": "high",
-      "actual": "absent",
+      "actual": "Permissions-Policy: absent",
       "affected_pages": [],
       "evidence": [
         {
@@ -4058,7 +4063,8 @@
       "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
       "expected": "Every cookie set by the sites has Secure and an explicit SameSite; session cookies not needed by scripts are HttpOnly. Script-readable auth cookies (e.g. Supabase SSR) are a documented exception.",
       "legal_review_required": false,
-      "status": "GREEN",
+      "status": "GRAY",
+      "status_reason": "No cookies are set on the crawled public pages, so there are no cookie attributes to check.",
       "confidence": "high",
       "actual": "no cookies set on public pages",
       "affected_pages": [],
@@ -4072,7 +4078,7 @@
         }
       ],
       "test_ids": [],
-      "test_result": "passed",
+      "test_result": "not-applicable",
       "remediation": "None.",
       "priority": "none"
     },

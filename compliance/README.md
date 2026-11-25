@@ -23,7 +23,7 @@ and never a certification or protection against lawsuits.**
 
 ## Statuses
 
-🟢 GREEN compliant (verified with evidence) · 🟡 YELLOW partial · 🔴 RED non-compliant · ⚪ GRAY not
+🟢 GREEN verified pass (with evidence) · 🟡 YELLOW partial · 🔴 RED verified failure · ⚪ GRAY not
 applicable (with a reason) · 🔵 BLUE unable to verify (with the reason).
 
 GREEN is never given for code merely existing, a comment, a policy statement, an untested setting
@@ -71,7 +71,7 @@ node compliance/scripts/build-backlog.mjs compliance/application-audits/<date>
 3. `refresh-legal-requirements.mjs snapshot` keeps the old baseline in `legal-history/<date>/`,
    and `diff <old> <new>` writes the regulatory change report (added, repealed, amended,
    future-effective, needing legal interpretation).
-4. Re-run the audits; `compare-audits.mjs` shows newly compliant, newly failing and regressions.
+4. Re-run the audits; `compare-audits.mjs` shows newly passing, newly failing and regressions.
 
 ## Sensitive evidence
 

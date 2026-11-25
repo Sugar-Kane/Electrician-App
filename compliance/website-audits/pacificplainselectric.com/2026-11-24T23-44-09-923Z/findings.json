@@ -80,8 +80,9 @@
     "responsible_party": "Website operator",
     "expected": "Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alternative format. Offer an equivalent non-web way to request a quote/booking/payment (e.g., staffed phone line) with comparable hours and pricing.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "An accessibility page is linked; its content (commitment, contact method, known limitations) was not reviewed.",
+    "confidence": "medium",
     "actual": "accessibility page linked",
     "affected_pages": [],
     "evidence": [
@@ -94,8 +95,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alternative format.",
     "priority": "none"
   },
   {
@@ -143,9 +144,10 @@
     "responsible_party": "Website operator, Messaging provider",
     "expected": "Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Pacific Plains Electric' / 'Volteira') to send marketing text messages/calls using automated technology to the number provided. Disclosure is legible (size/contrast), visible without scrolling away from the control, and written in plain language. Marketing consent is separate from consent for transactional/informational messages.",
     "legal_review_required": true,
-    "status": "RED",
-    "confidence": "high",
-    "actual": "0/2 phone form(s) show STOP and rates wording near the field",
+    "status": "BLUE",
+    "status_reason": "The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.",
+    "confidence": "medium",
+    "actual": "0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated",
     "affected_pages": [
       "https://www.pacificplainselectric.com/request-service",
       "https://www.pacificplainselectric.com/es/request-service"
@@ -153,16 +155,16 @@
     "evidence": [
       {
         "type": "network-observation",
-        "location": "observations.json#pages[].forms[].consentText",
+        "location": "observations.json#pages[].forms[].consentCheckbox",
         "collected_at": "2026-11-24T23:45:49.659Z",
         "method": "DOM form text",
-        "limitations": "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside."
+        "limitations": "Labels are captured up to 200 characters."
       }
     ],
     "test_ids": [],
-    "test_result": "failed",
+    "test_result": "not-applicable",
     "remediation": "Meet: Where marketing texts/calls will be sent, a disclosure adjacent to the phone field (not only in linked terms) clearly states that by opting in the person authorizes the named seller (e.g., 'Pacific Plains Electric' / 'Volteira') to send marketing text messages/calls using automated technology to the number provided.",
-    "priority": "P1"
+    "priority": "none"
   },
   {
     "finding_id": "F-WEB-FED-009-PACIFICPLAINSELECTRI",
@@ -173,9 +175,9 @@
     "responsible_party": "Website operator",
     "expected": "Disclosure states that consent to marketing messages is not required to purchase goods or services. The quote/booking/checkout form can be submitted with the marketing-consent control left unselected (the form actually works without consent).",
     "legal_review_required": false,
-    "status": "RED",
+    "status": "YELLOW",
     "confidence": "high",
-    "actual": "0/2 phone form(s) show STOP and rates wording near the field",
+    "actual": "2/2 phone form(s) mark the texting-consent checkbox as required in HTML, while its wording says consent is optional",
     "affected_pages": [
       "https://www.pacificplainselectric.com/request-service",
       "https://www.pacificplainselectric.com/es/request-service"
@@ -183,16 +185,16 @@
     "evidence": [
       {
         "type": "network-observation",
-        "location": "observations.json#pages[].forms[].consentText",
+        "location": "observations.json#pages[].forms[].fields[].required",
         "collected_at": "2026-11-24T23:45:49.659Z",
-        "method": "DOM form text",
-        "limitations": "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside."
+        "method": "DOM required attribute",
+        "limitations": "A required checkbox blocks submission unless ticked; confirm on the live page whether the form can be sent without texting consent."
       }
     ],
     "test_ids": [],
-    "test_result": "failed",
+    "test_result": "not-applicable",
     "remediation": "Meet: Disclosure states that consent to marketing messages is not required to purchase goods or services.",
-    "priority": "P1"
+    "priority": "P3"
   },
   {
     "finding_id": "F-WEB-FED-010-PACIFICPLAINSELECTRI",
@@ -203,9 +205,10 @@
     "responsible_party": "Website operator, Messaging provider",
     "expected": "Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled into 'I agree to the Terms' are not used. The consent record (phone number, disclosure text/version, timestamp, page URL, IP/user agent, method) is stored and retrievable.",
     "legal_review_required": false,
-    "status": "RED",
-    "confidence": "high",
-    "actual": "0/2 phone form(s) show STOP and rates wording near the field",
+    "status": "BLUE",
+    "status_reason": "The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.",
+    "confidence": "medium",
+    "actual": "0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated",
     "affected_pages": [
       "https://www.pacificplainselectric.com/request-service",
       "https://www.pacificplainselectric.com/es/request-service"
@@ -213,16 +216,16 @@
     "evidence": [
       {
         "type": "network-observation",
-        "location": "observations.json#pages[].forms[].consentText",
+        "location": "observations.json#pages[].forms[].consentCheckbox",
         "collected_at": "2026-11-24T23:45:49.659Z",
         "method": "DOM form text",
-        "limitations": "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside."
+        "limitations": "Labels are captured up to 200 characters."
       }
     ],
     "test_ids": [],
-    "test_result": "failed",
+    "test_result": "not-applicable",
     "remediation": "Meet: Consent is given by a distinct affirmative act (unchecked-by-default checkbox or separate button) that qualifies as an electronic signature under E-SIGN; pre-checked boxes and consent bundled into 'I agree to the Terms' are not used.",
-    "priority": "P1"
+    "priority": "none"
   },
   {
     "finding_id": "F-WEB-FED-011-PACIFICPLAINSELECTRI",
@@ -233,9 +236,10 @@
     "responsible_party": "Website operator, Messaging provider",
     "expected": "Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoices) so consent is knowing and within scope. Informational consent is not used to send marketing content; mixed-content messages are treated as marketing.",
     "legal_review_required": true,
-    "status": "RED",
-    "confidence": "high",
-    "actual": "0/2 phone form(s) show STOP and rates wording near the field",
+    "status": "BLUE",
+    "status_reason": "The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.",
+    "confidence": "medium",
+    "actual": "0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated",
     "affected_pages": [
       "https://www.pacificplainselectric.com/request-service",
       "https://www.pacificplainselectric.com/es/request-service"
@@ -243,16 +247,16 @@
     "evidence": [
       {
         "type": "network-observation",
-        "location": "observations.json#pages[].forms[].consentText",
+        "location": "observations.json#pages[].forms[].consentCheckbox",
         "collected_at": "2026-11-24T23:45:49.659Z",
         "method": "DOM form text",
-        "limitations": "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside."
+        "limitations": "Labels are captured up to 200 characters."
       }
     ],
     "test_ids": [],
-    "test_result": "failed",
+    "test_result": "not-applicable",
     "remediation": "Meet: Where the number is collected for appointment/service updates, the form tells the person what informational messages they will receive (e.g., appointment confirmations, technician arrival, invoices) so consent is knowing and within scope.",
-    "priority": "P1"
+    "priority": "none"
   },
   {
     "finding_id": "F-WEB-FED-012-PACIFICPLAINSELECTRI",
@@ -263,9 +267,10 @@
     "responsible_party": "Website operator, Messaging provider",
     "expected": "Opt-in point shows program/brand name, message types, 'Message frequency varies' (or stated frequency), 'Msg & data rates may apply', 'Reply HELP for help, STOP to cancel', and links to Terms and Privacy Policy. Privacy policy states mobile numbers/SMS opt-in data are not shared with or sold to third parties for their marketing purposes (carrier campaign-vetting expectation). Opt-in is not pre-checked and is not required to submit the form.",
     "legal_review_required": false,
-    "status": "RED",
-    "confidence": "high",
-    "actual": "0/2 phone form(s) show STOP and rates wording near the field",
+    "status": "BLUE",
+    "status_reason": "The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.",
+    "confidence": "medium",
+    "actual": "0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated",
     "affected_pages": [
       "https://www.pacificplainselectric.com/request-service",
       "https://www.pacificplainselectric.com/es/request-service"
@@ -273,16 +278,16 @@
     "evidence": [
       {
         "type": "network-observation",
-        "location": "observations.json#pages[].forms[].consentText",
+        "location": "observations.json#pages[].forms[].consentCheckbox",
         "collected_at": "2026-11-24T23:45:49.659Z",
         "method": "DOM form text",
-        "limitations": "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside."
+        "limitations": "Labels are captured up to 200 characters."
       }
     ],
     "test_ids": [],
-    "test_result": "failed",
+    "test_result": "not-applicable",
     "remediation": "Meet: Opt-in point shows program/brand name, message types, 'Message frequency varies' (or stated frequency), 'Msg & data rates may apply', 'Reply HELP for help, STOP to cancel', and links to Terms and Privacy Policy.",
-    "priority": "P1"
+    "priority": "none"
   },
   {
     "finding_id": "F-WEB-FED-013-PACIFICPLAINSELECTRI",
@@ -293,9 +298,10 @@
     "responsible_party": "Website operator, Messaging provider",
     "expected": "Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method. Revocation requests received by text reply (STOP, quit, end, revoke, opt out, cancel, unsubscribe), web form, email or phone are honored within 10 business days; at most one confirmation text without marketing content is sent.",
     "legal_review_required": true,
-    "status": "RED",
-    "confidence": "high",
-    "actual": "0/2 phone form(s) show STOP and rates wording near the field",
+    "status": "BLUE",
+    "status_reason": "The consent wording on 2 form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.",
+    "confidence": "medium",
+    "actual": "0/2 phone form(s) show STOP and rates wording in the captured text; 2 capture(s) truncated",
     "affected_pages": [
       "https://www.pacificplainselectric.com/request-service",
       "https://www.pacificplainselectric.com/es/request-service"
@@ -303,16 +309,16 @@
     "evidence": [
       {
         "type": "network-observation",
-        "location": "observations.json#pages[].forms[].consentText",
+        "location": "observations.json#pages[].forms[].consentCheckbox",
         "collected_at": "2026-11-24T23:45:49.659Z",
         "method": "DOM form text",
-        "limitations": "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside."
+        "limitations": "Labels are captured up to 200 characters."
       }
     ],
     "test_ids": [],
-    "test_result": "failed",
+    "test_result": "not-applicable",
     "remediation": "Meet: Consent language and the privacy/SMS terms explain how to opt out (reply STOP or other keywords, or contact the business) and the site does not restrict revocation to a single method.",
-    "priority": "P1"
+    "priority": "none"
   },
   {
     "finding_id": "F-WEB-FED-014-PACIFICPLAINSELECTRI",
@@ -1412,22 +1418,13 @@
     "responsible_party": "Pacific Plains Electric, Website operator",
     "expected": "The license shown is current and active on the CSLB public license lookup on the audit date (not expired, suspended or inactive). The business name used on the site (and in ads) is the name on the CSLB license record (or an approved DBA on the record); the site does not advertise under a different or misleading name. How to check: search the number at the CSLB Check a License page, record status, legal name/DBA, entity type, classifications, bond and workers' compensation status, and compare with site header, footer, About page and legal pages.",
     "legal_review_required": false,
-    "status": "GREEN",
+    "status": "BLUE",
+    "status_reason": "Needs a manual review of page content; no automated check settles it.",
     "confidence": "high",
-    "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
-    "affected_pages": [],
-    "evidence": [
-      {
-        "type": "network-observation",
-        "location": "observations.json#pages[].licenseMentions",
-        "collected_at": "2026-11-24T23:45:49.659Z",
-        "method": "page text",
-        "limitations": "Whether the number is active and matches the business name needs the CSLB record."
-      }
-    ],
-    "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "actual": "not assessed automatically",
+    "evidence": [],
+    "test_result": "not-run",
+    "remediation": "Verify manually or with the business's records.",
     "priority": "none"
   },
   {
@@ -1439,22 +1436,13 @@
     "responsible_party": "Pacific Plains Electric, Website operator",
     "expected": "Every advertised service is within the classifications on the CSLB record (e.g., C-10 Electrical covers electrical wiring, panels, EV chargers, lighting; solar may require C-46 or be within C-10; low-voltage systems C-7; HVAC C-20; general remodeling B). Services outside the classification are removed, or the site states they are performed by appropriately licensed subcontractors (with their license numbers where required).",
     "legal_review_required": true,
-    "status": "GREEN",
+    "status": "BLUE",
+    "status_reason": "Applicability or wording needs legal review; not settled by an automated check.",
     "confidence": "high",
-    "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
-    "affected_pages": [],
-    "evidence": [
-      {
-        "type": "network-observation",
-        "location": "observations.json#pages[].licenseMentions",
-        "collected_at": "2026-11-24T23:45:49.659Z",
-        "method": "page text",
-        "limitations": "Whether the number is active and matches the business name needs the CSLB record."
-      }
-    ],
-    "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "actual": "not assessed automatically",
+    "evidence": [],
+    "test_result": "not-run",
+    "remediation": "Verify manually or with the business's records.",
     "priority": "none"
   },
   {
@@ -1484,22 +1472,13 @@
     "responsible_party": "Pacific Plains Electric, Website operator, Third-party vendor",
     "expected": "'Bonded' matches an active contractor's bond on the CSLB record; 'insured' is backed by current general liability insurance (mandatory for LLC licensees in the amounts in 7071.19) and the workers' compensation status on the CSLB record is current (or a valid exemption where no employees). Claims are removed promptly if a bond, policy or license lapses.",
     "legal_review_required": false,
-    "status": "GREEN",
+    "status": "BLUE",
+    "status_reason": "Needs evidence a browser cannot see (records, server behaviour or business facts).",
     "confidence": "high",
-    "actual": "licence number shown on 40/40 pages: CSLB #1162180; CSLB #1162180 Verify license #1162180; CSLB #1162180 Verificar la licencia #1162180",
-    "affected_pages": [],
-    "evidence": [
-      {
-        "type": "network-observation",
-        "location": "observations.json#pages[].licenseMentions",
-        "collected_at": "2026-11-24T23:45:49.659Z",
-        "method": "page text",
-        "limitations": "Whether the number is active and matches the business name needs the CSLB record."
-      }
-    ],
-    "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "actual": "not assessed automatically",
+    "evidence": [],
+    "test_result": "not-run",
+    "remediation": "Verify manually or with the business's records.",
     "priority": "none"
   },
   {
@@ -2247,8 +2226,9 @@
     "responsible_party": "Website operator",
     "expected": "Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "No sideways scroll at 390 CSS px, but SC 1.4.10 is measured at 320 CSS px, which was not tested.",
+    "confidence": "medium",
     "actual": "0/3 key page(s) scroll sideways at 390px wide",
     "affected_pages": [],
     "evidence": [
@@ -2272,8 +2252,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
     "priority": "none"
   },
   {
@@ -2397,8 +2377,9 @@
     "responsible_party": "Website operator",
     "expected": "Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "An automated 40-step Tab walk found no trap; a full manual keyboard pass is needed before this can pass.",
+    "confidence": "medium",
     "actual": "0 page(s) where Tab cycled within two elements",
     "affected_pages": [],
     "evidence": [
@@ -2411,8 +2392,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
     "priority": "none"
   },
   {
@@ -2702,8 +2683,9 @@
     "responsible_party": "Website operator",
     "expected": "Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "Automated focus-style heuristic found no missing indicator; a person must confirm focus is visible.",
+    "confidence": "medium",
     "actual": "0/40 pages had focus targets with no outline or shadow on focus",
     "affected_pages": [],
     "evidence": [
@@ -2716,8 +2698,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
     "priority": "none"
   },
   {
@@ -3460,23 +3442,23 @@
     "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
     "expected": "An enforced (not report-only) Content-Security-Policy header is sent on every HTML page, including error pages and public token pages.",
     "legal_review_required": false,
-    "status": "YELLOW",
+    "status": "GREEN",
     "confidence": "high",
-    "actual": "enforced CSP present",
+    "actual": "enforced Content-Security-Policy on 40/40 crawled pages",
     "affected_pages": [],
     "evidence": [
       {
         "type": "network-observation",
         "location": "observations.json#pages[].headers",
         "collected_at": "2026-11-24T23:45:49.659Z",
-        "method": "response headers",
+        "method": "response headers of crawled pages",
         "limitations": ""
       }
     ],
     "test_ids": [],
-    "test_result": "not-applicable",
-    "remediation": "Meet: An enforced (not report-only) Content-Security-Policy header is sent on every HTML page, including error pages and public token pages.",
-    "priority": "P3"
+    "test_result": "passed",
+    "remediation": "None.",
+    "priority": "none"
   },
   {
     "finding_id": "F-WEB-SEC-007-PACIFICPLAINSELECTRI",
@@ -3489,7 +3471,7 @@
     "legal_review_required": false,
     "status": "YELLOW",
     "confidence": "high",
-    "actual": "enforced CSP present",
+    "actual": "enforced CSP present; script-src allows 'unsafe-inline' without nonce",
     "affected_pages": [],
     "evidence": [
       {
@@ -3613,9 +3595,9 @@
     "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
     "expected": "A Permissions-Policy header disables camera, microphone, geolocation, payment and USB except on the origins/pages that need them (e.g. microphone for dictation, geolocation for arrival).",
     "legal_review_required": false,
-    "status": "GREEN",
+    "status": "YELLOW",
     "confidence": "high",
-    "actual": "present",
+    "actual": "Permissions-Policy: camera=(), microphone=(), geolocation=()",
     "affected_pages": [],
     "evidence": [
       {
@@ -3627,9 +3609,9 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
-    "priority": "none"
+    "test_result": "not-applicable",
+    "remediation": "Meet: A Permissions-Policy header disables camera, microphone, geolocation, payment and USB except on the origins/pages that need them (e.g. microphone for dictation, geolocation for arrival).",
+    "priority": "P3"
   },
   {
     "finding_id": "F-WEB-SEC-013-PACIFICPLAINSELECTRI",
@@ -3685,7 +3667,8 @@
     "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
     "expected": "Every cookie set by the sites has Secure and an explicit SameSite; session cookies not needed by scripts are HttpOnly. Script-readable auth cookies (e.g. Supabase SSR) are a documented exception.",
     "legal_review_required": false,
-    "status": "GREEN",
+    "status": "GRAY",
+    "status_reason": "No cookies are set on the crawled public pages, so there are no cookie attributes to check.",
     "confidence": "high",
     "actual": "no cookies set on public pages",
     "affected_pages": [],
@@ -3699,7 +3682,7 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
+    "test_result": "not-applicable",
     "remediation": "None.",
     "priority": "none"
   },

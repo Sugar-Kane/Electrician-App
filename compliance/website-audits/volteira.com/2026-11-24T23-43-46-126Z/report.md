@@ -18,13 +18,13 @@
 
 | Scope | Total | 🟢 Green | 🟡 Yellow | 🔴 Red | ⚪ Gray | 🔵 Blue | Verified pass rate | Verification coverage | Overall verified compliance |
 |---|---|---|---|---|---|---|---|---|---|
-| **All requirements** | 180 | 16 | 4 | 2 | 31 | 127 | 72.7% | 14.8% | 10.7% |
+| **All requirements** | 180 | 11 | 5 | 2 | 32 | 130 | 61.1% | 12.2% | 7.4% |
 | Legal (statutes, regulations, guidance) | 88 | 0 | 0 | 0 | 30 | 58 | not available | 0% | 0% |
-| Standards and recommended controls | 92 | 16 | 4 | 2 | 1 | 69 | 72.7% | 24.2% | 17.6% |
+| Standards and recommended controls | 92 | 11 | 5 | 2 | 2 | 72 | 61.1% | 20% | 12.2% |
 
 Verified pass rate = Green ÷ (Green + Yellow + Red). Verification coverage = (Green + Yellow + Red) ÷ (Green + Yellow + Red + Blue). Overall verified applicable compliance = Green ÷ (Green + Yellow + Red + Blue). Gray is excluded; "not available" means the denominator is zero.
 
-Critical findings: 0. High-risk findings: 0. Requirements needing legal review: 53.
+Critical findings: 0. High-risk findings: 1. Requirements needing legal review: 53.
 
 ## Scorecards
 
@@ -33,10 +33,10 @@ Critical findings: 0. High-risk findings: 0. Requirements needing legal review: 
 | Federal website requirements | CONDITIONAL PASS | 33 | 0 | 1 | 0 | 9 | 23 | 0% | 4.2% |
 | California website requirements | INSUFFICIENT EVIDENCE | 36 | 0 | 0 | 0 | 1 | 35 | not available | 0% |
 | California contractor website requirements | INSUFFICIENT EVIDENCE | 21 | 0 | 0 | 0 | 21 | 0 | not available | not available |
-| Accessibility (WCAG 2.2 A/AA) | FAIL | 55 | 6 | 1 | 2 | 0 | 46 | 66.7% | 16.4% |
-| Privacy and tracking | CONDITIONAL PASS | 27 | 1 | 0 | 0 | 1 | 25 | 100% | 3.8% |
+| Accessibility (WCAG 2.2 A/AA) | FAIL | 55 | 3 | 1 | 2 | 0 | 49 | 50% | 10.9% |
+| Privacy and tracking | INSUFFICIENT EVIDENCE | 27 | 0 | 0 | 0 | 2 | 25 | not available | 0% |
 | Customer communications | FAIL | 15 | 0 | 0 | 1 | 7 | 7 | 0% | 12.5% |
-| Cybersecurity baseline (audit policy, not law) | CONDITIONAL PASS | 35 | 10 | 2 | 0 | 0 | 23 | 83.3% | 34.3% |
+| Cybersecurity baseline (audit policy, not law) | CONDITIONAL PASS | 35 | 8 | 3 | 0 | 1 | 23 | 72.7% | 32.4% |
 
 ## Pages
 
@@ -48,9 +48,10 @@ Discovered: 5. Tested: 3. Excluded: 2.
 |---|---|---|---|---|---|
 | 🔴 RED | medium | WCAG-104-001 | SC 1.4.1 Use of Color | link-in-text-block (serious, 1 element(s)) on https://www.volteira.com/changelog | Meet: Color is not the only visual means of conveying information, indicating an action, prompting a response or distinguishing an element (e.g., errors, required fields, links in text). |
 | 🔴 RED | medium | WCAG-104-004 | SC 1.4.4 Resize Text | meta-viewport (moderate, 1 element(s)) on https://www.volteira.com/; meta-viewport (moderate, 1 element(s)) on https://www.volteira.com/changelog; meta-viewport (moderate, 1 element(s)) on https://www.volteira.com/demo | Meet: Text can be resized up to 200 percent without assistive technology and without loss of content or functionality. |
+| 🟡 YELLOW | high | WEB-SEC-007 | CSP blocks inline scripts without a nonce or hash | enforced CSP present; allows 'unsafe-eval' | Meet: script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent. |
 | 🟡 YELLOW | medium | WEB-FED-005 | Accessibility statement and alternative contact channel | no accessibility statement or contact found | Meet: Publish an accessibility statement linked from every page footer naming the target standard (WCAG 2.2 AA), known limitations, and a phone and email way to get help or request content in an alter |
 | 🟡 YELLOW | medium | WCAG-205-008 | SC 2.5.8 Target Size (Minimum) | 6 focusable target(s) under 24×24 px (spacing exceptions not evaluated) | Meet: Pointer targets are at least 24 by 24 CSS pixels, or have sufficient spacing, or meet another listed exception (inline, equivalent, user-agent, essential). |
-| 🟡 YELLOW | low | WEB-SEC-012 | Permissions-Policy restricts powerful browser features | absent | Meet: A Permissions-Policy header disables camera, microphone, geolocation, payment and USB except on the origins/pages that need them (e.g. microphone for dictation, geolocation for arrival). |
+| 🟡 YELLOW | low | WEB-SEC-012 | Permissions-Policy restricts powerful browser features | Permissions-Policy: absent | Meet: A Permissions-Policy header disables camera, microphone, geolocation, payment and USB except on the origins/pages that need them (e.g. microphone for dictation, geolocation for arrival). |
 | 🟡 YELLOW | low | WEB-SEC-019 | No debug output, source maps or version banners | X-Powered-By: Next.js | Meet: Production serves no development overlays or verbose debug output; JavaScript source maps are not publicly retrievable unless a documented decision allows it. |
 | 🔵 BLUE | critical | WEB-FED-018 | Reviews: no fake or false consumer reviews or celebrity testimonials | not assessed automatically (Needs evidence a browser cannot see (records, server behaviour or business facts).) | Verify manually or with the business's records. |
 | 🔵 BLUE | critical | WEB-SEC-017 | No secret keys in client-side JavaScript | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
@@ -89,8 +90,11 @@ Discovered: 5. Tested: 3. Excluded: 2.
 | 🔵 BLUE | high | WCAG-101-001 | SC 1.1.1 Non-text Content | no automated violations (axe-core found no violation for SC 1.1.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Every image, icon, image button, CAPTCHA and other non-text content that conveys meaning has a text alternative serving the same purpose; decorative images are hidden from assistive technology. |
 | 🔵 BLUE | high | WCAG-103-001 | SC 1.3.1 Info and Relationships | no automated violations (axe-core found no violation for SC 1.3.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Structure and relationships conveyed visually (headings, lists, tables, form field groupings, required-field indicators) are programmatically determinable. |
 | 🔵 BLUE | high | WCAG-104-003 | SC 1.4.3 Contrast (Minimum) | no automated violations (axe-core found no violation for SC 1.4.3, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Text and images of text have a contrast ratio of at least 4.5:1 (3:1 for large text), except incidental text and logotypes. |
+| 🔵 BLUE | high | WCAG-104-010 | SC 1.4.10 Reflow | 0/1 key page(s) scroll sideways at 390px wide (No sideways scroll at 390 CSS px, but SC 1.4.10 is measured at 320 CSS px, which was not tested.) | Meet: Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is e |
 | 🔵 BLUE | high | WCAG-201-001 | SC 2.1.1 Keyboard | no automated violations (axe-core found no violation for SC 2.1.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: All functionality, including quote forms, date/time pickers, payment fields, signature capture and consent controls, is operable through a keyboard interface without specific timings. |
+| 🔵 BLUE | high | WCAG-201-002 | SC 2.1.2 No Keyboard Trap | 0 page(s) where Tab cycled within two elements (An automated 40-step Tab walk found no trap; a full manual keyboard pass is needed before this can pass.) | Meet: Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods. |
 | 🔵 BLUE | high | WCAG-204-003 | SC 2.4.3 Focus Order | no automated violations (axe-core found no violation for SC 2.4.3, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Focusable components receive focus in an order that preserves meaning and operability, including when modals and step-by-step forms open. |
+| 🔵 BLUE | high | WCAG-204-007 | SC 2.4.7 Focus Visible | 0/3 pages had focus targets with no outline or shadow on focus (Automated focus-style heuristic found no missing indicator; a person must confirm focus is visible.) | Meet: Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible. |
 | 🔵 BLUE | high | WCAG-204-011 | SC 2.4.11 Focus Not Obscured (Minimum) | no automated violations (axe-core found no violation for SC 2.4.11, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: When a component receives keyboard focus, it is not entirely hidden by author-created content such as sticky headers, cookie banners or chat launchers. |
 | 🔵 BLUE | high | WCAG-303-001 | SC 3.3.1 Error Identification | no automated violations (axe-core found no violation for SC 3.3.1, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: When an input error is automatically detected, the item in error is identified and the error is described to the user in text. |
 | 🔵 BLUE | high | WCAG-303-002 | SC 3.3.2 Labels or Instructions | no automated violations (axe-core found no violation for SC 3.3.2, which is not proof of conformance; manual and assistive-technology review is required.) | Meet: Labels or instructions are provided when content requires user input, including format requirements and required-field indication. |
@@ -179,20 +183,15 @@ Discovered: 5. Tested: 3. Excluded: 2.
 | 🔵 BLUE | low | WEB-SEC-023 | Unneeded HTTP methods (TRACE) are disabled | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
 | 🔵 BLUE | low | WEB-SEC-033 | security.txt vulnerability contact is published | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
 | 🔵 BLUE | informational | WEB-SEC-005 | Apex domain is on the browser preload list (optional) | not assessed automatically (Needs a manual review of page content; no automated check settles it.) | Verify manually or with the business's records. |
-| 🟢 GREEN | high | WCAG-104-010 | SC 1.4.10 Reflow | 0/1 key page(s) scroll sideways at 390px wide | None. |
-| 🟢 GREEN | high | WCAG-201-002 | SC 2.1.2 No Keyboard Trap | 0 page(s) where Tab cycled within two elements | None. |
-| 🟢 GREEN | high | WCAG-204-007 | SC 2.4.7 Focus Visible | 0/3 pages had focus targets with no outline or shadow on focus | None. |
 | 🟢 GREEN | high | WEB-SEC-001 | HTTP requests redirect to HTTPS | http:// answered 308 → https://www.volteira.com/ | None. |
 | 🟢 GREEN | high | WEB-SEC-002 | TLS certificate is valid and publicly trusted | TLS 1.3; certificate valid to 2026-12-23; issuer YR1 | None. |
-| 🟢 GREEN | high | WEB-SEC-006 | Content-Security-Policy is present on every HTML response | enforced CSP present | None. |
-| 🟢 GREEN | high | WEB-SEC-007 | CSP blocks inline scripts without a nonce or hash | enforced CSP present | None. |
+| 🟢 GREEN | high | WEB-SEC-006 | Content-Security-Policy is present on every HTML response | enforced Content-Security-Policy on 3/3 crawled pages | None. |
 | 🟢 GREEN | high | WEB-SEC-009 | Clickjacking protection via frame-ancestors or X-Frame-Options | X-Frame-Options / CSP frame-ancestors per page | None. |
 | 🟢 GREEN | medium | WCAG-204-001 | SC 2.4.1 Bypass Blocks | 0 page(s) without a skip link or main landmark | None. |
 | 🟢 GREEN | medium | WEB-SEC-004 | Strict-Transport-Security (HSTS) is sent with max-age of at least one year | Strict-Transport-Security: max-age=63072000 | None. |
 | 🟢 GREEN | medium | WEB-SEC-010 | X-Content-Type-Options: nosniff on all responses | X-Content-Type-Options: nosniff | None. |
 | 🟢 GREEN | medium | WEB-SEC-011 | Referrer-Policy limits URL leakage | Referrer-Policy: strict-origin-when-cross-origin | None. |
 | 🟢 GREEN | medium | WEB-SEC-014 | No mixed content (insecure sub-resources) on secure pages | 0 insecure sub-resource(s) | None. |
-| 🟢 GREEN | medium | WEB-SEC-015 | Cookies set Secure, HttpOnly and SameSite attributes | no cookies set on public pages | None. |
 | 🟢 GREEN | low | WCAG-204-002 | SC 2.4.2 Page Titled | 0 page(s) without a title | None. |
 | 🟢 GREEN | low | WCAG-301-001 | SC 3.1.1 Language of Page | 0 page(s) without a language | None. |
 | ⚪ GRAY | critical | WEB-FED-008 | TCPA PEWC: clear and conspicuous marketing-text disclosure at phone collection | no phone fields found (No form on the crawled pages asks for a phone number.) | None. |
@@ -224,6 +223,7 @@ Discovered: 5. Tested: 3. Excluded: 2.
 | ⚪ GRAY | medium | WEB-CSLB-015 | Notice of Cancellation may be sent by email (contractor email provided) | no contractor licence wording or trade services found (The site does not advertise contracting services.) | None. |
 | ⚪ GRAY | medium | WEB-CSLB-018 | Arbitration clause formatting in online contracts (if used) | no contractor licence wording or trade services found (The site does not advertise contracting services.) | None. |
 | ⚪ GRAY | medium | WEB-CSLB-019 | Warranty representations: Song-Beverly applicability | no contractor licence wording or trade services found (The site does not advertise contracting services.) | None. |
+| ⚪ GRAY | medium | WEB-SEC-015 | Cookies set Secure, HttpOnly and SameSite attributes | no cookies set on public pages (No cookies are set on the crawled public pages, so there are no cookie attributes to check.) | None. |
 | ⚪ GRAY | low | WEB-CSLB-020 | Magnuson-Moss: written warranty terms available before sale online | no contractor licence wording or trade services found (The site does not advertise contracting services.) | None. |
 | ⚪ GRAY | low | WEB-CSLB-021 | Solar disclosure document if solar energy systems are offered | no contractor licence wording or trade services found (The site does not advertise contracting services.) | None. |
 

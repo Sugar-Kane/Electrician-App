@@ -77,24 +77,30 @@ const checks = {
     if (!pages.length) return null;
     const enforced = header("content-security-policy");
     const reportOnly = pages.map((p) => p.headers?.["content-security-policy-report-only"] || "");
-    const status = enforced.every(Boolean) ? (enforced.some((v) => /script-src[^;]*'unsafe-inline'/.test(v) && !/nonce-|strict-dynamic/.test(v)) ? "YELLOW" : "GREEN") : reportOnly.some(Boolean) ? "YELLOW" : "RED";
-    return { status, actual: enforced.some(Boolean) ? "enforced CSP present" : reportOnly.some(Boolean) ? "report-only CSP only" : "no CSP", evidence: [ev("observations.json#pages[].headers", "response headers")] };
+    const status = enforced.every(Boolean) ? (enforced.some((v) => (/script-src[^;]*'unsafe-inline'/.test(v) && !/nonce-|strict-dynamic/.test(v)) || /'unsafe-eval'/.test(v)) ? "YELLOW" : "GREEN") : reportOnly.some(Boolean) ? "YELLOW" : "RED";
+    return { status, actual: enforced.some(Boolean) ? `enforced CSP present${enforced.some((v) => /'unsafe-eval'/.test(v)) ? "; allows 'unsafe-eval'" : ""}${enforced.some((v) => /script-src[^;]*'unsafe-inline'/.test(v) && !/nonce-|strict-dynamic/.test(v)) ? "; script-src allows 'unsafe-inline' without nonce" : ""}` : reportOnly.some(Boolean) ? "report-only CSP only" : "no CSP", evidence: [ev("observations.json#pages[].headers", "response headers")] };
+  },
+  "csp-present": () => {
+    if (!pages.length) return null;
+    const enforced = header("content-security-policy");
+    const n = enforced.filter(Boolean).length;
+    return { status: n === pages.length ? "GREEN" : n ? "YELLOW" : "RED", actual: `enforced Content-Security-Policy on ${n}/${pages.length} crawled pages`, pages: pageList((p) => !p.headers?.["content-security-policy"]), evidence: [ev("observations.json#pages[].headers", "response headers of crawled pages")] };
   },
   "frame-protection": () => (pages.length ? { status: pages.every((p) => p.headers?.["x-frame-options"] || /frame-ancestors/.test(p.headers?.["content-security-policy"] || "")) ? "GREEN" : "RED", actual: "X-Frame-Options / CSP frame-ancestors per page", evidence: [ev("observations.json#pages[].headers", "response headers")] } : null),
   nosniff: () => (pages.length ? { status: allHave("x-content-type-options", (v) => /nosniff/i.test(v)) ? "GREEN" : "RED", actual: `X-Content-Type-Options: ${[...new Set(header("x-content-type-options"))].join(" | ") || "absent"}`, evidence: [ev("observations.json#pages[].headers", "response headers")] } : null),
   "referrer-policy": () => (pages.length ? { status: allHave("referrer-policy") ? "GREEN" : "YELLOW", actual: `Referrer-Policy: ${[...new Set(header("referrer-policy"))].join(" | ") || "absent (browser default strict-origin-when-cross-origin)"}`, evidence: [ev("observations.json#pages[].headers", "response headers")] } : null),
-  "permissions-policy": () => (pages.length ? { status: allHave("permissions-policy") ? "GREEN" : "YELLOW", actual: header("permissions-policy").some(Boolean) ? "present" : "absent", evidence: [ev("observations.json#pages[].headers", "response headers")] } : null),
+  "permissions-policy": () => (pages.length ? { status: allHave("permissions-policy", (v) => ["camera", "microphone", "geolocation", "payment", "usb"].every((f) => new RegExp(`\\b${f}=`).test(v))) ? "GREEN" : "YELLOW", actual: `Permissions-Policy: ${[...new Set(header("permissions-policy"))].join(" | ") || "absent"}`, evidence: [ev("observations.json#pages[].headers", "response headers")] } : null),
   "mixed-content": () => (pages.length ? { status: pages.some((p) => (p.mixedContent || []).length) ? "RED" : "GREEN", actual: `${pages.reduce((n, p) => n + (p.mixedContent || []).length, 0)} insecure sub-resource(s)`, pages: pageList((p) => (p.mixedContent || []).length), evidence: [ev("observations.json#pages[].mixedContent", "DOM inspection")] } : null),
   "cookie-flags": () => {
     const cookies = pages.flatMap((p) => p.cookies || []);
-    if (!cookies.length) return { status: "GREEN", actual: "no cookies set on public pages", evidence: [ev("observations.json#pages[].cookies", "browser cookie jar")] };
+    if (!cookies.length) return { status: "GRAY", reason: "No cookies are set on the crawled public pages, so there are no cookie attributes to check.", actual: "no cookies set on public pages", evidence: [ev("observations.json#pages[].cookies", "browser cookie jar")] };
     const weak = cookies.filter((c) => !c.secure || c.sameSite === "None" && !c.secure);
     return { status: weak.length ? "YELLOW" : "GREEN", actual: `${cookies.length} cookie(s); ${weak.length} without Secure`, evidence: [ev("observations.json#pages[].cookies", "browser cookie jar")] };
   },
   "server-banner": () => (pages.length ? { status: pages.some((p) => p.headers?.["x-powered-by"]) ? "YELLOW" : "GREEN", actual: `X-Powered-By: ${[...new Set(header("x-powered-by"))].join(" | ") || "absent"}`, evidence: [ev("observations.json#pages[].headers", "response headers")] } : null),
   tls: () => (obs.tls?.validTo ? { status: obs.tls.validTo * 1000 > Date.now() + 14 * 86400000 ? "GREEN" : "YELLOW", actual: `${obs.tls.protocol || "TLS"}; certificate valid to ${new Date(obs.tls.validTo * 1000).toISOString().slice(0, 10)}; issuer ${obs.tls.issuer || "?"}`, evidence: [ev("observations.json#tls", "browser security details")] } : null),
   "privacy-link": () => (pages.length ? { status: pages.every((p) => (p.privacyLinks || []).length) ? "GREEN" : (home?.privacyLinks || []).length ? "YELLOW" : "RED", actual: `privacy link on ${pages.filter((p) => (p.privacyLinks || []).length).length}/${pages.length} crawled pages`, pages: pageList((p) => !(p.privacyLinks || []).length), evidence: [ev("observations.json#pages[].privacyLinks", "DOM link text/href")] } : null),
-  "accessibility-statement": () => (home ? { status: pages.some((p) => (p.accessibilityLinks || []).length) ? "GREEN" : "YELLOW", actual: pages.some((p) => (p.accessibilityLinks || []).length) ? "accessibility page linked" : "no accessibility statement or contact found", evidence: [ev("observations.json#pages[].accessibilityLinks", "DOM link text/href")] } : null),
+  "accessibility-statement": () => (home ? { status: pages.some((p) => (p.accessibilityLinks || []).length) ? "BLUE" : "YELLOW", reason: pages.some((p) => (p.accessibilityLinks || []).length) ? "An accessibility page is linked; its content (commitment, contact method, known limitations) was not reviewed." : undefined, actual: pages.some((p) => (p.accessibilityLinks || []).length) ? "accessibility page linked" : "no accessibility statement or contact found", evidence: [ev("observations.json#pages[].accessibilityLinks", "DOM link text/href")] } : null),
   "gpc-honored": () => {
     const t = obs.tracking || {};
     if (!t.fresh || !t.gpc) return null;
@@ -105,8 +111,19 @@ const checks = {
   "phone-consent": () => {
     if (!collectsPhone) return { status: "GRAY", reason: "No form on the crawled pages asks for a phone number.", actual: "no phone fields found", evidence: [ev("observations.json#pages[].forms", "DOM form inspection")] };
     const forms = pages.flatMap((p) => (p.forms || []).filter((f) => f.hasPhone).map((f) => ({ url: p.url, f })));
-    const good = forms.filter(({ f }) => /stop/i.test(f.consentText) && /(rate|frequency)/i.test(f.consentText));
+    const textOf = (f) => [f.consentText || "", ...(f.consentCheckbox || []).map((c) => c.label || "")].join(" ");
+    const truncated = (f) => (f.consentCheckbox || []).some((c) => (c.label || "").length >= 195) || (f.fields || []).some((x) => x.type === "checkbox" && (x.label || "").length >= 118);
+    const good = forms.filter(({ f }) => /\b(stop|alto|cancelar)\b/i.test(textOf(f)) && /(rate|frequency|tarifa|frecuencia)/i.test(textOf(f)));
+    const unsure = forms.filter(({ f }) => !good.some((g) => g.f === f) && truncated(f));
+    if (unsure.length) return { status: "BLUE", reason: `The consent wording on ${unsure.length} form(s) was cut off by the crawler's capture limit, so STOP / rates wording cannot be judged; check the live page by hand.`, actual: `${good.length}/${forms.length} phone form(s) show STOP and rates wording in the captured text; ${unsure.length} capture(s) truncated`, pages: forms.map((x) => x.url), evidence: [ev("observations.json#pages[].forms[].consentCheckbox", "DOM form text", "Labels are captured up to 200 characters.")] };
     return { status: good.length === forms.length ? "YELLOW" : "RED", actual: `${good.length}/${forms.length} phone form(s) show STOP and rates wording near the field`, pages: forms.map((x) => x.url), evidence: [ev("observations.json#pages[].forms[].consentText", "DOM form text", "Wording on the page is necessary but not sufficient; whether consent is recorded and enforced is a backend question, so at best YELLOW from outside.")] };
+  },
+  "text-consent-optional": () => {
+    if (!collectsPhone) return { status: "GRAY", reason: "No form on the crawled pages asks for a phone number.", actual: "no phone fields found", evidence: [ev("observations.json#pages[].forms", "DOM form inspection")] };
+    const forms = pages.flatMap((p) => (p.forms || []).filter((f) => f.hasPhone).map((f) => ({ url: p.url, f })));
+    const forced = forms.filter(({ f }) => (f.fields || []).some((x) => x.type === "checkbox" && x.required && /\b(text|sms|mensajes? de texto)\b/i.test(x.label || "")));
+    if (forced.length) return { status: "YELLOW", actual: `${forced.length}/${forms.length} phone form(s) mark the texting-consent checkbox as required in HTML, while its wording says consent is optional`, pages: forced.map((x) => x.url), evidence: [ev("observations.json#pages[].forms[].fields[].required", "DOM required attribute", "A required checkbox blocks submission unless ticked; confirm on the live page whether the form can be sent without texting consent.")] };
+    return { status: "BLUE", reason: "No texting checkbox is marked required; whether consent is ever made a condition of service needs a manual check.", actual: "texting checkbox not required in HTML", pages: forms.map((x) => x.url), evidence: [ev("observations.json#pages[].forms[].fields[]", "DOM form inspection")] };
   },
   "license-in-advertising": () => {
     if (profile !== "contractor") return { status: "GRAY", reason: "The site does not appear to advertise contracting services.", actual: "not a contractor site", evidence: [ev("observations.json#pages[].textSample", "page text")] };
@@ -119,19 +136,19 @@ const checks = {
     const kb = pages.filter((p) => p.keyboard);
     if (!kb.length) return null;
     const bad = kb.filter((p) => p.keyboard.withoutVisibleIndicator.length);
-    return { status: bad.length ? "YELLOW" : "GREEN", actual: `${bad.length}/${kb.length} pages had focus targets with no outline or shadow on focus`, pages: bad.map((p) => p.url), evidence: [ev("observations.json#pages[].keyboard", "Tab walk with computed focus styles", "Heuristic: a colour or underline change may still be a visible indicator; confirm by eye.")] };
+    return { status: bad.length ? "YELLOW" : "BLUE", reason: bad.length ? undefined : "Automated focus-style heuristic found no missing indicator; a person must confirm focus is visible.", actual: `${bad.length}/${kb.length} pages had focus targets with no outline or shadow on focus`, pages: bad.map((p) => p.url), evidence: [ev("observations.json#pages[].keyboard", "Tab walk with computed focus styles", "Heuristic: a colour or underline change may still be a visible indicator; confirm by eye.")] };
   },
   "keyboard-trap": () => {
     const kb = pages.filter((p) => p.keyboard);
     if (!kb.length) return null;
     const traps = kb.filter((p) => p.keyboard.possibleTrap);
-    return { status: traps.length ? "RED" : "GREEN", actual: `${traps.length} page(s) where Tab cycled within two elements`, pages: traps.map((p) => p.url), evidence: [ev("observations.json#pages[].keyboard", "40-step Tab walk")] };
+    return { status: traps.length ? "RED" : "BLUE", reason: traps.length ? undefined : "An automated 40-step Tab walk found no trap; a full manual keyboard pass is needed before this can pass.", actual: `${traps.length} page(s) where Tab cycled within two elements`, pages: traps.map((p) => p.url), evidence: [ev("observations.json#pages[].keyboard", "40-step Tab walk")] };
   },
   reflow: () => {
     const vps = pages.flatMap((p) => (p.viewports || []).filter((v) => v.viewport.startsWith("mobile")).map((v) => ({ url: p.url, v })));
     if (!vps.length) return null;
     const bad = vps.filter((x) => x.v.horizontalOverflow);
-    return { status: bad.length ? "RED" : "GREEN", actual: `${bad.length}/${vps.length} key page(s) scroll sideways at 390px wide`, pages: bad.map((x) => x.url), evidence: vps.map((x) => ({ type: "screenshot", location: x.v.screenshot, collected_at: obs.finished_at || now, method: "Playwright 390x844" })) };
+    return { status: bad.length ? "RED" : "BLUE", reason: bad.length ? undefined : "No sideways scroll at 390 CSS px, but SC 1.4.10 is measured at 320 CSS px, which was not tested.", actual: `${bad.length}/${vps.length} key page(s) scroll sideways at 390px wide`, pages: bad.map((x) => x.url), evidence: vps.map((x) => ({ type: "screenshot", location: x.v.screenshot, collected_at: obs.finished_at || now, method: "Playwright 390x844" })) };
   },
   bypass: () => (pages.length ? { status: pages.every((p) => p.skipLink || p.landmarks?.main) ? "GREEN" : "YELLOW", actual: `${pages.filter((p) => !(p.skipLink || p.landmarks?.main)).length} page(s) without a skip link or main landmark`, evidence: [ev("observations.json#pages[].landmarks", "DOM")] } : null),
   "target-size": () => {
@@ -146,6 +163,7 @@ const checks = {
 const CHECK_BY_KEYWORD = [
   [/https|redirect.*http|encrypt.*transit/i, "https-redirect"],
   [/strict.transport|hsts/i, "hsts"],
+  [/content.security.policy.*present|csp.*present/i, "csp-present"],
   [/content.security.policy|\bcsp\b/i, "csp"],
   [/clickjack|frame-ancestors|x-frame/i, "frame-protection"],
   [/mime|nosniff|content-type-options/i, "nosniff"],
@@ -157,6 +175,7 @@ const CHECK_BY_KEYWORD = [
   [/tls|certificate/i, "tls"],
   [/conspicuous.*privacy|privacy (policy )?link|post.*privacy policy/i, "privacy-link"],
   [/global privacy control|\bgpc\b/i, "gpc-honored"],
+  [/not (a )?condition of (purchase|service)/i, "text-consent-optional"],
   [/(sms|text|tcpa).*(consent|disclos)|consent.*(phone|text|sms)/i, "phone-consent"],
   [/license number|licen[cs]e.*(advertis|display)|7030\.5/i, "license-in-advertising"],
   [/accessibility (statement|contact|information)/i, "accessibility-statement"],
@@ -198,7 +217,10 @@ function evaluate(req) {
       check = { status: "RED", actual: hit.violations.slice(0, 5).join("; "), pages: [...hit.pages], evidence: check.evidence };
     }
   } else {
-    const hit = CHECK_BY_KEYWORD.find(([re]) => re.test(`${req.title} ${req.category}`));
+    const hit = CHECK_BY_KEYWORD.find(([re, name]) =>
+      name === "license-in-advertising"
+        ? re.test(req.title) && !/active|status|match|classification|bond|insur/i.test(req.title)
+        : re.test(`${req.title} ${req.category}`));
     if (hit) check = checks[hit[1]]();
   }
 

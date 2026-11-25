@@ -128,7 +128,7 @@ function inspectPage() {
     const fields = [...form.querySelectorAll("input, select, textarea")].map((el) => {
       const id = el.id;
       const label = (id && document.querySelector(`label[for="${CSS.escape(id)}"]`)?.innerText) || el.closest("label")?.innerText || el.getAttribute("aria-label") || el.getAttribute("placeholder") || "";
-      return { type: el.getAttribute("type") || el.tagName.toLowerCase(), name: el.getAttribute("name") || "", label: label.trim().slice(0, 120), required: el.required, autocomplete: el.getAttribute("autocomplete") || "" };
+      return { type: el.getAttribute("type") || el.tagName.toLowerCase(), name: el.getAttribute("name") || "", label: label.trim().slice(0, 600), required: el.required, autocomplete: el.getAttribute("autocomplete") || "" };
     });
     const formText = (form.innerText || "").replace(/\s+/g, " ");
     const hasPhone = fields.some((f) => f.type === "tel" || /phone|mobile|cell/i.test(f.name + " " + f.label));
@@ -137,8 +137,8 @@ function inspectPage() {
       method: (form.getAttribute("method") || "get").toLowerCase(),
       fields,
       hasPhone,
-      consentText: hasPhone ? (formText.match(/[^.]*\b(text|sms|message|msg)\b[^.]*\.(?:[^.]*\.){0,3}/i)?.[0] || "").slice(0, 600) : "",
-      consentCheckbox: [...form.querySelectorAll("input[type=checkbox]")].map((c) => ({ checked: c.checked, label: (c.closest("label")?.innerText || "").trim().slice(0, 200) })),
+      consentText: hasPhone ? (formText.match(/[^.]*\b(text|sms|message|msg|texto|mensajes?)\b[^.]*\.(?:[^.]*\.){0,5}/i)?.[0] || "").slice(0, 1200) : "",
+      consentCheckbox: [...form.querySelectorAll("input[type=checkbox]")].map((c) => ({ checked: c.checked, label: (c.closest("label")?.innerText || "").trim().slice(0, 600) })),
       hasCaptcha: /recaptcha|hcaptcha|turnstile/i.test(form.innerHTML),
     };
   });

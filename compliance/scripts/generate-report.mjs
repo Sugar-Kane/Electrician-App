@@ -119,7 +119,9 @@ if (kind === "website") {
   if (meta.pages_tested === 0) websiteResult = "INSUFFICIENT EVIDENCE";
   else if (legalCards.some((c) => c.result === "FAIL")) websiteResult = "FAIL";
   else if (legalCards.every((c) => c.result === "PASS")) websiteResult = "PASS";
-  else if (legalCards.some((c) => c.totals.GREEN + c.totals.YELLOW + c.totals.RED > 0)) websiteResult = "CONDITIONAL PASS";
+  // CONDITIONAL PASS needs most applicable requirements actually assessed; otherwise the
+  // honest answer is that the evidence is insufficient.
+  else if ((metrics(all).verification_coverage ?? 0) >= 50) websiteResult = "CONDITIONAL PASS";
   else websiteResult = "INSUFFICIENT EVIDENCE";
 }
 

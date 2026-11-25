@@ -22,19 +22,19 @@
     "Global (~/.claude) installation of the skills was not performed in this ephemeral container; the canonical copies are in the repository.",
     "Findings are evidence for review, not legal advice or a certification."
   ],
-  "generated_at": "2026-11-25T14:19:48.764Z",
+  "generated_at": "2026-11-25T14:32:06.932Z",
   "totals": {
-    "GREEN": 14,
-    "YELLOW": 108,
+    "GREEN": 11,
+    "YELLOW": 111,
     "RED": 103,
     "GRAY": 36,
     "BLUE": 158,
     "total": 419
   },
   "metrics": {
-    "verified_pass_rate": 6.2,
+    "verified_pass_rate": 4.9,
     "verification_coverage": 58.7,
-    "overall_verified_applicable_compliance": 3.7
+    "overall_verified_applicable_compliance": 2.9
   },
   "legal_totals": {
     "GREEN": 5,
@@ -50,17 +50,17 @@
     "overall_verified_applicable_compliance": 2.1
   },
   "standards_totals": {
-    "GREEN": 9,
-    "YELLOW": 64,
+    "GREEN": 6,
+    "YELLOW": 67,
     "RED": 39,
     "GRAY": 3,
     "BLUE": 34,
     "total": 149
   },
   "standards_metrics": {
-    "verified_pass_rate": 8,
+    "verified_pass_rate": 5.4,
     "verification_coverage": 76.7,
-    "overall_verified_applicable_compliance": 6.2
+    "overall_verified_applicable_compliance": 4.1
   },
   "scorecards": [
     {
@@ -117,17 +117,17 @@
     {
       "name": "Cybersecurity (recommended controls)",
       "totals": {
-        "GREEN": 9,
-        "YELLOW": 64,
+        "GREEN": 6,
+        "YELLOW": 67,
         "RED": 38,
         "GRAY": 2,
         "BLUE": 10,
         "total": 123
       },
       "metrics": {
-        "verified_pass_rate": 8.1,
+        "verified_pass_rate": 5.4,
         "verification_coverage": 91.7,
-        "overall_verified_applicable_compliance": 7.4
+        "overall_verified_applicable_compliance": 5
       },
       "result": "FAIL"
     },
@@ -293,6 +293,7 @@
     "F-SEC-002-015-APP",
     "F-SEC-003-001-APP",
     "F-SEC-003-017-APP",
+    "F-SEC-003-018-APP",
     "F-SEC-003-021-APP",
     "F-SEC-006-007-APP"
   ],
@@ -377,6 +378,7 @@
     "F-SEC-002-018-APP",
     "F-SEC-002-019-APP",
     "F-SEC-003-002-APP",
+    "F-SEC-003-004-APP",
     "F-SEC-003-005-APP",
     "F-SEC-003-006-APP",
     "F-SEC-003-009-APP",
@@ -10210,7 +10212,7 @@
       "severity": "medium",
       "confidence": "medium",
       "expected": "The cap is never lifted for a tenant unless an approved bond/joint control is recorded and confirmed.",
-      "actual": "No bond or joint-control override exists; maxDownPaymentCents applies to every job, and the cap test passes.",
+      "actual": "No bond or joint-control override exists, so the 7159.5(a)(8) exception is never used to lift the cap, and the cap rule's test passes (CT-DEPOSIT-001). This finding covers only the absence of an override; paths that bypass the cap altogether (e.g. recordPrepayment, dated installments) are reported under CSLB-004-001 and CSLB-004-004.",
       "affected_files": [
         "src/lib/payment-plan.ts:51"
       ],
@@ -12059,13 +12061,13 @@
       "requirement_id": "SEC-003-004",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "GREEN",
+      "status": "YELLOW",
       "severity": "high",
       "confidence": "medium",
       "applicability": "Applies to the Volteira multi-tenant application in production.",
       "responsible_party": "Volteira platform",
       "expected": "No raw HTML in chat/markdown; link schemes allowlisted; no auto-loaded external images.",
-      "actual": "chat-markdown renderer has 10 passing tests covering HTML and link-scheme handling.",
+      "actual": "The chat-markdown parser (src/lib/chat-markdown.ts) recognises only bold, inline code and bullet lines and returns plain text segments, so model text has no link or HTML path by design (source review). Its 10 passing tests cover that parsing, not HTML escaping, link schemes or external images, and the React renderer (src/components/ui/chat-markdown.tsx) is untested.",
       "affected_files": [
         "src/lib/chat-markdown.ts:1"
       ],
@@ -12077,13 +12079,14 @@
           "method": "npm test (node --test src/**/*.test.ts): 1529 tests, 1529 pass, 0 fail, 0 skipped, run 2026-11-25"
         }
       ],
-      "remediation": "Confirm in a browser that image markdown from AI output is not auto-loaded.",
-      "priority": "none",
+      "remediation": "Add tests that feed raw HTML, javascript:/data: links and markdown images through parseChatMarkdown and the renderer and assert they come out as inert text.",
+      "priority": "P3",
       "legal_review_required": false,
       "test_ids": [
         "src/lib/chat-markdown.test.ts"
       ],
-      "test_result": "passed"
+      "test_result": "passed",
+      "status_reason": "QA review 2026-11-25: GREEN withdrawn. The cited chat-markdown tests cover bold, inline code, bullets and headings only; none exercises raw HTML, link schemes or images."
     },
     {
       "finding_id": "F-SEC-003-005-APP",
@@ -12413,6 +12416,13 @@
           "location": "src/proxy.ts:41-49",
           "collected_at": "2026-11-25",
           "method": "code-review"
+        },
+        {
+          "type": "network-observation",
+          "location": "compliance/website-audits/volteira.com/headers-2026-11-24.txt",
+          "collected_at": "2026-11-24",
+          "method": "Live response headers of https://www.volteira.com/ (x-matched-path /welcome): HSTS max-age=63072000, nosniff, strict-origin-when-cross-origin, X-Frame-Options DENY, enforced nonce CSP with strict-dynamic, object-src none, base-uri self, frame-ancestors none",
+          "limitations": "Added in QA review 2026-11-25. One public route only; authenticated app routes and API responses were not captured."
         }
       ],
       "remediation": "Verify live response headers on production once; consider limiting 'unsafe-eval'.",
@@ -12428,7 +12438,7 @@
       "requirement_id": "SEC-003-015",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "GREEN",
+      "status": "YELLOW",
       "severity": "medium",
       "confidence": "medium",
       "applicability": "Applies to the Volteira multi-tenant application in production.",
@@ -12444,10 +12454,11 @@
           "method": "code-review"
         }
       ],
-      "remediation": "Keep CORS off; if MCP needs CORS, use a fixed origin list without credentials.",
-      "priority": "none",
+      "remediation": "Capture response headers from representative /api routes (including preflight OPTIONS) and confirm no Access-Control-Allow-* header is returned.",
+      "priority": "P3",
       "legal_review_required": false,
-      "test_result": "not-applicable"
+      "test_result": "not-applicable",
+      "status_reason": "QA review 2026-11-25: GREEN withdrawn. The only evidence is a source grep (absence of code); no API response headers were observed."
     },
     {
       "finding_id": "F-SEC-003-016-APP",
@@ -12519,9 +12530,9 @@
       "requirement_id": "SEC-003-018",
       "audit_id": "APP-2026-11-24",
       "target": "Volteira application",
-      "status": "GREEN",
+      "status": "YELLOW",
       "severity": "critical",
-      "confidence": "high",
+      "confidence": "medium",
       "applicability": "Applies to the Volteira multi-tenant application in production.",
       "responsible_party": "Volteira platform, Messaging provider",
       "expected": "Every Twilio route validates X-Twilio-Signature against the exact URL and params before acting; STOP only on verified requests.",
@@ -12544,14 +12555,15 @@
           "method": "code-review"
         }
       ],
-      "remediation": "None required; keep a test asserting each route rejects an unsigned request.",
-      "priority": "none",
+      "remediation": "Add a test of verifyTwilioSignature against Twilio's published signing example (valid, tampered and missing signature) and a route-level test that an unsigned request gets 403 with no side effects.",
+      "priority": "P2",
       "legal_review_required": false,
       "test_ids": [
         "src/lib/twilio-webhook-url.test.ts",
         "src/lib/sms-confirmation-webhook.test.ts"
       ],
-      "test_result": "passed"
+      "test_result": "passed",
+      "status_reason": "QA review 2026-11-25: GREEN withdrawn. The cited tests build candidate webhook URLs and stub verifyTwilioSignature to return true (sms-confirmation-webhook.test.ts:47); no test checks that a bad or missing signature is refused. Route coverage rests on code review."
     },
     {
       "finding_id": "F-SEC-003-019-APP",

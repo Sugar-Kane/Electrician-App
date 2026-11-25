@@ -631,7 +631,7 @@
     "severity": "medium",
     "confidence": "high",
     "expected": "Before Stripe Checkout for the subscription, show price, billing frequency, automatic renewal, trial terms and how to cancel.",
-    "actual": "The only pre-checkout disclosure is the button label 'Start Premium \u00b7 <price>'; Volteira's page does not state that the plan renews automatically, the renewal interval, or how to cancel before redirecting to Stripe Checkout. Stripe's hosted page shows the recurring price, but cancellation terms are not configured (no custom_text / consent_collection). The paid plan is live only when STRIPE_PREMIUM_PRICE_ID is set; production currently has 0 organization_subscriptions rows.",
+    "actual": "The only pre-checkout disclosure is the button label 'Start Premium · <price>'; Volteira's page does not state that the plan renews automatically, the renewal interval, or how to cancel before redirecting to Stripe Checkout. Stripe's hosted page shows the recurring price, but cancellation terms are not configured (no custom_text / consent_collection). The paid plan is live only when STRIPE_PREMIUM_PRICE_ID is set; production currently has 0 organization_subscriptions rows.",
     "affected_files": [
       "src/app/account/actions.ts:348",
       "src/app/account/actions.ts:384",
@@ -1563,7 +1563,7 @@
     "severity": "medium",
     "confidence": "medium",
     "expected": "The cap is never lifted for a tenant unless an approved bond/joint control is recorded and confirmed.",
-    "actual": "No bond or joint-control override exists; maxDownPaymentCents applies to every job, and the cap test passes.",
+    "actual": "No bond or joint-control override exists, so the 7159.5(a)(8) exception is never used to lift the cap, and the cap rule's test passes (CT-DEPOSIT-001). This finding covers only the absence of an override; paths that bypass the cap altogether (e.g. recordPrepayment, dated installments) are reported under CSLB-004-001 and CSLB-004-004.",
     "affected_files": [
       "src/lib/payment-plan.ts:51"
     ],

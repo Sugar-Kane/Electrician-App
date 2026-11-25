@@ -2375,8 +2375,9 @@
     "responsible_party": "Website operator",
     "expected": "Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "No sideways scroll at 390 CSS px, but SC 1.4.10 is measured at 320 CSS px, which was not tested.",
+    "confidence": "medium",
     "actual": "0/1 key page(s) scroll sideways at 390px wide",
     "affected_pages": [],
     "evidence": [
@@ -2388,8 +2389,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Content reflows without loss of information or functionality and without two-dimensional scrolling at 320 CSS px width (or 256 CSS px height for horizontal content), except where 2-D layout is essential.",
     "priority": "none"
   },
   {
@@ -2513,8 +2514,9 @@
     "responsible_party": "Website operator",
     "expected": "Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "An automated 40-step Tab walk found no trap; a full manual keyboard pass is needed before this can pass.",
+    "confidence": "medium",
     "actual": "0 page(s) where Tab cycled within two elements",
     "affected_pages": [],
     "evidence": [
@@ -2527,8 +2529,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Keyboard focus can always be moved away from any component (modals, chat widgets, embedded payment iframes, maps) using standard keys or documented methods.",
     "priority": "none"
   },
   {
@@ -2818,8 +2820,9 @@
     "responsible_party": "Website operator",
     "expected": "Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
     "legal_review_required": false,
-    "status": "GREEN",
-    "confidence": "high",
+    "status": "BLUE",
+    "status_reason": "Automated focus-style heuristic found no missing indicator; a person must confirm focus is visible.",
+    "confidence": "medium",
     "actual": "0/3 pages had focus targets with no outline or shadow on focus",
     "affected_pages": [],
     "evidence": [
@@ -2832,8 +2835,8 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
+    "test_result": "not-applicable",
+    "remediation": "Meet: Any keyboard-operable interface has a mode of operation where the keyboard focus indicator is visible.",
     "priority": "none"
   },
   {
@@ -3578,14 +3581,14 @@
     "legal_review_required": false,
     "status": "GREEN",
     "confidence": "high",
-    "actual": "enforced CSP present",
+    "actual": "enforced Content-Security-Policy on 3/3 crawled pages",
     "affected_pages": [],
     "evidence": [
       {
         "type": "network-observation",
         "location": "observations.json#pages[].headers",
         "collected_at": "2026-11-24T23:44:09.719Z",
-        "method": "response headers",
+        "method": "response headers of crawled pages",
         "limitations": ""
       }
     ],
@@ -3603,9 +3606,9 @@
     "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
     "expected": "script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent. object-src 'none' and base-uri 'none' or 'self' are set; form-action is restricted where practical.",
     "legal_review_required": false,
-    "status": "GREEN",
+    "status": "YELLOW",
     "confidence": "high",
-    "actual": "enforced CSP present",
+    "actual": "enforced CSP present; allows 'unsafe-eval'",
     "affected_pages": [],
     "evidence": [
       {
@@ -3617,9 +3620,9 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
-    "remediation": "None.",
-    "priority": "none"
+    "test_result": "not-applicable",
+    "remediation": "Meet: script-src uses per-response nonces or hashes (optionally 'strict-dynamic'); 'unsafe-inline' appears only as a fallback alongside a nonce, and 'unsafe-eval' is absent.",
+    "priority": "P3"
   },
   {
     "finding_id": "F-WEB-SEC-008-VOLTEIRACOM",
@@ -3731,7 +3734,7 @@
     "legal_review_required": false,
     "status": "YELLOW",
     "confidence": "high",
-    "actual": "absent",
+    "actual": "Permissions-Policy: absent",
     "affected_pages": [],
     "evidence": [
       {
@@ -3801,7 +3804,8 @@
     "responsible_party": "Website operator, Volteira platform, Pacific Plains Electric",
     "expected": "Every cookie set by the sites has Secure and an explicit SameSite; session cookies not needed by scripts are HttpOnly. Script-readable auth cookies (e.g. Supabase SSR) are a documented exception.",
     "legal_review_required": false,
-    "status": "GREEN",
+    "status": "GRAY",
+    "status_reason": "No cookies are set on the crawled public pages, so there are no cookie attributes to check.",
     "confidence": "high",
     "actual": "no cookies set on public pages",
     "affected_pages": [],
@@ -3815,7 +3819,7 @@
       }
     ],
     "test_ids": [],
-    "test_result": "passed",
+    "test_result": "not-applicable",
     "remediation": "None.",
     "priority": "none"
   },
