@@ -1,0 +1,33 @@
+{
+  "test": "TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, revision after run 1: named customers, split storage checks)",
+  "status": "run of record (supersedes tenant-isolation-run1.json)",
+  "run_at": "2026-11-25",
+  "run_by": "Adam, Supabase SQL editor (RLS option enabled), project wyyzptlciccewyxxjkyx (production), single query; the transaction was aborted by the final TI_RESULTS exception",
+  "post_run_check": {"method": "read-only execute_sql after the run", "leftover_compliance_orgs": 0, "leftover_compliance_users": 0, "leftover_compliance_customers": 0, "leftover_jobs_990001_990002": 0, "leftover_storage_objects_compliance": 0},
+  "summary": {"passed": 72, "failed": 1, "setup_problems": 0, "vacuous_checks": 6},
+  "vacuous": "activity_events and messaging_consent had no Tenant B rows (seeded = 0), so their 6 TI-002..004 checks prove nothing.",
+  "results": [
+    {"t":"TI-001","op":"auth.uid() is A and role is authenticated","exp":1,"act":1,"pass":true,"detail":"current_user=authenticated, auth.uid() = synthetic Tenant A user"},
+    {"t":"TI-002/003/004","op":"select / update / delete Tenant B rows as Tenant A","tables_seeded_1":["customers","properties","jobs","estimates","contracts","invoices","invoice_payments","documents","conversations","messages","messaging_settings","service_settings","organization_members","organization_subscriptions"],"exp":0,"act":0,"pass":true,"detail":"42 checks; every one returned or affected 0 rows"},
+    {"t":"TI-002/003/004","op":"select / update / delete Tenant B rows as Tenant A","tables_seeded_0":["activity_events","messaging_consent"],"exp":0,"act":0,"pass":true,"detail":"vacuous"},
+    {"t":"TI-005","op":"select / update / delete Tenant B organization","seeded":1,"exp":0,"act":0,"pass":true},
+    {"t":"TI-006","op":"insert customer with B org id","blocked":true,"pass":true,"detail":"42501 new row violates row-level security policy for table \"customers\""},
+    {"t":"TI-006","op":"insert membership into B (join B directly)","blocked":true,"pass":true,"detail":"42501 new row violates row-level security policy for table \"organization_members\""},
+    {"t":"TI-007","op":"move A's own customer to B","blocked":true,"pass":true,"detail":"42501 A customers row cannot move to another business."},
+    {"t":"TI-008","op":"A job pointing at B's customer","blocked":true,"pass":true,"detail":"23514 jobs.customer_id refers to a record that belongs to another business"},
+    {"t":"TI-009","op":"rpc organization_roster(B)","exp":0,"act":0,"pass":true},
+    {"t":"TI-010","op":"list B storage objects","seeded":1,"exp":0,"act":0,"pass":true},
+    {"t":"TI-010","op":"update B storage objects","seeded":1,"exp":0,"act":0,"pass":true},
+    {"t":"TI-010","op":"delete B storage objects","seeded":1,"blocked":true,"pass":true,"detail":"42501 Direct deletion from storage tables is not allowed. Use the Storage API instead."},
+    {"t":"TI-010","op":"upload into B prefix","blocked":true,"pass":true,"detail":"42501 new row violates row-level security policy for table \"objects\""},
+    {"t":"TI-011","op":"Tenant A owner sets its own subscription status to active","exp":0,"act":1,"pass":false,"detail":"OWNER/ADMIN CAN GRANT ITSELF A PAID PLAN"},
+    {"t":"TI-012","op":"anon select B rows","tables":["customers","jobs","estimates","contracts","invoices","invoice_payments","documents","conversations","messages","organization_members","organization_subscriptions"],"blocked":true,"pass":true,"detail":"42501 permission denied for table <each>"}
+  ],
+  "not_covered": [
+    "Only 17 of the ~95 public tables were exercised; the rest rely on catalog inspection only.",
+    "Roles other than owner (admin, office, technician) were not exercised as Tenant A.",
+    "Storage access through the Storage API (signed URLs, downloads) and page-level/route-level access were not exercised.",
+    "MCP and AI paths (SEC-007) were not exercised.",
+    "Manual run, not an automated CI test."
+  ]
+}

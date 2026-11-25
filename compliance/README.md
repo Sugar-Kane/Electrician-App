@@ -11,7 +11,7 @@ and never a certification or protection against lawsuits.**
 | `registry/*.json` | Requirement registers: law, standards and contractual rules only. Statuses never live here. 9 registers: `federal`, `california`, `california-contractors`, `website-federal`, `website-california`, `website-contractors`, `website-accessibility` (every WCAG 2.2 A/AA criterion), `website-security`, `application-security`. Plus `cslb-license-lookup.json`. |
 | `schemas/` | JSON schemas for requirements, findings, evidence and reports. |
 | `scripts/` | Node tools (no extra dependencies): `validate-requirements`, `run-website-audit`, `evaluate-website`, `generate-report`, `compare-audits`, `refresh-legal-requirements`, `verify-command-registry`, `package-website-skill`, `build-backlog`. |
-| `tests/manifest.json` | Compliance tests → requirement IDs. Unit tests live in `src/compliance-tests/` (run by `npm test`); `tests/tenant-isolation/` holds the rolled-back two-tenant SQL. |
+| `tests/manifest.json` | Compliance tests → requirement IDs. Unit tests live in `src/compliance-tests/` (run by `npm test`); `tests/tenant-isolation/` holds the two-tenant SQL (one transaction that always aborts); its last run is recorded in the manifest and in `application-audits/2026-11-24/evidence/tenant-isolation-run2.json`. |
 | `templates/` | Dashboard HTML template; proposed CI workflow (`ci-compliance.yml.example`, not active). |
 | `application-audits/history.json`, `website-audits/<domain>/history.json` | Audit history index, updated by `generate-report.mjs` (an audit's own entry is replaced when it is regenerated; older audits are never touched). |
 | `application-audits/<date>/` | One application audit: `findings/`, `evidence/`, `report.{md,json}`, `dashboard.html`. |

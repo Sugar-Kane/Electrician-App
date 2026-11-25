@@ -680,7 +680,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "RLS enabled on every Data API table; FORCE RLS considered; Tenant A sees zero Tenant B rows in every table; new tables enable RLS.",
-    "actual": "All 95 public tables have relrowsecurity = true (none disabled); 0 tables use FORCE RLS. Four tables have RLS with zero policies (booking_calendar_connections, booking_calendar_events, organization_ai_keys, task_work), which denies all non-service access. No views. The behavioural two-tenant check has not been run.",
+    "actual": "All 95 public tables have relrowsecurity = true (none disabled); 0 tables use FORCE RLS. Four tables have RLS with zero policies (booking_calendar_connections, booking_calendar_events, organization_ai_keys, task_work), which denies all non-service access. No views. The behavioural two-tenant check has not been run. Run 2 (2026-11-25): as Tenant A, 0 Tenant B rows were visible in all 14 seeded tables plus the organization row and storage objects (customers, properties, jobs, estimates, contracts, invoices, invoice_payments, documents, conversations, messages, both settings tables, organization_members, organization_subscriptions). Remaining ~80 tables were not exercised, so 'every table' is not yet shown.",
     "affected_files": [
       "supabase/migrations/20261117130000_tenant_relationship_and_storage_guards.sql:1"
     ],
@@ -703,15 +703,23 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Run compliance/tests/tenant-isolation/two-tenant-rollback.sql (TI-002) on a branch/copy and attach results; add a CI check that fails when a migration creates a public table without enable row level security.",
     "priority": "P1",
     "legal_review_required": false,
     "test_ids": [
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
-    "test_result": "not-run",
+    "test_result": "passed",
     "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
   },
   {
@@ -725,7 +733,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "Policies check organization membership via organization_members, never user_metadata; no USING (true) on tenant data; A affects zero B rows.",
-    "actual": "Policies use private.is_org_member / is_org_admin / can_edit_billing (membership via organization_members and auth.uid()); none reference user_metadata. Only USING (true) policy is site_videos (marketing videos, not tenant data). Defect: 'Owners can delete organizations' compares membership.organization_id = membership.id (unqualified id bound to the subquery table), so it never matches and owners cannot delete (fails closed, but not the intended rule).",
+    "actual": "Policies use private.is_org_member / is_org_admin / can_edit_billing (membership via organization_members and auth.uid()); none reference user_metadata. Only USING (true) policy is site_videos (marketing videos, not tenant data). Defect: 'Owners can delete organizations' compares membership.organization_id = membership.id (unqualified id bound to the subquery table), so it never matches and owners cannot delete (fails closed, but not the intended rule). Run 2 (2026-11-25): Tenant A updated and deleted 0 Tenant B rows in all 14 seeded tables and the organization row. Not exercised for the remaining tables or for non-owner roles.",
     "affected_files": [
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:185"
     ],
@@ -754,15 +762,23 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Run TI-002..TI-005; fix the organizations delete policy to compare membership.organization_id = organizations.id in a new migration.",
     "priority": "P1",
     "legal_review_required": false,
     "test_ids": [
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
-    "test_result": "not-run",
+    "test_result": "passed",
     "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
   },
   {
@@ -776,7 +792,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "INSERT/UPDATE WITH CHECK requires membership of the new organization_id; organization_id immutable after insert; A cannot insert into or move rows to B.",
-    "actual": "No UPDATE policy lacks WITH CHECK; INSERT policies check membership of the new organization_id. 89 tables carry zz_tenant_owner_immutable (keep_tenant_owner raises when organization_id changes) and zz_tenant_references_guard (cross-tenant references refused). The prior audit's local harness (scripts/security/tenant-isolation-test.sql) is not part of npm test and has not been run against the live schema in this audit.",
+    "actual": "No UPDATE policy lacks WITH CHECK; INSERT policies check membership of the new organization_id. 89 tables carry zz_tenant_owner_immutable (keep_tenant_owner raises when organization_id changes) and zz_tenant_references_guard (cross-tenant references refused). The prior audit's local harness (scripts/security/tenant-isolation-test.sql) is not part of npm test and has not been run against the live schema in this audit. Run 2 (2026-11-25): inserting a customer with B's organization_id and joining B's membership were refused by RLS (42501); moving A's own customer to B was refused by the tenant guard ('A customers row cannot move to another business'); a job pointing at B's customer was refused ('refers to a record that belongs to another business'). Exercised on customers, organization_members and jobs only.",
     "affected_files": [
       "supabase/migrations/20261117130000_tenant_relationship_and_storage_guards.sql:1",
       "scripts/security/tenant-isolation-test.sql:1"
@@ -800,6 +816,13 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed); TI-006, TI-007, TI-008"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Run TI-006..TI-008 and record results; wire scripts/security/replay-migrations.sh + tenant-isolation-test.sql into a pre-release job.",
@@ -807,9 +830,10 @@
     "legal_review_required": false,
     "test_ids": [
       "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
-      "scripts/security/tenant-isolation-test.sql"
+      "scripts/security/tenant-isolation-test.sql",
+      "TI-001"
     ],
-    "test_result": "not-run",
+    "test_result": "passed",
     "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
   },
   {
@@ -894,7 +918,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "Anon key alone returns no tenant data except deliberately public minimal data; public flows use token-validating RPCs.",
-    "actual": "anon holds table privileges only on site_videos and tenant_legal_pages (published pages only). Other anon access is through SECURITY DEFINER RPCs that take a token/slug (get_invoice_by_link, get_public_contract, sign_contract_in_app, decline_change_order, list_public_booking_slots, create_public_booking_intake, etc.). Their outputs were not inspected field by field, and anon behaviour has not been exercised.",
+    "actual": "anon holds table privileges only on site_videos and tenant_legal_pages (published pages only). Other anon access is through SECURITY DEFINER RPCs that take a token/slug (get_invoice_by_link, get_public_contract, sign_contract_in_app, decline_change_order, list_public_booking_slots, create_public_booking_intake, etc.). Their outputs were not inspected field by field, and anon behaviour has not been exercised. Run 2 (2026-11-25): anon was refused (42501 permission denied) on 11 tenant tables. Public token RPCs were not exercised.",
     "affected_files": [],
     "evidence": [
       {
@@ -915,15 +939,23 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed); TI-012"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Run TI-012; review each anon RPC's return columns for minimisation; revoke anon EXECUTE on private.* helpers.",
     "priority": "P1",
     "legal_review_required": false,
     "test_ids": [
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
-    "test_result": "not-run",
+    "test_result": "passed",
     "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
   },
   {
@@ -937,7 +969,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "Tenant buckets private; keys start with server-generated org id; storage policies check membership of path org; short signed URLs after authz.",
-    "actual": "business-documents is private with storage.objects policies keyed on private.storage_object_organization_id(name) membership (delete admin-only). documents.storage_path has CHECK private.is_owned_object_path(storage_path, organization_id, 3). isOwnedObjectPath guards every service-role sign/download (tested). Signed URLs are 60s for most paths, 1h for avatars. public-branding is public by design. Behavioural storage test not run.",
+    "actual": "business-documents is private with storage.objects policies keyed on private.storage_object_organization_id(name) membership (delete admin-only). documents.storage_path has CHECK private.is_owned_object_path(storage_path, organization_id, 3). isOwnedObjectPath guards every service-role sign/download (tested). Signed URLs are 60s for most paths, 1h for avatars. public-branding is public by design. Behavioural storage test not run. Run 2 (2026-11-25): as Tenant A, listing and updating B's storage.objects metadata returned 0 rows, deleting was refused, and inserting an object under B's folder was refused by storage RLS. Signed URLs and Storage API downloads were not exercised.",
     "affected_files": [
       "src/lib/tenant-storage-path.ts:1"
     ],
@@ -966,6 +998,13 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed); TI-010"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Run TI-010 (list/overwrite/delete/upload into B prefix as A); set allowed_mime_types on business-documents.",
@@ -973,7 +1012,8 @@
     "legal_review_required": false,
     "test_ids": [
       "src/lib/tenant-storage-path.test.ts",
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
     "test_result": "passed",
     "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
@@ -1054,7 +1094,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "Documented permission matrix; role checked server-side; technicians cannot do owner-only actions; admins cannot grant themselves paid features.",
-    "actual": "Billing role rule is enforced in DB (can_edit_billing) and tested; owner-only invites guarded by triggers; exports gated by canExportReports. But organization_subscriptions lets any owner/admin INSERT/UPDATE/DELETE their own row including status and plan (policies 'Organization admins can add/update/remove subscriptions', authenticated UPDATE on every column, no guard trigger). src/lib/ai-allowance.ts:18-24 reads that status with the service role and paidPlanActive() makes AI use unlimited, so an admin can grant itself a paid plan (and unlimited AI spend) without paying. Similarly stripe_connect_accounts is admin-writable for charges_enabled/payouts_enabled/fee_payer/stripe_account_id. No permission matrix document.",
+    "actual": "Billing role rule is enforced in DB (can_edit_billing) and tested; owner-only invites guarded by triggers; exports gated by canExportReports. But organization_subscriptions lets any owner/admin INSERT/UPDATE/DELETE their own row including status and plan (policies 'Organization admins can add/update/remove subscriptions', authenticated UPDATE on every column, no guard trigger). src/lib/ai-allowance.ts:18-24 reads that status with the service role and paidPlanActive() makes AI use unlimited, so an admin can grant itself a paid plan (and unlimited AI spend) without paying. Similarly stripe_connect_accounts is admin-writable for charges_enabled/payouts_enabled/fee_payer/stripe_account_id. No permission matrix document. Confirmed on the production database by run 2 (TI-011, 2026-11-25): Tenant A's owner changed its own organization_subscriptions.status from canceled to active (1 row updated) without paying.",
     "affected_files": [
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:189",
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229",
@@ -1086,6 +1126,13 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "TI-011 (self-upgrade) not executed; finding based on inspected policy, grants and triggers."
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Drop the INSERT/UPDATE/DELETE policies on organization_subscriptions and revoke insert/update/delete from authenticated (only the Stripe webhook via service role writes it); likewise restrict stripe_connect_accounts writes to service role (sync from Stripe account.updated); write and publish the role permission matrix.",
@@ -1093,9 +1140,10 @@
     "legal_review_required": false,
     "test_ids": [
       "src/lib/billing-permission.test.ts",
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
-    "test_result": "passed",
+    "test_result": "failed",
     "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
   },
   {
@@ -1137,7 +1185,7 @@
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "anon/authenticated hold only needed privileges; default privileges reviewed; least-privilege tenant roles.",
-    "actual": "authenticated has full INSERT/UPDATE/DELETE/TRUNCATE table grants on every public table (default ACL from postgres grants arwdDxtm), so least privilege rests entirely on RLS. Where policies are broad this is exploitable: owners/admins can write organization_subscriptions (status/plan) and stripe_connect_accounts (charges_enabled, payouts_enabled, fee_payer); members can update/delete messaging_consent and stripe_customers. Function default ACL grants EXECUTE to anon and authenticated.",
+    "actual": "authenticated has full INSERT/UPDATE/DELETE/TRUNCATE table grants on every public table (default ACL from postgres grants arwdDxtm), so least privilege rests entirely on RLS. Where policies are broad this is exploitable: owners/admins can write organization_subscriptions (status/plan) and stripe_connect_accounts (charges_enabled, payouts_enabled, fee_payer); members can update/delete messaging_consent and stripe_customers. Function default ACL grants EXECUTE to anon and authenticated. Confirmed on the production database by run 2 (TI-011, 2026-11-25): the authenticated role could update organization_subscriptions.status directly.",
     "affected_files": [
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229"
     ],
@@ -1165,15 +1213,23 @@
         "location": "compliance/application-audits/2026-11-24/evidence/db-security-catalog.json#queries.q14_default_acl_public",
         "collected_at": "2026-11-25",
         "method": "read-only catalog query via Supabase MCP execute_sql"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Revoke TRUNCATE and write privileges from authenticated on service-owned tables (organization_subscriptions, stripe_connect_accounts, stripe_webhook_events, audit tables); alter default privileges to stop granting EXECUTE to anon; show owner count per tenant to owners.",
     "priority": "P0",
     "legal_review_required": false,
     "test_ids": [
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
-    "test_result": "not-run"
+    "test_result": "failed"
   },
   {
     "finding_id": "F-SEC-002-013-APP",
@@ -1404,13 +1460,13 @@
     "requirement_id": "SEC-002-019",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "Repeatable two-tenant test over every table/view/RPC/bucket as A, B and anon, run before each migration release.",
-    "actual": "No such test runs automatically: there is no CI (.github absent) and npm test covers pure functions only. scripts/security/tenant-isolation-test.sql (prior audit) and the new compliance/tests/tenant-isolation/two-tenant-rollback.sql exist but neither has been run in this audit or on a schedule.",
+    "actual": "No such test runs automatically: there is no CI (.github absent) and npm test covers pure functions only. scripts/security/tenant-isolation-test.sql (prior audit) and the new compliance/tests/tenant-isolation/two-tenant-rollback.sql exist but neither has been run in this audit or on a schedule. A repeatable two-tenant test now exists (compliance/tests/tenant-isolation/two-tenant-rollback.sql) and was run on 2026-11-25 (72 passed, 1 failed). It covers 17 tables, the roster RPC and storage as owner and anon, but it is manual, not run before each migration release, and does not cover every table, view, RPC or role.",
     "affected_files": [
       "scripts/security/tenant-isolation-test.sql:1",
       "compliance/tests/tenant-isolation/two-tenant-rollback.sql:1"
@@ -1428,16 +1484,24 @@
         "collected_at": "2026-11-25",
         "method": "SQL written, not executed",
         "limitations": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run2.json",
+        "collected_at": "2026-11-25",
+        "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
+        "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
       }
     ],
     "remediation": "Run compliance/tests/tenant-isolation/two-tenant-rollback.sql on a Supabase branch before each release that changes migrations, fail the release on any passed=false row, and keep the output as evidence.",
     "priority": "P1",
     "legal_review_required": false,
     "test_ids": [
-      "compliance/tests/tenant-isolation/two-tenant-rollback.sql"
+      "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
+      "TI-001"
     ],
-    "test_result": "not-run",
-    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-25: a repeatable two-tenant test now exists and has been run, but it is manual and partial."
   },
   {
     "finding_id": "F-SEC-003-001-APP",
