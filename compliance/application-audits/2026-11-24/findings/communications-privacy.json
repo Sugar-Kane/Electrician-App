@@ -167,12 +167,12 @@
     "requirement_id": "FED-002-005",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira platform, Messaging provider",
     "expected": "Revocation accepted by any reasonable means, including replies of stop, quit, end, revoke, opt out, cancel, unsubscribe, free-text revocations, voice, email or telling staff.",
-    "actual": "Inbound handling matches only the exact single words stop, stopall, unsubscribe, cancel, end, quit after stripping non-letters (route.ts:23, 89). 'revoke' and 'opt out' (normalised to 'optout') are not recognised, and a sentence such as 'please stop texting me' is passed to the AI intake instead of opting out. There is no path to record a revocation made by voice, email or to staff. A STOP from a customer with no consent row updates zero rows (route.ts:142-151), so the local ledger records nothing and sendSms will text them again unless Twilio's own list blocks it. Any org member can also UPDATE or DELETE messaging_consent rows under RLS, so a STOP can be cleared outside the START path.",
+    "actual": "Inbound handling matches only the exact single words stop, stopall, unsubscribe, cancel, end, quit after stripping non-letters (route.ts:23, 89). 'revoke' and 'opt out' (normalised to 'optout') are not recognised, and a sentence such as 'please stop texting me' is passed to the AI intake instead of opting out. There is no path to record a revocation made by voice, email or to staff. A STOP from a customer with no consent row updates zero rows (route.ts:142-151), so the local ledger records nothing and sendSms will text them again unless Twilio's own list blocks it. Any org member can also UPDATE or DELETE messaging_consent rows under RLS, so a STOP can be cleared outside the START path. UPDATE 2026-11-26: PR #310: an opt-out is recognised however the customer words it (reply keywords incl. REVOKE/OPT OUT, own words, Spanish) without reading job talk as one; it is recorded even with no consent row; staff can record a request made by phone, in person, letter or email; a database guard stops any signed-in user clearing, back-dating, re-opting-in over or deleting an opt-out.",
     "affected_files": [
       "src/app/api/twilio/inbound/route.ts:23-24",
       "src/app/api/twilio/inbound/route.ts:89",
@@ -191,13 +191,22 @@
         "location": "public.messaging_consent constraints/policies/triggers",
         "collected_at": "2026-11-25",
         "method": "pg_constraint + pg_policies read-only: UNIQUE(customer_id,channel,scope); scope check transactional|marketing; source check; RLS INSERT/UPDATE/DELETE for any org member"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126040000_honor_any_opt_out.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: an opt-out is recognised however the customer words it (reply keywords incl. REVOKE/OPT OUT, own words, Spanish) without reading job talk as one; it is recorded even with no consent row; staff can record a request made by phone, in person, letter or email; a database guard stops any signed-"
       }
     ],
-    "test_ids": [],
-    "test_result": "not-run",
+    "test_ids": [
+      "CT-SMS-002"
+    ],
+    "test_result": "passed",
     "remediation": "Add 'revoke', 'optout'/'opt out' and other synonyms; detect free-text revocation intent before the AI intake and treat it as an opt-out; upsert (not update) the opt-out row so a STOP lands with no prior row; add staff/voice/email 'customer asked to stop' actions that write the ledger; restrict UPDATE/DELETE of opted_out_at to the service role or a START-only function; add tests for each keyword and the no-row case.",
-    "priority": "P0",
-    "legal_review_required": false
+    "priority": "P2",
+    "legal_review_required": true,
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: an opt-out is recognised however the customer words it (reply keywords incl. REVOKE/OPT OUT, own words, Spanish) without reading job talk as one; it is recorded even with no consent row; staff can record a request made by phone, in person, letter or email; a database guard stops any signed-in user clearing, back-dating, re-opting-in over or deleting an opt-out."
   },
   {
     "finding_id": "F-FED-002-006-APP",
