@@ -21,6 +21,9 @@ export const SUPERVISED_ACTIONS = [
   "issue_refund",
   "change_price",
   "cancel_job",
+  // A ChatGPT tool call that reaches a customer or moves money, held for the
+  // owner's approval (mcp-approval.ts) and replayed once approved.
+  "chatgpt_tool",
 ] as const;
 
 export type SupervisedAction = (typeof SUPERVISED_ACTIONS)[number];
@@ -43,6 +46,7 @@ export function isSupervisedAction(value: unknown): value is SupervisedAction {
 
 /** Binding or financial: the owner, and only the owner, approves. */
 const OWNER_ONLY = new Set<SupervisedAction>([
+  "chatgpt_tool",
   "send_contract",
   "send_estimate",
   "purchase_materials",
@@ -75,6 +79,25 @@ export function mayApprove(role: string, action: string, templateKey: string | n
 /** Owner-only actions: binding documents and money. */
 export function isOwnerOnly(action: string): boolean {
   return isSupervisedAction(action) && OWNER_ONLY.has(action);
+}
+
+/**
+ * Whether a proposal may be approved from ChatGPT (approve_proposal). Customer
+ * messages and ChatGPT's own requests never are: the person approves them in
+ * Volteira. Owner-only actions only where VOLTEIRA_PHASE2_MCP_APPROVE_RESTRICTED
+ * allows it. Same as the database (decide_supervised_proposal, via 'chatgpt').
+ */
+export function mayApproveFromChatGpt(action: string, restrictedAllowed: boolean): boolean {
+  if (!isSupervisedAction(action)) return false;
+  if (action === "chatgpt_tool" || CUSTOMER_MESSAGES.has(action)) return false;
+  if (OWNER_ONLY.has(action)) return restrictedAllowed;
+  return true;
+}
+
+/** A short name for an action type, for people. */
+export function actionTitle(action: string): string {
+  if (action === "chatgpt_tool") return "ChatGPT request";
+  return action.replaceAll("_", " ");
 }
 
 export function isCustomerMessage(action: string): boolean {

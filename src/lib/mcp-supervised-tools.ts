@@ -3,7 +3,7 @@ import "server-only";
 import type { McpTool, ToolResult } from "@/lib/mcp-protocol";
 import { toE164 } from "@/lib/phone-format";
 import type { FlexibleSupabaseClient } from "@/lib/supabase/flexible";
-import { decisionMessage, isOwnerOnly, isSupervisedAction, proposalView, statusLabel, type SupervisedAction } from "@/lib/supervised-actions";
+import { decisionMessage, isOwnerOnly, isSupervisedAction, mayApproveFromChatGpt, proposalView, statusLabel, type SupervisedAction } from "@/lib/supervised-actions";
 import {
   createSupervisedProposal,
   decideForVerifiedActor,
@@ -277,10 +277,14 @@ export async function runSupervisedTool(input: {
       const id = text(args.proposal_id);
       const fingerprint = text(args.fingerprint);
       if (!UUID.test(id) || !/^sha256:[0-9a-f]{64}$/.test(fingerprint)) return { isError: true, text: "Give the proposal id and its fingerprint. Nothing was changed." };
-      if (approve && process.env.VOLTEIRA_PHASE2_MCP_APPROVE_RESTRICTED !== "true") {
+      if (approve) {
         const found = await getSupervisedProposal(database, organizationId, id);
         if (!found) return { isError: true, text: "That proposal was not found." };
-        if (isOwnerOnly(found.proposal.actionType)) return { isError: true, text: `${decisionMessage("restricted_channel")} Nothing was changed.` };
+        // Anything that reaches a customer or moves money is approved by a
+        // person in Volteira, never from the AI conversation that asked for it.
+        if (!mayApproveFromChatGpt(found.proposal.actionType, process.env.VOLTEIRA_PHASE2_MCP_APPROVE_RESTRICTED === "true")) {
+          return { isError: true, text: `${decisionMessage("restricted_channel")} Nothing was changed.` };
+        }
       }
       const result = await decideForVerifiedActor({
         actorUserId,

@@ -68,7 +68,7 @@ export default async function PayLinkPage({
     );
   }
 
-  const { payment, amountCents, processingCents, canPay } = view;
+  const { payment, amountCents, processingCents, canPay, notYet } = view;
   const tel = payment.businessPhone.replace(/[^\d+]/g, "");
   const invoiceOut = Boolean(payment.invoiceToken);
   const settled = !invoiceOut && amountCents === 0 && processingCents === 0;
@@ -155,6 +155,12 @@ export default async function PayLinkPage({
             <ReceiptText className="h-5 w-5" aria-hidden />
             View your invoice
           </a>
+        ) : notYet ? (
+          <p className="mt-8 rounded-control border border-line bg-canvas px-4 py-3 text-sm leading-6 text-ink-muted">
+            {payment.signed
+              ? "This payment opens once the work it covers is done. The business will send you the link again then."
+              : "This payment opens once the contract is signed."}
+          </p>
         ) : canPay && !justPaid ? (
           <form action={`/pay/${encodeURIComponent(token)}/checkout`} method="post" className="mt-8">
             <button

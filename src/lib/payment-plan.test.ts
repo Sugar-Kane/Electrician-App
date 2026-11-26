@@ -71,7 +71,10 @@ test("what is due now: what has come due, less what was paid, never negative", (
   assert.equal(amountDueNow(plan.payments, { ...base, paidCents: 0 }), 0);
   assert.equal(amountDueNow(plan.payments, { ...base, signed: true, paidCents: 0 }), 10_000);
   assert.equal(amountDueNow(plan.payments, { ...base, signed: true, paidCents: 10_000 }), 0);
-  assert.equal(amountDueNow(plan.payments, { ...base, signed: true, today: "2026-12-01", paidCents: 10_000 }), 25_000);
+  // Its date alone is not enough before the job is done: its work must be marked done (B&P 7159.5).
+  assert.equal(amountDueNow(plan.payments, { ...base, signed: true, today: "2026-12-01", paidCents: 10_000 }), 0);
+  const withDone = plan.payments.map((payment) => (payment.kind === "installment" ? { ...payment, doneAt: "2026-11-30T12:00:00Z" } : payment));
+  assert.equal(amountDueNow(withDone, { ...base, signed: true, today: "2026-12-01", paidCents: 10_000 }), 25_000);
   // Finished before a dated installment: the balance is due, the installment
   // still waits for its date (paying over time after the work).
   assert.equal(amountDueNow(plan.payments, { ...base, signed: true, completed: true, paidCents: 10_000 }), 65_000);
@@ -114,7 +117,9 @@ test("a payment is asked for automatically once, when due, and never after the i
   assert.equal(shouldRequestPayment(deposit, { ...base, owedCents: 0 }), false);
   assert.equal(shouldRequestPayment(deposit, { ...base, invoiceSent: true }), false);
   assert.equal(shouldRequestPayment(dated, base), false);
-  assert.equal(shouldRequestPayment(dated, { ...base, today: "2026-12-01" }), true);
+  // On its date, but only once its work is marked done (B&P 7159.5).
+  assert.equal(shouldRequestPayment(dated, { ...base, today: "2026-12-01" }), false);
+  assert.equal(shouldRequestPayment({ ...dated, doneAt: "2026-11-30T12:00:00Z" }, { ...base, today: "2026-12-01" }), true);
   // The balance on completion is the invoice's job.
   assert.equal(shouldRequestPayment({ kind: "final", due: "on_completion", dueDate: null }, base), false);
 });

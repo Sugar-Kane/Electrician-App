@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { billingRefusal } from "@/lib/billing-permission-server";
 import { readPrice } from "@/lib/job-lines";
 import type { PlanItemInput } from "@/lib/payment-plan";
-import { recordPrepayment, saveJobPaymentPlan } from "@/lib/payment-plan-server";
+import { recordActivity } from "@/lib/activity";
+import { recordPrepayment, saveJobPaymentPlan, setPaymentWorkDone } from "@/lib/payment-plan-server";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -101,6 +102,36 @@ export async function sendPayLinkAction(jobNumber: string, itemId: string): Prom
   if (went.length === 0) return { error: `The pay link didn't go out. Text: ${sent.sms}. Email: ${sent.email}.` };
   const missed = [sent.sms !== "sent" ? `text ${sent.sms}` : "", sent.email !== "sent" ? `email ${sent.email}` : ""].filter(Boolean);
   return { error: "", notice: `Pay link ${went.join(" and ")} to the customer.${missed.length ? ` (Not sent: ${missed.join("; ")}.)` : ""}` };
+}
+
+/**
+ * Mark the work a progress payment is for as done (or undo it). Only then can
+ * the payment be asked for or paid: California forbids payments ahead of the
+ * work performed. A billing change, recorded on the job's activity.
+ */
+export async function setPaymentWorkDoneAction(jobNumber: string, itemId: string, done: boolean): Promise<PaymentPlanState> {
+  const blocked = await billingRefusal();
+  if (blocked) return { error: blocked };
+  const found = await findJob(jobNumber);
+  if (!found) return { error: "That job could not be found." };
+  const saved = await setPaymentWorkDone(found.database, {
+    organizationId: found.context.organizationId,
+    jobId: found.jobId,
+    itemId,
+    done,
+    userId: found.context.userId ?? null,
+  });
+  if (!saved.ok) return { error: saved.error };
+  await recordActivity(found.database, {
+    organizationId: found.context.organizationId,
+    actorUserId: found.context.userId ?? null,
+    eventType: done ? "payment_work_done" : "payment_work_undone",
+    label: done ? "Marked the work for a progress payment done" : "Unmarked the work for a progress payment",
+    jobId: found.jobId,
+    metadata: { plan_item_id: itemId },
+  }).catch(() => undefined);
+  revalidatePath(`/jobs/${jobNumber}`);
+  return { error: "", notice: done ? "Marked done. This payment can now be asked for." : "Unmarked. This payment can't be asked for until its work is marked done." };
 }
 
 export async function recordPrepaymentAction(_previous: PaymentPlanState, formData: FormData): Promise<PaymentPlanState> {

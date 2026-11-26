@@ -18,8 +18,15 @@ import {
   contractPaymentTerms,
   matchesSignedSchedule,
   maxDownPaymentCents,
+  doneProgressCents,
   payLinkCents,
+  payLinkPayable,
+  paymentIsDue,
+  paymentPayable,
   planAmounts,
+  preWorkAllowanceCents,
+  preWorkRefusal,
+  shouldRequestPayment,
 } from "../lib/payment-plan.ts";
 import { isPublicPath } from "../lib/public-paths.ts";
 import { smsConsentDisclosure } from "../lib/sms-consent.ts";
@@ -84,6 +91,64 @@ test("CT-DEPOSIT-005: automatic payment requests only follow the schedule the cu
   assert.equal(matchesSignedSchedule([deposit], 0, signed), true);
   assert.equal(matchesSignedSchedule([{ ...deposit, cents: dollars(1_000) + 1 }], 0, signed), false);
   assert.equal(matchesSignedSchedule([deposit], 0, null), false);
+});
+
+test("CT-DEPOSIT-006: a progress payment can't be asked for or paid until its work is marked done", () => {
+  const signed = { signed: true, completed: false };
+  // The audit's case: $1,000 deposit, $8,999 dated tomorrow, $1 balance on a $10,000 job.
+  const plan = planAmounts(dollars(10_000), [
+    { kind: "deposit", amountType: "fixed", amountCents: dollars(1_000), due: "on_signing" },
+    { kind: "installment", amountType: "fixed", amountCents: dollars(8_999), due: "on_date", dueDate: "2026-11-27" },
+    { kind: "final", amountType: "fixed", due: "on_completion" },
+  ]);
+  assert.ok(plan.ok);
+  const [deposit, progress, balance] = plan.payments;
+  assert.equal(paymentPayable(deposit, signed), true);
+  assert.equal(paymentPayable(deposit, { signed: false, completed: false }), false, "no deposit before the contract is signed");
+  assert.equal(paymentPayable(progress, signed), false, "the dated payment waits for its work");
+  assert.equal(payLinkPayable(plan.payments, 1, signed), false);
+  assert.equal(paymentIsDue(progress, { today: "2026-12-01", signed: true, completed: false }), false, "its date alone is not enough");
+  assert.equal(
+    shouldRequestPayment(progress, { requestedAt: null, owedCents: dollars(8_999), today: "2026-12-01", signed: true, invoiceSent: false }),
+    false,
+  );
+  const done = { ...progress, doneAt: "2026-11-30T17:00:00Z" };
+  assert.equal(paymentPayable(done, signed), true);
+  assert.equal(payLinkPayable([deposit, done, balance], 1, signed), true);
+  assert.equal(
+    shouldRequestPayment(done, { requestedAt: null, owedCents: dollars(8_999), today: "2026-12-01", signed: true, invoiceSent: false }),
+    true,
+  );
+  assert.equal(paymentPayable(balance, signed), false, "the balance waits for completion");
+  assert.equal(paymentPayable(balance, { signed: true, completed: true }), true);
+});
+
+test("CT-DEPOSIT-007: money taken before the work never passes the down payment plus work marked done", () => {
+  const base = { contractTotalCents: dollars(20_000), doneCents: 0, collectedCents: 0, completed: false };
+  assert.equal(preWorkAllowanceCents(base), dollars(1_000));
+  assert.equal(preWorkRefusal({ ...base, proposedCents: dollars(1_000) }), null);
+  assert.match(preWorkRefusal({ ...base, proposedCents: dollars(1_000) + 1 }) ?? "", /California limits/);
+  // A diagnostic fee being credited toward the work counts as taken.
+  assert.equal(preWorkAllowanceCents({ ...base, diagnosticCreditCents: dollars(150) }), dollars(850));
+  // Cash recorded on top of a paid deposit is refused.
+  assert.notEqual(preWorkRefusal({ ...base, collectedCents: dollars(1_000), proposedCents: dollars(500) }), null);
+  // Work marked done opens room for its payment, and no more.
+  assert.equal(preWorkAllowanceCents({ ...base, collectedCents: dollars(1_000), doneCents: dollars(6_000) }), dollars(6_000));
+  // The signed price is the base: 10% of $5,000 is $500.
+  assert.equal(preWorkAllowanceCents({ ...base, contractTotalCents: dollars(5_000) }), dollars(500));
+  // Once the job is complete, the rest may be billed.
+  assert.equal(preWorkAllowanceCents({ ...base, completed: true }), null);
+  assert.equal(preWorkRefusal({ ...base, completed: true, proposedCents: dollars(19_000) }), null);
+  // Only progress payments marked done count: not the deposit, not the balance.
+  assert.equal(
+    doneProgressCents([
+      { kind: "deposit", due: "on_signing", doneAt: "x", cents: 100 },
+      { kind: "installment", due: "on_date", doneAt: "x", cents: 500 },
+      { kind: "installment", due: "on_date", doneAt: null, cents: 700 },
+      { kind: "final", due: "on_completion", doneAt: "x", cents: 900 },
+    ]),
+    500,
+  );
 });
 
 test("CT-SIGN-001: a signed, void or superseded contract cannot be signed again", () => {

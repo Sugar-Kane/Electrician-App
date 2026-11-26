@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { OperationsApprovalControls } from "@/components/operations-approval-controls";
-import { approverFor, mayApprove, statusLabel } from "@/lib/supervised-actions";
+import { actionTitle, approverFor, mayApprove, statusLabel } from "@/lib/supervised-actions";
 import type { AuditEntry, SupervisedProposal } from "@/lib/supervised-actions-server";
 import { SUPERVISED_TEMPLATES, isTemplateKey } from "@/lib/supervised-templates";
 
@@ -79,7 +79,7 @@ export function SupervisedProposalCard({
     ["Expires", proposal.expiresAt ? activityTime(proposal.expiresAt, timeZone) : "—"],
   ];
   const summary = {
-    action: proposal.actionType.replaceAll("_", " "),
+    action: actionTitle(proposal.actionType),
     recipient: proposal.recipient,
     amount: proposal.amountCents !== null ? money(proposal.amountCents) : "",
     customer: proposal.customerName,
@@ -90,7 +90,7 @@ export function SupervisedProposalCard({
     <li className="rounded-control border border-line p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold capitalize">{proposal.actionType.replaceAll("_", " ")}</p>
+          <p className="font-semibold first-letter:uppercase">{actionTitle(proposal.actionType)}</p>
           {proposal.reason ? <p className="mt-1 text-sm text-ink-muted">{proposal.reason}</p> : null}
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_TONE[proposal.status] ?? "bg-white/[0.05] text-ink-muted"}`}>

@@ -8,6 +8,7 @@ import {
   recordPrepaymentAction,
   savePaymentPlanAction,
   sendPayLinkAction,
+  setPaymentWorkDoneAction,
   type PaymentPlanState,
 } from "@/app/jobs/[jobId]/payment-plan-actions";
 import { FormMessage, inputClass } from "@/components/ui/field";
@@ -125,6 +126,15 @@ function PayLinks({ jobNumber, plan }: { jobNumber: string; plan: Plan & { canEd
       if (!outcome.error) router.refresh();
     });
   };
+  const markDone = (id: string, done: boolean) => {
+    setBusy(`done:${id}`);
+    startSending(async () => {
+      const outcome = await setPaymentWorkDoneAction(jobNumber, id, done);
+      setResult({ ...outcome, id });
+      setBusy("");
+      if (!outcome.error) router.refresh();
+    });
+  };
   const copy = async (id: string, token: string) => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/pay/${token}`);
@@ -138,13 +148,15 @@ function PayLinks({ jobNumber, plan }: { jobNumber: string; plan: Plan & { canEd
     <div className="mt-3 border-t border-line pt-3">
       <p className="text-xs font-semibold text-ink-muted">Pay links</p>
       <p className="mt-1 text-xs leading-5 text-ink-faint">
-        A deposit due on signing is sent when the customer signs, and a dated payment on its date. The balance on completion is on the invoice.
+        A deposit due on signing is sent when the customer signs. A progress payment can be asked for only once you mark its work done (California does not allow payments ahead of the work); a dated one then goes out on its date. The balance on completion is on the invoice.
       </p>
       <ul className="mt-2 space-y-2">
         {payments.map((payment, index) => {
           const saved = plan.saved[index];
           if (!saved) return null;
           const byInvoice = payment.kind === "final" && payment.due === "on_completion";
+          const progress = payment.kind === "installment" && payment.due !== "on_signing";
+          const waitingForWork = progress && !saved.doneAt && !saved.paid;
           return (
             <li key={saved.id} className="rounded-control border border-line p-2">
               <div className="flex items-baseline justify-between gap-2 text-sm">
@@ -162,7 +174,27 @@ function PayLinks({ jobNumber, plan }: { jobNumber: string; plan: Plan & { canEd
                           : "Not asked for yet"
                     }`}
               </p>
-              {plan.canEdit && !saved.paid && !byInvoice ? (
+              {progress ? (
+                <p className="mt-0.5 text-xs text-ink-muted" suppressHydrationWarning>
+                  {saved.doneAt
+                    ? `Work marked done ${new Date(saved.doneAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                    : "Payable after its work is marked done"}
+                </p>
+              ) : null}
+              {plan.canEdit && progress && !saved.paid ? (
+                <button
+                  type="button"
+                  disabled={sending}
+                  onClick={() => markDone(saved.id, !saved.doneAt)}
+                  className={`tap-target mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-control px-3 text-sm font-semibold disabled:opacity-60 ${
+                    saved.doneAt ? "border border-line" : "bg-brand text-on-brand"
+                  }`}
+                >
+                  {busy === `done:${saved.id}` ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Check className="h-4 w-4" aria-hidden />}
+                  {saved.doneAt ? "Undo work done" : "Mark work done"}
+                </button>
+              ) : null}
+              {plan.canEdit && !saved.paid && !byInvoice && !waitingForWork ? (
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
                     type="button"
