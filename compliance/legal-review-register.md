@@ -1,6 +1,6 @@
 # Legal review register
 
-Generated 2026-11-25 by `compliance/scripts/build-backlog.mjs`. Questions for a California-licensed
+Generated 2026-11-26 by `compliance/scripts/build-backlog.mjs`. Questions for a California-licensed
 lawyer. The audit does not decide these; it records what the software does today.
 
 | Requirement | Citation | Source verified | Observed | Severity | Question / what was observed |
@@ -57,7 +57,7 @@ lawyer. The audit does not decide these; it records what the software does today
 | CSLB-003-026 Information about the Contractors State License Board (CSLB… | Cal. Bus. & Prof. Code § 7159(e)(5) | yes | RED | high | Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbat… |
 | CSLB-003-028 Electronic signature and electronic delivery of the contrac… | Cal. Civ. Code §§ 1633.1-1633.17 (Uniform Electronic Transactions Act); Cal. Bus. & Prof. Code § 7159 | no | YELLOW | high | Consent checkbox required server-side; audit trail (time, IP, UA, body hash) frozen by trigger but deletable with the contract (RLS ALL, admin deletion functions); no Notice of Cancellation exists to evaluate; consent not stored. |
 | CSLB-003-031 Statutory notices may not be waived; contract may not inclu… | Cal. Bus. & Prof. Code § 7159; Cal. Civ. Code § 1689.12 | no | YELLOW | high | Default template contains no waiver. Tenant templates are free text saved without any content check. |
-| CSLB-004-002 Booking-time deposits taken before a signed contract count … | Cal. Bus. & Prof. Code §§ 7159.5, 7159 | yes | RED | high | The booking diagnostic fee is collected at booking and credited toward approved repair work (diagnostic-credit.ts), but planAmounts/maxDownPaymentCents never consider it. Example: a $15,000 repair booked from a $150 diagnostic can carry a $1,000 deposit, so $… |
+| CSLB-004-002 Booking-time deposits taken before a signed contract count … | Cal. Bus. & Prof. Code §§ 7159.5, 7159 | yes | YELLOW | high | Re-graded 2026-11-26 after PR #308. PR #308: a paid diagnostic fee being credited counts toward the cap, and no deposit can be requested before the contract is signed. Unit-tested; legal review remains. |
 | CSLB-005-003 Overbilling guard | Recommended control supporting Cal. Bus. & Prof. Code § 7159.5 | no | RED | high | Pay links are capped at the plan total (payLinkCents) and an invoice payment cannot exceed what is owed (tested), but no guard compares cumulative billing to work completed: typed invoice amounts (raiseInvoice, MCP create_invoice) are unbounded by contract pr… |
 | CSLB-005-004 Furnish lien release after payment (on request) | Cal. Bus. & Prof. Code § 7159.5(a)(6); Cal. Bus. & Prof. Code § 7159(c)(4) | yes | RED | high | No lien release / waiver generation exists anywhere in the application (grep for lien, waiver, 8134 found nothing relevant). |
 | CSLB-007-001 Home solicitation contract definition triggers cancellation… | Cal. Civ. Code § 1689.5 | no | RED | high | No identification; no cancellation regime. |

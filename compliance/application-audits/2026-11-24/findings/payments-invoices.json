@@ -1481,7 +1481,7 @@
     "severity": "critical",
     "confidence": "high",
     "expected": "Deposit capped at min($1,000, 10% of contract price) in integer cents; any deposit above the cap rejected however entered; pre-contract money counts.",
-    "actual": "planAmounts enforces the cap on deposits and anything due on signing, for fixed and percent amounts, on save and again on every load, so a plan inserted directly through the API that breaks the cap yields no pay links (loadPlanPayment returns null). Gaps: the cap base is the job's live line-item total, not the signed contract price; recordPrepayment accepts any cash/check amount before the invoice with no cap; booking diagnostic fees are not counted (CSLB-004-002); no DB constraint enforces the cap.",
+    "actual": "planAmounts enforces the cap on deposits and anything due on signing, for fixed and percent amounts, on save and again on every load, so a plan inserted directly through the API that breaks the cap yields no pay links (loadPlanPayment returns null). Gaps: the cap base is the job's live line-item total, not the signed contract price; recordPrepayment accepts any cash/check amount before the invoice with no cap; booking diagnostic fees are not counted (CSLB-004-002); no DB constraint enforces the cap. UPDATE 2026-11-26: PR #308: the pre-work allowance (cap on the signed price plus work marked done, less money taken and diagnostic credit) is enforced on hand-recorded prepayments, pay links, checkouts and invoices sent before completion, with a database backstop on prepayments and checkouts. Unit-tested (CT-DEPOSIT-006/007); not yet exercised in a browser. Legal review of applicability remains.",
     "affected_files": [
       "src/lib/payment-plan.ts:51",
       "src/lib/payment-plan.ts:83",
@@ -1502,28 +1502,37 @@
         "collected_at": "2026-11-24",
         "method": "No cap constraint; only amount > 0 checks.",
         "limitations": "Read-only catalog inspection via Supabase MCP execute_sql on project wyyzptlciccewyxxjkyx; no customer contents read."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126030000_payment_plan_work_done.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #308: the pre-work allowance (cap on the signed price plus work marked done, less money taken and diagnostic credit) is enforced on hand-recorded prepayments, pay links, checkouts and invoices sent before completion, with a database backstop on prepayments and checkouts. Unit-tested (CT-DEPOSIT-0"
       }
     ],
     "remediation": "Base the cap on the signed contract price (contracts figures) when one exists; make recordPrepayment refuse (or require an explicit 'payment for work performed' reason) amounts that would take total pre-work money above the cap; include paid diagnostic credits in the down-payment sum.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
       "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less",
-      "src/lib/payment-plan.test.ts::a percentage deposit is of the contract total, and the balance is the rest"
+      "src/lib/payment-plan.test.ts::a percentage deposit is of the contract total, and the balance is the rest",
+      "CT-DEPOSIT-006",
+      "CT-DEPOSIT-007"
     ],
     "test_result": "passed",
-    "responsible_party": "Volteira platform"
+    "responsible_party": "Volteira platform",
+    "status_reason": "Re-graded 2026-11-26 after PR #308. PR #308: the pre-work allowance (cap on the signed price plus work marked done, less money taken and diagnostic credit) is enforced on hand-recorded prepayments, pay links, checkouts and invoices sent before completion, with a database backstop on prepayments and checkouts. Unit-tested (CT-DEPOSIT-006/007); not yet exercised in a browser. Legal review of applicability remains."
   },
   {
     "finding_id": "F-CSLB-004-002-APP",
     "requirement_id": "CSLB-004-002",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "Money collected before the contract (booking deposit, diagnostic fee credited to the job) counts toward the down-payment cap.",
-    "actual": "The booking diagnostic fee is collected at booking and credited toward approved repair work (diagnostic-credit.ts), but planAmounts/maxDownPaymentCents never consider it. Example: a $15,000 repair booked from a $150 diagnostic can carry a $1,000 deposit, so $1,150 is taken before work. Also sendPaymentRequest(byHand) sends a deposit pay link before any contract is signed (no signed check on the by-hand path).",
+    "actual": "The booking diagnostic fee is collected at booking and credited toward approved repair work (diagnostic-credit.ts), but planAmounts/maxDownPaymentCents never consider it. Example: a $15,000 repair booked from a $150 diagnostic can carry a $1,000 deposit, so $1,150 is taken before work. Also sendPaymentRequest(byHand) sends a deposit pay link before any contract is signed (no signed check on the by-hand path). UPDATE 2026-11-26: PR #308: a paid diagnostic fee being credited counts toward the cap, and no deposit can be requested before the contract is signed. Unit-tested; legal review remains.",
     "affected_files": [
       "src/lib/payment-plan.ts:83",
       "src/lib/diagnostic-credit.ts:20",
@@ -1543,16 +1552,25 @@
         "location": "npm test (node --test src/**/*.test.ts)",
         "collected_at": "2026-11-24",
         "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #308: a paid diagnostic fee being credited counts toward the cap, and no deposit can be requested before the contract is signed. Unit-tested; legal review remains."
       }
     ],
     "remediation": "Pass the diagnostic credit still to be applied into planAmounts and count it in the down payment; refuse by-hand deposit requests until the contract with the schedule is signed (or legal review approves pre-contract collection). Add a money-rule test.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
     "test_ids": [
-      "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less"
+      "src/lib/payment-plan.test.ts::California caps the down payment at 10% or $1,000, whichever is less",
+      "CT-DEPOSIT-006",
+      "CT-DEPOSIT-007"
     ],
     "test_result": "passed",
-    "responsible_party": "Volteira platform"
+    "responsible_party": "Volteira platform",
+    "status_reason": "Re-graded 2026-11-26 after PR #308. PR #308: a paid diagnostic fee being credited counts toward the cap, and no deposit can be requested before the contract is signed. Unit-tested; legal review remains."
   },
   {
     "finding_id": "F-CSLB-004-003-APP",
@@ -1595,11 +1613,11 @@
     "requirement_id": "CSLB-004-004",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Except the down payment, no payment is requested or accepted beyond work performed or materials delivered; no pay links or auto-charges for phases not completed.",
-    "actual": "Installments are scheduled by calendar date ('on_date') or on signing, never by phase completion, and only 'deposit'/'on_signing' items count toward the cap, so a plan of $1,000 deposit + $8,999 installment dated tomorrow + $1 balance on a $10,000 job passes planAmounts. Auto-requests fire on the date regardless of progress; sendPaymentRequest(byHand) sends any item's link at any time; the /pay/[token] page lets the customer pay an installment before its date (payLinkCents ignores due status). raiseInvoice and the MCP create_invoice tool accept any typed amount, even on a job with no lines or work done.",
+    "actual": "Installments are scheduled by calendar date ('on_date') or on signing, never by phase completion, and only 'deposit'/'on_signing' items count toward the cap, so a plan of $1,000 deposit + $8,999 installment dated tomorrow + $1 balance on a $10,000 job passes planAmounts. Auto-requests fire on the date regardless of progress; sendPaymentRequest(byHand) sends any item's link at any time; the /pay/[token] page lets the customer pay an installment before its date (payLinkCents ignores due status). raiseInvoice and the MCP create_invoice tool accept any typed amount, even on a job with no lines or work done. UPDATE 2026-11-26: PR #308: progress payments can't be requested or paid until their work is marked done; invoices sent before completion are limited to the allowance (app, assistant and ChatGPT via deliverInvoice). Unit-tested including the audit's $1,000 + $8,999-tomorrow + $1 case.",
     "affected_files": [
       "src/lib/payment-plan.ts:83",
       "src/lib/payment-plan.ts:152",
@@ -1627,17 +1645,26 @@
         "type": "reproduction-steps",
         "location": "src/lib/payment-plan.ts:63",
         "method": "planAmounts(1_000_000, [{kind:'deposit',amountType:'fixed',amountCents:100_000,due:'on_signing'},{kind:'installment',amountType:'fixed',amountCents:899_900,due:'on_date',dueDate:'2026-11-26'}]) returns ok:true (traced by reading; not executed)."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/payment-plan.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #308: progress payments can't be requested or paid until their work is marked done; invoices sent before completion are limited to the allowance (app, assistant and ChatGPT via deliverInvoice). Unit-tested including the audit's $1,000 + $8,999-tomorrow + $1 case."
       }
     ],
     "remediation": "Tie each non-deposit payment to a phase that must be marked complete (optionally with photos) before it can be requested, linked or paid; block pay links and invoices whose cumulative amount exceeds deposit + value of completed phases; require a reason and owner confirmation for typed invoice amounts above unbilled line value. Add money-rule tests.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
       "src/lib/payment-plan.test.ts::a payment is asked for automatically once, when due, and never after the invoice",
-      "src/lib/payment-plan.test.ts::only a payment the customer signed for is asked for automatically"
+      "src/lib/payment-plan.test.ts::only a payment the customer signed for is asked for automatically",
+      "CT-DEPOSIT-006",
+      "CT-DEPOSIT-007"
     ],
     "test_result": "passed",
-    "responsible_party": "Volteira platform"
+    "responsible_party": "Volteira platform",
+    "status_reason": "Re-graded 2026-11-26 after PR #308. PR #308: progress payments can't be requested or paid until their work is marked done; invoices sent before completion are limited to the allowance (app, assistant and ChatGPT via deliverInvoice). Unit-tested including the audit's $1,000 + $8,999-tomorrow + $1 case."
   },
   {
     "finding_id": "F-CSLB-004-005-APP",
@@ -1709,11 +1736,11 @@
     "requirement_id": "CSLB-005-001",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Each progress payment requested corresponds to work performed/materials delivered; phase must be marked complete before an installment is issued or charged.",
-    "actual": "There is no concept of phase completion: installments are due on a date or on signing; auto and by-hand requests and the pay page do not check job progress; invoices can be raised for typed amounts at any job stage. The contract says 'Progress payments are for work performed or materials delivered' but nothing enforces it.",
+    "actual": "There is no concept of phase completion: installments are due on a date or on signing; auto and by-hand requests and the pay page do not check job progress; invoices can be raised for typed amounts at any job stage. The contract says 'Progress payments are for work performed or materials delivered' but nothing enforces it. UPDATE 2026-11-26: PR #308: a 'Mark work done' step per progress payment (done_at, done_by, activity entry) gates requests and payment. The owner's mark stands in for the value of work performed; phases with photos/evidence are not built.",
     "affected_files": [
       "src/lib/payment-plan.ts:14",
       "src/lib/payment-plan.ts:169",
@@ -1733,16 +1760,24 @@
         "location": "npm test (node --test src/**/*.test.ts)",
         "collected_at": "2026-11-24",
         "method": "Ran full unit suite: 1529 tests, 1529 pass, 0 fail, 0 skipped."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126030000_payment_plan_work_done.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #308: a 'Mark work done' step per progress payment (done_at, done_by, activity entry) gates requests and payment. The owner's mark stands in for the value of work performed; phases with photos/evidence are not built."
       }
     ],
     "remediation": "Add PlanDue 'on_phase' tied to a job phase/milestone with completion (who, when, photos); allow requests and pay links only after completion; migrate on_date installments to require completion confirmation.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
-      "src/lib/payment-plan.test.ts::what is due now: what has come due, less what was paid, never negative"
+      "src/lib/payment-plan.test.ts::what is due now: what has come due, less what was paid, never negative",
+      "CT-DEPOSIT-006"
     ],
     "test_result": "passed",
-    "responsible_party": "Volteira platform"
+    "responsible_party": "Volteira platform",
+    "status_reason": "Re-graded 2026-11-26 after PR #308. PR #308: a 'Mark work done' step per progress payment (done_at, done_by, activity entry) gates requests and payment. The owner's mark stands in for the value of work performed; phases with photos/evidence are not built."
   },
   {
     "finding_id": "F-CSLB-005-002-APP",

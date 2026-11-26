@@ -5,14 +5,14 @@
       "audit_id": "APP-volteira-2026-11-24",
       "folder": "2026-11-24",
       "started_at": "2026-11-24T20:00:00.000Z",
-      "generated_at": "2026-11-25T14:47:19.774Z",
+      "generated_at": "2026-11-26T03:13:02.264Z",
       "git_commit": "25d5faedfa5541b4302fb6d303faad3dd89516d8",
       "legal_baseline_version": "2026-11-25",
       "result": "Not ready: verified failures present",
       "totals": {
         "GREEN": 11,
-        "YELLOW": 112,
-        "RED": 102,
+        "YELLOW": 121,
+        "RED": 93,
         "GRAY": 36,
         "BLUE": 158,
         "total": 419
