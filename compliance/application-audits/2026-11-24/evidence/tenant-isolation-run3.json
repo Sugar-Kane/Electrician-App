@@ -1,0 +1,18 @@
+{
+  "test": "TI-001..TI-013 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, with TI-013 added)",
+  "status": "run of record after PR #308 (supersedes tenant-isolation-run2.json)",
+  "run_at": "2026-11-26",
+  "run_by": "Adam, Supabase SQL editor, project wyyzptlciccewyxxjkyx (production), single query; aborted by the final TI_RESULTS exception",
+  "post_run_check": {"method": "read-only execute_sql", "leftover_compliance_orgs": 0, "leftover_compliance_users": 0, "leftover_test_stripe_connections": 0, "leftover_compliance_customers": 0},
+  "summary": {"passed": 75, "failed": 0, "setup_problems": 0, "vacuous_checks": 6},
+  "vacuous": "activity_events and messaging_consent had no Tenant B rows (seeded = 0).",
+  "changes_since_run2": [
+    "TI-011 now passes: an owner setting its own organization_subscriptions.status to active is refused (42501 permission denied for table organization_subscriptions).",
+    "TI-013 (new) passes: an owner turning on its own stripe_connect_accounts.charges_enabled, or changing its stripe_account_id, is refused (42501 permission denied for table stripe_connect_accounts).",
+    "TI-003/004 on organization_subscriptions are now refused with permission denied (previously 0 rows by RLS)."
+  ],
+  "unchanged": "Every other check passed as in run 2: as Tenant A, 0 Tenant B rows visible, updated or deleted in 14 seeded tables, the organization row and storage; cross-tenant insert, join, move and reference refused; roster RPC 0 rows; anon refused on every table.",
+  "not_covered": [
+    "Only 17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run, not CI."
+  ]
+}

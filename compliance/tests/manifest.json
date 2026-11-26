@@ -1,7 +1,7 @@
 {
   "description": "Compliance tests and the requirements they support. A passing test is evidence for the rule it exercises, not for every pathway that should call that rule; pathway coverage is assessed in the audit findings.",
   "version": "1.0.0",
-  "updated": "2026-11-25",
+  "updated": "2026-11-26",
   "classifications": [
     "automated",
     "browser-assisted",
@@ -208,10 +208,10 @@
       ],
       "what": "Two synthetic tenants in one transaction that always aborts: tenant A cannot read, change or delete tenant B's rows (TI-002..010), anon sees nothing (TI-012), and an owner cannot change its own subscription (TI-011) or Stripe connection (TI-013)",
       "last_run": {
-        "date": "2026-11-25",
+        "date": "2026-11-26",
         "how": "manual, production, single transaction always aborted",
-        "result": "72 passed, 1 failed (TI-011 subscription self-upgrade), 6 vacuous",
-        "evidence": "compliance/application-audits/2026-11-24/evidence/tenant-isolation-run2.json"
+        "result": "75 passed, 0 failed, 6 vacuous (TI-011 and TI-013 refused after PR #308)",
+        "evidence": "compliance/application-audits/2026-11-24/evidence/tenant-isolation-run3.json"
       }
     },
     {

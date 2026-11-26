@@ -1,6 +1,6 @@
 -- TI-001 .. TI-013: two-tenant isolation test in ONE transaction that always aborts.
 --
--- STATUS: run 2 on 2026-11-25 is the run of record: 72 passed, 1 failed (TI-011), 6 vacuous (evidence/tenant-isolation-run2.json).
+-- STATUS: run 3 on 2026-11-26 is the run of record: 75 passed, 0 failed, 6 vacuous (evidence/tenant-isolation-run3.json).
 -- Supports: SEC-002-001, -002, -003, -004, -006, -007, -010, -012, -013, -019.
 --
 -- What it does

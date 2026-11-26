@@ -1088,13 +1088,13 @@
     "requirement_id": "SEC-002-010",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "Documented permission matrix; role checked server-side; technicians cannot do owner-only actions; admins cannot grant themselves paid features.",
-    "actual": "Billing role rule is enforced in DB (can_edit_billing) and tested; owner-only invites guarded by triggers; exports gated by canExportReports. But organization_subscriptions lets any owner/admin INSERT/UPDATE/DELETE their own row including status and plan (policies 'Organization admins can add/update/remove subscriptions', authenticated UPDATE on every column, no guard trigger). src/lib/ai-allowance.ts:18-24 reads that status with the service role and paidPlanActive() makes AI use unlimited, so an admin can grant itself a paid plan (and unlimited AI spend) without paying. Similarly stripe_connect_accounts is admin-writable for charges_enabled/payouts_enabled/fee_payer/stripe_account_id. No permission matrix document. Confirmed on the production database by run 2 (TI-011, 2026-11-25): Tenant A's owner changed its own organization_subscriptions.status from canceled to active (1 row updated) without paying.",
+    "actual": "Billing role rule is enforced in DB (can_edit_billing) and tested; owner-only invites guarded by triggers; exports gated by canExportReports. But organization_subscriptions lets any owner/admin INSERT/UPDATE/DELETE their own row including status and plan (policies 'Organization admins can add/update/remove subscriptions', authenticated UPDATE on every column, no guard trigger). src/lib/ai-allowance.ts:18-24 reads that status with the service role and paidPlanActive() makes AI use unlimited, so an admin can grant itself a paid plan (and unlimited AI spend) without paying. Similarly stripe_connect_accounts is admin-writable for charges_enabled/payouts_enabled/fee_payer/stripe_account_id. No permission matrix document. Confirmed on the production database by run 2 (TI-011, 2026-11-25): Tenant A's owner changed its own organization_subscriptions.status from canceled to active (1 row updated) without paying. UPDATE 2026-11-26: Fixed for billing records in PR #308 (migration 20261126010000_lock_billing_tables): signed-in users can no longer write organization_subscriptions or stripe_connect_accounts. Verified on production by tenant-isolation run 3 (TI-011 and TI-013 refused). A documented permission matrix and role checks for other owner-only actions remain open.",
     "affected_files": [
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:189",
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229",
@@ -1133,10 +1133,16 @@
         "collected_at": "2026-11-25",
         "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
         "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run3.json",
+        "collected_at": "2026-11-26",
+        "method": "Fixed for billing records in PR #308 (migration 20261126010000_lock_billing_tables): signed-in users can no longer write organization_subscriptions or stripe_connect_accounts. Verified on production by tenant-isolation run 3 (TI-011 and TI-013 refused). A documented permission matrix and role checks"
       }
     ],
     "remediation": "Drop the INSERT/UPDATE/DELETE policies on organization_subscriptions and revoke insert/update/delete from authenticated (only the Stripe webhook via service role writes it); likewise restrict stripe_connect_accounts writes to service role (sync from Stripe account.updated); write and publish the role permission matrix.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
       "src/lib/billing-permission.test.ts",
@@ -1144,7 +1150,7 @@
       "TI-001"
     ],
     "test_result": "failed",
-    "status_reason": "pending rolled-back two-tenant test TI-001..TI-012 (compliance/tests/tenant-isolation/two-tenant-rollback.sql, written, not executed)"
+    "status_reason": "Re-graded 2026-11-26 after PR #308. Fixed for billing records in PR #308 (migration 20261126010000_lock_billing_tables): signed-in users can no longer write organization_subscriptions or stripe_connect_accounts. Verified on production by tenant-isolation run 3 (TI-011 and TI-013 refused). A documented permission matrix and role checks for other owner-only actions remain open."
   },
   {
     "finding_id": "F-SEC-002-011-APP",
@@ -1179,13 +1185,13 @@
     "requirement_id": "SEC-002-012",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "applicability": "Applies to every table, function, bucket, route and tool that holds or reaches tenant data.",
     "responsible_party": "Volteira platform, Volteira as service provider",
     "expected": "anon/authenticated hold only needed privileges; default privileges reviewed; least-privilege tenant roles.",
-    "actual": "authenticated has full INSERT/UPDATE/DELETE/TRUNCATE table grants on every public table (default ACL from postgres grants arwdDxtm), so least privilege rests entirely on RLS. Where policies are broad this is exploitable: owners/admins can write organization_subscriptions (status/plan) and stripe_connect_accounts (charges_enabled, payouts_enabled, fee_payer); members can update/delete messaging_consent and stripe_customers. Function default ACL grants EXECUTE to anon and authenticated. Confirmed on the production database by run 2 (TI-011, 2026-11-25): the authenticated role could update organization_subscriptions.status directly.",
+    "actual": "authenticated has full INSERT/UPDATE/DELETE/TRUNCATE table grants on every public table (default ACL from postgres grants arwdDxtm), so least privilege rests entirely on RLS. Where policies are broad this is exploitable: owners/admins can write organization_subscriptions (status/plan) and stripe_connect_accounts (charges_enabled, payouts_enabled, fee_payer); members can update/delete messaging_consent and stripe_customers. Function default ACL grants EXECUTE to anon and authenticated. Confirmed on the production database by run 2 (TI-011, 2026-11-25): the authenticated role could update organization_subscriptions.status directly. UPDATE 2026-11-26: Billing tables fixed in PR #308: authenticated now holds only SELECT on organization_subscriptions and stripe_connect_accounts (verified read-only and by run 3). The blanket insert/update/delete/truncate grants to authenticated on other public tables remain.",
     "affected_files": [
       "supabase/migrations/20260804144538_user_profiles_preferences_billing_square.sql:229"
     ],
@@ -1220,16 +1226,23 @@
         "collected_at": "2026-11-25",
         "method": "Two synthetic tenants seeded in one production transaction that was always aborted (compliance/tests/tenant-isolation/two-tenant-rollback.sql, run 2); queries executed as role authenticated with Tenant A's JWT claims and as anon; post-run read-only check found no leftover rows.",
         "limitations": "17 of ~95 public tables; owner role only; no Storage API, route-level or MCP/AI paths; manual run."
+      },
+      {
+        "type": "database-check",
+        "location": "evidence/tenant-isolation-run3.json",
+        "collected_at": "2026-11-26",
+        "method": "Billing tables fixed in PR #308: authenticated now holds only SELECT on organization_subscriptions and stripe_connect_accounts (verified read-only and by run 3). The blanket insert/update/delete/truncate grants to authenticated on other public tables remain."
       }
     ],
     "remediation": "Revoke TRUNCATE and write privileges from authenticated on service-owned tables (organization_subscriptions, stripe_connect_accounts, stripe_webhook_events, audit tables); alter default privileges to stop granting EXECUTE to anon; show owner count per tenant to owners.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
       "compliance/tests/tenant-isolation/two-tenant-rollback.sql",
       "TI-001"
     ],
-    "test_result": "failed"
+    "test_result": "failed",
+    "status_reason": "Re-graded 2026-11-26 after PR #308. Billing tables fixed in PR #308: authenticated now holds only SELECT on organization_subscriptions and stripe_connect_accounts (verified read-only and by run 3). The blanket insert/update/delete/truncate grants to authenticated on other public tables remain."
   },
   {
     "finding_id": "F-SEC-002-013-APP",
