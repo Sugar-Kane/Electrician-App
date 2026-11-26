@@ -11,8 +11,8 @@ source is marked ❔; the problem was still observed.
 | Priority | Items |
 |---|---|
 | P0 | 0 |
-| P1 | 101 |
-| P2 | 144 |
+| P1 | 91 |
+| P2 | 154 |
 | P3 | 55 |
 | **Total** | **300** |
 
@@ -106,16 +106,6 @@ source is marked ❔; the problem was still observed.
 - **Fix:** Source name/address/license from the verified record (CSLB-001-006) and refuse to generate when any is missing.
 - **Files:** `src/lib/pdf/letterhead.tsx:121`, `src/lib/pdf/store.ts:69`, `src/lib/pdf/letterhead.tsx:149`
 - **Done when:** Contractor name, business address and license number, from the verified license record. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
-
-### F-CSLB-003-013-APP: Contract Price heading with amount in dollars and cents
-
-- **Requirement:** CSLB-003-013 (Cal. Bus. & Prof. Code § 7159(d)(5))
-- **Observed:** RED, severity critical, confidence high
-- **Problem:** Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'.
-- **Fix:** Use the statutory 'Contract Price' heading in the home-improvement template.
-- **Files:** `src/lib/contract-template.ts:202`, `src/lib/contract-template.ts:143`
-- **Done when:** Heading 'Contract Price' followed by the amount in dollars and cents from integer cents. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
 
 ### F-CSLB-006-001-APP: Change orders in writing and signed before the changed work begins
@@ -437,26 +427,6 @@ source is marked ❔; the problem was still observed.
 - **Done when:** In close proximity to the signatures, a notice that the owner or tenant may require a performance and payment bond (B&P 7159(c)(6); no type-size rule). Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
 
-### F-CSLB-003-011-APP: 'Home Improvement' heading identifying the contract type
-
-- **Requirement:** CSLB-003-011 (Cal. Bus. & Prof. Code § 7159(d)(3))
-- **Observed:** RED, severity high, confidence high
-- **Problem:** Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading.
-- **Fix:** Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.
-- **Files:** `src/lib/contract-template.ts:193`, `src/lib/pdf/contract-document.tsx:192`
-- **Done when:** 10pt bold heading 'Home Improvement' identifying the contract type. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
-
-### F-CSLB-003-012-APP: Statement: entitled to a completely filled-in copy (all blanks filled)
-
-- **Requirement:** CSLB-003-012 (Cal. Bus. & Prof. Code § 7159(d)(4))
-- **Observed:** RED, severity high, confidence high
-- **Problem:** Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) are not required, and job_date falls back to 'a date to be agreed'.
-- **Fix:** Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Make all 7159 required fields mandatory before send.
-- **Files:** `src/lib/contract-template.ts:193`, `src/lib/contract-signing.ts:156`, `src/app/jobs/[jobId]/contract-actions.ts:390`
-- **Done when:** 12pt bold 'completely filled in copy' statement; refuse issuance while required fields are blank. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
-
 ### F-CSLB-003-015-APP: Description of the project and significant materials and equipment
 
 - **Requirement:** CSLB-003-015 (Cal. Bus. & Prof. Code § 7159(d)(7))
@@ -487,16 +457,6 @@ source is marked ❔; the problem was still observed.
 - **Done when:** 'Approximate Completion Date' heading and date. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
 
-### F-CSLB-003-021-APP: Note about Extra Work and Change Orders
-
-- **Requirement:** CSLB-003-021 (Cal. Bus. & Prof. Code § 7159(d)(13))
-- **Observed:** RED, severity high, confidence high
-- **Problem:** Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'.
-- **Fix:** Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.
-- **Files:** `src/lib/contract-template.ts:209`, `src/lib/contract-template.ts:193`
-- **Done when:** 'Note about Extra Work and Change Orders' heading and statutory statement. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
-
 ### F-CSLB-003-022-APP ⚖️: Commercial General Liability Insurance (CGL) notice
 
 - **Requirement:** CSLB-003-022 (Cal. Bus. & Prof. Code § 7159(e)(1))
@@ -525,16 +485,6 @@ source is marked ❔; the problem was still observed.
 - **Fix:** Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.
 - **Files:** `src/lib/contract-template.ts:193`
 - **Done when:** Notice of buyer's rights regarding extra/change-order work. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
-
-### F-CSLB-003-026-APP ⚖️: Information about the Contractors State License Board (CSLB) notice
-
-- **Requirement:** CSLB-003-026 (Cal. Bus. & Prof. Code § 7159(e)(5))
-- **Observed:** RED, severity high, confidence high
-- **Problem:** Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.
-- **Fix:** Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.
-- **Files:** `src/lib/contract-template.ts:193`
-- **Done when:** 12pt 'Information about the Contractors State License Board (CSLB)' notice. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/contracts-esign.json`
 
 ### F-CSLB-003-028-APP ⚖️ ❔: Electronic signature and electronic delivery of the contract copy
@@ -707,16 +657,6 @@ source is marked ❔; the problem was still observed.
 - **Done when:** Installment plans are capped at four installments with no finance charge, or TILA closed-end disclosures are given; tenants crossing TILA triggers are flagged. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/payments-invoices.json`
 
-### F-FED-011-002-APP ⚖️: Cooling-Off Rule applicability to in-home contractor sales
-
-- **Requirement:** FED-011-002 (16 CFR 429.0 (definitions); 16 CFR 429.3 (exemptions))
-- **Observed:** RED, severity high, confidence high
-- **Problem:** Estimates, change orders and contracts can be presented and signed in person at the customer's home on the job page (contract-send.ts:54), but there is no in-home-sale flag, no determination, and no cancellation workflow. The e-sign consent even refers to 'any notice of your right to cancel' (esign-consent.ts:28) that the product never generates.
-- **Fix:** Get counsel's determination; add an 'sold at the residence' flag that inserts the cancellation statement and Notice of Cancellation and holds work/payment until the period ends.
-- **Files:** `src/lib/contract-send.ts:54`, `src/lib/esign-consent.ts:28`, `src/lib/contract-template.ts:1-40`
-- **Done when:** Determine which sales are door-to-door; support a flag for in-home sales that triggers cancellation-notice workflows. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
-
 ### F-FED-011-003-APP ⚖️: Cooling-Off Rule: contract/receipt must state the buyer's right to cancel within three business days
 
 - **Requirement:** FED-011-003 (16 CFR 429.1(a))
@@ -725,16 +665,6 @@ source is marked ❔; the problem was still observed.
 - **Fix:** Insert the prescribed statement on in-home sales (FED-011-002) and test its presence and placement.
 - **Files:** `src/lib/payment-plan.ts:56-57`, `src/lib/payment-plan.ts:250-256`, `src/lib/contract-template.ts`
 - **Done when:** Contract/receipt states the buyer's right to cancel within three business days, near the signature, in 10-point bold. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
-
-### F-FED-011-004-APP ⚖️: Cooling-Off Rule: Notice of Cancellation form in duplicate, oral notice, and timely refunds
-
-- **Requirement:** FED-011-004 (16 CFR 429.1(b)-(g))
-- **Observed:** RED, severity high, confidence high
-- **Problem:** No Notice of Cancellation form, oral-notice prompt or cancellation-refund workflow exists; refunds are manual (invoice-refund.ts) and not tied to a cancellation deadline.
-- **Fix:** Generate a completed Notice of Cancellation with the transaction date and deadline, prompt the technician to give oral notice, and track cancellation refunds against the 10-business-day deadline.
-- **Files:** `src/lib/invoice-refund.ts`, `src/lib/contract-signing.ts`
-- **Done when:** Notice of Cancellation form in duplicate, oral notice, and refunds within 10 business days of a valid cancellation. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
 
 ### F-FED-011-006-APP ❔: No general federal data breach notification law; record sector-specific triggers
@@ -746,16 +676,6 @@ source is marked ❔; the problem was still observed.
 - **Files:** `docs/security/REMEDIATION.md`, `docs/security/MULTI-TENANT-READINESS.md`
 - **Done when:** Incident response plan mapping state breach laws, FTC Safeguards (if applicable), Stripe/PCI reporting and tenant notice timelines. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/communications-privacy.json`
-
-### F-SEC-001-001-APP: Multi-factor authentication is available to every user
-
-- **Requirement:** SEC-001-001 (OWASP ASVS 5.0.0 V6.3.3; NIST CSF 2.0 PR.AA-03)
-- **Observed:** RED, severity high, confidence high
-- **Problem:** No MFA anywhere in the application: no enroll/challenge/verify calls, no aal checks (grep mfa\|totp\|aal over src returns no auth usage). Production auth.mfa_factors has 0 rows. Local supabase/config.toml has [auth.mfa.totp] enroll_enabled = false.
-- **Fix:** Enable TOTP (and WebAuthn when available) in Supabase Auth; add an Account > Security enrollment flow using supabase.auth.mfa.enroll/challenge/verify; read the aal claim server-side in currentContext(); nudge enrollment on sign-up and the account page.
-- **Files:** `src/app/account/page.tsx:384`, `src/lib/request-context.ts:52`, `supabase/config.toml:317`
-- **Done when:** Every user can enroll a TOTP/WebAuthn factor from account settings; AAL checked server-side; MFA encouraged. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/security.json`
 
 ### F-SEC-002-019-APP: Automated two-tenant isolation tests run before release
 
@@ -832,15 +752,6 @@ source is marked ❔; the problem was still observed.
 - **Done when:** App roles cannot UPDATE/DELETE audit rows; tenants read only their own; retention documented. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/security.json`
 
-### F-SEC-006-001-APP: A documented incident response plan exists and is maintained
-
-- **Requirement:** SEC-006-001 (NIST CSF 2.0 ID.IM-04; NIST CSF 2.0 RS.MA-01)
-- **Observed:** RED, severity high, confidence high
-- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).
-- **Fix:** Write docs/security/incident-response.md naming the incident lead and backup, contacts (counsel, insurer, vendors), severity levels and runbooks.
-- **Done when:** Written IR plan with lead/backup, contacts, severities, runbooks; reviewed annually. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/security.json`
-
 ### F-SEC-006-002-APP: Incidents are detected, triaged and declared against criteria
 
 - **Requirement:** SEC-006-002 (NIST CSF 2.0 DE.AE-02; NIST CSF 2.0 DE.AE-08; NIST CSF 2.0 RS.MA-02)
@@ -857,15 +768,6 @@ source is marked ❔; the problem was still observed.
 - **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).
 - **Fix:** Add a classification matrix including Cal. Civ. Code 1798.82(h) data elements and encryption-key exposure.
 - **Done when:** Classification by severity, tenants, data types (1798.82(h) PI, payment, credentials), encryption state. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
-- **Source:** `application-audits/2026-11-24/findings/security.json`
-
-### F-SEC-006-005-APP: Evidence is preserved with integrity
-
-- **Requirement:** SEC-006-005 (NIST CSF 2.0 RS.AN-03; NIST CSF 2.0 RS.AN-06; NIST CSF 2.0 RS.AN-07)
-- **Observed:** RED, severity high, confidence high
-- **Problem:** No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Log retention is not documented and no drain exists.
-- **Fix:** Add an evidence-preservation runbook (Vercel/Supabase log export, PITR timestamp, action log).
-- **Done when:** Runbooks preserve logs, PITR point and investigator actions before changes; retention adequate. Add a regression test if it touches money, security, consent or signatures (AGENTS.md).
 - **Source:** `application-audits/2026-11-24/findings/security.json`
 
 ### F-SEC-006-006-APP: Containment and eradication runbooks exist for key scenarios
@@ -1022,6 +924,7 @@ source is marked ❔; the problem was still observed.
 |---|---|---|---|---|---|---|
 | F-CSLB-002-001-APP ⚖️ | CSLB-002-001 Identify home improvement contracts (B&P 7151.2) and apply … | YELLOW | critical | No contract-type classification exists. contracts.kind is only agreement\|change_order; jobs.category is an operational category (diagnostic, work_order, ...). One generic template is used for every job, and it is not a … | Add contract_type (and property/customer type) to jobs/contracts, default residential to home_improvement, and select a type-specific locked template. | src/app/jobs/[jobId]/contract-actions.ts:190, src/app/jobs/[jobId]/contract-actions.ts:338, src/lib/contract-template.ts:193 |
 | F-CSLB-002-009-APP ⚖️ ❔ | CSLB-002-009 Home solicitation determination for in-home and remote sign… | YELLOW | critical | No signing-location record and no cancellation notice or form in any contract; in-person tablet signing and remote link signing both produce the same notice-free document. The default STARTER_TEMPLATE (WORK AGREEMENT / … | Default every residential contract to include the cancellation notice/forms; only omit when a 'negotiated at contractor's place of business' attestation is recorded. | src/lib/contract-template.ts:193, src/lib/pdf/contract-document.tsx:79, src/components/signature-pad.tsx:1 |
+| F-CSLB-003-013-APP | CSLB-003-013 Contract Price heading with amount in dollars and cents | YELLOW | critical | Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'. UPDATE 2026-11-26: PR #310: the … | Use the statutory 'Contract Price' heading in the home-improvement template. | src/lib/contract-template.ts:202, src/lib/contract-template.ts:143 |
 | F-CSLB-003-016-APP ⚖️ | CSLB-003-016 Downpayment heading, amount and 12-point notice | YELLOW | critical | Cap is enforced in planAmounts (passing test). But the rendered contract labels the $800 deposit 'Diagnostic fee: $800.00, due on signing' (the {{deposit}} placeholder is reused); there is no 'Downpayment' heading; the … | Render a 'Downpayment' heading with the amount and the verbatim notice in 12pt bold from a fixed component; stop labelling a down payment as a diagnostic fee. | src/lib/contract-template.ts:204, src/app/jobs/[jobId]/contract-actions.ts:410, src/lib/payment-plan.ts:57 |
 | F-CSLB-003-017-APP ⚖️ | CSLB-003-017 Schedule of Progress Payments heading, phase detail and 12-… | YELLOW | critical | Rendered block is headed 'PAYMENT SCHEDULE' with 'Payment 2 $3,200.00 (40%) due 2026-12-05' - tied to a calendar date, not to work performed; the 'Do not pay ahead of the work' statement is absent (only 'Progress paymen… | Require a work/milestone description per progress payment, use the statutory heading, add the verbatim 12pt bold statement, and disallow date-only progress payments for home-improvement contracts. | src/lib/payment-plan.ts:214, src/lib/payment-plan.ts:244 |
 | F-CSLB-003-025-APP ⚖️ | CSLB-003-025 Mechanics Lien Warning notice | YELLOW | critical | Missing from the default template and the rendered contract; no statutory text exists anywhere in src. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvem… | Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official … | src/lib/contract-template.ts:193, src/lib/pdf/contract-document.tsx:79 |
@@ -1067,6 +970,10 @@ source is marked ❔; the problem was still observed.
 | F-CSLB-003-006-APP | CSLB-003-006 Change-order form incorporated into the contract | RED | high | No change-order form is included in or attached to the contract; change orders exist only as separate documents generated later. | Attach a blank change-order form (or the statutory incorporation language plus form) to every home-improvement contract. | src/lib/contract-template.ts:193, src/lib/change-order-document.ts:51 |
 | F-CSLB-003-008-APP | CSLB-003-008 Required items appear in the statutory order | RED | high | Rendered order is WORK AGREEMENT, SCOPE OF WORK, PRICE, PAYMENT, ACCESS AND CONDITIONS, PAYMENT SCHEDULE (appended at the end when the template has no {{payment_terms}}), signatures; most required items are absent. | Generate the 7159(d) items from a structured, locked template so none can be omitted. | src/lib/contract-template.ts:193, src/lib/payment-plan.ts:271 |
 | F-CSLB-003-010-APP | CSLB-003-010 Home improvement salesperson name and registration number, … | RED | high | No salesperson attribution or HIS registration field exists. | Capture the selling user per job and HIS number per user; print when the seller is not the qualifier/owner. | src/app/jobs/[jobId]/contract-actions.ts:190 |
+| F-CSLB-003-011-APP | CSLB-003-011 'Home Improvement' heading identifying the contract type | YELLOW | high | Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvem… | Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official … | src/lib/contract-template.ts:193, src/lib/pdf/contract-document.tsx:192 |
+| F-CSLB-003-012-APP | CSLB-003-012 Statement: entitled to a completely filled-in copy (all bla… | YELLOW | high | Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) ar… | Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official … | src/lib/contract-template.ts:193, src/lib/contract-signing.ts:156, src/app/jobs/[jobId]/contract-actions.ts:390 |
+| F-CSLB-003-021-APP | CSLB-003-021 Note about Extra Work and Change Orders | YELLOW | high | Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-imp… | Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official … | src/lib/contract-template.ts:209, src/lib/contract-template.ts:193 |
+| F-CSLB-003-026-APP ⚖️ | CSLB-003-026 Information about the Contractors State License Board (CSLB… | YELLOW | high | Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends,… | Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official … | src/lib/contract-template.ts:193 |
 | F-CSLB-003-031-APP ⚖️ ❔ | CSLB-003-031 Statutory notices may not be waived; contract may not inclu… | YELLOW | high | Default template contains no waiver. Tenant templates are free text saved without any content check. | Lint tenant templates for waiver/contradicting language and keep statutory notices outside the editable template. | src/app/settings/contract/actions.ts:39, src/lib/contract-template.ts:193 |
 | F-CSLB-004-002-APP ⚖️ | CSLB-004-002 Booking-time deposits taken before a signed contract count … | YELLOW | high | The booking diagnostic fee is collected at booking and credited toward approved repair work (diagnostic-credit.ts), but planAmounts/maxDownPaymentCents never consider it. Example: a $15,000 repair booked from a $150 dia… | Pass the diagnostic credit still to be applied into planAmounts and count it in the down payment; refuse by-hand deposit requests until the contract with the schedule is signed (or legal review approves pre-contract col… | src/lib/payment-plan.ts:83, src/lib/diagnostic-credit.ts:20, src/lib/booking-checkout.ts:150 |
 | F-CSLB-005-002-APP | CSLB-005-002 Installment invoices reference the phase of work in the sch… | YELLOW | high | Pay links and requests name the payment ('Deposit', 'Payment 2', 'Balance') and job number, and automatic requests go only when they match the signed schedule (tested). There are no phase descriptions in the schedule, p… | Add a phase description to each plan item, show it on the contract schedule, pay links and invoices, and reference the contract number. | src/lib/payment-plan.ts:214, src/lib/payment-plan.ts:229, src/lib/job-prepayment-pay.ts:450 |
@@ -1083,6 +990,9 @@ source is marked ❔; the problem was still observed.
 | F-FED-003-001-APP | FED-003-001 Classify each email as commercial vs transactional/relation… | YELLOW | high | All built-in emails (booking confirmations, estimates, invoices, receipts, contracts, refunds, invitations) are transactional by content, but nothing tags them, and the AI-proposed send_customer_email accepts a free-for… | Add a purpose tag to sendEmail; for free-form owner/AI emails, either refuse promotional content or treat as commercial (unsubscribe, postal address, ad identification). | src/lib/email.ts:27-37, src/lib/mcp-supervised-tools.ts:56-64, src/lib/mcp-supervised-tools.ts:207-242 |
 | F-FED-007-002-APP ❔ | FED-007-002 SAQ A eligibility: fully outsourced, hosted Stripe Checkout… | YELLOW | high | Every checkout is created server-side with ui_mode 'hosted_page' and the browser is redirected to session.url; a nonce-based CSP is enforced and tested. Eligibility attestation is not documented. The booking page displa… | Record the SAQ A eligibility determination (hosted redirect, CSP evidence); change 'Secure test payment' to 'Secure payment' on the booking form. | src/lib/booking-checkout.ts:120, src/lib/job-prepayment-pay.ts:454, src/lib/csp.ts:1 |
 | F-FED-010-003-APP | FED-010-003 AI-drafted customer communications must not deceive; mainta… | YELLOW | high | Supervised proposals record decided_by/decided_via and re-check STOP and quiet hours (tested); the in-app assistant requires the signed-in user's tap. But MCP send_text, send_invoice, send_estimate, send_contract_for_si… | Route MCP customer messages through supervised proposals with approver logging (SEC-007-009); store approved_by on messages; apply quiet hours on all AI sends; consider disclosing at the start of AI calls that the calle… | src/lib/mcp-business-tools.ts:711, src/lib/customer-text.ts:131, src/lib/voice-intake.ts:44 |
+| F-FED-011-002-APP ⚖️ | FED-011-002 Cooling-Off Rule applicability to in-home contractor sales | YELLOW | high | Estimates, change orders and contracts can be presented and signed in person at the customer's home on the job page (contract-send.ts:54), but there is no in-home-sale flag, no determination, and no cancellation workflo… | Get counsel's determination; add an 'sold at the residence' flag that inserts the cancellation statement and Notice of Cancellation and holds work/payment until the period ends. | src/lib/contract-send.ts:54, src/lib/esign-consent.ts:28, src/lib/contract-template.ts:1-40 |
+| F-FED-011-004-APP ⚖️ | FED-011-004 Cooling-Off Rule: Notice of Cancellation form in duplicate,… | YELLOW | high | No Notice of Cancellation form, oral-notice prompt or cancellation-refund workflow exists; refunds are manual (invoice-refund.ts) and not tied to a cancellation deadline. UPDATE 2026-11-26: PR #310: two completed Notice… | Generate a completed Notice of Cancellation with the transaction date and deadline, prompt the technician to give oral notice, and track cancellation refunds against the 10-business-day deadline. | src/lib/invoice-refund.ts, src/lib/contract-signing.ts |
+| F-SEC-001-001-APP | SEC-001-001 Multi-factor authentication is available to every user | YELLOW | high | No MFA anywhere in the application: no enroll/challenge/verify calls, no aal checks (grep mfa\|totp\|aal over src returns no auth usage). Production auth.mfa_factors has 0 rows. Local supabase/config.toml has [auth.mfa.to… | Enable TOTP (and WebAuthn when available) in Supabase Auth; add an Account > Security enrollment flow using supabase.auth.mfa.enroll/challenge/verify; read the aal claim server-side in currentContext(); nudge enrollment… | src/app/account/page.tsx:384, src/lib/request-context.ts:52, supabase/config.toml:317 |
 | F-SEC-001-005-APP | SEC-001-005 Sensitive account changes require re-authentication | YELLOW | high | Password change sends current_password to supabase.auth.updateUser (account/actions.ts:462). Email change calls updateUser({ email }) with no re-authentication (account/actions.ts:89; relies on Supabase double-confirmat… | Require re-authentication (supabase.auth.reauthenticate nonce or password re-entry within N minutes) before email change, payout onboarding, ownership transfer and future MFA factor changes; enable secure email change i… | src/app/account/actions.ts:89, src/app/account/actions.ts:462, src/app/settings/payments/start/route.ts:25 |
 | F-SEC-001-008-APP | SEC-001-008 Password reset is secure and does not bypass MFA | YELLOW | high | Reset completes only for a session whose amr includes 'recovery' within one hour (password-reset.ts mayResetPassword, tested); callback uses getSafeNextPath. No hints/questions. Because MFA does not exist, 'reset does n… | When MFA ships, require aal2 (or a factor challenge) after recovery before updateUser({password}) for users with factors; document the Supabase OTP expiry setting. | src/lib/password-reset.ts:26, src/app/reset-password/actions.ts:30, src/app/auth/callback/route.ts:16 |
 | F-SEC-001-012-APP | SEC-001-012 Sessions are verified server-side and revoked on sign-out | YELLOW | high | currentUser() and the proxy use supabase.auth.getClaims() (signature-verified JWT) and API routes such as recordings use getUser(). signOut() calls supabase.auth.signOut() whose default scope is global (revokes refresh … | Add a test or documented manual check that a refresh token is rejected after sign-out; keep access-token lifetime short; consider getUser() (server round-trip) on high-risk actions. | src/lib/request-context.ts:52, src/lib/supabase/proxy.ts:323, src/app/account/actions.ts:472 |
@@ -1110,6 +1020,8 @@ source is marked ❔; the problem was still observed.
 | F-SEC-005-008-APP | SEC-005-008 Financial changes are logged with before and after values | YELLOW | high | invoice_revisions stores previous/next, subtotal_delta_cents, credit_due_cents and created_by; activity timeline and refund tests pass. Payment records and discount edits were not all confirmed to log before/after. invo… | Extend revision logging to manual payments, discounts and deposit applications. |  |
 | F-SEC-005-011-APP | SEC-005-011 Every MCP tool call is logged | YELLOW | high | mcp_call_log has organization_id, method, tool_name, redacted arguments, is_error/http_status, duration_ms, session_key; owners/admins can read; retention cron. No explicit connection/credential id column. mcp-log-redac… | Add the credential/connection id to each row (details in SEC-007 findings). | src/lib/mcp-log.ts:1 |
 | F-SEC-005-012-APP | SEC-005-012 Logs contain no secrets and minimal personal information | RED | high | src/app/booking/[token]/pay/route.ts:104 logs the booking capability token via console.error (Vercel runtime logs). Capability and MCP tokens are in URL paths, so Vercel request logs contain them; no retention/access st… | Remove the token from that log line; document Vercel log retention/access; move tokens out of paths (fragment or POST) where practical. | src/app/booking/[token]/pay/route.ts:104 |
+| F-SEC-006-001-APP | SEC-006-001 A documented incident response plan exists and is maintained | YELLOW | high | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). UPDATE 2026-11-26: PR #310: docs/security/INCIDENT-RESPONSE-PL… | Write docs/security/incident-response.md naming the incident lead and backup, contacts (counsel, insurer, vendors), severity levels and runbooks. |  |
+| F-SEC-006-005-APP | SEC-006-005 Evidence is preserved with integrity | YELLOW | high | No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Log retention is not documented and no drain exists. UPDATE 20… | Add an evidence-preservation runbook (Vercel/Supabase log export, PITR timestamp, action log). |  |
 | F-SEC-007-007-APP | SEC-007-007 Tool arguments are validated server-side | YELLOW | high | The protocol layer passes arguments straight to handlers without validating against inputSchema (src/lib/mcp-protocol.ts:162-171); additionalProperties:false is declared but not enforced, so unknown fields are silently … | Validate every tools/call against the tool's inputSchema in handleOne (e.g. Ajv in strict mode, or zod schemas generated per tool), rejecting unknown fields and out-of-range values with isError before the handler runs; … | src/lib/mcp-protocol.ts:162, src/lib/mcp-protocol.ts:208, src/lib/mcp-business-tools.ts:711 |
 | F-SEC-007-011-APP | SEC-007-011 AI and MCP outputs do not disclose sensitive information | RED | high | No grant model exists (SEC-007-003), so every business connection can read full customer text conversations (list_text_conversations / get_text_conversation), customer details, invoices and proposal provider receipts. C… | Put text history and any recording/transcript access behind a separate opt-in grant; trim tool responses to the fields needed (e.g. omit email/phone from search results unless asked); add response-shape tests for the te… | src/lib/mcp-text-history.ts:36, src/lib/mcp-text-history.ts:51, src/lib/mcp-customer-tools.ts:36 |
 | F-SEC-007-016-APP | SEC-007-016 AI-produced financial figures are computed deterministically | YELLOW | high | Totals are computed in code in cents: add_job_lines parses lines and totals them (mcp-job-lines tested), bill_job and create_invoice use invoiceTotals, change orders and discounts recompute via tested math, the assistan… | Make create_invoice/set_invoice_amount derive totals from priced lines (or require the human to type the figure in Volteira); keep the model's role to proposing lines, not totals. | src/lib/mcp-business-tools.ts:601, src/lib/assistant-confirmed.ts:354, src/lib/mcp-job-lines.ts:1 |

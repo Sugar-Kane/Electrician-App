@@ -1523,12 +1523,12 @@
     "requirement_id": "FED-011-002",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
     "expected": "Determine which sales are door-to-door; support a flag for in-home sales that triggers cancellation-notice workflows.",
-    "actual": "Estimates, change orders and contracts can be presented and signed in person at the customer's home on the job page (contract-send.ts:54), but there is no in-home-sale flag, no determination, and no cancellation workflow. The e-sign consent even refers to 'any notice of your right to cancel' (esign-consent.ts:28) that the product never generates.",
+    "actual": "Estimates, change orders and contracts can be presented and signed in person at the customer's home on the job page (contract-send.ts:54), but there is no in-home-sale flag, no determination, and no cancellation workflow. The e-sign consent even refers to 'any notice of your right to cancel' (esign-consent.ts:28) that the product never generates. UPDATE 2026-11-26: PR #310: a home improvement contract is treated as a home solicitation sale by default; the office marks it only when agreed at the contractor's own place of business, which removes the right-to-cancel notice. Counsel to confirm the FTC 16 CFR 429 determination.",
     "affected_files": [
       "src/lib/contract-send.ts:54",
       "src/lib/esign-consent.ts:28",
@@ -1540,13 +1540,22 @@
         "location": "grep 'right to cancel|notice of cancellation|three business days' in contract code: none",
         "collected_at": "2026-11-25",
         "method": "Code search"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: a home improvement contract is treated as a home solicitation sale by default; the office marks it only when agreed at the contractor's own place of business, which removes the right-to-cancel notice. Counsel to confirm the FTC 16 CFR 429 determination."
       }
     ],
-    "test_ids": [],
-    "test_result": "not-run",
+    "test_ids": [
+      "CT-HIC-003"
+    ],
+    "test_result": "passed",
     "remediation": "Get counsel's determination; add an 'sold at the residence' flag that inserts the cancellation statement and Notice of Cancellation and holds work/payment until the period ends.",
-    "priority": "P1",
-    "legal_review_required": true
+    "priority": "P2",
+    "legal_review_required": true,
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: a home improvement contract is treated as a home solicitation sale by default; the office marks it only when agreed at the contractor's own place of business, which removes the right-to-cancel notice. Counsel to confirm the FTC 16 CFR 429 determination."
   },
   {
     "finding_id": "F-FED-011-003-APP",
@@ -1590,12 +1599,12 @@
     "requirement_id": "FED-011-004",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "responsible_party": "Pacific Plains Electric, Contractor tenants, Volteira as service provider",
     "expected": "Notice of Cancellation form in duplicate, oral notice, and refunds within 10 business days of a valid cancellation.",
-    "actual": "No Notice of Cancellation form, oral-notice prompt or cancellation-refund workflow exists; refunds are manual (invoice-refund.ts) and not tied to a cancellation deadline.",
+    "actual": "No Notice of Cancellation form, oral-notice prompt or cancellation-refund workflow exists; refunds are manual (invoice-refund.ts) and not tied to a cancellation deadline. UPDATE 2026-11-26: PR #310: two completed Notice of Cancellation forms (transaction date and last day filled at signing) on detachable pages; cancellations by link or recorded by the office start a 10-day refund clock with Refund all payments. The FTC rule's own form wording and oral notice are not separately produced; counsel to confirm the California form satisfies 16 CFR 429.",
     "affected_files": [
       "src/lib/invoice-refund.ts",
       "src/lib/contract-signing.ts"
@@ -1606,13 +1615,23 @@
         "location": "grep 'notice of cancellation' across src: none",
         "collected_at": "2026-11-25",
         "method": "Code search"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/cancellation-refunds.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: two completed Notice of Cancellation forms (transaction date and last day filled at signing) on detachable pages; cancellations by link or recorded by the office start a 10-day refund clock with Refund all payments. The FTC rule's own form wording and oral notice are not separately produced"
       }
     ],
-    "test_ids": [],
-    "test_result": "not-run",
+    "test_ids": [
+      "CT-HIC-006",
+      "CT-HIC-007"
+    ],
+    "test_result": "passed",
     "remediation": "Generate a completed Notice of Cancellation with the transaction date and deadline, prompt the technician to give oral notice, and track cancellation refunds against the 10-business-day deadline.",
-    "priority": "P1",
-    "legal_review_required": true
+    "priority": "P2",
+    "legal_review_required": true,
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: two completed Notice of Cancellation forms (transaction date and last day filled at signing) on detachable pages; cancellations by link or recorded by the office start a 10-day refund clock with Refund all payments. The FTC rule's own form wording and oral notice are not separately produced; counsel to confirm the California form satisfies 16 CFR 429."
   },
   {
     "finding_id": "F-FED-011-005-APP",

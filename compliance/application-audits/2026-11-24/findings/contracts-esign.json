@@ -1484,11 +1484,11 @@
     "requirement_id": "CSLB-003-011",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "10pt bold heading 'Home Improvement' identifying the contract type.",
-    "actual": "Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading.",
+    "actual": "Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 10-point bold 'Home Improvement' heading on page 1.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/pdf/contract-document.tsx:192"
@@ -1500,23 +1500,34 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 10-point bold 'Home Improvement' heading on page 1."
   },
   {
     "finding_id": "F-CSLB-003-012-APP",
     "requirement_id": "CSLB-003-012",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "12pt bold 'completely filled in copy' statement; refuse issuance while required fields are blank.",
-    "actual": "Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) are not required, and job_date falls back to 'a date to be agreed'.",
+    "actual": "Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) are not required, and job_date falls back to 'a date to be agreed'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 12-point bold completely-filled-in-copy statement; a contract with blanks already cannot be signed (unsignableBecause).",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/contract-signing.ts:156",
@@ -1535,26 +1546,35 @@
         "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
         "collected_at": "2026-11-25",
         "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Make all 7159 required fields mandatory before send.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
-      "src/lib/contract-signing.test.ts:106"
+      "src/lib/contract-signing.test.ts:106",
+      "CT-HIC-001",
+      "CT-HIC-003"
     ],
-    "test_result": "passed"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 12-point bold completely-filled-in-copy statement; a contract with blanks already cannot be signed (unsignableBecause)."
   },
   {
     "finding_id": "F-CSLB-003-013-APP",
     "requirement_id": "CSLB-003-013",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Heading 'Contract Price' followed by the amount in dollars and cents from integer cents.",
-    "actual": "Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'.",
+    "actual": "Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 'Contract Price' heading followed by the amount from integer cents.",
     "affected_files": [
       "src/lib/contract-template.ts:202",
       "src/lib/contract-template.ts:143"
@@ -1572,15 +1592,23 @@
         "location": "npm test (node --test src/**/*.test.ts)",
         "collected_at": "2026-11-25",
         "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Use the statutory 'Contract Price' heading in the home-improvement template.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
-      "src/lib/contract-template.test.ts"
+      "src/lib/contract-template.test.ts",
+      "CT-HIC-003"
     ],
-    "test_result": "passed"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 'Contract Price' heading followed by the amount from integer cents."
   },
   {
     "finding_id": "F-CSLB-003-014-APP",
@@ -1817,11 +1845,11 @@
     "requirement_id": "CSLB-003-021",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "'Note about Extra Work and Change Orders' heading and statutory statement.",
-    "actual": "Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'.",
+    "actual": "Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes 'Note About Extra Work and Change Orders' and the statutory statement.",
     "affected_files": [
       "src/lib/contract-template.ts:209",
       "src/lib/contract-template.ts:193"
@@ -1833,12 +1861,22 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes 'Note About Extra Work and Change Orders' and the statutory statement."
   },
   {
     "finding_id": "F-CSLB-003-022-APP",
@@ -1979,11 +2017,11 @@
     "requirement_id": "CSLB-003-026",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "12pt 'Information about the Contractors State License Board (CSLB)' notice.",
-    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the CSLB information notice at 12 point.",
     "affected_files": [
       "src/lib/contract-template.ts:193"
     ],
@@ -1994,12 +2032,23 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the CSLB information notice at 12 point."
   },
   {
     "finding_id": "F-CSLB-003-027-APP",

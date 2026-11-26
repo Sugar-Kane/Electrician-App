@@ -4,13 +4,13 @@
     "requirement_id": "SEC-001-001",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "applicability": "Applies to the Volteira multi-tenant application in production.",
     "responsible_party": "Volteira platform, Authorized users",
     "expected": "Every user can enroll a TOTP/WebAuthn factor from account settings; AAL checked server-side; MFA encouraged.",
-    "actual": "No MFA anywhere in the application: no enroll/challenge/verify calls, no aal checks (grep mfa|totp|aal over src returns no auth usage). Production auth.mfa_factors has 0 rows. Local supabase/config.toml has [auth.mfa.totp] enroll_enabled = false.",
+    "actual": "No MFA anywhere in the application: no enroll/challenge/verify calls, no aal checks (grep mfa|totp|aal over src returns no auth usage). Production auth.mfa_factors has 0 rows. Local supabase/config.toml has [auth.mfa.totp] enroll_enabled = false. UPDATE 2026-11-26: PR #310: every user can enroll a TOTP factor at Settings → Two-step sign-in; the assurance level is checked server-side (mfa-server.ts) and in the database for platform admins from 2026-12-10. WebAuthn not offered.",
     "affected_files": [
       "src/app/account/page.tsx:384",
       "src/lib/request-context.ts:52",
@@ -35,12 +35,22 @@
         "collected_at": "2026-11-25",
         "method": "file read",
         "limitations": "Local CLI config, not the production Auth dashboard setting."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/mfa-server.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: every user can enroll a TOTP factor at Settings → Two-step sign-in; the assurance level is checked server-side (mfa-server.ts) and in the database for platform admins from 2026-12-10. WebAuthn not offered."
       }
     ],
     "remediation": "Enable TOTP (and WebAuthn when available) in Supabase Auth; add an Account > Security enrollment flow using supabase.auth.mfa.enroll/challenge/verify; read the aal claim server-side in currentContext(); nudge enrollment on sign-up and the account page.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-MFA-001"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: every user can enroll a TOTP factor at Settings → Two-step sign-in; the assurance level is checked server-side (mfa-server.ts) and in the database for platform admins from 2026-12-10. WebAuthn not offered."
   },
   {
     "finding_id": "F-SEC-001-002-APP",
@@ -3239,13 +3249,13 @@
     "requirement_id": "SEC-006-001",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "applicability": "Applies to the Volteira multi-tenant application in production.",
     "responsible_party": "Shadam LLC, Volteira platform",
     "expected": "Written IR plan with lead/backup, contacts, severities, runbooks; reviewed annually.",
-    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing).",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). UPDATE 2026-11-26: PR #310: docs/security/INCIDENT-RESPONSE-PLAN.md names roles, contacts to keep, first-hour containment, key rotation, an incident log and an annual tabletop. Gaps: a named backup lead, a severity matrix and separate runbooks per scenario.",
     "affected_files": [],
     "evidence": [
       {
@@ -3253,12 +3263,20 @@
         "location": "docs/, SECURITY_REMEDIATION_REPORT.md, README.md",
         "collected_at": "2026-11-25",
         "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "docs/security/INCIDENT-RESPONSE-PLAN.md",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: docs/security/INCIDENT-RESPONSE-PLAN.md names roles, contacts to keep, first-hour containment, key rotation, an incident log and an annual tabletop. Gaps: a named backup lead, a severity matrix and separate runbooks per scenario."
       }
     ],
     "remediation": "Write docs/security/incident-response.md naming the incident lead and backup, contacts (counsel, insurer, vendors), severity levels and runbooks.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "not-applicable",
+    "test_ids": [],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: docs/security/INCIDENT-RESPONSE-PLAN.md names roles, contacts to keep, first-hour containment, key rotation, an incident log and an annual tabletop. Gaps: a named backup lead, a severity matrix and separate runbooks per scenario."
   },
   {
     "finding_id": "F-SEC-006-002-APP",
@@ -3343,13 +3361,13 @@
     "requirement_id": "SEC-006-005",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "applicability": "Applies to the Volteira multi-tenant application in production.",
     "responsible_party": "Shadam LLC, Volteira platform",
     "expected": "Runbooks preserve logs, PITR point and investigator actions before changes; retention adequate.",
-    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Log retention is not documented and no drain exists.",
+    "actual": "No incident response plan exists in the repository (grep for incident response/tabletop/breach notification in docs, README and compliance returns nothing). Log retention is not documented and no drain exists. UPDATE 2026-11-26: PR #310: the incident plan's first hour exports Supabase and Vercel logs, mcp_call_log, activity_events, task_proposals and Stripe/Twilio events before changes, kept access-limited; PITR timestamp not yet named.",
     "affected_files": [],
     "evidence": [
       {
@@ -3357,12 +3375,20 @@
         "location": "docs/",
         "collected_at": "2026-11-25",
         "method": "code-review"
+      },
+      {
+        "type": "source-reference",
+        "location": "docs/security/INCIDENT-RESPONSE-PLAN.md",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the incident plan's first hour exports Supabase and Vercel logs, mcp_call_log, activity_events, task_proposals and Stripe/Twilio events before changes, kept access-limited; PITR timestamp not yet named."
       }
     ],
     "remediation": "Add an evidence-preservation runbook (Vercel/Supabase log export, PITR timestamp, action log).",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "not-applicable",
+    "test_ids": [],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the incident plan's first hour exports Supabase and Vercel logs, mcp_call_log, activity_events, task_proposals and Stripe/Twilio events before changes, kept access-limited; PITR timestamp not yet named."
   },
   {
     "finding_id": "F-SEC-006-006-APP",
