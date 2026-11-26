@@ -307,6 +307,15 @@
         "CSLB-007-011"
       ],
       "what": "Deposits and work wait out the right to cancel; customer may cancel only within it; refund due in 10 days"
+    },
+    {
+      "id": "CT-HIC-007",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-007-007"
+      ],
+      "what": "After a cancellation every payment is returned in full (Stripe or by hand), only once"
     }
   ]
 }

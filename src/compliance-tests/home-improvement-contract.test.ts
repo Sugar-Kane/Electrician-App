@@ -175,3 +175,23 @@ test("CT-HIC-006: deposits and work wait out the right to cancel; the customer m
 
   assert.equal(refundDueBy(new Date("2026-11-21T00:00:00Z")).toISOString(), "2026-12-01T00:00:00.000Z");
 });
+
+test("CT-HIC-007: after a cancellation every payment is returned in full, to the card when Stripe took it, else by hand, and only once", async () => {
+  const { cancellationRefundSteps, owedBackCents, refundsComplete } = await import("../lib/cancellation-refunds.ts");
+  const paid = [
+    { id: "deposit", source: "prepayment" as const, method: "card", amountCents: 100_000, refundedCents: 0, viaStripe: true },
+    { id: "cash", source: "prepayment" as const, method: "cash", amountCents: 25_000, refundedCents: 0, viaStripe: false },
+    { id: "inv", source: "invoice" as const, method: "card", amountCents: 50_000, refundedCents: 20_000, viaStripe: true },
+    { id: "done", source: "invoice" as const, method: "check", amountCents: 10_000, refundedCents: 10_000, viaStripe: false },
+  ];
+  assert.deepEqual(cancellationRefundSteps(paid), [
+    { id: "deposit", source: "prepayment", amountCents: 100_000, how: "stripe" },
+    { id: "cash", source: "prepayment", amountCents: 25_000, how: "by_hand" },
+    { id: "inv", source: "invoice", amountCents: 30_000, how: "stripe" },
+  ]);
+  assert.equal(owedBackCents(paid), 155_000);
+  assert.equal(refundsComplete(paid), false);
+  // Over-refunded or odd figures never produce a negative or fractional refund.
+  assert.deepEqual(cancellationRefundSteps([{ ...paid[0]!, refundedCents: 150_000 }]), []);
+  assert.equal(refundsComplete(paid.map((payment) => ({ ...payment, refundedCents: payment.amountCents }))), true);
+});

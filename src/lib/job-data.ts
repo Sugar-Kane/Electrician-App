@@ -1,3 +1,4 @@
+import { readLegalNotices, withinCancellationPeriod } from "@/lib/ca-home-improvement";
 import "server-only";
 
 import { cache } from "react";
@@ -1287,7 +1288,46 @@ export type JobContract = {
   messagePreview: string;
   /** The scope paragraph, as drafted: what the customer is agreeing to have done. */
   scope: string;
+  /**
+   * A home improvement contract's right to cancel (compliance CSLB-007-002,
+   * CSLB-007-007). Null for a contract without one.
+   */
+  rightToCancel: {
+    /** The last day the customer may cancel; the right ends at midnight. Empty until signed. */
+    lastDayLabel: string;
+    /** Still inside the period: no work, no payments. */
+    open: boolean;
+    cancelledLabel: string;
+    refundDueLabel: string;
+    /** Past the 10 days with refunds not marked done. */
+    refundOverdue: boolean;
+    refundsCompleted: boolean;
+    note: string;
+  } | null;
 };
+
+function rightToCancelFor(row: Record<string, unknown>, timeZone: string): JobContract["rightToCancel"] {
+  const notices = readLegalNotices(row.legal_notices);
+  if (!notices?.cancellationForm) return null;
+  const iso = (value: unknown) => (typeof value === "string" ? value : "");
+  const day = (value: string) =>
+    value ? new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(new Date(value)) : "";
+  const deadline = iso(row.cancel_deadline);
+  const refundDue = iso(row.refund_due_by);
+  const completed = Boolean(iso(row.refunds_completed_at));
+  return {
+    lastDayLabel: deadline ? day(new Date(Date.parse(deadline) - 1).toISOString()) : "",
+    open: withinCancellationPeriod(
+      { cancellable: true, signedAt: iso(row.signed_at) || null, cancelDeadline: deadline || null, cancelledAt: iso(row.cancelled_at) || null },
+      new Date(),
+    ),
+    cancelledLabel: day(iso(row.cancelled_at)),
+    refundDueLabel: day(refundDue),
+    refundOverdue: Boolean(refundDue) && !completed && Date.now() > Date.parse(refundDue),
+    refundsCompleted: completed,
+    note: iso(row.cancellation_note),
+  };
+}
 
 /**
  * The contracts already generated for a job.
@@ -1320,7 +1360,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
   const { data } = await context.database
     .from("contracts")
     .select(
-      "id, kind, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name, total_cents, deposit_cents, deposit_paid, scope",
+      "id, kind, body, unfilled, created_at, status, public_token, signed_at, signature_name, signature_provider, signature_sent_at, contractor_signed_at, contractor_signature_name, total_cents, deposit_cents, deposit_paid, scope, legal_notices, cancel_deadline, cancelled_at, cancellation_note, refund_due_by, refunds_completed_at",
     )
     .eq("organization_id", context.organizationId)
     .eq("job_id", jobId)
@@ -1402,6 +1442,7 @@ export async function getJobContracts(jobNumber: string): Promise<JobContract[]>
         depositPaid: typeof row.deposit_paid === "boolean" ? row.deposit_paid : null,
       }),
       scope: typeof row.scope === "string" ? row.scope : "",
+      rightToCancel: rightToCancelFor(row, context.timeZone),
       messagePreview: signingLinkMessage({
         businessName: typeof organization?.name === "string" ? organization.name : "",
         jobNumber,

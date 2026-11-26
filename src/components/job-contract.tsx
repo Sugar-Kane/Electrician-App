@@ -1,5 +1,6 @@
 "use client";
 
+import { recordCancellationAction, refundAllPaymentsAction, type CancellationActionState } from "@/app/jobs/[jobId]/cancellation-actions";
 import { CONTRACT_TYPES, defaultContractType, type ContractType } from "@/lib/ca-home-improvement";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -419,6 +420,7 @@ function ContractSigning({
 /** Where the newest contract stands, in the one line the folded section shows. */
 function contractStatus(contract: JobContractRecord): string {
   const order = contract.kind === "change_order";
+  if (contract.status === "cancelled") return `Cancelled by the customer · ${contract.rightToCancel?.cancelledLabel ?? ""}`;
   if (contract.signedLabel) {
     return `${order ? "Change order signed" : "Signed"} by ${contract.signatureName} · ${contract.signedLabel}`;
   }
@@ -679,6 +681,94 @@ function ContractTypeFields({ customerType }: { customerType: string }) {
   );
 }
 
+const cancellationInitial: CancellationActionState = { error: "" };
+
+/**
+ * A signed home improvement contract's right to cancel, on the job: while the
+ * customer may still cancel, no work and no payments; a cancellation the
+ * customer sent by email, mail or in person is recorded here; after one, the
+ * 10-day refund deadline and "Refund all payments".
+ */
+function RightToCancelPanel({ jobNumber, contract }: { jobNumber: string; contract: JobContractRecord | undefined }) {
+  const [recordState, record, recording] = useActionState(recordCancellationAction, cancellationInitial);
+  const [refundState, refund, refunding] = useActionState(refundAllPaymentsAction, cancellationInitial);
+  const right = contract?.rightToCancel;
+  if (!contract || !right) return null;
+
+  if (contract.status === "cancelled") {
+    return (
+      <div className={`mt-3 rounded-control border p-4 ${right.refundsCompleted ? "border-line" : "border-critical/40 bg-critical/5"}`}>
+        <p className="text-sm font-semibold">Customer cancelled on {right.cancelledLabel}</p>
+        {right.note ? <p className="mt-1 text-sm text-ink-muted">They wrote: “{right.note}”</p> : null}
+        {right.refundsCompleted ? (
+          <p className="mt-1 text-sm text-ink-muted">Everything they paid has been refunded.</p>
+        ) : (
+          <>
+            <p className={`mt-1 text-sm ${right.refundOverdue ? "font-semibold text-critical" : "text-ink-muted"}`}>
+              {right.refundOverdue ? "Overdue: " : ""}California law requires returning everything they paid by {right.refundDueLabel}. Don&apos;t start or continue the work.
+            </p>
+            <form action={refund} className="mt-3">
+              <input type="hidden" name="jobNumber" value={jobNumber} />
+              <button
+                type="submit"
+                disabled={refunding}
+                className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-60 sm:w-auto"
+              >
+                {refunding ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                Refund all payments
+              </button>
+              <p className="mt-2 text-sm text-ink-muted">Card and bank payments go back through Stripe. Cash and checks are marked returned; hand them back.</p>
+            </form>
+          </>
+        )}
+        <FormMessage error={refundState.error} notice={refundState.notice} />
+      </div>
+    );
+  }
+
+  if (!right.open) return null;
+  return (
+    <div className="mt-3 rounded-control border border-caution/40 bg-caution-bg p-4">
+      <p className="text-sm font-semibold">The customer can cancel until midnight on {right.lastDayLabel || "the end of their cancellation period"}</p>
+      <p className="mt-1 text-sm text-ink-muted">Don&apos;t start the work or take payments until then. Pay links and the deposit request wait and go out once it ends.</p>
+      <details className="mt-3">
+        <summary className="tap-target flex min-h-11 cursor-pointer items-center text-sm font-semibold">They cancelled by email, mail or in person</summary>
+        <form action={record} className="mt-2 space-y-3">
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <input type="hidden" name="contractId" value={contract.id} />
+          <label className="block text-sm font-medium">
+            How it arrived
+            <select name="channel" defaultValue="email" className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base">
+              <option value="email">Email</option>
+              <option value="mail">Mail</option>
+              <option value="fax">Fax</option>
+              <option value="in_person">Handed over in person</option>
+              <option value="other">Other written notice</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            Date received
+            <input type="date" name="receivedOn" required className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base" />
+          </label>
+          <label className="block text-sm font-medium">
+            Note (optional)
+            <input name="note" maxLength={1000} className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base" />
+          </label>
+          <button
+            type="submit"
+            disabled={recording}
+            className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-critical px-4 text-sm font-semibold text-critical disabled:opacity-60 sm:w-auto"
+          >
+            {recording ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+            Record the cancellation
+          </button>
+        </form>
+      </details>
+      <FormMessage error={recordState.error} notice={recordState.notice} />
+    </div>
+  );
+}
+
 export function JobContract({
   jobNumber,
   contracts,
@@ -808,6 +898,8 @@ export function JobContract({
         </div>
       ) : null}
       {changeOrder}
+
+      <RightToCancelPanel jobNumber={jobNumber} contract={contracts.find((entry) => entry.kind === "agreement" && entry.rightToCancel && entry.signedAt)} />
 
       {/*
         Folded by default, like Job details and History. On most visits the
