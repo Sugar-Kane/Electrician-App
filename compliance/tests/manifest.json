@@ -183,7 +183,7 @@
         "SEC-002-010",
         "SEC-002-012"
       ],
-      "what": "Two synthetic tenants in a rolled-back transaction: tenant A cannot read, change or delete tenant B's rows",
+      "what": "Two synthetic tenants in one transaction that always aborts: tenant A cannot read, change or delete tenant B's rows (TI-002..010), anon sees nothing (TI-012), and an owner cannot change its own subscription (TI-011) or Stripe connection (TI-013)",
       "last_run": {
         "date": "2026-11-25",
         "how": "manual, production, single transaction always aborted",

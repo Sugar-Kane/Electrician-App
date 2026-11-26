@@ -1,4 +1,4 @@
--- TI-001 .. TI-012: two-tenant isolation test in ONE transaction that always aborts.
+-- TI-001 .. TI-013: two-tenant isolation test in ONE transaction that always aborts.
 --
 -- STATUS: run 2 on 2026-11-25 is the run of record: 72 passed, 1 failed (TI-011), 6 vacuous (evidence/tenant-isolation-run2.json).
 -- Supports: SEC-002-001, -002, -003, -004, -006, -007, -010, -012, -013, -019.
@@ -216,6 +216,15 @@ begin
   exception when others then
     insert into _ti_results (test_id, phase, table_name, operation, detail)
     values ('TI-000', 'setup', 'organization_subscriptions', 'insert', 'FAILED: ' || sqlstate || ' ' || sqlerrm);
+  end;
+
+  begin
+    -- Not ready for charges, so the TI-013 check below is meaningful.
+    insert into public.stripe_connect_accounts (organization_id, stripe_account_id, onboarding_status, charges_enabled)
+    values (ids.a_org, 'acct_TIcompliance' || left(replace(ids.a_org::text, '-', ''), 12), 'pending', false);
+  exception when others then
+    insert into _ti_results (test_id, phase, table_name, operation, detail)
+    values ('TI-000', 'setup', 'stripe_connect_accounts', 'insert', 'FAILED: ' || sqlstate || ' ' || sqlerrm);
   end;
 
   begin
@@ -442,6 +451,29 @@ begin
   exception when others then
     insert into _ti_results (test_id, phase, table_name, operation, expected, blocked, passed, detail)
     values ('TI-011', 'as_a', 'organization_subscriptions', 'self-upgrade own plan to active', 0, true, true, sqlstate || ' ' || sqlerrm);
+  end;
+
+  -- TI-013 Within-tenant privilege: A's owner turns on charges or points payouts at
+  -- another Stripe account (SEC-002-010 / SEC-002-012).
+  begin
+    with u as (update public.stripe_connect_accounts set charges_enabled = true where organization_id = ids.a_org returning 1)
+      select count(*) into n from u;
+    insert into _ti_results (test_id, phase, table_name, operation, expected, actual, passed, detail)
+    values ('TI-013', 'as_a', 'stripe_connect_accounts', 'turn on own charges_enabled', 0, n, n = 0,
+            case when n = 0 then 'refused' else 'OWNER/ADMIN CAN MARK ITS OWN STRIPE ACCOUNT READY' end);
+  exception when others then
+    insert into _ti_results (test_id, phase, table_name, operation, expected, blocked, passed, detail)
+    values ('TI-013', 'as_a', 'stripe_connect_accounts', 'turn on own charges_enabled', 0, true, true, sqlstate || ' ' || sqlerrm);
+  end;
+  begin
+    with u as (update public.stripe_connect_accounts set stripe_account_id = 'acct_TIredirected' where organization_id = ids.a_org returning 1)
+      select count(*) into n from u;
+    insert into _ti_results (test_id, phase, table_name, operation, expected, actual, passed, detail)
+    values ('TI-013', 'as_a', 'stripe_connect_accounts', 'change own stripe_account_id', 0, n, n = 0,
+            case when n = 0 then 'refused' else 'OWNER/ADMIN CAN REDIRECT ITS PAYOUTS' end);
+  exception when others then
+    insert into _ti_results (test_id, phase, table_name, operation, expected, blocked, passed, detail)
+    values ('TI-013', 'as_a', 'stripe_connect_accounts', 'change own stripe_account_id', 0, true, true, sqlstate || ' ' || sqlerrm);
   end;
 end
 $as_a$;
