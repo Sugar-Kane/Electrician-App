@@ -61,7 +61,7 @@ export function maxDownPaymentCents(totalCents: number): number {
 }
 
 /** The statutory notice a contract with a down payment carries. */
-export const DOWN_PAYMENT_NOTICE = "THE DOWN PAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.";
+export const DOWN_PAYMENT_NOTICE = "THE DOWNPAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.";
 
 export function planAmounts(totalCents: number, items: PlanItemInput[]): PlanResult {
   const total = Math.max(0, whole(totalCents));
