@@ -428,3 +428,38 @@ export function customerMayCancel(
   if (contract.status !== "signed") return false;
   return withinCancellationPeriod(contract, now);
 }
+
+/** One Notice of Cancellation form, ready to print: blanks are "" until the contract is signed. */
+export type CancellationFormView = {
+  caption: string;
+  /** The date of the transaction: the day the contract was signed. */
+  transactionDate: string;
+  statement: string[];
+  instruction: string;
+  sellerName: string;
+  sellerAddress: string;
+  /** The last day to cancel; the right ends at midnight that night. */
+  lastDay: string;
+  signLine: string;
+};
+
+export function cancellationFormView(
+  form: CancellationFormFacts,
+  filled: { transactionDate: string; lastDay: string },
+): CancellationFormView {
+  return {
+    caption: NOTICE_OF_CANCELLATION_CAPTION,
+    transactionDate: filled.transactionDate,
+    statement: cancellationStatement(form.days),
+    instruction: NOTICE_OF_CANCELLATION_INSTRUCTION,
+    sellerName: form.sellerName,
+    sellerAddress: form.sellerAddress,
+    lastDay: filled.lastDay,
+    signLine: NOTICE_OF_CANCELLATION_SIGN_LINE,
+  };
+}
+
+/** The sections of a contract's notices that go in one place. */
+export function noticesAt(notices: LegalNotices | null | undefined, placement: NoticePlacement): NoticeSection[] {
+  return (notices?.sections ?? []).filter((section) => section.placement === placement);
+}

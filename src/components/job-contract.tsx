@@ -1,5 +1,6 @@
 "use client";
 
+import { CONTRACT_TYPES, defaultContractType, type ContractType } from "@/lib/ca-home-improvement";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -624,9 +625,64 @@ export function ContractPage({
   );
 }
 
+/**
+ * What kind of contract this is, asked before it is drawn up. A home
+ * improvement contract (the default for residential work) carries
+ * California's notices, and the buyer's age decides whether they get three or
+ * five business days to cancel; work agreed at the business's own place of
+ * business carries no right to cancel.
+ */
+function ContractTypeFields({ customerType }: { customerType: string }) {
+  const [type, setType] = useState<ContractType>(defaultContractType(customerType));
+  const chosen = CONTRACT_TYPES.find((entry) => entry.value === type);
+  return (
+    <div className="mb-3 space-y-3">
+      <label className="block text-sm font-medium">
+        Contract type
+        <select
+          name="contractType"
+          value={type}
+          onChange={(event) => setType(event.target.value as ContractType)}
+          className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base"
+        >
+          {CONTRACT_TYPES.map((entry) => (
+            <option key={entry.value} value={entry.value}>
+              {entry.label}
+            </option>
+          ))}
+        </select>
+        {chosen ? <span className="mt-1 block text-sm font-normal text-ink-muted">{chosen.describes}</span> : null}
+      </label>
+      {type === "home_improvement" ? (
+        <>
+          <fieldset>
+            <legend className="text-sm font-medium">Is the customer 65 or older?</legend>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[
+                { value: "no", label: "No · 3 days to cancel" },
+                { value: "yes", label: "Yes · 5 days to cancel" },
+              ].map((option) => (
+                <label key={option.value} className="tap-target flex min-h-12 items-center gap-2 rounded-control border border-line px-3 text-sm">
+                  <input type="radio" name="seniorBuyer" value={option.value} required className="h-4 w-4" />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="tap-target flex min-h-12 items-center gap-2 text-sm">
+            <input type="checkbox" name="negotiatedAtBusiness" className="h-4 w-4" />
+            Agreed at our own place of business (no right to cancel)
+          </label>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export function JobContract({
   jobNumber,
   contracts,
+  customerType = "residential",
   customerName = "",
   customerPhone = "",
   customerEmail = "",
@@ -648,6 +704,8 @@ export function JobContract({
   customerEmail?: string;
   /** What has been written on the job since the customer last signed. */
   changes?: AgreementChangeSummary;
+  /** "residential" or "commercial": residential work defaults to a home improvement contract. */
+  customerType?: string;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
   const [orderState, orderAction] = useActionState(generateChangeOrder, initialState);
@@ -676,6 +734,7 @@ export function JobContract({
   const generate = (
     <form action={action}>
       <input type="hidden" name="jobNumber" value={jobNumber} />
+      <ContractTypeFields customerType={customerType} />
       <GenerateButton existing={contracts.length > 0} />
     </form>
   );

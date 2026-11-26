@@ -30,6 +30,12 @@ export type PlanItemInput = {
    * any, is only when to send the reminder.
    */
   doneAt?: string | null;
+  /**
+   * The phase of work, and the materials or equipment, a progress payment is
+   * for. A home improvement contract lists it beside each payment
+   * (B&P 7159(d)(9)(B)).
+   */
+  phase?: string | null;
 };
 
 export type PlannedPayment = PlanItemInput & { cents: number };

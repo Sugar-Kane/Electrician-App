@@ -1235,6 +1235,7 @@ export default async function JobDetailPage({
               customerName={job.contactName || job.customer}
               customerPhone={job.phone}
               customerEmail={job.email}
+              customerType={job.customerType}
               changes={agreement}
               changeOrders={changeOrders}
               stock={stock}
@@ -1367,6 +1368,7 @@ export default async function JobDetailPage({
               customerName={job.contactName || job.customer}
               customerPhone={job.phone}
               customerEmail={job.email}
+              customerType={job.customerType}
               changes={agreement}
               changeOrders={changeOrders}
               stock={stock}

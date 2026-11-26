@@ -1,3 +1,4 @@
+import { jobCancellationHold } from "@/lib/contract-cancellation-server";
 import "server-only";
 
 import type Stripe from "stripe";
@@ -377,6 +378,8 @@ export async function startPlanCheckout(input: { token: string; origin: string }
   if (!payment) return { error: "unavailable" };
   if (payment.invoiceToken) return { error: "invoice" };
   if (!payLinkPayable(payment.payments, payment.index, { signed: payment.signed, completed: payment.completed })) return { error: "not_payable" };
+  // Not while the customer may still cancel a home improvement contract, or after they did.
+  if (await jobCancellationHold(asFlexibleClient(database), payment.organizationId, payment.jobId)) return { error: "not_payable" };
   const stripeAccount = payment.stripeAccount;
   if (!stripeAccount) return { error: "not_payable" };
   const onAccount = { stripeAccount };
@@ -762,6 +765,10 @@ export async function sendPaymentRequest(itemId: string, options: { byHand: bool
       .find(Boolean);
     return { ok: false, message: blocking ?? "That payment can't be asked for yet." };
   }
+  // Waits out the customer's right to cancel; an automatic request stays
+  // unclaimed and goes once the period ends.
+  const hold = await jobCancellationHold(asFlexibleClient(database), payment.organizationId, payment.jobId);
+  if (hold) return { ok: false, message: hold };
   if (!payment.stripeAccount) return { ok: false, message: "Online payments aren't set up yet. Connect Stripe in Settings first." };
   const origin = appOrigin();
   if (!origin) return { ok: false, message: "Pay links can't be sent right now." };

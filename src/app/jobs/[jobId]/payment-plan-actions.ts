@@ -51,6 +51,7 @@ function readItems(raw: unknown): PlanItemInput[] | null {
       percentBps: typeof row.percentBps === "number" ? Math.round(row.percentBps) : null,
       due,
       dueDate: typeof row.dueDate === "string" ? row.dueDate.slice(0, 10) : null,
+      phase: typeof row.phase === "string" ? row.phase.slice(0, 300) : null,
     });
   }
   return items;
