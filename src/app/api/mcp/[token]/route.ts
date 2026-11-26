@@ -1,25 +1,24 @@
 import { createHash } from "node:crypto";
 import { after, NextResponse } from "next/server";
 
-import { BOOKING_TOOLS, runBookingTool } from "@/lib/booking-tools";
-import { BUSINESS_MCP_TOOLS, runBusinessMcpTool } from "@/lib/mcp-business-tools";
-import { SUPPLIER_ORDER_MCP_TOOLS, runSupplierOrderMcpTool } from "@/lib/mcp-supplier-order-tools";
-import { PAID_INVOICE_MCP_TOOLS, isPaidInvoiceTool, runPaidInvoiceTool } from "@/lib/mcp-paid-invoice-tools";
-import { CUSTOMER_MCP_TOOLS, isCustomerTool, runCustomerTool } from "@/lib/mcp-customer-tools";
-import { TEXT_HISTORY_MCP_TOOLS, isTextHistoryTool, runTextHistoryTool, type HistoryDatabase } from "@/lib/mcp-text-history";
-import { WORKDAY_MCP_TOOLS, runWorkdayMcpTool } from "@/lib/mcp-workday-tools";
-import { isSupervisedTool, runSupervisedTool, SUPERVISED_MCP_TOOLS, supervisedMcpEnabled } from "@/lib/mcp-supervised-tools";
-import { isReleaseTool, RELEASE_MCP_TOOLS, runReleaseTool } from "@/lib/mcp-release-tools";
-import { CHANGE_ORDER_MCP_TOOLS, isChangeOrderTool, runChangeOrderTool } from "@/lib/mcp-change-order-tools";
-import { organizationTimeZone } from "@/lib/job-billing-server";
-import { asFlexibleClient } from "@/lib/supabase/flexible";
+import { BOOKING_TOOLS } from "@/lib/booking-tools";
+import { BUSINESS_MCP_TOOLS } from "@/lib/mcp-business-tools";
+import { SUPPLIER_ORDER_MCP_TOOLS } from "@/lib/mcp-supplier-order-tools";
+import { PAID_INVOICE_MCP_TOOLS } from "@/lib/mcp-paid-invoice-tools";
+import { CUSTOMER_MCP_TOOLS } from "@/lib/mcp-customer-tools";
+import { TEXT_HISTORY_MCP_TOOLS } from "@/lib/mcp-text-history";
+import { WORKDAY_MCP_TOOLS } from "@/lib/mcp-workday-tools";
+import { SUPERVISED_MCP_TOOLS, supervisedMcpEnabled } from "@/lib/mcp-supervised-tools";
+import { RELEASE_MCP_TOOLS } from "@/lib/mcp-release-tools";
+import { CHANGE_ORDER_MCP_TOOLS } from "@/lib/mcp-change-order-tools";
 import { logMcpCall } from "@/lib/mcp-log";
 import { handleMcpRequest } from "@/lib/mcp-protocol";
 import { bearerAccepted, isMcpConfigured, readSession } from "@/lib/mcp-session";
 import { authorizeBusinessMcpConnection } from "@/lib/mcp-business-authorization";
+import { businessConnectionLookups, callToolFromChatGpt } from "@/lib/mcp-dispatch";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const SERVER_VERSION = "1.16.0";
+const SERVER_VERSION = "1.17.0";
 
 /*
  * Room for the confirmations that `runBookingTool` schedules with `after`.
@@ -37,22 +36,6 @@ function json(body: unknown, status: number) {
 
 function rpcError(status: number, code: number, message: string) {
   return json({ jsonrpc: "2.0", id: null, error: { code, message } }, status);
-}
-
-/**
- * Who a tool that records a person acts as: the owner who created this
- * connection, but only while they are still a member of the business. Never
- * anything the request says.
- */
-async function connectionUserId(database: ReturnType<typeof getSupabaseAdmin>, organizationId: string, userId: string): Promise<string | null> {
-  if (!userId) return null;
-  const { data: member } = await database
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", organizationId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  return member ? userId : null;
 }
 
 function describeRequest(body: unknown): { method: string; toolName?: string } {
@@ -83,33 +66,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   if (business) {
     // One decision, tested on its own (mcp-business-authorization.ts): a live
     // credential of this same business, made by someone still an owner here.
-    const verdict = await authorizeBusinessMcpConnection(session, {
-      credential: async (credentialId, organizationId) => {
-        const { data } = await database
-          .from("mcp_business_credentials")
-          .select("created_by, revoked_at, expires_at")
-          .eq("id", credentialId)
-          .eq("organization_id", organizationId)
-          .maybeSingle();
-        const row = (data ?? null) as Record<string, unknown> | null;
-        return row
-          ? {
-              createdBy: typeof row.created_by === "string" ? row.created_by : "",
-              revokedAt: typeof row.revoked_at === "string" ? row.revoked_at : null,
-              expiresAt: typeof row.expires_at === "string" ? row.expires_at : null,
-            }
-          : null;
-      },
-      memberRole: async (organizationId, userId) => {
-        const { data } = await database
-          .from("organization_members")
-          .select("role")
-          .eq("organization_id", organizationId)
-          .eq("user_id", userId)
-          .maybeSingle();
-        return typeof data?.role === "string" ? data.role : null;
-      },
-    });
+    const verdict = await authorizeBusinessMcpConnection(session, businessConnectionLookups(database));
     if (!verdict.ok) return rpcError(verdict.status, -32001, verdict.message);
     connectedBy = verdict.connectedBy;
     // A query only runs once awaited, and `after` keeps it off the reply's path.
@@ -137,65 +94,15 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   const tools = business
     ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CHANGE_ORDER_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...RELEASE_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
-  const workdayNames = new Set(WORKDAY_MCP_TOOLS.map((tool) => tool.name));
-  const businessNames = new Set(BUSINESS_MCP_TOOLS.map((tool) => tool.name));
-  const supplierNames = new Set(SUPPLIER_ORDER_MCP_TOOLS.map((tool) => tool.name));
 
   const reply = await handleMcpRequest(body, {
     serverInfo: { name: business ? "electrician-business" : "electrician-booking", version: SERVER_VERSION },
     tools,
     callTool: async (name, args) => {
       const toolStartedAt = Date.now();
-      const result = business && isReleaseTool(name)
-        ? runReleaseTool(name, args, process.env.NEXT_PUBLIC_APP_URL ?? "")
-        : supervised && isSupervisedTool(name)
-        ? await runSupervisedTool({
-            database: asFlexibleClient(database),
-            organizationId: session.organizationId,
-            // The owner this connection was verified for above, never a model's claim.
-            actorUserId: await connectionUserId(database, session.organizationId, connectedBy),
-            credentialId: session.credentialId ?? "",
-            name,
-            args,
-          })
-        : business && workdayNames.has(name)
-        ? await runWorkdayMcpTool({ database, session, name, args })
-        : business && businessNames.has(name)
-        ? await runBusinessMcpTool({ database, session, name, args })
-        : business && isChangeOrderTool(name)
-        ? await runChangeOrderTool({
-            name,
-            args,
-            // Billing permission is the connected owner's own, checked again
-            // in the database for anything that moves money.
-            context: await (await import("@/lib/mcp-change-order-services")).changeOrderToolContext({
-              database: asFlexibleClient(database),
-              organizationId: session.organizationId,
-              actorUserId: await connectionUserId(database, session.organizationId, connectedBy),
-            }),
-          })
-        : business && isCustomerTool(name)
-        ? await runCustomerTool({ database: asFlexibleClient(database), organizationId: session.organizationId, name, args })
-        : business && isPaidInvoiceTool(name)
-        ? await runPaidInvoiceTool({
-            database: asFlexibleClient(database),
-            organizationId: session.organizationId,
-            actorUserId: await connectionUserId(database, session.organizationId, connectedBy),
-            timeZone: await organizationTimeZone(asFlexibleClient(database), session.organizationId),
-            name,
-            args,
-          })
-        : business && isTextHistoryTool(name)
-        ? await runTextHistoryTool({
-            database: database as unknown as HistoryDatabase,
-            organizationId: session.organizationId,
-            timeZone: await organizationTimeZone(asFlexibleClient(database), session.organizationId),
-            name,
-            args,
-          })
-        : business && supplierNames.has(name)
-          ? await runSupplierOrderMcpTool({ database, session, name, args })
-          : await runBookingTool({ database, session, name, args });
+      // A confirmed call that reaches a customer or moves money waits for the
+      // owner's approval in Volteira instead of running (mcp-approval.ts).
+      const result = await callToolFromChatGpt({ database, session, connectedBy }, name, args);
       await logMcpCall(database, {
         organizationId: session.organizationId,
         method: "tools/call",

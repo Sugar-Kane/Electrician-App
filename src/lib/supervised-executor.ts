@@ -206,7 +206,27 @@ const writeNote: Handler = async (action, deps) => {
   return { outcome: "succeeded", externalRef: text(data.id) };
 };
 
+/**
+ * An approved ChatGPT request: the original tool call runs now, through the
+ * same code ChatGPT would have reached, after the connection is checked again.
+ * The tool's own checks (paid invoice, STOP, contract status) run again too.
+ */
+const runChatGptTool: Handler = async (action) => {
+  const tool = text(action.payload.tool);
+  const credentialId = text(action.payload.credential_id);
+  const args = action.payload.args && typeof action.payload.args === "object" && !Array.isArray(action.payload.args)
+    ? (action.payload.args as Record<string, unknown>)
+    : {};
+  if (!tool || !credentialId) return { outcome: "failed", error: "This request is missing its tool or connection. Nothing was sent." };
+  const { runApprovedChatGptCall } = await import("@/lib/mcp-dispatch");
+  const run = await runApprovedChatGptCall({ organizationId: action.organizationId, credentialId, tool, args });
+  return run.ok
+    ? { outcome: "succeeded", receipt: { tool, result: run.text } }
+    : { outcome: "failed", error: run.error };
+};
+
 export const HANDLERS: Partial<Record<SupervisedAction, Handler>> = {
+  chatgpt_tool: runChatGptTool,
   send_text: sendText,
   send_customer_message: sendText,
   send_customer_email: sendCustomerEmail,

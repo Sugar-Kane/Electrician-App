@@ -88,7 +88,8 @@ test("a proposal is the AI's, for the connection's business, to the number on fi
 });
 
 test("approval needs the owner's confirmation and the fingerprint", async () => {
-  const h = harness(ON);
+  // An internal note: the kind of proposal that may still be approved from ChatGPT.
+  const h = harness(ON, { actionType: "add_job_note" });
   assert.match((await h.run("approve_proposal", { proposal_id: UUID_A, fingerprint: HASH, confirmed: false })).text, /CONFIRMATION REQUIRED/);
   assert.equal((await h.run("approve_proposal", { proposal_id: UUID_A, fingerprint: "sha256:short", confirmed: true })).isError, true);
   assert.equal(h.decided.length, 0);
@@ -104,8 +105,8 @@ test("no verified owner, no decision", async () => {
   assert.equal(h.decided.length, 0);
 });
 
-test("binding and financial actions are approved in Volteira, not from ChatGPT", async () => {
-  for (const actionType of ["issue_refund", "send_contract", "purchase_materials"]) {
+test("binding and financial actions, customer messages and ChatGPT's own requests are approved in Volteira, not from ChatGPT", async () => {
+  for (const actionType of ["issue_refund", "send_contract", "purchase_materials", "send_customer_message", "send_customer_email", "chatgpt_tool"]) {
     const h = harness(ON, { actionType });
     const result = await h.run("approve_proposal", { proposal_id: UUID_A, fingerprint: HASH, confirmed: true });
     assert.equal(result.isError, true, actionType);

@@ -20,7 +20,7 @@ const channel = { type: "string", enum: ["sms", "email", "both"] };
 const confirmed = {
   type: "boolean",
   description:
-    "Set true only after the user explicitly approved this exact action (invoice, amount, how they paid, and whether to send it) in this conversation. Leave false first to get the proposal to show them.",
+    "Set true only after the user explicitly approved this exact action (invoice, amount, how they paid, and whether to send it) in this conversation. Leave false first to get the proposal to show them. For anything that reaches a customer or moves money (texts, estimates, invoices, contracts, billing, payments, discounts, supplier orders, cancelling or telling a customer about a job), true does not run it: it is sent to the owner to approve in Volteira (Operations → AI approval inbox) and runs once they approve.",
 };
 
 export const PAID_INVOICE_MCP_TOOLS: McpTool[] = [

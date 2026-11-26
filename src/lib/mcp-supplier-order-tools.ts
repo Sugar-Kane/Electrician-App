@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const confirmed = {
   type: "boolean",
-  description: "True only after the owner explicitly approves this exact order action.",
+  description: "True only after the owner explicitly approves this exact order action. For anything that reaches a customer or moves money (texts, estimates, invoices, contracts, billing, payments, discounts, supplier orders, cancelling or telling a customer about a job), true does not run it: it is sent to the owner to approve in Volteira (Operations → AI approval inbox) and runs once they approve.",
 };
 
 export const SUPPLIER_ORDER_MCP_TOOLS: McpTool[] = [
