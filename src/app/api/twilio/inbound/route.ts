@@ -1,7 +1,7 @@
 import { readMessagePhotos } from "@/lib/message-media";
 import { NextResponse } from "next/server";
 
-import { firstTextOptsIn, phoneMatches } from "@/lib/messaging-rules";
+import { OPT_OUT_CONFIRMATION, firstTextOptsIn, phoneMatches, readOptOut } from "@/lib/messaging-rules";
 import { handleInboundText } from "@/lib/sms-intake-runner";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { isTwilioConfigured, twilioWebhookUrls, verifyTwilioSignature } from "@/lib/twilio";
@@ -17,13 +17,15 @@ import { isTwilioConfigured, twilioWebhookUrls, verifyTwilioSignature } from "@/
  *
  * Replies with empty TwiML. Twilio's Advanced Opt-Out sends the STOP/START/HELP
  * auto-responses at the Messaging Service level, and duplicating them here
- * would send two.
+ * would send two. The one exception is a customer who asks to stop in their
+ * own words ("please stop texting me"): Twilio does not recognise that, so the
+ * opt-out is recorded here and a single confirmation goes back in the reply.
  */
 
-const OPT_OUT_KEYWORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit"]);
 const OPT_IN_KEYWORDS = new Set(["start", "unstop", "yes"]);
 
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
+const OPT_OUT_TWIML = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${OPT_OUT_CONFIRMATION}</Message></Response>`;
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -87,12 +89,17 @@ export async function POST(request: Request) {
   // gets — someone asking for work. This used to be dropped on the floor.
   // A STOP from a stranger is not worth a customer record; anything else is.
   const keyword = body.toLowerCase().replace(/[^a-z]/g, "");
+  // Any reasonable way of asking to stop, not only the exact keyword (FCC
+  // revocation rule, compliance FED-002-005).
+  const optOutReading = readOptOut(body);
+  const optOut = optOutReading.optOut;
+  const replyTwiml = optOutReading.optOut && !optOutReading.carrierHandled ? OPT_OUT_TWIML : EMPTY_TWIML;
   const now = new Date().toISOString();
   let customerId = customer ? String(customer.id) : "";
 
   if (!customerId) {
-    if (OPT_OUT_KEYWORDS.has(keyword) || body.length === 0) {
-      return new NextResponse(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+    if (optOut || body.length === 0) {
+      return new NextResponse(replyTwiml, { headers: { "Content-Type": "text/xml" } });
     }
 
     const { data: lead } = await database
@@ -139,14 +146,31 @@ export async function POST(request: Request) {
   // the only writes here whose failure is reported back to Twilio, because a
   // 200 tells Twilio never to retry — and a dropped STOP means continuing to
   // text someone who asked us not to.
-  if (OPT_OUT_KEYWORDS.has(keyword)) {
-    const { error } = await database
+  if (optOut) {
+    // A customer with no consent row on file (added by the business, never
+    // asked) who says stop must still be recorded, or the next text would go
+    // out: the row is created when the update finds none. The opt-in record
+    // (its source and proof) is left as it was.
+    const optOutRecord = {
+      opted_out_at: now,
+      opt_out_source: "inbound_text",
+      opt_out_proof: `Customer texted: "${body.slice(0, 160)}"`,
+    };
+    const updated = await database
       .from("messaging_consent")
-      .update({ opted_out_at: now })
+      .update(optOutRecord)
       .eq("organization_id", organizationId)
       .eq("customer_id", customerId)
       .eq("channel", "sms")
-      .eq("scope", "transactional");
+      .eq("scope", "transactional")
+      .select("id");
+    let error = updated.error;
+    if (!error && (updated.data ?? []).length === 0) {
+      ({ error } = await database.from("messaging_consent").upsert(
+        { organization_id: organizationId, customer_id: customerId, channel: "sms", scope: "transactional", source: "inbound_text", ...optOutRecord },
+        { onConflict: "customer_id,channel,scope" },
+      ));
+    }
 
     if (error) return new NextResponse("Could not record opt-out", { status: 500 });
   } else if (OPT_IN_KEYWORDS.has(keyword)) {
@@ -266,7 +290,7 @@ export async function POST(request: Request) {
       last_message_at: now,
       // A STOP is not a conversation to reply to; anything else needs a human
       // until the intake below decides otherwise.
-      status: OPT_OUT_KEYWORDS.has(keyword) ? "closed" : "needs_human",
+      status: optOut ? "closed" : "needs_human",
     })
     .eq("id", conversationId);
 
@@ -279,7 +303,7 @@ export async function POST(request: Request) {
   // Not in a conversation somebody at the business has taken over: their
   // customer's text waits for them, marked as needing a person, above.
   const takenOver = Boolean(conversation.assistant_paused_at);
-  if (body.length > 0 && !takenOver && !OPT_OUT_KEYWORDS.has(keyword) &&
+  if (body.length > 0 && !takenOver && !optOut &&
     (!OPT_IN_KEYWORDS.has(keyword) || keyword === "yes")) {
     await handleInboundText({
       organizationId,
@@ -291,5 +315,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return new NextResponse(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  return new NextResponse(replyTwiml, { headers: { "Content-Type": "text/xml" } });
 }

@@ -134,6 +134,15 @@
       "what": "Texting consent wording carries STOP/HELP, rates, frequency, not a condition of purchase"
     },
     {
+      "id": "CT-SMS-002",
+      "file": "src/compliance-tests/regulatory-rules.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "FED-002-005"
+      ],
+      "what": "A request to stop texts is honored however the customer words it (reply keywords, own words, Spanish), without reading job talk as an opt-out"
+    },
+    {
       "id": "CT-REFUND-001",
       "file": "src/compliance-tests/regulatory-rules.test.ts",
       "classification": "automated",

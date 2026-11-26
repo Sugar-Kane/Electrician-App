@@ -30,6 +30,7 @@ import {
 } from "../lib/payment-plan.ts";
 import { isPublicPath } from "../lib/public-paths.ts";
 import { smsConsentDisclosure } from "../lib/sms-consent.ts";
+import { OPT_OUT_CONFIRMATION, readOptOut } from "../lib/messaging-rules.ts";
 import { isOwnedObjectPath } from "../lib/tenant-storage-path.ts";
 import { verifyXaiWebhook } from "../lib/xai-webhook.ts";
 
@@ -187,6 +188,49 @@ test("CT-SMS-001: the texting consent wording carries the required disclosures",
   assert.match(text, /Reply STOP to opt out/);
   assert.match(text, /HELP/);
   assert.match(text, /not a condition of purchase/);
+});
+
+test("CT-SMS-002: a request to stop texts is honored however the customer words it", () => {
+  // The FCC's reply words, Twilio-answered or not.
+  for (const word of ["STOP", "Stop.", "quit", "End", "CANCEL", "unsubscribe", "stop all", "Revoke", "opt out", "OPTOUT"]) {
+    assert.equal(readOptOut(word).optOut, true, word);
+  }
+  // The customer's own words, in English and Spanish.
+  for (const words of [
+    "Please stop texting me",
+    "stop sending me messages",
+    "Don't text me anymore, call instead",
+    "do not contact me",
+    "No more texts please",
+    "remove me from your list",
+    "Take my number off your list",
+    "wrong number",
+    "Leave me alone",
+    "No me envíen más mensajes",
+    "Alto",
+    "dejen de mandar mensajes",
+    "BAJA",
+  ]) {
+    assert.equal(readOptOut(words).optOut, true, words);
+  }
+  // Ordinary job talk is not an opt-out.
+  for (const words of [
+    "cancel my appointment for Tuesday",
+    "Can you stop by at 3?",
+    "I need to cancel",
+    "The breaker won't stop tripping",
+    "I got no texts yesterday about the time",
+    "yes",
+    "START",
+    "",
+  ]) {
+    assert.equal(readOptOut(words).optOut, false, words);
+  }
+  // Twilio confirms its own keywords; Volteira confirms only the ones it caught itself, once.
+  assert.deepEqual(readOptOut("STOP"), { optOut: true, carrierHandled: true });
+  assert.deepEqual(readOptOut("please stop texting me"), { optOut: true, carrierHandled: false });
+  assert.deepEqual(readOptOut("alto"), { optOut: true, carrierHandled: false });
+  assert.match(OPT_OUT_CONFIRMATION, /START/);
 });
 
 test("CT-REFUND-001: a refund never exceeds what was paid, and only owners or admins may refund", () => {

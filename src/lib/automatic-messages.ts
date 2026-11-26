@@ -278,7 +278,7 @@ export async function sendJobEventMessage(input: {
       if (result.errorCode === "21610") {
         await database
           .from("messaging_consent")
-          .update({ opted_out_at: new Date().toISOString() })
+          .update({ opted_out_at: new Date().toISOString(), opt_out_source: "carrier", opt_out_proof: "Twilio refused the text: the number is on the carrier STOP list (error 21610)." })
           .eq("organization_id", organizationId)
           .eq("customer_id", customerId)
           .eq("channel", "sms")

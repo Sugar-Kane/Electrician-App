@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { chooseLanguage, languageLabel } from "@/lib/customer-language";
 import { saveCustomerDetails } from "@/lib/customer-details-save";
+import { STAFF_OPT_OUT_WAYS, recordStaffOptOut, type StaffOptOutWay } from "@/lib/manual-sms-consent";
 import { currentContext } from "@/lib/request-context";
 import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { createClient } from "@/lib/supabase/server";
@@ -117,4 +118,32 @@ export async function saveCustomerDetailsAction(_previous: CustomerDetailsState,
     error: "",
     notice: `Saved. Invoices and contracts go to ${saved.details.billTo === "business" ? saved.details.businessName : "them personally"}.`,
   };
+}
+
+export type StopTextsState = { error: string; notice?: string };
+
+/**
+ * The customer asked, by phone, in person, in writing or by email, not to be
+ * texted. Any team member may record it; nobody in the app can undo it.
+ */
+export async function recordStopTextsRequest(_previous: StopTextsState, formData: FormData): Promise<StopTextsState> {
+  const customerId = String(formData.get("customerId") ?? "").trim();
+  if (!/^[0-9a-f-]{36}$/i.test(customerId)) return { error: "That customer could not be found." };
+  const wayValue = String(formData.get("way") ?? "");
+  if (!(wayValue in STAFF_OPT_OUT_WAYS)) return { error: "Choose how they asked." };
+
+  const context = await currentContext();
+  if (!context) return { error: "Sign in to change this." };
+
+  const result = await recordStaffOptOut(asFlexibleClient(await createClient()), {
+    organizationId: context.organizationId,
+    customerId,
+    userId: context.userId,
+    way: wayValue as StaffOptOutWay,
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!result.ok) return { error: result.reason };
+
+  revalidatePath(`/customers/${customerId}`);
+  return { error: "", notice: result.already ? "Texts were already off for this customer." : "Texts are off. Nothing more will be texted to them unless they text START." };
 }
