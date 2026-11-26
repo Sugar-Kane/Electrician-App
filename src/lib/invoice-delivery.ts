@@ -18,7 +18,9 @@ import {
 } from "@/lib/invoice-messages";
 import { onlinePaymentsEnabled } from "@/lib/invoice-online-pay";
 import { invoicePdf } from "@/lib/invoice-pdf-file";
+import { invoiceSendCheck } from "@/lib/payment-plan-server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asFlexibleClient } from "@/lib/supabase/flexible";
 import { sendSms } from "@/lib/twilio";
 
 /**
@@ -59,6 +61,18 @@ export async function deliverInvoice(input: {
   // An invoice the customer already holds, sent again because what they owe changed.
   const revised = input.kind === "revised";
   const database = getSupabaseAdmin();
+
+  // A bill sent before the job is complete may not ask for more than the work
+  // done allows (B&P 7159.5): every sender (the screen, the assistant,
+  // ChatGPT) comes through here. A preview or a paid copy asks for nothing.
+  if (!preview && !paidCopy) {
+    const allowed = await invoiceSendCheck(asFlexibleClient(database), { organizationId: input.organizationId, invoiceId: input.invoiceId });
+    if (!allowed.ok) {
+      const at = new Date().toISOString();
+      const asked = [...new Set(input.channels.filter((channel): channel is DeliveryChannel => channel === "sms" || channel === "email"))];
+      return (asked.length ? asked : (["sms"] as DeliveryChannel[])).map((channel) => ({ channel, to: "", ok: false, detail: allowed.error, at }));
+    }
+  }
 
   // Read off the invoice itself, so the link and the customer for the STOP check do not depend
   // on every caller (the screen, the assistant, ChatGPT) remembering them.

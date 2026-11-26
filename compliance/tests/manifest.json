@@ -60,6 +60,29 @@
       "what": "Automatic payment requests follow only the signed schedule"
     },
     {
+      "id": "CT-DEPOSIT-006",
+      "file": "src/compliance-tests/regulatory-rules.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-004-004",
+        "CSLB-005-001",
+        "CSLB-004-002"
+      ],
+      "what": "A progress payment can't be asked for or paid until its work is marked done; no deposit before signing; the balance waits for completion"
+    },
+    {
+      "id": "CT-DEPOSIT-007",
+      "file": "src/compliance-tests/regulatory-rules.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-004-001",
+        "CSLB-004-002",
+        "CSLB-004-004",
+        "CSLB-005-001"
+      ],
+      "what": "Money taken before the work never passes the down payment plus work marked done; diagnostic credit counts; signed price is the base"
+    },
+    {
       "id": "CT-SIGN-001",
       "file": "src/compliance-tests/regulatory-rules.test.ts",
       "classification": "automated",

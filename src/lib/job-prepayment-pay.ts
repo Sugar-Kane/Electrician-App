@@ -11,7 +11,9 @@ import { MIN_ONLINE_CENTS, methodFromStripeType, onlineEventAction } from "@/lib
 import {
   matchesSignedSchedule,
   payLinkCents,
+  payLinkPayable,
   paymentLabel,
+  paymentNotPayableReason,
   shouldRequestPayment,
   type PlannedPayment,
   type SignedSchedulePayment,
@@ -115,6 +117,8 @@ export type PlanPayment = {
   signed: boolean;
   /** The payments as the newest signed contract set them out. */
   signedSchedule: SignedSchedulePayment[] | null;
+  /** The job is complete: every payment, the balance too, may be asked for. */
+  completed: boolean;
 };
 
 /** The payments in a signed contract's payment_schedule snapshot, or null when it can't be read. */
@@ -146,7 +150,7 @@ export async function loadPlanPayment(
     loadJobPaymentPlan(asFlexibleClient(database), { organizationId, jobId }),
     database
       .from("jobs")
-      .select("job_number, customer_id, customers ( first_name, email, phone ), organizations ( name, phone, timezone )")
+      .select("job_number, status, customer_id, customers ( first_name, email, phone ), organizations ( name, phone, timezone )")
       .eq("id", jobId)
       .eq("organization_id", organizationId)
       .maybeSingle(),
@@ -205,6 +209,7 @@ export async function loadPlanPayment(
     stripeAccount: account?.accountId ?? null,
     signed: Boolean(signedRow),
     signedSchedule: readSignedSchedule((signedRow as Row | null)?.payment_schedule),
+    completed: text(job.status) === "completed",
   };
 }
 
@@ -303,6 +308,8 @@ export type PayLinkView = {
   /** A bank payment for the job on its way. */
   processingCents: number;
   canPay: boolean;
+  /** Not payable yet: the contract isn't signed, or the work this payment is for isn't marked done. */
+  notYet: boolean;
 };
 
 /** What the customer's pay link shows. Null for a link that leads nowhere; `unavailable` when it can't be read right now. */
@@ -328,11 +335,19 @@ export async function payLinkView(token: string): Promise<PayLinkView | { unavai
     }
   }
   const amountCents = payLinkCents(payment.payments, payment.index, { prepaidCents: payment.prepaidCents, processingCents });
+  const payable = payLinkPayable(payment.payments, payment.index, { signed: payment.signed, completed: payment.completed });
   return {
     payment,
+    notYet: !payable && !payment.invoiceToken && amountCents > 0,
     amountCents,
     processingCents,
-    canPay: known && !payment.invoiceToken && Boolean(payment.stripeAccount) && amountCents >= MIN_ONLINE_CENTS,
+    canPay:
+      known &&
+      !payment.invoiceToken &&
+      Boolean(payment.stripeAccount) &&
+      amountCents >= MIN_ONLINE_CENTS &&
+      // Never ahead of the work: the deposit once signed, a progress payment once its work is marked done.
+      payable,
   };
 }
 
@@ -361,6 +376,7 @@ export async function startPlanCheckout(input: { token: string; origin: string }
   }
   if (!payment) return { error: "unavailable" };
   if (payment.invoiceToken) return { error: "invoice" };
+  if (!payLinkPayable(payment.payments, payment.index, { signed: payment.signed, completed: payment.completed })) return { error: "not_payable" };
   const stripeAccount = payment.stripeAccount;
   if (!stripeAccount) return { error: "not_payable" };
   const onAccount = { stripeAccount };
@@ -738,6 +754,14 @@ export async function sendPaymentRequest(itemId: string, options: { byHand: bool
   }
   if (!payment) return { ok: false, message: "That payment is no longer in the job's plan." };
   if (payment.invoiceToken) return { ok: false, message: "The invoice has been sent, and it asks for what is owed." };
+  // Never ahead of the work, by hand or automatically (B&P 7159.5).
+  if (!payLinkPayable(payment.payments, payment.index, { signed: payment.signed, completed: payment.completed })) {
+    const blocking = payment.payments
+      .slice(0, payment.index + 1)
+      .map((each) => paymentNotPayableReason(each, { signed: payment.signed, completed: payment.completed }))
+      .find(Boolean);
+    return { ok: false, message: blocking ?? "That payment can't be asked for yet." };
+  }
   if (!payment.stripeAccount) return { ok: false, message: "Online payments aren't set up yet. Connect Stripe in Settings first." };
   const origin = appOrigin();
   if (!origin) return { ok: false, message: "Pay links can't be sent right now." };

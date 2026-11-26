@@ -23,6 +23,13 @@ export type PlanItemInput = {
   due: PlanDue;
   /** "2026-12-01", for a payment due on a date. */
   dueDate?: string | null;
+  /**
+   * When the owner or office marked the work this payment is for as done. A
+   * progress payment can be asked for or taken only after that: California
+   * forbids payments ahead of the work performed (B&P 7159.5). The date, if
+   * any, is only when to send the reminder.
+   */
+  doneAt?: string | null;
 };
 
 export type PlannedPayment = PlanItemInput & { cents: number };
@@ -104,12 +111,94 @@ export function planAmounts(totalCents: number, items: PlanItemInput[]): PlanRes
 
 /** Whether a payment is due yet: on signing once signed, on a date once it comes, on completion once done. */
 export function paymentIsDue(
-  payment: Pick<PlanItemInput, "due" | "dueDate">,
+  payment: Pick<PlanItemInput, "due" | "dueDate" | "doneAt"> & { kind?: PlanItemKind },
   state: { today: string; signed: boolean; completed: boolean },
 ): boolean {
   if (payment.due === "on_signing") return state.signed;
   if (payment.due === "on_completion") return state.completed;
-  return Boolean(payment.dueDate) && (payment.dueDate as string) <= state.today;
+  // A dated payment: its date must come, and before the job is complete its
+  // work must be marked done too. After completion a dated payment is paying
+  // over time for finished work, so only its date matters.
+  const dateCame = Boolean(payment.dueDate) && (payment.dueDate as string) <= state.today;
+  return dateCame && (state.completed || Boolean(payment.doneAt));
+}
+
+/**
+ * Whether a payment may be asked for or paid at all right now:
+ *
+ * - the deposit, and anything due on signing: once the contract is signed;
+ * - a progress payment: once its work is marked done (or the job is complete);
+ * - the balance: once the job is complete (the invoice asks for it).
+ */
+export function paymentPayable(
+  payment: Pick<PlanItemInput, "kind" | "due" | "doneAt">,
+  state: { signed: boolean; completed: boolean },
+): boolean {
+  if (payment.kind === "deposit" || payment.due === "on_signing") return state.signed;
+  if (state.completed) return true;
+  if (payment.kind === "final" || payment.due === "on_completion") return false;
+  return Boolean(payment.doneAt);
+}
+
+/** Whether a pay link for payment `index` may be paid: it and every payment before it (a link asks for those too). */
+export function payLinkPayable(
+  payments: Pick<PlannedPayment, "kind" | "due" | "doneAt">[],
+  index: number,
+  state: { signed: boolean; completed: boolean },
+): boolean {
+  if (index < 0 || index >= payments.length) return false;
+  return payments.slice(0, index + 1).every((payment) => paymentPayable(payment, state));
+}
+
+/** Why a payment can't be asked for yet, in words for the owner. Null when it can. */
+export function paymentNotPayableReason(
+  payment: Pick<PlanItemInput, "kind" | "due" | "doneAt">,
+  state: { signed: boolean; completed: boolean },
+): string | null {
+  if (paymentPayable(payment, state)) return null;
+  if (payment.kind === "deposit" || payment.due === "on_signing") return "The contract must be signed before the deposit is asked for.";
+  if (payment.kind === "final" || payment.due === "on_completion") return "The balance is asked for by the invoice once the job is complete.";
+  return "Mark the work for this payment done first. California does not allow asking for payment ahead of the work.";
+}
+
+/**
+ * How much more may be taken before the job is complete, in cents, or null
+ * for no limit (the job is complete).
+ *
+ * The down payment allowance (10% of the price or $1,000, whichever is less),
+ * plus the progress payments whose work is marked done, less everything
+ * already taken or on its way and any diagnostic fee being credited toward
+ * the work. California B&P 7159.5(a)(3), (a)(5).
+ */
+export function preWorkAllowanceCents(input: {
+  contractTotalCents: number;
+  /** Progress payments (not the deposit) whose work is marked done. */
+  doneCents: number;
+  /** Prepayments recorded, plus payments on their way. */
+  collectedCents: number;
+  /** A booking or diagnostic fee already paid that will be credited toward this work. */
+  diagnosticCreditCents?: number;
+  completed: boolean;
+}): number | null {
+  if (input.completed) return null;
+  const allowed = maxDownPaymentCents(input.contractTotalCents) + Math.max(0, whole(input.doneCents));
+  const taken = Math.max(0, whole(input.collectedCents)) + Math.max(0, whole(input.diagnosticCreditCents ?? 0));
+  return Math.max(0, allowed - taken);
+}
+
+/** Null when `proposedCents` may be taken before the job is complete, else the reason it may not. */
+export function preWorkRefusal(input: Parameters<typeof preWorkAllowanceCents>[0] & { proposedCents: number }): string | null {
+  const allowance = preWorkAllowanceCents(input);
+  if (allowance === null) return null;
+  if (whole(input.proposedCents) <= allowance) return null;
+  return `California limits money taken before the work to the down payment (10% of the price or $1,000, whichever is less) plus work marked done. At most ${(allowance / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })} more can be taken on this job now. Mark the finished work done, or complete the job first.`;
+}
+
+/** What the progress payments marked done come to (the deposit and the balance excluded). */
+export function doneProgressCents(payments: Pick<PlannedPayment, "kind" | "due" | "doneAt" | "cents">[]): number {
+  return payments
+    .filter((payment) => payment.kind === "installment" && payment.due !== "on_signing" && Boolean(payment.doneAt))
+    .reduce((sum, payment) => sum + payment.cents, 0);
 }
 
 /**
@@ -167,7 +256,7 @@ export function payLinkCents(
  * not a pay link, and nothing is asked for once the invoice is out.
  */
 export function shouldRequestPayment(
-  payment: Pick<PlannedPayment, "kind" | "due" | "dueDate">,
+  payment: Pick<PlannedPayment, "kind" | "due" | "dueDate" | "doneAt">,
   state: { requestedAt: string | null; owedCents: number; today: string; signed: boolean; invoiceSent: boolean },
 ): boolean {
   if (state.requestedAt || state.invoiceSent || state.owedCents <= 0) return false;
