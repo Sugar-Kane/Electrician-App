@@ -316,6 +316,15 @@
         "CSLB-007-007"
       ],
       "what": "After a cancellation every payment is returned in full (Stripe or by hand), only once"
+    },
+    {
+      "id": "CT-MFA-001",
+      "file": "src/compliance-tests/mfa.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "SEC-001-002"
+      ],
+      "what": "Owners, admins and platform staff must use two-step sign-in from 2026-12-10; anyone set up is always asked for the code"
     }
   ]
 }
