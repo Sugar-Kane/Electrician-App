@@ -11,9 +11,9 @@
       "category": "Contractor licensing and advertising",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7030.5",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7030.5",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website advertises construction/electrical contracting services in California (pacificplainselectric.com).",
@@ -49,7 +49,7 @@
       "related_ids": [
         "WEB-CSLB-002"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. B&P 7030.5(c): license number in \"all forms of advertising, as prescribed by the registrar of contractors\"."
     },
     {
       "id": "WEB-CSLB-002",
@@ -59,9 +59,9 @@
       "category": "Contractor licensing and advertising",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7059.1; 7028 (unlicensed contracting); 7027.1",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7059.1",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website advertises construction/electrical contracting services in California (pacificplainselectric.com).",
@@ -100,7 +100,7 @@
         "WEB-CSLB-003",
         "WEB-CSLB-005"
       ],
-      "notes": "CSLB lookup tool (not fetched in this session): https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/CheckLicense.aspx. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "CSLB lookup tool (not fetched in this session): https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/CheckLicense.aspx. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. Read B&P 7059.1, 7028 and 7027.1 in the 2026 Law Book."
     },
     {
       "id": "WEB-CSLB-003",
@@ -110,9 +110,9 @@
       "category": "Contractor licensing and advertising",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7059, 7117.6; 16 CCR 832.10 (C-10 Electrical)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7117.6",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website advertises construction/electrical contracting services in California (pacificplainselectric.com).",
@@ -148,7 +148,7 @@
       "related_ids": [
         "WEB-CSLB-002"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. Read B&P 7059, 7117.6 and 16 CCR 832.10. The Law Book prints 832.10 (now naming battery energy storage systems and photovoltaic solar energy systems) with the footnote \"Effective date temporarily stayed at time of printing\"; confirm the C-10 scope for solar/storage work before relying on it."
     },
     {
       "id": "WEB-CSLB-004",
@@ -192,7 +192,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment. (Labor Code 108-108.5 is not in the CSLB Law Book; B&P 7161(a) confirmed against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf.)"
     },
     {
       "id": "WEB-CSLB-005",
@@ -202,9 +202,9 @@
       "category": "Contractor licensing and advertising",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7071.6 (contractor bond), 7125 (workers' compensation), 7071.19 (LLC liability insurance), 7161(a)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7161",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website advertises construction/electrical contracting services in California (pacificplainselectric.com).",
@@ -242,7 +242,7 @@
         "WEB-CSLB-002",
         "WEB-CA-026"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. Read B&P 7071.6 ($25,000 bond), 7125 (printed as \"[Repealed effective January 1, 2028]\" with a successor operative that date), 7071.19 (LLC aggregate liability insurance of at least $1,000,000, plus $100,000 per person over five on the personnel of record, up to $5,000,000) and 7161(a)."
     },
     {
       "id": "WEB-CSLB-006",
@@ -252,9 +252,9 @@
       "category": "Contractor advertising practices",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7161",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7161",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website advertises construction/electrical contracting services in California (pacificplainselectric.com).",
@@ -269,7 +269,7 @@
         "Website operator"
       ],
       "required_behavior": [
-        "The site does not use misleading or deceptive representations or false advertising to obtain contracts, and 'free' goods/services, prizes or discounts offered as inducements comply with 7161's prohibitions."
+        "The site does not use false, misleading or deceptive advertising as an inducement to enter into a contract for a work of improvement (7161(a)), does not make substantial misrepresentations or false promises to procure a contract (7161(b)), and does not publish advertisements with false, deceptive or misleading statements of fact or advertise work with the intent not to accept contracts for that work or at the advertised price (7161(e))."
       ],
       "verification_methods": [
         "browser-assisted",
@@ -284,7 +284,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Exact subdivisions of 7161 recalled from prior knowledge; confirm in official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Exact subdivisions of 7161 recalled from prior knowledge; confirm in official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Corrected 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf: 7161 has no provision on 'free' goods, prizes or discounts; the behavior now tracks 7161(a), (b) and (e). Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-CSLB-007",
@@ -333,7 +333,7 @@
         "WEB-CA-029",
         "WEB-FED-016"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment."
     },
     {
       "id": "WEB-CSLB-008",
@@ -376,7 +376,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment. (B&P 7161 confirmed against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; B&P 17500 and Civ. Code 1770 not read.)"
     },
     {
       "id": "WEB-CSLB-009",
@@ -386,9 +386,9 @@
       "category": "Home improvement contracts (online)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7159(c)-(e)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "amendment_notes": "AB 1327 (Stats. 2025) added contractor email/telephone and email Notice of Cancellation provisions (per secondary sources and CSLB 2026 new-laws bulletin); not verified against official text.",
       "applicability": {
         "criteria": [
@@ -413,7 +413,7 @@
         "Third-party vendor"
       ],
       "required_behavior": [
-        "The e-signed or click-accepted contract includes the 7159 contents in the required order/format, including: heading 'Home Improvement' (contract), contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; approximate start and substantial completion dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327).",
+        "The e-signed or click-accepted contract includes the 7159 contents in the required order/format, including: the heading “Home Improvement.” in at least 10-point boldface type, contractor name, business address, license number; the CSLB information notice; salesperson name/registration if applicable; contract price and finance charges; description of work and materials; the “Approximate Start Date” and “Approximate Completion Date” headings with the dates; schedule of progress payments; the down payment statement; the Mechanics Lien Warning; the right-to-cancel notice when applicable; required statements about change orders, commercial general liability and workers' compensation insurance; and the contractor's email address and statement that the Notice of Cancellation may be emailed (AB 1327).",
         "Contract is presented in full to the buyer before signature (not only a summary)."
       ],
       "enforcement_exposure": "Noncompliant contracts: CSLB discipline, misdemeanor exposure under 7159, and potential unenforceability/restitution claims.",
@@ -440,7 +440,7 @@
         "WEB-CSLB-012",
         "WEB-CSLB-014"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Corrected 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf: quoted the statutory headings: “Home Improvement.” (7159(d)(3)), “Approximate Start Date” and “Approximate Completion Date” (7159(d)(10)-(11)) instead of 'approximate start and substantial completion dates'. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-CSLB-010",
@@ -496,7 +496,7 @@
         "WEB-FED-007",
         "WEB-CA-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment. (B&P 7159(c)(3)(A), copy of the signed and dated contract before work starts, confirmed against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; Civ. Code 1633.8 not read.)"
     },
     {
       "id": "WEB-CSLB-011",
@@ -505,10 +505,10 @@
       "jurisdiction": "California",
       "category": "Home improvement contracts (online)",
       "requirement_type": "statutory",
-      "citation": "Cal. Bus. & Prof. Code 7159(e); Cal. Civ. Code 8000 et seq. (mechanics liens)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "Cal. Bus. & Prof. Code 7159(e)(4); Cal. Civ. Code 8000 et seq. (mechanics liens)",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A home improvement contract (work on residential property, aggregate contract price over the statutory threshold, $500 under B&P 7159 per prior knowledge — confirm current threshold) is formed, signed or accepted online (e-signature, click-to-accept estimate, or online deposit that accepts an estimate)."
@@ -547,7 +547,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Corrected 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf: narrowed to (e)(4), the paragraph with the “Mechanics Lien Warning” heading and text. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. The behavior rests on 7159(e)(4), whose warning text itself explains Preliminary Notices; Civ. Code 8000 et seq. is context and was not read."
     },
     {
       "id": "WEB-CSLB-012",
@@ -557,9 +557,9 @@
       "category": "Home improvement contracts (online)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7159.5(a)(3)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159.5",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A home improvement contract (work on residential property, aggregate contract price over the statutory threshold, $500 under B&P 7159 per prior knowledge — confirm current threshold) is formed, signed or accepted online (e-signature, click-to-accept estimate, or online deposit that accepts an estimate)."
@@ -583,7 +583,7 @@
         "Third-party vendor"
       ],
       "required_behavior": [
-        "Any deposit or down payment collected online for a home improvement contract does not exceed $1,000 or 10 percent of the contract price, whichever is less (swimming pool contracts have a different limit), and the contract states the down payment.",
+        "Any deposit or down payment collected online for a home improvement contract does not exceed $1,000 or 10 percent of the contract price, whichever is less, and the contract states the down payment.",
         "Browser check: compare deposit amount at checkout with the accepted estimate total; Stripe charge must be at or below the limit."
       ],
       "enforcement_exposure": "Excess down payment is a misdemeanor and cause for discipline (7159.5).",
@@ -606,7 +606,7 @@
         "WEB-CSLB-013",
         "WEB-CSLB-007"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Corrected 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf: removed '(swimming pool contracts have a different limit)': 7159.5(a)(3) in the 2026 text has no swimming pool exception. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-CSLB-013",
@@ -616,9 +616,9 @@
       "category": "Home improvement contracts (online)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7159.5(a)(5)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159.5",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A home improvement contract (work on residential property, aggregate contract price over the statutory threshold, $500 under B&P 7159 per prior knowledge — confirm current threshold) is formed, signed or accepted online (e-signature, click-to-accept estimate, or online deposit that accepts an estimate)."
@@ -657,7 +657,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-CSLB-014",
@@ -716,7 +716,7 @@
         "WEB-CSLB-015",
         "WEB-CSLB-009"
       ],
-      "notes": "Whether an online-only transaction initiated by the buyer is a home solicitation contract is not settled; treat in-home-estimate-then-online-signature as likely covered. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Whether an online-only transaction initiated by the buyer is a home solicitation contract is not settled; treat in-home-estimate-then-online-signature as likely covered. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment. (B&P 7159(e)(6), the “Three-Day Right to Cancel” / “Five-Day Right to Cancel” notices, confirmed against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; Civ. Code 1689.5-1689.7 not read.)"
     },
     {
       "id": "WEB-CSLB-015",
@@ -726,9 +726,9 @@
       "category": "Home improvement contracts (online)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7159 (as amended by AB 1327, Stats. 2025)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2026-01-01",
       "amendment_notes": "Effective date assumed January 1, 2026 (CSLB 2026 new-laws bulletin, per search snippets); confirm.",
       "applicability": {
@@ -773,7 +773,7 @@
       "related_ids": [
         "WEB-CSLB-014"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. The Law Book history line shows Stats 2025 ch 348 (AB 1327), effective January 1, 2026; 7159(c)(3)(B)(ii) requires the contractor's email address, preceded by a statement that the “Notice of Cancellation” may be sent to the address or email address, and the cancel notices say \"by emailing, mailing, faxing, or delivering\"."
     },
     {
       "id": "WEB-CSLB-016",
@@ -783,9 +783,9 @@
       "category": "Home improvement contracts (online)",
       "requirement_type": "legal-interpretation-required",
       "citation": "Cal. Bus. & Prof. Code 7159.10-7159.14",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7159.10",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A home improvement contract (work on residential property, aggregate contract price over the statutory threshold, $500 under B&P 7159 per prior knowledge — confirm current threshold) is formed, signed or accepted online (e-signature, click-to-accept estimate, or online deposit that accepts an estimate)."
@@ -829,7 +829,7 @@
         "WEB-CSLB-012",
         "WEB-CSLB-007"
       ],
-      "notes": "Price cap and deposit rules for service and repair contracts are not restated here because the official text could not be read. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Price cap and deposit rules for service and repair contracts are not restated here because the official text could not be read. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. The Law Book prints 7159.10, 7159.11 and 7159.14 only (no 7159.12 or 7159.13). 7159.10(a): contract amount $750 or less, buyer-initiated, no payment due or accepted until the work is completed; otherwise 7159(c)-(e) apply."
     },
     {
       "id": "WEB-CSLB-017",
@@ -886,7 +886,7 @@
         "WEB-FED-006",
         "WEB-CA-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment. (B&P 7159(d) and 7159.6 confirmed against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf and 15 U.S.C. 7001 at https://uscode.house.gov/us/usc/t15/s7001/; Civ. Code 1633.7 not read.)"
     },
     {
       "id": "WEB-CSLB-018",
@@ -896,9 +896,9 @@
       "category": "Home improvement contracts (online)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7191",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7191",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A home improvement contract (work on residential property, aggregate contract price over the statutory threshold, $500 under B&P 7159 per prior knowledge — confirm current threshold) is formed, signed or accepted online (e-signature, click-to-accept estimate, or online deposit that accepts an estimate).",
@@ -938,7 +938,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. 7191: heading “ARBITRATION OF DISPUTES”, at least 10-point roman boldface or contrasting red print in at least 8-point roman boldface (capitals if typed), and the statutory NOTICE immediately before the assent/initials space."
     },
     {
       "id": "WEB-CSLB-019",
@@ -985,7 +985,7 @@
       "related_ids": [
         "WEB-CSLB-020"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: leginfo.legislature.ca.gov not reachable from the audit environment."
     },
     {
       "id": "WEB-CSLB-020",
@@ -995,9 +995,9 @@
       "category": "Warranties",
       "requirement_type": "regulatory",
       "citation": "15 U.S.C. 2302; 16 CFR 702.3",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-702",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-702/section-702.3",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site sells (or quotes for sale) consumer products costing more than $15 with a written warranty, including products sold online."
@@ -1030,7 +1030,7 @@
       "related_ids": [
         "WEB-CSLB-019"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-702/section-702.3; supersedes the earlier source-not-verified note. Also read 15 U.S.C. 2302 at https://uscode.house.gov/us/usc/t15/s2302/. Online sales fall under 702.3(c) (catalog and mail order sales: full text, or the warrantor's web address plus how to get it free, in close conjunction to the product)."
     },
     {
       "id": "WEB-CSLB-021",
@@ -1040,9 +1040,9 @@
       "category": "Contractor advertising practices",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 7169",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7169",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site offers sale, lease or financing of residential solar energy systems."
@@ -1071,7 +1071,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf; supersedes the earlier source-not-verified note. 7169(b): the disclosure document is printed on the front or cover page of every solar energy contract in boldface 16-point type."
     }
   ]
 }

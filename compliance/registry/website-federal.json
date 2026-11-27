@@ -11,9 +11,9 @@
       "category": "Accessibility (ADA Title III)",
       "requirement_type": "legal-interpretation-required",
       "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
-      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t42/s12182/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
@@ -68,7 +68,7 @@
         "WCAG-401-002",
         "WEB-CA-023"
       ],
-      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t42/s12182/; supersedes the earlier source-not-verified note. Also read 28 CFR 36.201 and 36.303 at https://www.ecfr.gov/current/title-28/part-36/section-36.201 and https://www.ecfr.gov/current/title-28/part-36/section-36.303."
     },
     {
       "id": "WEB-FED-002",
@@ -78,9 +78,9 @@
       "category": "Accessibility (ADA Title III)",
       "requirement_type": "legal-interpretation-required",
       "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
-      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t42/s12182/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
@@ -135,7 +135,7 @@
         "WCAG-401-002",
         "WEB-CA-023"
       ],
-      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t42/s12182/; supersedes the earlier source-not-verified note. Also read 28 CFR 36.201 and 36.303 at https://www.ecfr.gov/current/title-28/part-36/section-36.201 and https://www.ecfr.gov/current/title-28/part-36/section-36.303."
     },
     {
       "id": "WEB-FED-003",
@@ -145,9 +145,9 @@
       "category": "Accessibility (ADA Title III)",
       "requirement_type": "legal-interpretation-required",
       "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
-      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t42/s12182/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
@@ -202,7 +202,7 @@
         "WCAG-401-002",
         "WEB-CA-023"
       ],
-      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t42/s12182/; supersedes the earlier source-not-verified note. Also read 28 CFR 36.201 and 36.303 at https://www.ecfr.gov/current/title-28/part-36/section-36.201 and https://www.ecfr.gov/current/title-28/part-36/section-36.303."
     },
     {
       "id": "WEB-FED-004",
@@ -212,9 +212,9 @@
       "category": "Accessibility (ADA Title III)",
       "requirement_type": "legal-interpretation-required",
       "citation": "42 U.S.C. 12182(a), (b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.303",
-      "official_source_url": "https://www.ada.gov/resources/web-guidance/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t42/s12182/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
@@ -269,7 +269,7 @@
         "WCAG-401-002",
         "WEB-CA-023"
       ],
-      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "DOJ has adopted no Title III web technical standard; its 2022 web guidance (ada.gov/resources/web-guidance) says businesses may choose how to comply and points to WCAG as helpful. WCAG 2.1/2.2 AA is the de facto benchmark in litigation. The 2024 Title II rule (28 CFR 35.200, WCAG 2.1 AA) binds state/local governments only and does not apply to these sites. Whether a website alone (without a physical place) is a 'place of public accommodation' is split among federal circuits; Pacific Plains Electric serves customers at their premises and both sites sell services to the public. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t42/s12182/; supersedes the earlier source-not-verified note. Also read 28 CFR 36.201 and 36.303 at https://www.ecfr.gov/current/title-28/part-36/section-36.201 and https://www.ecfr.gov/current/title-28/part-36/section-36.303."
     },
     {
       "id": "WEB-FED-005",
@@ -280,8 +280,8 @@
       "requirement_type": "recommended-control",
       "citation": "DOJ Guidance on Web Accessibility and the ADA (2022); supports 28 CFR 36.303",
       "official_source_url": "https://www.ada.gov/resources/web-guidance/",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Business is a private entity whose operations affect commerce and fall within one of the 12 categories of public accommodation (42 U.S.C. 12181(7)), or the site is connected to such services.",
@@ -313,7 +313,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Not itself a legal requirement; recommended because it reduces exposure and supports effective-communication obligations. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Not itself a legal requirement; recommended because it reduces exposure and supports effective-communication obligations. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ada.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ada.gov/resources/web-guidance/; supersedes the earlier source-not-verified note. The guidance (dated March 18, 2022) recommends a way for the public to report accessibility problems; it does not itself require a staffed phone alternative, which remains a recommended control supporting 28 CFR 36.303 (read at https://www.ecfr.gov/current/title-28/part-36/section-36.303)."
     },
     {
       "id": "WEB-FED-006",
@@ -323,9 +323,9 @@
       "category": "Electronic signatures and records",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7001&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "The site or its signing flow provides to a consumer, electronically, information that a statute or regulation requires be provided or made available in writing (e.g., California home improvement contract copies and notices under B&P 7159).",
@@ -375,7 +375,7 @@
         "WEB-CA-025",
         "WEB-CSLB-009"
       ],
-      "notes": "Browser-observable: the presence and content of the disclosure/consent step. Backend: stored consent record. Federal ESIGN 7001(c) applies to consumer disclosures even where California UETA governs the transaction generally (UETA 1633.3/ESIGN 7002 preemption analysis needed). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Browser-observable: the presence and content of the disclosure/consent step. Backend: stored consent record. Federal ESIGN 7001(c) applies to consumer disclosures even where California UETA governs the transaction generally (UETA 1633.3/ESIGN 7002 preemption analysis needed). SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s7001/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-007",
@@ -385,9 +385,9 @@
       "category": "Electronic signatures and records",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(d), (e)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7001&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "The site or its signing flow provides to a consumer, electronically, information that a statute or regulation requires be provided or made available in writing (e.g., California home improvement contract copies and notices under B&P 7159).",
@@ -431,7 +431,7 @@
         "WEB-FED-006",
         "WEB-CSLB-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s7001/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-008",
@@ -441,9 +441,9 @@
       "category": "Telemarketing and SMS consent",
       "requirement_type": "regulatory",
       "citation": "47 U.S.C. 227(b)(1)(A)(iii); 47 CFR 64.1200(a)(2), (f)(9)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
@@ -491,7 +491,7 @@
         "WEB-FED-012",
         "WEB-FED-013"
       ],
-      "notes": "The FCC 'one-to-one consent' amendment to 64.1200(f)(9) was vacated by the Eleventh Circuit (Insurance Marketing Coalition v. FCC, Jan. 2025) before taking effect; naming the specific seller in the consent remains best practice. Post-Facebook v. Duguid (2021) ATDS scope is narrow, but many SMS platforms and state laws (e.g., Florida/Oklahoma mini-TCPAs) still make PEWC the prudent standard. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "The FCC 'one-to-one consent' amendment to 64.1200(f)(9) was vacated by the Eleventh Circuit (Insurance Marketing Coalition v. FCC, Jan. 2025) before taking effect; naming the specific seller in the consent remains best practice. Post-Facebook v. Duguid (2021) ATDS scope is narrow, but many SMS platforms and state laws (e.g., Florida/Oklahoma mini-TCPAs) still make PEWC the prudent standard. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-47/part-64/section-64.1200; supersedes the earlier source-not-verified note. Also read 47 U.S.C. 227(b)(1)(A)(iii) at https://uscode.house.gov/us/usc/t47/s227/."
     },
     {
       "id": "WEB-FED-009",
@@ -501,9 +501,9 @@
       "category": "Telemarketing and SMS consent",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(f)(9)(i)(B)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
@@ -542,7 +542,7 @@
       "related_ids": [
         "WEB-FED-008"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-47/part-64/section-64.1200; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-010",
@@ -552,9 +552,9 @@
       "category": "Telemarketing and SMS consent",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(f)(9) (written agreement bearing signature; E-SIGN-compliant electronic signature permitted)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
@@ -596,7 +596,7 @@
         "WEB-FED-008",
         "WEB-FED-006"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-47/part-64/section-64.1200; supersedes the earlier source-not-verified note. 64.1200(f)(9)(ii) confirms an electronic or digital signature valid under federal law or state contract law qualifies."
     },
     {
       "id": "WEB-FED-011",
@@ -606,9 +606,9 @@
       "category": "Telemarketing and SMS consent",
       "requirement_type": "regulatory",
       "citation": "47 U.S.C. 227(b)(1)(A)(iii); 47 CFR 64.1200(a)(1)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site collects a mobile phone number that will receive text messages (SMS/MMS) or calls made with an autodialer (ATDS) or artificial/prerecorded voice.",
@@ -650,7 +650,7 @@
         "WEB-FED-008",
         "WEB-FED-013"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-47/part-64/section-64.1200; supersedes the earlier source-not-verified note. Also read 47 U.S.C. 227(b)(1)(A)(iii) at https://uscode.house.gov/us/usc/t47/s227/."
     },
     {
       "id": "WEB-FED-012",
@@ -696,7 +696,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Industry/contractual requirement, not federal law; non-compliance leads to campaign rejection, filtering or suspension. No official URL recorded: the current CTIA Messaging Principles document location could not be confirmed and was not fetched. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Industry/contractual requirement, not federal law; non-compliance leads to campaign rejection, filtering or suspension. No official URL recorded: the current CTIA Messaging Principles document location could not be confirmed and was not fetched. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: www.ctia.org, www.campaignregistry.com and www.twilio.com not reachable from the audit environment."
     },
     {
       "id": "WEB-FED-013",
@@ -705,10 +705,10 @@
       "jurisdiction": "Federal",
       "category": "Telemarketing and SMS consent",
       "requirement_type": "regulatory",
-      "citation": "47 CFR 64.1200(a)(10) (revocation of consent by any reasonable means; honor within 10 business days)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "47 CFR 64.1200(a)(10), (a)(12) (revocation of consent by any reasonable means; honor within 10 business days; one confirmation text)",
+      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2025-04-11",
       "amendment_notes": "Revocation rule (FCC 24-24) effective April 11, 2025. The 'revoke-all' scope provision of 64.1200(a)(10) was delayed by waiver (reported to January 31, 2027) and the FCC later adopted amendments narrowing it and allowing callers to designate an exclusive revocation method; secondary sources report differing effective dates (one reports November 25, 2026). Confirm against the Federal Register/FCC Public Notice.",
       "applicability": {
@@ -753,7 +753,7 @@
         "WEB-FED-008",
         "WEB-FED-011"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Corrected 2026-11-25 against https://www.ecfr.gov/current/title-47/part-64/section-64.1200: added (a)(12), which is where the single non-marketing confirmation text is permitted. Verified 2026-11-25 against https://www.ecfr.gov/current/title-47/part-64/section-64.1200; supersedes the earlier source-not-verified note. The effective_date (2025-04-11) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-014",
@@ -763,9 +763,9 @@
       "category": "Email marketing",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7704(a)(1)-(2), (a)(5); 16 CFR 316",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7704&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site offers an email newsletter/marketing signup or sends commercial electronic mail messages (primary purpose commercial advertisement or promotion)."
@@ -801,7 +801,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "CAN-SPAM does not require opt-in consent at signup; the browser-observable part is the signup representation, the rest is verified by subscribing a test address. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "CAN-SPAM does not require opt-in consent at signup; the browser-observable part is the signup representation, the rest is verified by subscribing a test address. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s7704/; supersedes the earlier source-not-verified note. Also read 16 CFR part 316 at https://www.ecfr.gov/current/title-16/part-316. The third behavior (sign-up form describes the emails) is a supporting practice, not a 7704 duty."
     },
     {
       "id": "WEB-FED-015",
@@ -811,9 +811,9 @@
       "category": "Email marketing",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7704(a)(3)-(4), (a)(5)(A)(ii); 16 CFR 316.5",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7704&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site offers an email newsletter/marketing signup or sends commercial electronic mail messages (primary purpose commercial advertisement or promotion)."
@@ -851,7 +851,7 @@
       "related_ids": [
         "WEB-FED-014"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s7704/; supersedes the earlier source-not-verified note. Also read 16 CFR 316.5 at https://www.ecfr.gov/current/title-16/part-316/section-316.5."
     },
     {
       "id": "WEB-FED-016",
@@ -861,9 +861,9 @@
       "category": "Advertising and pricing",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 45(a); FTC Guides Against Deceptive Pricing (16 CFR 233)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section45&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site advertises prices, 'starting at' rates, free trials, free estimates, discounts or fees."
@@ -902,7 +902,7 @@
         "WEB-CA-028",
         "WEB-CSLB-007"
       ],
-      "notes": "FTC Rule on Unfair or Deceptive Fees (16 CFR 464, effective May 12, 2025) covers only live-event tickets and short-term lodging and does not apply to these sites; California SB 478 (WEB-CA-028) is the binding all-in pricing rule here. 16 CFR 233 Guides are interpretive guidance. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "FTC Rule on Unfair or Deceptive Fees (16 CFR 464, effective May 12, 2025) covers only live-event tickets and short-term lodging and does not apply to these sites; California SB 478 (WEB-CA-028) is the binding all-in pricing rule here. 16 CFR 233 Guides are interpretive guidance. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s45/; supersedes the earlier source-not-verified note. Also read 16 CFR part 233 at https://www.ecfr.gov/current/title-16/part-233."
     },
     {
       "id": "WEB-FED-017",
@@ -949,7 +949,7 @@
         "WEB-CA-026",
         "WEB-CSLB-005"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-25: www.ftc.gov not reachable from the audit environment (it rejects automated requests); the reasonable-basis rule comes from the FTC Policy Statement Regarding Advertising Substantiation, which was not read. (15 U.S.C. 45(a) confirmed at https://uscode.house.gov/us/usc/t15/s45/.)"
     },
     {
       "id": "WEB-FED-018",
@@ -959,9 +959,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.2",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465/section-465.2",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -1000,7 +1000,7 @@
         "WEB-FED-024",
         "WEB-FED-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-465/section-465.2; supersedes the earlier source-not-verified note. The effective_date (2024-10-21) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-019",
@@ -1010,9 +1010,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.4",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465/section-465.4",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -1050,7 +1050,7 @@
         "WEB-FED-024",
         "WEB-FED-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-465/section-465.4; supersedes the earlier source-not-verified note. The effective_date (2024-10-21) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-020",
@@ -1060,9 +1060,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.5",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465/section-465.5",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -1100,7 +1100,7 @@
         "WEB-FED-024",
         "WEB-FED-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-465/section-465.5; supersedes the earlier source-not-verified note. The effective_date (2024-10-21) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-021",
@@ -1110,9 +1110,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.6",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465/section-465.6",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -1150,7 +1150,7 @@
         "WEB-FED-024",
         "WEB-FED-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-465/section-465.6; supersedes the earlier source-not-verified note. The effective_date (2024-10-21) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-022",
@@ -1160,9 +1160,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.7",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465/section-465.7",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -1201,7 +1201,7 @@
         "WEB-FED-024",
         "WEB-FED-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-465/section-465.7; supersedes the earlier source-not-verified note. The effective_date (2024-10-21) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-023",
@@ -1211,9 +1211,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.8",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465/section-465.8",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -1251,7 +1251,7 @@
         "WEB-FED-024",
         "WEB-FED-025"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-465/section-465.8; supersedes the earlier source-not-verified note. 465.8 prohibits buying, procuring, selling or distributing fake indicators of social media influence; displaying them is the website-visible symptom. The effective_date (2024-10-21) is not stated in the eCFR text read and was left unchanged."
     },
     {
       "id": "WEB-FED-024",
@@ -1261,9 +1261,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "guidance",
       "citation": "16 CFR 255.5 (FTC Guides Concerning the Use of Endorsements and Testimonials in Advertising)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255/section-255.5",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site displays endorsements or testimonials, affiliate/partner links, influencer content, or statements by people with a material connection to the operator."
@@ -1296,7 +1296,7 @@
       "related_ids": [
         "WEB-FED-020"
       ],
-      "notes": "The Guides are interpretive guidance (not binding rules); deceptive endorsements are enforced under FTC Act 5. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "The Guides are interpretive guidance (not binding rules); deceptive endorsements are enforced under FTC Act 5. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-255/section-255.5; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-025",
@@ -1306,9 +1306,9 @@
       "category": "Reviews and endorsements",
       "requirement_type": "guidance",
       "citation": "16 CFR 255.2",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255/section-255.2",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site displays endorsements or testimonials, affiliate/partner links, influencer content, or statements by people with a material connection to the operator."
@@ -1341,7 +1341,7 @@
       "related_ids": [
         "WEB-FED-017"
       ],
-      "notes": "Interpretive guidance enforced under FTC Act 5. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Interpretive guidance enforced under FTC Act 5. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-255/section-255.2; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-026",
@@ -1351,9 +1351,9 @@
       "category": "Privacy representations",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 45(a)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section45&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site publishes a privacy policy, cookie banner or other privacy statements."
@@ -1394,7 +1394,7 @@
         "WEB-CA-008",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s45/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-027",
@@ -1404,9 +1404,9 @@
       "category": "Privacy representations",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 45(a)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section45&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site shows a cookie/consent banner or preference center."
@@ -1443,7 +1443,7 @@
         "WEB-CA-012",
         "WEB-CA-016"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s45/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-028",
@@ -1453,9 +1453,9 @@
       "category": "Subscriptions and negative options",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 8403(1)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section8403&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site sells a recurring subscription or free-trial-to-paid plan online with a negative option feature (Volteira SaaS plans)."
@@ -1500,7 +1500,7 @@
         "WEB-CA-031",
         "WEB-CA-033"
       ],
-      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s8403/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-029",
@@ -1510,9 +1510,9 @@
       "category": "Subscriptions and negative options",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 8403(2)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section8403&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site sells a recurring subscription or free-trial-to-paid plan online with a negative option feature (Volteira SaaS plans)."
@@ -1557,7 +1557,7 @@
         "WEB-CA-031",
         "WEB-CA-033"
       ],
-      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s8403/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-030",
@@ -1567,9 +1567,9 @@
       "category": "Subscriptions and negative options",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 8403(3)",
-      "official_source_url": "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section8403&num=0&edition=prelim",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site sells a recurring subscription or free-trial-to-paid plan online with a negative option feature (Volteira SaaS plans)."
@@ -1614,7 +1614,7 @@
         "WEB-CA-031",
         "WEB-CA-033"
       ],
-      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "The FTC's amended Negative Option ('click-to-cancel') Rule was vacated by the Eighth Circuit on July 8, 2025 before its compliance date; ROSCA itself remains in force. California's ARL (WEB-CA-030..034) is stricter where applicable. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks uscode.house.gov (and ftc.gov / fcc.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://uscode.house.gov/us/usc/t15/s8403/; supersedes the earlier source-not-verified note."
     },
     {
       "id": "WEB-FED-031",
@@ -1625,8 +1625,8 @@
       "requirement_type": "regulatory",
       "citation": "15 U.S.C. 6501-6506; 16 CFR 312",
       "official_source_url": "https://www.ecfr.gov/current/title-16/part-312",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "effective_date": "2025-06-23",
       "amendment_notes": "Amended COPPA Rule published April 22, 2025; effective June 23, 2025; general compliance date April 22, 2026 (per prior knowledge; not verified).",
       "applicability": {
@@ -1664,7 +1664,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-16/part-312; supersedes the earlier source-not-verified note. Also read 15 U.S.C. 6501-6506 at https://uscode.house.gov/us/usc/t15/s6501/ (and s6502-s6506). The eCFR source line shows the amendments at 90 FR 16977 (Apr. 22, 2025); the effective_date (2025-06-23) is not stated in the text read and was left unchanged."
     },
     {
       "id": "WEB-FED-032",
@@ -1674,9 +1674,9 @@
       "category": "Consumer financing advertising",
       "requirement_type": "regulatory",
       "citation": "12 CFR 1026.24(d)",
-      "official_source_url": "https://www.ecfr.gov/current/title-12/section-1026.24",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/current/title-12/part-1026/section-1026.24",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site advertises closed-end consumer credit for personal/household purposes (e.g., 'Finance your panel upgrade for $99/month', 'as low as X% APR', partner financing such as Hearth/GreenSky/Synchrony)."
@@ -1716,7 +1716,7 @@
       "related_ids": [
         "WEB-FED-033"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-25 against https://www.ecfr.gov/current/title-12/part-1026/section-1026.24; supersedes the earlier source-not-verified note. The second behavior (applies to any person advertising the credit) rests on the Official Interpretations, not on the section text read."
     },
     {
       "id": "WEB-FED-033",
@@ -1725,10 +1725,10 @@
       "jurisdiction": "Federal",
       "category": "Consumer financing advertising",
       "requirement_type": "regulatory",
-      "citation": "12 CFR 1026.24(b)-(c)",
-      "official_source_url": "https://www.ecfr.gov/current/title-12/section-1026.24",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "12 CFR 1026.24(a)-(c)",
+      "official_source_url": "https://www.ecfr.gov/current/title-12/part-1026/section-1026.24",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Site advertises closed-end consumer credit for personal/household purposes (e.g., 'Finance your panel upgrade for $99/month', 'as low as X% APR', partner financing such as Hearth/GreenSky/Synchrony)."
@@ -1766,7 +1766,7 @@
       "related_ids": [
         "WEB-FED-032"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.ecfr.gov (and ftc.gov / fcc.gov / consumerfinance.gov) (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Corrected 2026-11-25 against https://www.ecfr.gov/current/title-12/part-1026/section-1026.24: added (a); the 'actually available terms' rule in the second behavior is 1026.24(a). Verified 2026-11-25 against https://www.ecfr.gov/current/title-12/part-1026/section-1026.24; supersedes the earlier source-not-verified note. The 'same as cash'/'0%' clause rests on the Official Interpretations, not on the section text read."
     }
   ]
 }
