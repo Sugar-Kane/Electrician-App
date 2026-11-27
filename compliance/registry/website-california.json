@@ -11,7 +11,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(a), 22577(b)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22577",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -30,7 +30,7 @@
         "Website operator"
       ],
       "required_behavior": [
-        "The privacy policy is 'conspicuously posted' by at least one method in B&P 22577(b): (1) the policy itself appears on the homepage; (2) it appears on the first significant page after entering the site; (3) an icon hyperlink to it that contains the word 'privacy' appears on the homepage or first significant page, in a color that contrasts with the page background; (4) a text hyperlink that includes the word 'privacy' appears on the homepage or first significant page, written in capital letters equal to or greater in size than the surrounding text, or in larger type than surrounding text, or in contrasting type, font or color to surrounding text of the same size, or set off by symbols or marks that call attention to it; or (5) any other functional hyperlink so displayed that a reasonable person would notice it.",
+        "The privacy policy is 'conspicuously posted' by at least one method in B&P 22577(b): (1) a Web page on which the actual privacy policy is posted, if the Web page is the homepage or first significant page after entering the Web site; (2) an icon that hyperlinks to a Web page on which the actual privacy policy is posted, if the icon is located on the homepage or the first significant page after entering the Web site, and if the icon contains the word \"privacy\"; the icon shall also use a color that contrasts with the background color of the Web page or is otherwise distinguishable; (3) a text link that hyperlinks to a Web page on which the actual privacy policy is posted, if the text link is located on the homepage or first significant page after entering the Web site, and if the text link does one of the following: (A) includes the word \"privacy\"; (B) is written in capital letters equal to or greater in size than the surrounding text; or (C) is written in larger type than the surrounding text, or in contrasting type, font, or color to the surrounding text of the same size, or set off from the surrounding text of the same size by symbols or other marks that call attention to the language; or (4) any other functional hyperlink that is so displayed that a reasonable person would notice it. (Paragraph (5), any other reasonably accessible means, applies only to an online service.)",
         "The link resolves (HTTP 200) to the current policy and is present on every page template (footer) as good practice."
       ],
       "enforcement_exposure": "AG enforcement under UCL (B&P 17200) after 30-day notice to cure (22575(a)); penalties up to $2,500 per violation under UCL.",
@@ -49,7 +49,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Check: find an <a> on the homepage whose text contains 'privacy' (case-insensitive) and verify styling meets one of the (b)(4) options; record which 22577(b) method is satisfied. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Check: find an <a> on the homepage whose text contains 'privacy' (case-insensitive) and verify styling meets one of the (b)(4) options; record which 22577(b) method is satisfied. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf.  Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable. Corrected 2026-11-26 against https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf: 22577(b) methods renumbered and restated from the text — (b)(1) is a single method (policy on the homepage or first significant page), the icon is (b)(2) and may contrast 'or is otherwise distinguishable', the text link is (b)(3) and need satisfy only ONE of (A) includes the word \"privacy\", (B) capitals, or (C) larger/contrasting/set-off type; any other noticeable functional hyperlink is (b)(4). The existing note's reference to 'the (b)(4) options' should be read as 22577(b)(3)(A)-(C); a homepage/footer text link containing the word 'privacy' satisfies (b)(3)(A) by itself. 22575(a) confirmed: violation only if the operator fails to post within 30 days after being notified of noncompliance."
     },
     {
       "id": "WEB-CA-002",
@@ -59,7 +59,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(b)(1)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -98,7 +98,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf. 22575(b)(1) text matches: categories of PII collected through the Web site and categories of third-party persons or entities with whom the operator may share it. Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable."
     },
     {
       "id": "WEB-CA-003",
@@ -108,7 +108,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(b)(2)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -147,7 +147,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf. 22575(b)(2) text matches (description of the review-and-request-changes process, if the operator maintains one). Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable."
     },
     {
       "id": "WEB-CA-004",
@@ -157,7 +157,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(b)(3)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -196,7 +196,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf. 22575(b)(3) text matches: describe the process by which the operator notifies consumers of material changes to the privacy policy. Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable."
     },
     {
       "id": "WEB-CA-005",
@@ -206,7 +206,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(b)(4)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -245,7 +245,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf. 22575(b)(4) text matches: 'Identify its effective date.' Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable."
     },
     {
       "id": "WEB-CA-006",
@@ -255,7 +255,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(b)(5), (b)(7)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -274,7 +274,7 @@
         "Website operator"
       ],
       "required_behavior": [
-        "Policy discloses how the operator responds to web browser 'do not track' signals or other mechanisms giving consumers choice about collection of PII across sites over time, or links to a program/protocol description that offers that choice.",
+        "Policy discloses how the operator responds to Web browser 'do not track' signals or other mechanisms that provide consumers the ability to exercise choice regarding the collection of PII about an individual consumer's online activities over time and across third-party Web sites or online services, if the operator engages in that collection (22575(b)(5)); or, under 22575(b)(7), provides a clear and conspicuous hyperlink in the policy to an online location containing a description, including the effects, of any program or protocol the operator follows that offers the consumer that choice.",
         "If GPC is honored as a CCPA opt-out, the DNT/GPC statements are consistent."
       ],
       "verification_methods": [
@@ -295,7 +295,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf.  Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable. Corrected 2026-11-26 against https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf: added the statutory condition 'if the operator engages in that collection' to (b)(5) and the (b)(7) wording (clear and conspicuous hyperlink to a description, including the effects, of the program or protocol). Second bullet (DNT/GPC consistency) is product design and not contradicted."
     },
     {
       "id": "WEB-CA-007",
@@ -305,7 +305,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22575(b)(6)",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22575",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -344,7 +344,7 @@
         "WEB-CA-001",
         "WEB-CA-010"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf. 22575(b)(6) text matches: disclose whether other parties may collect PII about a consumer's online activities over time and across different Web sites when the consumer uses the operator's site or service. Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable."
     },
     {
       "id": "WEB-CA-008",
@@ -354,7 +354,7 @@
       "category": "Privacy policy (CalOPPA)",
       "requirement_type": "statutory",
       "citation": "Cal. Bus. & Prof. Code 22576",
-      "official_source_url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=22576",
+      "official_source_url": "https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf",
       "last_verified": "",
       "source_verified": false,
       "applicability": {
@@ -395,7 +395,7 @@
         "WEB-FED-026",
         "WEB-CA-007"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403). The only full text of B&P 22575-22579 on an allowed host is an Attorney General/Office of Privacy Protection reprint (2014) at https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf; it was read and is consistent with this requirement, but it cannot establish the current statutory text. Read 2026-11-26 (not current-text verification): https://oag.ca.gov/sites/all/files/agweb/pdfs/cybersecurity/making_your_privacy_practices_public.pdf. 22576 text matches: violation if the operator fails to comply with 22575 or its posted policy either (a) knowingly and willfully or (b) negligently and materially. Source is the full text of Bus. & Prof. Code 22575-22579 reproduced in the Appendix (pp. 15-17) of the California Attorney General's 'Making Your Privacy Practices Public' (May 2014) on oag.ca.gov; leginfo.legislature.ca.gov (Cloudflare bot challenge, HTTP 403) was not reachable to confirm no later amendment, so re-check against leginfo when it becomes reachable."
     },
     {
       "id": "WEB-CA-009",
@@ -405,9 +405,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.100(a)-(b); 11 CCR 7012",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -449,7 +449,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. Civ. Code 1798.100(a)(1)-(3) (categories incl. sensitive PI, purposes, whether sold or shared, retention period or criteria) and (b) (third-party collection) confirmed; 11 CCR 7012(e)(1)-(6) confirmed (incl. link to Notice of Right to Opt-out of Sale/Sharing if selling/sharing, and link to privacy policy). Placement in the second bullet matches the illustrative examples in 7012(c)(1)-(2) (link on the introductory page and all pages where PI is collected; link in close proximity to webform fields or the submit button). Also note 7012(d) (no collection without the notice) and 7012(f) (an online notice given by link must go directly to the privacy-policy section holding the (e)(1)-(6) information, not the top of the policy)."
     },
     {
       "id": "WEB-CA-010",
@@ -459,9 +459,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.130(a)(5); 11 CCR 7011",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -487,7 +487,7 @@
       ],
       "required_behavior": [
         "Privacy policy describes consumer rights (know/access, delete, correct, opt out of sale/sharing, limit sensitive PI, non-retaliation) and how to exercise them, including authorized agents and how requests are verified.",
-        "Lists, for the preceding 12 months: categories of PI collected, sources, business/commercial purposes, categories of third parties to whom disclosed, categories sold or shared (or a statement that none are), and retention periods.",
+        "Lists, for the preceding 12 months: categories of PI collected (using the 1798.140(v)(1)(A)-(K) and (ae) terms), categories of sources, the specific business or commercial purposes for collecting; categories of PI sold or shared and, for each, the categories of third parties to whom sold or shared, and the purpose for selling or sharing (or a statement that none was sold or shared); categories of PI disclosed to service providers or contractors for a business purpose and the purpose (or a statement that none was disclosed); whether the business has actual knowledge that it sells or shares PI of consumers under 16; and whether it uses or discloses sensitive PI for purposes other than those in 11 CCR 7027(m). (Retention periods are required in the Notice at Collection — 1798.100(a)(3), 11 CCR 7012(e)(4) — which may be given by a link to a privacy-policy section, so including them in the policy is good practice but is not a 7011(e) item.)",
         "States how the business responds to opt-out preference signals; gives contact information; states the date last updated and is updated at least every 12 months."
       ],
       "verification_methods": [
@@ -504,7 +504,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf: second bullet restated from 1798.130(a)(5)(B)-(C) and 11 CCR 7011(e)(1)(A)-(J); 'retention periods' is not a privacy-policy element under 1798.130(a)(5) or 7011(e) (it is a Notice at Collection element) and the omitted items (business-purpose disclosures, under-16 actual-knowledge statement, sensitive-PI statement, purposes for selling/sharing) were added. Rights list confirmed at 7011(e)(2)(A)-(H) (also the ADMT opt-out/access rights in (F)-(G) if the business uses ADMT for a significant decision); verification process (e)(3)(E), authorized agents (e)(3)(H), opt-out preference signal processing (e)(3)(F), contact (e)(3)(J), date last updated (e)(4); update at least once every 12 months per 1798.130(a)(5)."
     },
     {
       "id": "WEB-CA-011",
@@ -513,10 +513,10 @@
       "jurisdiction": "California",
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
-      "citation": "Cal. Civ. Code 1798.120, 1798.135(a); 11 CCR 7013, 7015, 7026",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "Cal. Civ. Code 1798.120, 1798.135(a), (c)(1), (c)(4); 11 CCR 7012(e)(5), 7013, 7015, 7026",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -541,8 +541,8 @@
         "Website operator"
       ],
       "required_behavior": [
-        "If the business sells or shares personal information (including cross-context behavioral advertising via pixels such as Meta Pixel, Google Ads remarketing, TikTok), a clear and conspicuous 'Do Not Sell or Share My Personal Information' link (or the CPPA-specified alternative opt-out link/icon) appears on the homepage and at points of collection, leading directly to the opt-out mechanism.",
-        "Opt-out takes effect for cookies/pixels without requiring account creation or excessive information; the business may not sell/share for at least 12 months before asking again.",
+        "If the business sells or shares personal information (including cross-context behavioral advertising via pixels such as Meta Pixel, Google Ads remarketing, TikTok), a clear and conspicuous link titled 'Do Not Sell or Share My Personal Information' (or the Alternative Opt-out Link titled 'Your Privacy Choices' or 'Your California Privacy Choices' with the opt-out icon, 7015(b)) appears in the header or footer of the homepage(s) (1798.135(a)(1); 7013(c)), and the Notice at Collection includes the link to the Notice of Right to Opt-out of Sale/Sharing (7012(e)(5)). The link either immediately effectuates the opt-out or leads to the notice with an interactive opt-out form (7013(a), (e)(1), (f)(2)). Under 7013(d) a business may instead process opt-out preference signals in a frictionless manner per 7025(f)-(g), but must still post the Notice of Right to Opt-out.",
+        "The opt-out does not require creating an account or providing information beyond what is necessary (1798.135(c)(1); 7026(c)), is not a verifiable consumer request (7026(d)), and is not satisfied by a cookie banner or cookie controls alone (7026(a)(4)); the business stops selling/sharing as soon as feasibly possible and no later than 15 business days after receipt (7026(f)(1)) and waits at least 12 months before asking the consumer to consent to sale or sharing again (1798.135(c)(4); 7026(k)).",
         "If the business does not sell/share, the privacy policy says so and observed network traffic is consistent."
       ],
       "enforcement_exposure": "CPPA administrative fines up to $2,500 per violation or $7,500 per intentional violation (CPI-adjusted); AG civil penalties.",
@@ -562,7 +562,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf and https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf: link location is the homepage(s) header or footer (statute and 7013(c)); points of collection are covered by the Notice at Collection link requirement in 7012(e)(5); the second bullet's '12 months' rule actually requires waiting at least 12 months before asking the consumer to opt back in (1798.135(c)(4), 7026(k)), and the 15-business-day deadline (7026(f)(1)) and cookie-banner rule (7026(a)(4)) were added; citation now includes 1798.135(c)(1), (c)(4) and 7012(e)(5). Third bullet (no sale/sharing statement) confirmed by 7013(g) and 1798.130(a)(5)(C)(i)."
     },
     {
       "id": "WEB-CA-012",
@@ -571,10 +571,10 @@
       "jurisdiction": "California",
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
-      "citation": "Cal. Civ. Code 1798.135(b), (e); 11 CCR 7025",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "Cal. Civ. Code 1798.135(b), (e); 11 CCR 7025(b), (c)(1), (c)(6), (e)-(g)",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "amendment_notes": "CCPA regulation amendments approved 2025 and effective January 1, 2026 added the display of opt-out-signal processing status (per secondary sources; confirm in 11 CCR 7025). AB 566 (Opt Me Out Act) requires browsers to offer an opt-out preference signal from January 1, 2027.",
       "applicability": {
         "criteria": [
@@ -600,9 +600,9 @@
         "Website operator"
       ],
       "required_behavior": [
-        "A browser sending a Global Privacy Control signal (Sec-GPC: 1 header / navigator.globalPrivacyControl) is treated as a valid request to opt out of sale/sharing for that browser (and any known consumer profile), without requiring further action.",
-        "The site does not respond to the signal with a pop-up or interstitial that degrades the experience or demands confirmation (frictionless processing).",
-        "The site displays whether it has processed the signal (e.g., 'Opt-Out Request Honored') where required by the amended 11 CCR 7025."
+        "A business that sells or shares personal information treats a browser signal meeting 7025(b) (e.g., Global Privacy Control, sent as the Sec-GPC: 1 HTTP header / navigator.globalPrivacyControl JavaScript property) as a valid request to opt out of sale/sharing for that browser or device and any consumer profile associated with it, including pseudonymous profiles, and, if known, for the consumer (7025(c)(1)), without requiring information beyond what is necessary to send the signal (7025(c)(2)).",
+        "The signal must be processed even if the 'Do Not Sell or Share' / Alternative Opt-out links are posted (7025(e)). If the business relies on 1798.135(b)(1) to omit those links, it processes the signal in a frictionless manner: no fee, no change to the consumer's experience, and no notification, pop-up, text, graphic, animation, sound, video or interstitial content in response to the signal (7025(f)), and its privacy policy contains the 7025(g)(2) statements.",
+        "The site displays whether it has processed the consumer's opt-out preference signal as a valid request to opt out of sale/sharing (e.g., 'Opt-Out Request Honored') — required by 11 CCR 7025(c)(6); displaying that status is not a frictionless-processing violation (7025(f)(3))."
       ],
       "verification_methods": [
         "automated-test",
@@ -618,7 +618,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf: (1) frictionless (no pop-up/interstitial) processing is required only when the business uses it in lieu of posting the opt-out links (1798.135(b)(1); 7025(e)-(g)); otherwise the signal must still be honored but may be processed non-frictionlessly; (2) the status display is an unconditional requirement of 7025(c)(6), not 'where required by the amended 7025'; (3) the signal applies to the browser/device and associated profiles including pseudonymous profiles (7025(c)(1)); citation pinpointed. Note 7026(g) cross-refers to '7025, subsection (b)(6)', which appears to mean (c)(6)."
     },
     {
       "id": "WEB-CA-013",
@@ -627,10 +627,10 @@
       "jurisdiction": "California",
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
-      "citation": "Cal. Civ. Code 1798.121, 1798.135(a)(2); 11 CCR 7027",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "Cal. Civ. Code 1798.121, 1798.135(a)(2); 11 CCR 7014, 7027",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -655,8 +655,8 @@
         "Website operator"
       ],
       "required_behavior": [
-        "If the business uses or discloses sensitive personal information for purposes beyond those permitted in 11 CCR 7027(m), it provides a 'Limit the Use of My Sensitive Personal Information' link (or alternative opt-out link).",
-        "Otherwise, the policy states sensitive PI is used only for permitted purposes."
+        "If the business uses or discloses sensitive personal information for purposes beyond those permitted in 11 CCR 7027(m), it provides a conspicuous 'Limit the Use of My Sensitive Personal Information' link in the header or footer of the homepage(s) (or the Alternative Opt-out Link) leading to the Notice of Right to Limit with an interactive form (1798.135(a)(2); 7014(c)-(f); 7027(b)(1)).",
+        "Otherwise, the privacy policy states that sensitive PI is used and disclosed only for the 7027(m) purposes (or is collected or processed without the purpose of inferring characteristics about a consumer), so no link or Notice of Right to Limit is needed (7014(g); 7011(e)(1)(J))."
       ],
       "verification_methods": [
         "browser-assisted",
@@ -673,7 +673,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf: added 11 CCR 7014 (Notice of Right to Limit and link placement/exemption) to the citation and stated the 7014(g)(1)-(2) conditions for not providing the link. 7027(m)(1)-(8) permitted purposes confirmed."
     },
     {
       "id": "WEB-CA-014",
@@ -683,9 +683,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.130(a)(1); 11 CCR 7020",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -729,7 +729,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Pacific Plains Electric is not online-only (in-home services), so a toll-free number is required if CCPA applies; Volteira may qualify for the online-only email exception if it operates exclusively online with a direct relationship. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Pacific Plains Electric is not online-only (in-home services), so a toll-free number is required if CCPA applies; Volteira may qualify for the online-only email exception if it operates exclusively online with a direct relationship. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. 1798.130(a)(1)(A)-(B) and 11 CCR 7020(a)-(b) confirmed: two or more designated methods including at minimum a toll-free number; exclusively-online business with a direct relationship need only provide an email address; if the business maintains a website, the website is a method (e.g., webform). Also 7004(a)(5)(B) (broken links / unmonitored inboxes may violate) supports the 'actually work' check."
     },
     {
       "id": "WEB-CA-015",
@@ -738,10 +738,10 @@
       "jurisdiction": "California",
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
-      "citation": "Cal. Civ. Code 1798.130(a)(2); 11 CCR 7004, 7020, 7060-7062",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "Cal. Civ. Code 1798.130(a)(2); 11 CCR 7004, 7020, 7026(c)-(d), 7060-7063",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -767,8 +767,8 @@
       ],
       "required_behavior": [
         "Consumers are not required to create an account to submit a request; the request form asks only for information needed to verify identity, proportionate to the request's sensitivity.",
-        "Opt-out requests are not subject to identity verification beyond what is necessary.",
-        "Authorized agent submission is supported."
+        "A consumer is not required to verify their identity to make a request to opt out of sale/sharing, a request to limit, or a request to opt out of ADMT; the business may ask only for information necessary to complete the request, which shall not be burdensome (11 CCR 7060(b); 7026(c)-(d)).",
+        "Authorized agent submission is supported; for requests to delete, correct or know, the business may require the agent's proof of signed permission and may require the consumer to verify identity or confirm the permission directly, but may not require the consumer to resubmit the request or require a power of attorney (11 CCR 7063)."
       ],
       "verification_methods": [
         "browser-assisted",
@@ -789,7 +789,7 @@
         "WEB-CA-014",
         "WEB-CA-016"
       ],
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. No-account rule confirmed in 1798.130(a)(2)(A) (business may require an existing accountholder to use the account). Proportionate verification confirmed in 7060(c)-(d) and 7062(b)-(d). Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf: opt-out/limit requests may not be subjected to identity verification at all (7060(b), 7026(d)), not merely 'beyond what is necessary'; authorized-agent rules are in 7063, which was added to the citation along with 7026(c)-(d)."
     },
     {
       "id": "WEB-CA-016",
@@ -799,9 +799,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.140(h), (l); 11 CCR 7004",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -848,7 +848,7 @@
         "WEB-FED-027",
         "WEB-CA-011"
       ],
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. 1798.140(h) ('Consent' ... agreement obtained through use of dark patterns does not constitute consent) and 1798.140(l) ('Dark pattern') confirmed. 11 CCR 7004(a)(1)-(5) confirmed (easy to understand, symmetry in choice — e.g., 'Accept All' vs 'Decline All', 'yes' not more prominent than 'no' (7004(a)(2)(C)-(D)) — no confusing language/double negatives, no impairing choice architecture, easy to execute) and 7004(b)-(c) (agreement obtained through dark patterns is not consent)."
     },
     {
       "id": "WEB-CA-017",
@@ -858,9 +858,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "Cal. Civ. Code 1798.125(b); 11 CCR 7016",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -902,7 +902,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf; also read https://cppa.ca.gov/pdf/20260101_ccpa_statute.pdf. 1798.125(b)(1)-(4) confirmed (notice per 1798.130; prior opt-in consent that clearly describes material terms and may be revoked at any time; 12-month wait after refusal). 11 CCR 7016(c)-(d) confirmed (notice before opt-in; summary, material terms incl. categories of PI and value of data, how to opt in, right to withdraw, good-faith estimate of data value and calculation method). See also 7004(a)(2)(E) (incentive option may not be preselected or more prominent)."
     },
     {
       "id": "WEB-CA-018",
@@ -912,9 +912,9 @@
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "regulatory",
       "citation": "11 CCR 7003",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only to a 'business' under Civ. Code 1798.140(d): for-profit entity doing business in California that collects consumers' personal information and (A) has annual gross revenue above the CPI-adjusted threshold (US$25,000,000 in statute, adjusted by the CPPA; reported as US$26,625,000 from January 1, 2025 — confirm current figure), or (B) annually buys, sells or shares personal information of 100,000 or more California consumers or households, or (C) derives 50% or more of annual revenue from selling or sharing personal information.",
@@ -939,7 +939,7 @@
         "Website operator"
       ],
       "required_behavior": [
-        "Privacy notices and request interfaces use plain language, are readable on small screens, are available in the languages in which the business ordinarily provides contracts/ads to California consumers, and are reasonably accessible to consumers with disabilities (generally WCAG-conformant online)."
+        "Disclosures and communications to consumers are easy to read and understandable, using plain, straightforward language and avoiding technical or legal jargon (7003(a)); Article 2 notices (privacy policy, notice at collection, opt-out/limit notices, financial incentive notice) also use a format readable on smaller screens, are available in the languages in which the business in its ordinary course provides contracts, disclaimers, sale announcements and other information to consumers in California, and are reasonably accessible to consumers with disabilities — online, by following generally recognized industry standards such as WCAG version 2.1 (June 5, 2018) (7003(b)); required conspicuous links appear in a similar manner (at least the approximate font size and color) as other links the business uses on its homepage (7003(c))."
       ],
       "verification_methods": [
         "browser-assisted",
@@ -964,7 +964,7 @@
         "WCAG-104-003",
         "WCAG-301-001"
       ],
-      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf. Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf: 7003(b)(3) names WCAG version 2.1 of June 5, 2018 as the example of generally recognized industry standards (the register's WCAG 2.2 AA baseline exceeds it); the (b) requirements apply to Article 2 disclosures; added the 7003(c) conspicuous-link rule."
     },
     {
       "id": "WEB-CA-019",
@@ -973,10 +973,10 @@
       "jurisdiction": "California",
       "category": "Consumer privacy (CCPA/CPRA)",
       "requirement_type": "future-effective",
-      "citation": "11 CCR Article 11 (automated decisionmaking technology), as adopted 2025; section numbers to be confirmed against the official text",
-      "official_source_url": "https://cppa.ca.gov/regulations/",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "11 CCR 7200, 7220, 7221, 7222 (Article 11, Automated Decisionmaking Technology); 'significant decision' defined in 11 CCR 7001(ddd)",
+      "official_source_url": "https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2027-01-01",
       "amendment_notes": "CPPA regulations on ADMT, risk assessments and cybersecurity audits approved September 2025 and effective January 1, 2026; ADMT obligations apply from January 1, 2027 for existing uses (per secondary sources).",
       "applicability": {
@@ -1003,7 +1003,7 @@
         "Website operator"
       ],
       "required_behavior": [
-        "If the business uses automated decisionmaking technology to make a significant decision about consumers (financial or lending services, housing, education, employment, or healthcare), provide a pre-use notice at or before collection describing the purpose, how the ADMT works and the right to opt out and access; offer opt-out (two or more methods) unless an exception applies; respond to ADMT access requests.",
+        "If the business uses automated decisionmaking technology to make a significant decision concerning a consumer — a decision that results in the provision or denial of financial or lending services (including extension of credit or a loan and installment payment plans), housing, education enrollment or opportunities, employment or independent contracting opportunities or compensation, or healthcare services (7001(ddd)) — provide a Pre-use Notice, prominently and conspicuously at or before collecting the PI to be processed with ADMT, explaining the specific purpose, the rights to opt out of and access ADMT and how to exercise them, non-retaliation, and how the ADMT works and the alternative process for those who opt out (7220); offer two or more designated methods to opt out unless an exception in 7221(b) applies, such as a human-appeal process, with an online opt-out link in the Pre-use Notice (7221(c)); and respond to requests to access ADMT (7222).",
         "Determine and document whether any site feature (e.g., AI quote estimation, automated credit/financing pre-qualification, automated job applicant screening on a careers page) is ADMT making a significant decision."
       ],
       "verification_methods": [
@@ -1021,7 +1021,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Likely not applicable to quote/booking sites that do not make significant decisions; applicability must be documented. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Likely not applicable to quote/booking sites that do not make significant decisions; applicability must be documented. Applicability flag: mark GRAY (not applicable) with a documented threshold determination if the operator is not a CCPA 'business'. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks cppa.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Verified 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf. Corrected 2026-11-26 against https://cppa.ca.gov/regulations/pdf/ccpa_statute_eff_20260101.pdf: Article 11 is confirmed as 'Automated Decisionmaking Technology', sections 7200 (applicability), 7220 (Pre-use Notice), 7221 (opt-out and exceptions), 7222 (access); citation updated from 'section numbers to be confirmed'. Compliance date confirmed by 7200(b): a business using ADMT for a significant decision before January 1, 2027 must comply no later than January 1, 2027; a business that starts on or after that date must comply whenever it uses ADMT for a significant decision (effective_date 2027-01-01 unchanged). Significant-decision categories restated from 7001(ddd); note that 'financial or lending services' includes installment payment plans, so any automated financing/payment-plan approval would be in scope."
     },
     {
       "id": "WEB-CA-020",
@@ -1074,7 +1074,7 @@
         "WEB-CA-007",
         "WEB-FED-027"
       ],
-      "notes": "Courts disagree on whether website vendors are third-party eavesdroppers. SB 690 (2025-2026) was narrowed before passage: per secondary sources the enacted version (reported signed September 30, 2026) removed the proposed 'commercial business purpose' exemption for 631/632/632.7, so interception claims remain available. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Courts disagree on whether website vendors are third-party eavesdroppers. SB 690 (2025-2026) was narrowed before passage: per secondary sources the enacted version (reported signed September 30, 2026) removed the proposed 'commercial business purpose' exemption for 631/632/632.7, so interception claims remain available. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Penal Code 631, 632.7 and 637.2 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov. The SB 690 enactment status in the notes remains unconfirmed from official text."
     },
     {
       "id": "WEB-CA-021",
@@ -1121,7 +1121,7 @@
       "related_ids": [
         "WEB-CA-020"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Penal Code 638.50-638.51 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-022",
@@ -1165,7 +1165,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Penal Code 632 and 632.7 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-023",
@@ -1224,7 +1224,7 @@
         "WEB-FED-004",
         "WEB-CA-024"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Civ. Code 51 and 52 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-024",
@@ -1270,7 +1270,7 @@
       "related_ids": [
         "WEB-CA-023"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Civ. Code 54, 54.1 and 54.3 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-025",
@@ -1323,7 +1323,7 @@
         "WEB-FED-007",
         "WEB-CSLB-009"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Civ. Code 1633.5, 1633.7 and 1633.8 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-026",
@@ -1373,7 +1373,7 @@
         "WEB-FED-017",
         "WEB-CA-028"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17200 and 17500 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-027",
@@ -1415,7 +1415,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17501 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-028",
@@ -1471,7 +1471,7 @@
         "WEB-FED-016",
         "WEB-CSLB-007"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Civ. Code 1770 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-029",
@@ -1514,7 +1514,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Subdivision content recalled from prior knowledge; confirm the exact list of required disclosures in the official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Subdivision content recalled from prior knowledge; confirm the exact list of required disclosures in the official text. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17538 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-030",
@@ -1566,7 +1566,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17601-17602 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-031",
@@ -1621,7 +1621,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17602 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-032",
@@ -1674,7 +1674,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17602 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-033",
@@ -1729,7 +1729,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17602 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-034",
@@ -1784,7 +1784,7 @@
         "WEB-FED-029",
         "WEB-FED-030"
       ],
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17602 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     },
     {
       "id": "WEB-CA-035",
@@ -1829,7 +1829,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Civ. Code 1798.83 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov. The AG's 'shine the light' guidance PDF (oag.ca.gov COPP_bus_reportinfo_sharing1.pdf) only cites/summarizes 1798.83 and is not statute text."
     },
     {
       "id": "WEB-CA-036",
@@ -1870,7 +1870,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Liability attaches to use of a bot with intent to mislead about its artificial identity; disclosure provides the statutory safe harbor. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set."
+      "notes": "Liability attaches to use of a bot with intent to mislead about its artificial identity; disclosure provides the statutory safe harbor. SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Not verified 2026-11-26: leginfo.legislature.ca.gov not reachable from the audit environment (Cloudflare bot challenge, HTTP 403); no full official text of Bus. & Prof. Code 17940-17943 found on oag.ca.gov, cppa.ca.gov or cslb.ca.gov."
     }
   ]
 }

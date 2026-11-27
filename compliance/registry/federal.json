@@ -11,9 +11,9 @@
       "category": "E-signature",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(a)(1)-(2)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Transaction in or affecting interstate or foreign commerce",
@@ -60,7 +60,7 @@
         "FED-001-010",
         "FED-001-012"
       ],
-      "notes": "Attribution evidence is a recommended control derived from the 7006(5) definition; ESIGN itself does not prescribe an audit trail format. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Attribution evidence is a recommended control derived from the 7006(5) definition; ESIGN itself does not prescribe an audit trail format. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/; also read https://uscode.house.gov/us/usc/t15/s7006/; https://uscode.house.gov/us/usc/t15/s7003/. 15 U.S.C. 7001(a)(1)-(2) and the 7006(5) definition of 'electronic signature' (sound, symbol or process attached to or logically associated with the record and executed or adopted with intent to sign) match the register; the audit-trail bullet is product design consistent with the statute."
     },
     {
       "id": "FED-001-002",
@@ -70,9 +70,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(A)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -123,7 +123,7 @@
         "FED-001-003",
         "FED-001-007"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(A): consumer 'has affirmatively consented to such use and has not withdrawn such consent' - matches."
     },
     {
       "id": "FED-001-003",
@@ -133,9 +133,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(B)(i)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -180,7 +180,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(B)(i)(I)-(II) text matches, including 'conditions, consequences (which may include termination of the parties' relationship), or fees in the event of such withdrawal'."
     },
     {
       "id": "FED-001-004",
@@ -190,9 +190,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(B)(ii)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -235,7 +235,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(B)(ii)(I)-(II) matches."
     },
     {
       "id": "FED-001-005",
@@ -245,9 +245,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(B)(iii)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -293,7 +293,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(B)(iii) matches; 7001(c)(4) adds that withdrawal is effective within a reasonable period after receipt and is prospective only."
     },
     {
       "id": "FED-001-006",
@@ -303,9 +303,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(B)(iv)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -351,7 +351,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(B)(iv)(I)-(II) matches."
     },
     {
       "id": "FED-001-007",
@@ -361,9 +361,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(C)(i)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -404,7 +404,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(C)(i) matches."
     },
     {
       "id": "FED-001-008",
@@ -414,9 +414,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(C)(ii)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -457,7 +457,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "What 'reasonably demonstrates' requires is fact-specific. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "What 'reasonably demonstrates' requires is fact-specific. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(C)(ii) matches; note 7001(c)(3): a contract is not invalid solely because (c)(1)(C)(ii) consent was not obtained."
     },
     {
       "id": "FED-001-009",
@@ -467,9 +467,9 @@
       "category": "E-signature consumer consent",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(1)(D)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -514,7 +514,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(1)(D)(i)-(ii) matches; 7001(c)(4) lets the consumer treat a (c)(1)(D) failure as a withdrawal of consent."
     },
     {
       "id": "FED-001-010",
@@ -524,9 +524,9 @@
       "category": "Record retention",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(d)(1)-(3)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires a contract or other record be retained"
@@ -564,7 +564,7 @@
       "related_ids": [
         "FED-006-002"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(d)(1)(A)-(B), (d)(2) and (d)(3) (originals) match; post-signature locking and longest-period retention are product design consistent with (d)(1)."
     },
     {
       "id": "FED-001-011",
@@ -574,9 +574,9 @@
       "category": "E-signature",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(e)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -618,7 +618,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(e) matches (record 'may be denied' legal effect if not capable of being retained and accurately reproduced by all entitled parties)."
     },
     {
       "id": "FED-001-012",
@@ -628,9 +628,9 @@
       "category": "E-signature",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7001(c)(6)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7001/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "A statute, regulation or rule of law requires information relating to a transaction to be provided or made available to a consumer in writing",
@@ -676,7 +676,7 @@
       "related_ids": [
         "FED-002-004"
       ],
-      "notes": "7001(c)(6) carves out 'except as otherwise provided under applicable law'. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "7001(c)(6) carves out 'except as otherwise provided under applicable law'. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7001/. 7001(c)(6) text: 'An oral communication or a recording of an oral communication shall not qualify as an electronic record for purposes of this subsection except as otherwise provided under applicable law.' Matches."
     },
     {
       "id": "FED-001-013",
@@ -686,9 +686,9 @@
       "category": "E-signature",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7003; 15 U.S.C. 7002",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7003",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7003/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Document type falls within 7003(a) (wills/testamentary trusts; family law; UCC other than 1-107, 1-206 and Articles 2 and 2A) or 7003(b) (court documents; certain notices such as cancellation/termination of utility services, default/foreclosure/eviction on a primary residence, cancellation of health or life insurance, product recall notices affecting health or safety; documents required to accompany hazardous materials)",
@@ -719,7 +719,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Exclusion list paraphrased from memory; confirm exact list against official 7003 text. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Exclusion list paraphrased from memory; confirm exact list against official 7003 text. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7003/; also read https://uscode.house.gov/us/usc/t15/s7002/. 7003(a)(1)-(3) and (b)(1)-(3) exclusion list read; it matches the applicability criteria (wills/codicils/testamentary trusts; adoption, divorce, family law; UCC other than 1-107, 1-206 and Articles 2 and 2A; court orders/notices/documents; utility cancellation; default/acceleration/repossession/foreclosure/eviction/right to cure on a primary residence; health/life insurance cancellation; product recall/material failure risking health or safety; hazardous-materials documents). 7002(a)(1) confirms a State UETA enactment may modify, limit or supersede 7001 within the stated limits."
     },
     {
       "id": "FED-002-001",
@@ -729,9 +729,9 @@
       "category": "TCPA consent",
       "requirement_type": "statutory",
       "citation": "47 U.S.C. 227(b)(1)(A)(iii); 47 CFR 64.1200(a)(1)(iii)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/47/227",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t47/s227/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Outbound calls or text messages to wireless numbers using an ATDS or an artificial or prerecorded voice",
@@ -787,7 +787,7 @@
         "FED-002-005",
         "FED-002-013"
       ],
-      "notes": "Whether Volteira's sending system is an ATDS turns on Facebook, Inc. v. Duguid, 592 U.S. 395 (2021) (equipment must use a random or sequential number generator); human-approved, list-driven texts may fall outside the ATDS definition, but artificial/prerecorded-voice rules apply regardless. Treat consent as required as a matter of design; legal review recommended. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Whether Volteira's sending system is an ATDS turns on Facebook, Inc. v. Duguid, 592 U.S. 395 (2021) (equipment must use a random or sequential number generator); human-approved, list-driven texts may fall outside the ATDS definition, but artificial/prerecorded-voice rules apply regardless. Treat consent as required as a matter of design; legal review recommended. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t47/s227/; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 227(b)(1)(A)(iii) and 64.1200(a)(1)(iii) read: no ATDS or artificial/prerecorded-voice call to a wireless number without prior express consent (emergency exception; 227 also excepts calls solely to collect a U.S.-owned or guaranteed debt). Consent recording, blocking and tenant scoping are product design. Facebook v. Duguid (case law) not read."
     },
     {
       "id": "FED-002-002",
@@ -797,9 +797,9 @@
       "category": "TCPA consent",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(a)(2), (a)(3), (f)(9)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "amendment_notes": "The FCC's 2023 'one-to-one consent' amendment to (f)(9) was vacated by the Eleventh Circuit in Insurance Marketing Coalition v. FCC (Jan. 2025) and did not take effect (researcher knowledge; verify).",
       "applicability": {
         "criteria": [
@@ -840,7 +840,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "critical",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 64.1200(a)(2), (a)(3) and (f)(9) read: prior express written consent = signed written agreement clearly authorizing the seller to deliver ads/telemarketing by ATDS or artificial/prerecorded voice to a designated number; (f)(9)(i)(A)-(B) clear and conspicuous disclosures incl. that signing is not a condition of purchase; (f)(9)(ii) e-signatures valid under federal or state law count."
     },
     {
       "id": "FED-002-003",
@@ -850,9 +850,9 @@
       "category": "TCPA consent",
       "requirement_type": "statutory",
       "citation": "47 U.S.C. 227(b)(1)(B); 47 CFR 64.1200(a)(3)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/47/227",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t47/s227/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Outbound voice AI or prerecorded calls to residential landlines"
@@ -885,7 +885,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t47/s227/; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 227(b)(1)(B) and 64.1200(a)(3) read. Note: (a)(3)(i)-(v) let some non-telemarketing artificial/prerecorded-voice calls to residential lines go without consent (e.g., commercial non-telemarketing calls, max three per consecutive 30 days, with (b)/(d) opt-out); requiring consent for all AI-voice calls is a stricter design choice consistent with the rule."
     },
     {
       "id": "FED-002-004",
@@ -935,7 +935,7 @@
         "FED-002-014",
         "FED-010-004"
       ],
-      "notes": "Declaratory ruling; after McLaughlin (FED-002-014) district courts are not bound by FCC interpretations in enforcement suits, but the statutory text ('artificial or prerecorded voice') likely reaches AI voices independently. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Declaratory ruling; after McLaughlin (FED-002-014) district courts are not bound by FCC interpretations in enforcement suits, but the statutory text ('artificial or prerecorded voice') likely reaches AI voices independently. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: FCC Declaratory Ruling FCC 24-17 is on docs.fcc.gov, which is not on the audit allowlist (www.fcc.gov returns HTTP 403). 47 U.S.C. 227(b) read at https://uscode.house.gov/us/usc/t47/s227/ and its 'artificial or prerecorded voice' wording is consistent with the requirement, but the ruling itself was not read."
     },
     {
       "id": "FED-002-005",
@@ -945,9 +945,9 @@
       "category": "TCPA revocation",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(a)(10) (Report and Order, FCC 24-24, CG Docket No. 02-278)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2025-04-11",
       "amendment_notes": "Core revocation rules effective April 11, 2025 (researcher knowledge). See FED-002-007 for the 'revoke all' provision and its 2026 replacement.",
       "applicability": {
@@ -995,7 +995,7 @@
         "FED-002-007",
         "FED-002-008"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200; also read https://www.ecfr.gov/api/versioner/v1/versions/title-47.json?section=64.1200. 64.1200(a)(10) read: revocation 'by using any reasonable method'; per se reasonable means include an automated interactive voice/key-press opt-out, the words 'stop', 'quit', 'end', 'revoke', 'opt out', 'cancel' or 'unsubscribe' in reply to a text, or a caller-designated website or number; other words count if a reasonable person would understand them as revocation; callers 'may not designate an exclusive means to request revocation of consent'. (a)(11): other means (e.g., voicemail, email) create a rebuttable presumption of revocation. eCFR version history shows the substantive amendment effective 2025-04-11. FCC 24-24 itself (docs.fcc.gov) not read. As of 2026-11-26 the eCFR current text still forbids an exclusive means; the amendment at 91 FR 67219 (Oct. 26, 2026) is only cross-referenced and has not been incorporated, so the 'amended rule effective 2026-11-25' hedge in bullet 2 could not be checked."
     },
     {
       "id": "FED-002-006",
@@ -1005,9 +1005,9 @@
       "category": "TCPA revocation",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(a)(10)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2025-04-11",
       "applicability": {
         "criteria": [
@@ -1027,7 +1027,7 @@
         "Volteira platform"
       ],
       "required_behavior": [
-        "Stop covered robocalls/robotexts as soon as practicable and no later than 10 business days after receipt of revocation; Volteira should apply opt-outs immediately at send time"
+        "Honor a revocation made in any reasonable manner within a reasonable time not to exceed ten business days from receipt of the request (47 CFR 64.1200(a)(10)); Volteira should apply opt-outs immediately at send time"
       ],
       "enforcement_exposure": "Private right of action: actual loss or $500 per violation, up to treble ($1,500) for willful or knowing violations (47 USC 227(b)(3)); DNC private action under 227(c)(5) for more than one call in 12 months; FCC forfeitures and state AG actions (227(g)). Class-action exposure is significant.",
       "verification_methods": [
@@ -1043,7 +1043,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "critical",
-      "notes": "The FCC's 2026 Further Notice reportedly seeks comment on shortening the 10-business-day period (secondary sources). Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "The FCC's 2026 Further Notice reportedly seeks comment on shortening the 10-business-day period (secondary sources). Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200; also read https://www.ecfr.gov/api/versioner/v1/versions/title-47.json?section=64.1200. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200: the rule says revocations 'must be honored within a reasonable time not to exceed ten business days from receipt of such request'; replaced 'as soon as practicable and no later than 10 business days after receipt of revocation' with the rule's wording."
     },
     {
       "id": "FED-002-007",
@@ -1092,7 +1092,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Effective date and content come from law-firm summaries surfaced by web search (Nelson Mullins, Ashurst, Manatt, Squire Patton Boggs, Crowell); the Federal Register text was not read. Effective date is one day after this baseline. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Effective date and content come from law-firm summaries surfaced by web search (Nelson Mullins, Ashurst, Manatt, Squire Patton Boggs, Crowell); the Federal Register text was not read. Effective date is one day after this baseline. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: FCC 26-67 / 91 FR 67214 (federalregister.gov) and DA 25-312 / DA 26-12 (docs.fcc.gov) are not on the audit allowlist. 47 CFR 64.1200(a)(10) read at https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200: as of 2026-11-26 the eCFR current text contains no 'revoke all' language and shows only a cross-reference 'Link to an amendment published at 91 FR 67219, Oct. 26, 2026'; the eCFR version history (https://www.ecfr.gov/api/versioner/v1/versions/title-47.json?section=64.1200) lists no version on or after 2026-11-25 (latest 2026-10-26, which added only the cross-reference). So the amended category-based text and the 2026-11-25 effective date could not be confirmed; if the amendment were effective 2026-11-25, eCFR would normally show it by now - recheck the effective date."
     },
     {
       "id": "FED-002-008",
@@ -1102,9 +1102,9 @@
       "category": "TCPA revocation",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(a)(12)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2025-04-11",
       "applicability": {
         "criteria": [
@@ -1142,7 +1142,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Paragraph number from researcher recollection of the 2024 Order; confirm. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Paragraph number from researcher recollection of the 2024 Order; confirm. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 64.1200(a)(12) read; paragraph number confirmed as (a)(12). Text: a one-time confirmation text must merely confirm the revocation, include no marketing or promotional information, and be the only additional message; if sent within five minutes of receipt it is presumed within prior consent, otherwise the sender must show the delay was reasonable; where the recipient consented to several categories, it may ask whether the revocation covers all of them, and must cease all texts requiring consent absent further clarification."
     },
     {
       "id": "FED-002-009",
@@ -1152,9 +1152,9 @@
       "category": "TCPA DNC",
       "requirement_type": "regulatory",
       "citation": "47 U.S.C. 227(c); 47 CFR 64.1200(c)(2), (e)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t47/s227/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "amendment_notes": "FCC's 2023 order codified that DNC protections extend to text messages (researcher knowledge; verify).",
       "applicability": {
         "criteria": [
@@ -1191,7 +1191,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t47/s227/; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 227(c) and 64.1200(c)(2) (registrations honored indefinitely; safe harbor incl. a registry version obtained no more than 31 days before the call) and (e) (applies (c)-(d) to texts/calls to wireless numbers) read and consistent."
     },
     {
       "id": "FED-002-010",
@@ -1201,9 +1201,9 @@
       "category": "TCPA DNC",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(d)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "amendment_notes": "2024 Order shortened honoring period from 30 days to 10 business days (researcher knowledge).",
       "applicability": {
         "criteria": [
@@ -1216,8 +1216,8 @@
         "Volteira platform"
       ],
       "required_behavior": [
-        "Maintain a written DNC policy available on demand; train personnel; record DNC requests at time made and honor within a reasonable time not exceeding 10 business days; retain requests for the period the rule requires (see notes)",
-        "Identify the seller by name and provide a contact telephone number in telemarketing",
+        "Maintain a written DNC policy available on demand; train personnel; record DNC requests at the time made and honor them within a reasonable time not exceeding 10 business days from receipt; keep a record of each request and honor it for 5 years from the time it is made (47 CFR 64.1200(d)(1)-(3), (d)(6))",
+        "Provide the called party with the name of the individual caller, the name of the person or entity on whose behalf the call is made, and a telephone number or address at which that person or entity may be contacted; the number may not be a 900 number or other number charging more than local or long-distance transmission charges (47 CFR 64.1200(d)(4))",
         "Scope company DNC per tenant (seller), not across all tenants"
       ],
       "enforcement_exposure": "Private right of action: actual loss or $500 per violation, up to treble ($1,500) for willful or knowing violations (47 USC 227(b)(3)); DNC private action under 227(c)(5) for more than one call in 12 months; FCC forfeitures and state AG actions (227(g)). Class-action exposure is significant.",
@@ -1235,7 +1235,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "The retention period for company DNC requests (commonly cited as 5 years) is not confirmed here. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "The retention period for company DNC requests (commonly cited as 5 years) is not confirmed here. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 64.1200(d)(1)-(6) read. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200: (d)(6) settles the retention point - 'A do-not-call request must be honored for 5 years from the time the request is made'; (d)(4) requires the name of the individual caller, the name of the person or entity on whose behalf the call is made, and a telephone number or address (not a 900 number or a number charging more than local/long-distance transmission) - replaced 'contact telephone number'. (d)(5) supports per-seller scoping (affiliates excluded unless the consumer would reasonably expect them included)."
     },
     {
       "id": "FED-002-011",
@@ -1245,9 +1245,9 @@
       "category": "TCPA time of day",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(c)(1)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Telephone solicitations (marketing calls/texts) to residential subscribers"
@@ -1278,7 +1278,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200. 64.1200(c)(1): no telephone solicitation to a residential subscriber 'before the hour of 8 a.m. or after 9 p.m. (local time at the called party's location)'. Matches."
     },
     {
       "id": "FED-002-012",
@@ -1288,9 +1288,9 @@
       "category": "TCPA identification",
       "requirement_type": "regulatory",
       "citation": "47 CFR 64.1200(b)(1)-(3); 47 CFR 64.1601(e); 47 U.S.C. 227(e)",
-      "official_source_url": "https://www.ecfr.gov/current/title-47/part-64/section-64.1200",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Artificial or prerecorded (including AI) voice messages",
@@ -1323,7 +1323,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1200; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-47?part=64&section=64.1601; https://uscode.house.gov/us/usc/t47/s227/. 64.1200(b)(1) (identity at the beginning; registered business name), (b)(2) (telephone number during or after the message), (b)(3) (automated interactive opt-out within two seconds of identification for telemarketing and (a)(3)(ii)-(v) exempt calls to residential/wireless lines; toll-free callback number when left on voicemail), 64.1601(e) (telemarketers must transmit CPN or ANI and, when available, name; may substitute seller name and customer service number; may not block) and 227(e)(1) (no knowingly misleading or inaccurate caller ID with intent to defraud, cause harm, or wrongfully obtain anything of value) read and consistent."
     },
     {
       "id": "FED-002-013",
@@ -1362,7 +1362,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Holding (6-3): the Hobbs Act does not bind district courts in civil enforcement proceedings to an agency's interpretation of a statute. Scope as to legislative rules vs interpretations remains debated. Opinion URL surfaced by search but not read. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Holding (6-3): the Hobbs Act does not bind district courts in civil enforcement proceedings to an agency's interpretation of a statute. Scope as to legislative rules vs interpretations remains debated. Opinion URL surfaced by search but not read. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: supremecourt.gov (case law) not on an allowed host."
     },
     {
       "id": "FED-002-014",
@@ -1408,7 +1408,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Contractual, not law. URLs not fetched. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Contractual, not law. URLs not fetched. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: A2P 10DLC / The Campaign Registry and Twilio policies (contract terms) not on an allowed host."
     },
     {
       "id": "FED-002-015",
@@ -1453,7 +1453,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Exact current edition and clause numbers not verified. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Exact current edition and clause numbers not verified. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: CTIA Messaging Principles and Best Practices, carrier codes and Twilio policy (industry/contract terms) not on an allowed host."
     },
     {
       "id": "FED-002-016",
@@ -1463,9 +1463,9 @@
       "category": "Telemarketing",
       "requirement_type": "legal-interpretation-required",
       "citation": "16 CFR Part 310 (Telemarketing Sales Rule), incl. 310.4(b)(1)(iii) DNC, 310.4(c) calling times, 310.5 recordkeeping",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-310",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=310",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "amendment_notes": "2024 TSR amendments reportedly extended recordkeeping (to 5 years) and added B2B misrepresentation coverage (researcher knowledge; verify).",
       "applicability": {
         "criteria": [
@@ -1501,7 +1501,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=310. 16 CFR 310.4(b)(1)(iii)(A)-(B) (company-specific and National DNC), 310.4(c) (no outbound calls to a residence other than between 8:00 a.m. and 9:00 p.m. local time without prior consent), 310.4(d) disclosures, 310.3 misrepresentations, 310.5 recordkeeping and 310.6 exemptions read and consistent."
     },
     {
       "id": "FED-003-001",
@@ -1511,9 +1511,9 @@
       "category": "Email",
       "requirement_type": "regulatory",
       "citation": "15 U.S.C. 7702(2), 7702(17); 16 CFR 316.3",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-316",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "All outbound email sent through Volteira"
@@ -1543,7 +1543,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316; also read https://uscode.house.gov/us/usc/t15/s7702/. 15 U.S.C. 7702(2) (primary purpose; transactional messages excluded; mere reference to a company/link does not by itself make a message commercial) and 7702(17) read; 16 CFR 316.3(a)(2)-(3) confirms the subject-line and beginning-of-body tests for mixed messages."
     },
     {
       "id": "FED-003-002",
@@ -1553,9 +1553,9 @@
       "category": "Email",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7704(a)(1)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7704",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Commercial electronic mail and transactional or relationship messages"
@@ -1586,7 +1586,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7704/. 7704(a)(1) applies to commercial and transactional or relationship messages and bars 'materially false or materially misleading' header information; (a)(1)(B): an accurate 'from' line is not misleading. Domain authentication via Resend is product design."
     },
     {
       "id": "FED-003-003",
@@ -1596,9 +1596,9 @@
       "category": "Email",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7704(a)(2)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7704",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Electronic mail message whose primary purpose is commercial advertisement or promotion (16 CFR 316.3)"
@@ -1633,7 +1633,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7704/. 7704(a)(2) read: subject heading 'likely to mislead a recipient, acting reasonably under the circumstances, about a material fact regarding the contents or subject matter of the message', with actual or fairly implied knowledge. Matches."
     },
     {
       "id": "FED-003-004",
@@ -1643,9 +1643,9 @@
       "category": "Email",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7704(a)(3)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7704",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Electronic mail message whose primary purpose is commercial advertisement or promotion (16 CFR 316.3)"
@@ -1682,7 +1682,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7704/. 7704(a)(3)(A)(i)-(ii) read: functioning return email address or other Internet-based mechanism, clearly and conspicuously displayed, capable of receiving requests for no less than 30 days after transmission; (a)(3)(B) allows a preference menu if it includes an all-commercial opt-out."
     },
     {
       "id": "FED-003-005",
@@ -1692,9 +1692,9 @@
       "category": "Email",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 7704(a)(4)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7704",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Electronic mail message whose primary purpose is commercial advertisement or promotion (16 CFR 316.3)"
@@ -1715,7 +1715,7 @@
       ],
       "required_behavior": [
         "Stop commercial email to an opted-out address no later than 10 business days after the request (Volteira should suppress immediately)",
-        "Do not sell, lease, exchange or otherwise transfer the address except to a party hired to help comply",
+        "Do not sell, lease, exchange or otherwise transfer or release the opted-out address for any purpose other than compliance with CAN-SPAM or other provision of law (15 U.S.C. 7704(a)(4)(A)(iv))",
         "Scope suppression per tenant (sender) and globally for Volteira's own marketing"
       ],
       "enforcement_exposure": "FTC civil penalties per violating email (inflation-adjusted; reported as $53,088 in 2025), state AG and ISP actions; no consumer private right of action. Each separate email is a separate violation.",
@@ -1733,7 +1733,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7704/. 7704(a)(4)(A)(i)-(iv) read. Corrected 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7704/: the statute bars selling, leasing, exchanging or otherwise transferring or releasing the address 'for any purpose other than compliance with this chapter or other provision of law' - replaced 'except to a party hired to help comply' (an FTC-guidance paraphrase) with the statute's wording."
     },
     {
       "id": "FED-003-006",
@@ -1742,10 +1742,10 @@
       "jurisdiction": "Federal",
       "category": "Email",
       "requirement_type": "statutory",
-      "citation": "15 U.S.C. 7704(a)(5)(A)(i)-(iii)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/7704",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "15 U.S.C. 7704(a)(5)(A)(i)-(iii); 16 CFR 316.2(p)",
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s7704/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Electronic mail message whose primary purpose is commercial advertisement or promotion (16 CFR 316.3)"
@@ -1782,7 +1782,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s7704/; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316. 7704(a)(5)(A)(i)-(iii) and (a)(5)(B) (identification not required with prior affirmative consent) read. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316: the street address / registered USPS P.O. box / registered private mailbox definition comes from 16 CFR 316.2(p) ('valid physical postal address'), so added 16 CFR 316.2(p) to the citation."
     },
     {
       "id": "FED-003-007",
@@ -1792,9 +1792,9 @@
       "category": "Email",
       "requirement_type": "regulatory",
       "citation": "16 CFR 316.5",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-316",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Electronic mail message whose primary purpose is commercial advertisement or promotion (16 CFR 316.3)"
@@ -1827,7 +1827,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316. 16 CFR 316.5 read: no fee, no information other than email address and opt-out preferences, and no steps other than sending a reply email or visiting a single Internet Web page. Matches."
     },
     {
       "id": "FED-003-008",
@@ -1837,9 +1837,9 @@
       "category": "Email",
       "requirement_type": "legal-interpretation-required",
       "citation": "15 U.S.C. 7702(9), (12), (16); 15 U.S.C. 7705; 16 CFR 316.2 (definition of 'sender', multiple senders)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-316",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Volteira transmits commercial email whose content promotes a tenant's services"
@@ -1873,7 +1873,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316; also read https://uscode.house.gov/us/usc/t15/s7702/; https://uscode.house.gov/us/usc/t15/s7705/. 7702(9) ('initiate', incl. procuring; more than one person may initiate), (12) ('procure'), (16) ('sender'), 7705 (businesses knowingly promoted in messages with false header info; third-party providers generally not liable under 7705(b)) and 16 CFR 316.2(m) (multiple-sender rule: one sender if identified alone in the 'from' line and compliant with listed provisions) read and consistent."
     },
     {
       "id": "FED-003-009",
@@ -1917,7 +1917,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Mailbox-provider policy, not law. Thresholds stated from researcher knowledge; confirm against provider pages. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Mailbox-provider policy, not law. Thresholds stated from researcher knowledge; confirm against provider pages. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: Google/Yahoo sender guidelines and IETF RFCs 7208/6376/7489/8058 are not on allowed hosts (support.google.com, rfc-editor.org not on the audit allowlist); mailbox-provider policy, not law."
     },
     {
       "id": "FED-004-001",
@@ -1927,9 +1927,9 @@
       "category": "Privacy/security representations",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 45(a)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/45",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Any statement in privacy policy, terms, marketing site, app UI, sales material or AI assistant output about data handling, security, encryption, AI, consent or tenant isolation"
@@ -1962,7 +1962,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s45/. 15 U.S.C. 45(a)(1) declares unfair or deceptive acts or practices in or affecting commerce unlawful; the inventory, dark-pattern and retroactive-change bullets are compliance design consistent with it. The FTC staff report on dark patterns (guidance) was not read."
     },
     {
       "id": "FED-004-002",
@@ -1972,9 +1972,9 @@
       "category": "Data security",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 45(a), 45(n)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/45",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Practices causing or likely to cause substantial consumer injury not reasonably avoidable and not outweighed by benefits"
@@ -2006,7 +2006,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "critical",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s45/. 45(a)(1) and 45(n) (unfairness: substantial injury not reasonably avoidable by consumers and not outweighed by countervailing benefits) read; the listed security controls are compliance design consistent with them."
     },
     {
       "id": "FED-004-003",
@@ -2016,9 +2016,9 @@
       "category": "GLBA Safeguards",
       "requirement_type": "legal-interpretation-required",
       "citation": "16 CFR 314.1, 314.2 (definition of 'financial institution'); 15 U.S.C. 6801(b), 6809(3)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-314",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Entity significantly engaged in financial activities (12 U.S.C. 1843(k)) under FTC jurisdiction",
@@ -2051,7 +2051,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Likely not applicable to Volteira as a SaaS provider and to tenants that only take card/ACH payment for their own services; installment credit is the main gray area. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Likely not applicable to Volteira as a SaaS provider and to tenants that only take card/ACH payment for their own services; installment credit is the main gray area. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314; also read https://uscode.house.gov/us/usc/t15/s6801/; https://uscode.house.gov/us/usc/t15/s6809/. 16 CFR 314.1(b) and 314.2 ('financial institution' = business engaging in activity financial in nature or incidental under 12 U.S.C. 1843(k)), 15 U.S.C. 6801(b) and 6809(3)(A) read and consistent."
     },
     {
       "id": "FED-004-004",
@@ -2061,9 +2061,9 @@
       "category": "GLBA Safeguards",
       "requirement_type": "regulatory",
       "citation": "16 CFR 314.4(a)-(i)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-314",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Applies only if FED-004-003 concludes the entity is a covered financial institution"
@@ -2097,7 +2097,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314. 314.4(a)-(i) read: Qualified Individual (a); written risk assessment (b); safeguards (c)(1)-(8) incl. access controls, encryption in transit and at rest, secure development, MFA, disposal no later than two years after last use unless needed, change management, monitoring/logging; testing (d); training (e); service provider oversight (f); program adjustment (g); written incident response plan (h); written report to the board at least annually (i). Note 314.6: (b)(1), (d)(2), (h) and (i) do not apply to institutions with customer information on fewer than 5,000 consumers."
     },
     {
       "id": "FED-004-005",
@@ -2107,9 +2107,9 @@
       "category": "Breach notification",
       "requirement_type": "regulatory",
       "citation": "16 CFR 314.4(j); 16 CFR 314.2 (definition of 'notification event')",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-314",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2024-05-13",
       "amendment_notes": "Notification requirement added by 2023 amendment, effective May 13, 2024 (researcher knowledge; verify).",
       "applicability": {
@@ -2142,7 +2142,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314. 314.4(j)(1): notify the FTC 'as soon as possible, and no later than 30 days after discovery' of a notification event involving at least 500 consumers, electronically on the FTC form; 'notification event' defined at 314.2(m). 314.5 confirms 314.4(j) is effective May 13, 2024 (matches effective_date)."
     },
     {
       "id": "FED-005-001",
@@ -2152,9 +2152,9 @@
       "category": "Accessibility",
       "requirement_type": "statutory",
       "citation": "42 U.S.C. 12182(a), 12182(b)(2)(A)(ii)-(iii); 28 CFR 36.201, 36.302",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/42/12182",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t42/s12182/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Tenant is a private entity whose operations affect commerce and that falls in a 12181(7) public-accommodation category (electrical contractors are 'service establishments')",
@@ -2199,7 +2199,7 @@
         "FED-005-003",
         "FED-005-004"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t42/s12182/; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-28?part=36. 42 U.S.C. 12182(a) and (b)(2)(A)(ii)-(iii) and 28 CFR 36.201 and 36.302 read and consistent. Whether a website is covered by Title III is not stated in the text; treating it as covered is a design choice consistent with DOJ's guidance (FED-005-003)."
     },
     {
       "id": "FED-005-002",
@@ -2209,9 +2209,9 @@
       "category": "Accessibility",
       "requirement_type": "regulatory",
       "citation": "28 CFR 36.303",
-      "official_source_url": "https://www.ecfr.gov/current/title-28/part-36",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-28?part=36",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Public accommodation communicating with customers with hearing, vision or speech disabilities"
@@ -2244,7 +2244,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-28?part=36. 28 CFR 36.303 read; 36.303(d)(4): a public accommodation 'shall respond to telephone calls from a telecommunications relay service established under title IV of the ADA in the same manner that it responds to other telephone calls'. Supports the relay-call bullet; other alternatives are design."
     },
     {
       "id": "FED-005-003",
@@ -2255,8 +2255,8 @@
       "requirement_type": "guidance",
       "citation": "U.S. DOJ, Guidance on Web Accessibility and the ADA (Mar. 18, 2022)",
       "official_source_url": "https://www.ada.gov/resources/web-guidance/",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Businesses open to the public"
@@ -2287,7 +2287,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Guidance document; not binding regulation. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Guidance document; not binding regulation. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ada.gov/resources/web-guidance/. DOJ 'Guidance on Web Accessibility and the ADA' dated March 18, 2022 read; it covers color contrast, text alternatives, video captions, online forms (labels, keyboard access, clear instructions, identifying errors and how to fix them), keyboard navigation and providing a way to report accessibility problems. Matches."
     },
     {
       "id": "FED-005-004",
@@ -2296,10 +2296,10 @@
       "jurisdiction": "Standard",
       "category": "Accessibility",
       "requirement_type": "technical-standard",
-      "citation": "W3C Web Content Accessibility Guidelines (WCAG) 2.2, Level AA (W3C Recommendation, Oct. 2023)",
+      "citation": "W3C Web Content Accessibility Guidelines (WCAG) 2.2, Level AA (W3C Recommendation, originally published 5 Oct. 2023; current version 12 Dec. 2024)",
       "official_source_url": "https://www.w3.org/TR/WCAG22/",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "All Volteira-built customer-facing pages: tenant websites, booking, checkout handoff, signing, customer portal, plus the contractor app"
@@ -2329,7 +2329,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Voluntary technical standard used as the benchmark in litigation and settlements; not itself law for Title III. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Voluntary technical standard used as the benchmark in litigation and settlements; not itself law for Title III. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.w3.org/TR/WCAG22/. Corrected 2026-11-26 against https://www.w3.org/TR/WCAG22/: the current WCAG 2.2 is 'W3C Recommendation 12 December 2024'; the document says WCAG 2.2 was originally published on 05 October 2023. SC 2.4.11 Focus Not Obscured (Minimum) (AA), 2.5.7 Dragging Movements (AA), 2.5.8 Target Size (Minimum) (AA), 3.3.7 Redundant Entry (Level A) and 3.3.8 Accessible Authentication (Minimum) (AA) confirmed; AA conformance includes the Level A criteria."
     },
     {
       "id": "FED-005-005",
@@ -2339,9 +2339,9 @@
       "category": "Accessibility",
       "requirement_type": "guidance",
       "citation": "28 CFR Part 35, Subpart H (Title II web and mobile app rule, 89 FR 31320, Apr. 24, 2024); compliance dates extended by interim final rule (91 FR, Apr. 20, 2026, FR Doc. 2026-07663)",
-      "official_source_url": "https://www.federalregister.gov/documents/2026/04/20/2026-07663/extension-of-compliance-dates-for-nondiscrimination-on-the-basis-of-disability-accessibility-of-web",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-28?part=35",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "amendment_notes": "Original compliance dates April 24, 2026 (population 50,000+) and April 26, 2027 (smaller); April 2026 IFR reportedly extended each by one year to April 2027 / April 2028 (exact days vary across secondary sources).",
       "applicability": {
         "criteria": [
@@ -2371,7 +2371,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Status from web-search summaries of the April 20, 2026 interim final rule; FR text not read. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Status from web-search summaries of the April 20, 2026 interim final rule; FR text not read. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-28?part=35; also read https://www.ecfr.gov/api/versioner/v1/versions/title-28.json?section=35.200. 28 CFR 35.200 read in eCFR: it applies to public entities' web content and mobile apps; compliance with WCAG 2.1 Level A and AA begins April 26, 2027 (population 50,000 or more, other than special district governments) and April 26, 2028 (under 50,000 and special districts). eCFR version history shows the amendment effective 2026-04-20, consistent with the April 20, 2026 extension; the Federal Register document itself (federalregister.gov) was not read."
     },
     {
       "id": "FED-006-001",
@@ -2381,9 +2381,9 @@
       "category": "Tax recordkeeping",
       "requirement_type": "statutory",
       "citation": "26 U.S.C. 6001; 26 CFR 1.6001-1(a)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/26/6001",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-26?part=1&section=1.6001-1",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Every person liable for federal tax (Shadam LLC, Pacific Plains Electric, each tenant)"
@@ -2413,7 +2413,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-26?part=1&section=1.6001-1; also read https://uscode.house.gov/us/usc/t26/s6001/. 26 U.S.C. 6001 and 26 CFR 1.6001-1(a) (permanent books of account or records sufficient to establish gross income, deductions, credits or other matters) read and consistent."
     },
     {
       "id": "FED-006-002",
@@ -2424,8 +2424,8 @@
       "requirement_type": "regulatory",
       "citation": "26 CFR 1.6001-1(e); 26 U.S.C. 6501, 6511; IRS 'How long should I keep records?'",
       "official_source_url": "https://www.irs.gov/businesses/small-businesses-self-employed/how-long-should-i-keep-records",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "All records supporting federal returns"
@@ -2466,7 +2466,7 @@
       "related_ids": [
         "FED-001-010"
       ],
-      "notes": "IRS page surfaced by search but its table was not read; 4-year employment figure from a secondary source. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "IRS page surfaced by search but its table was not read; 4-year employment figure from a secondary source. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.irs.gov/businesses/small-businesses-self-employed/how-long-should-i-keep-records; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-26?part=1&section=1.6001-1; https://uscode.house.gov/us/usc/t26/s6501/; https://uscode.house.gov/us/usc/t26/s6511/. 1.6001-1(e): retain 'so long as the contents thereof may become material in the administration of any internal revenue law'. The IRS page table read and matches the thresholds: 3 years; 3 years from filing or 2 years from payment for refund claims; 7 years for worthless securities/bad debt; 6 years for unreported income over 25% of gross income; indefinitely for no return or a fraudulent return; employment tax records at least 4 years after the tax is due or paid (now confirmed); property records until the limitations period expires for the year of disposition. 6501(a), (c)(1), (e) and 6511(a), (d)(1) consistent."
     },
     {
       "id": "FED-006-003",
@@ -2476,9 +2476,9 @@
       "category": "Tax recordkeeping",
       "requirement_type": "guidance",
       "citation": "Rev. Proc. 97-22, 1997-1 C.B. 652 (electronic storage systems); Rev. Proc. 98-25, 1998-1 C.B. 689 (machine-sensible records)",
-      "official_source_url": "",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.irs.gov/pub/irs-irbs/irb97-13.pdf",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Taxpayer keeps books/records electronically (imaged or machine-sensible)"
@@ -2508,7 +2508,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "low",
-      "notes": "Revenue procedures are IRS administrative guidance binding on the IRS; IRB citations from researcher knowledge. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Revenue procedures are IRS administrative guidance binding on the IRS; IRB citations from researcher knowledge. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.irs.gov/pub/irs-irbs/irb97-13.pdf; also read https://www.irs.gov/pub/irs-drop/rp-98-25.pdf. Rev. Proc. 97-22 read in 1997-13 I.R.B. 9 (sec. 4.01: accurate and complete transfer; integrity/accuracy/reliability controls; controls against unauthorized creation, alteration or deletion; inspection and quality assurance; indexing/retrieval; legible and readable hardcopies; system documentation) and Rev. Proc. 98-25 read (sec. 5: retain machine-sensible records while material, reconcile with books and return, transaction-level detail; sec. 6: documentation incl. record formats or layouts and field definitions). The C.B. page cites (1997-1 C.B. 652; 1998-1 C.B. 689) were not checked; the I.R.B. cites read are 1997-13 I.R.B. 9 and 1998-11 I.R.B. 7."
     },
     {
       "id": "FED-006-004",
@@ -2518,9 +2518,9 @@
       "category": "Tax reporting",
       "requirement_type": "legal-interpretation-required",
       "citation": "26 U.S.C. 6050W; 26 CFR 1.6050W-1",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/26/6050W",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t26/s6050W/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Payment settlement entity or third-party settlement organization settles payments to payees"
@@ -2554,7 +2554,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Threshold change and its effective tax year stated from researcher knowledge; verify. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Threshold change and its effective tax year stated from researcher knowledge; verify. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t26/s6050W/; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-26?part=1&section=1.6050W-1. 6050W and 1.6050W-1 read. 6050W(e) as amended by Pub. L. 119-21 (July 4, 2025): a third party settlement organization reports only if payments exceed $20,000 and transactions exceed 200 (confirms the applicability threshold; it applies to third party network transactions, not payment card transactions). Who files is a Stripe configuration question (design)."
     },
     {
       "id": "FED-006-005",
@@ -2565,8 +2565,8 @@
       "requirement_type": "statutory",
       "citation": "26 U.S.C. 6050I; 26 CFR 1.6050I-1",
       "official_source_url": "https://www.irs.gov/businesses/small-businesses-self-employed/irs-form-8300-reference-guide",
-      "last_verified": "",
-      "source_verified": false,
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Trade or business receives more than $10,000 in cash in one transaction or two or more related transactions"
@@ -2600,7 +2600,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.irs.gov/businesses/small-businesses-self-employed/irs-form-8300-reference-guide; also read https://uscode.house.gov/us/usc/t26/s6050I/; https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-26?part=1&section=1.6050I-1. 6050I(a) (more than $10,000 in cash in 1 transaction or 2 or more related transactions) and 1.6050I-1 read; 1.6050I-1 requires a report within 15 days of receipt (confirms the applicability threshold) and treats certain cashier's checks, bank drafts, traveler's checks or money orders of not more than $10,000 as cash in designated transactions. IRS Form 8300 reference guide consistent."
     },
     {
       "id": "FED-007-001",
@@ -2643,7 +2643,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "PCI DSS is an industry standard enforced by contract, not law. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "PCI DSS is an industry standard enforced by contract, not law. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: the PCI DSS v4.0.1 standard is served from docs-prv.pcisecuritystandards.org via a JS document library, which could not be read from the audit environment. https://www.pcisecuritystandards.org/standards/pci-dss/ read: it says entities that store, process or transmit CHD/SAD or could impact the CDE are the audience, and that whether an entity must comply or validate is at the discretion of payment brands/acquirers - consistent with the contractual framing. The March 31, 2025 future-dated date was not confirmed. Stripe Services Agreement (contract terms) not on an allowed host."
     },
     {
       "id": "FED-007-002",
@@ -2671,7 +2671,7 @@
       ],
       "required_behavior": [
         "Use redirect to Stripe-hosted Checkout/Payment Links only; never render card fields from Volteira code",
-        "Confirm the new eligibility criterion that the merchant's site is not susceptible to attacks from scripts that could affect the e-commerce system (e.g., CSP, script integrity, dependency management on pages that redirect to checkout)",
+        "The SAQ A r1 eligibility criterion that the merchant's site is not susceptible to attacks from scripts applies only to pages that embed a TPSP payment page/form (e.g., iframes); per the PCI SSC FAQ it does not apply to merchants that redirect to the TPSP (e.g., Stripe-hosted Checkout) or fully outsource payment via a link. If Volteira ever embeds Stripe payment elements, meet it with techniques such as those in PCI DSS 6.4.3 and 11.6.1 or the TPSP's confirmation; keep CSP and script integrity on pages that start checkout as a recommended control",
         "Requirements 6.4.3, 11.6.1 and 12.3.1 were removed from SAQ A in the January 2025 revision"
       ],
       "verification_methods": [
@@ -2689,7 +2689,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Revision details from web-search summary of the PCI SSC blog; document not read. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Revision details from web-search summary of the PCI SSC blog; document not read. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: the SAQ A document itself (docs-prv.pcisecuritystandards.org) could not be read and blog.pcisecuritystandards.org is not on the audit allowlist. Corrected 2026-11-26 against https://www.pcisecuritystandards.org/faq/articles/Frequently_Asked_Question/how-does-an-e-commerce-merchant-meet-the-saq-a-eligibility-criteria-for-scripts/ (PCI SSC FAQ on an allowed host): the SAQ A r1 criterion that 'their site is not susceptible to attacks from scripts that could affect the merchant's e-commerce system(s)' applies only to merchants whose page embeds a TPSP's payment page/form (e.g., iframes) and 'does not apply' to merchants that redirect to the TPSP (HTTP 30x, meta or JavaScript redirect) or fully outsource payment (e.g., emailed pay link) - bullet 2 rewritten accordingly. The removal of 6.4.3, 11.6.1 and 12.3.1 from SAQ A was not confirmed."
     },
     {
       "id": "FED-007-003",
@@ -2732,7 +2732,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: PCI DSS v4.0.1 Requirements 3 and 4 text is served from docs-prv.pcisecuritystandards.org (not readable from the audit environment)."
     },
     {
       "id": "FED-007-004",
@@ -2773,7 +2773,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: PCI DSS v4.0.1 glossary/service-provider text (docs-prv.pcisecuritystandards.org) not readable; Stripe Connect terms (contract terms) not on an allowed host."
     },
     {
       "id": "FED-007-005",
@@ -2783,9 +2783,9 @@
       "category": "EFT",
       "requirement_type": "regulatory",
       "citation": "15 U.S.C. 1693e(a); 12 CFR 1005.10(b), 1005.10(d)",
-      "official_source_url": "https://www.consumerfinance.gov/rules-policy/regulations/1005/10/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005&section=1005.10",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Consumer's account debited on a recurring basis at substantially regular intervals (e.g., installment autopay by ACH or debit card)"
@@ -2822,7 +2822,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005&section=1005.10; also read https://uscode.house.gov/us/usc/t15/s1693e/. 15 U.S.C. 1693e(a) (authorization only in writing; copy provided when made) and 12 CFR 1005.10(b) ('signed or similarly authenticated'; the person obtaining it provides a copy) and 1005.10(d)(1)-(2) (written notice of amount and date at least 10 days before a varying transfer; option to receive notice only outside a specified range or above an agreed difference) read and consistent."
     },
     {
       "id": "FED-007-006",
@@ -2832,9 +2832,9 @@
       "category": "EFT",
       "requirement_type": "regulatory",
       "citation": "15 U.S.C. 1693k; 12 CFR 1005.10(e)(1)",
-      "official_source_url": "https://www.consumerfinance.gov/rules-policy/regulations/1005/10/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005&section=1005.10",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Tenant extends credit to a consumer (installment plan)"
@@ -2864,7 +2864,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005&section=1005.10; also read https://uscode.house.gov/us/usc/t15/s1693k/. 15 U.S.C. 1693k(1) and 12 CFR 1005.10(e)(1) (no conditioning credit on repayment by preauthorized EFT, except overdraft/minimum-balance credit) read and consistent."
     },
     {
       "id": "FED-007-007",
@@ -2874,9 +2874,9 @@
       "category": "EFT",
       "requirement_type": "legal-interpretation-required",
       "citation": "15 U.S.C. 1693 et seq.; 12 CFR Part 1005",
-      "official_source_url": "https://www.consumerfinance.gov/rules-policy/regulations/1005/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Most Reg E duties (error resolution, periodic statements, liability limits) fall on financial institutions holding consumer accounts",
@@ -2903,7 +2903,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1005&section=1005.10. 12 CFR Part 1005 read; payee-facing duties in 1005.10(b)-(e) apply to 'the person that obtains the authorization' / 'designated payee' / 'other person', while error resolution and most other duties fall on financial institutions. Consistent."
     },
     {
       "id": "FED-007-008",
@@ -2913,9 +2913,9 @@
       "category": "Consumer credit",
       "requirement_type": "legal-interpretation-required",
       "citation": "15 U.S.C. 1602(g); 12 CFR 1026.2(a)(17); 12 CFR 1026.17-1026.18",
-      "official_source_url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/2/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1026&section=1026.2",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Credit offered to a consumer primarily for personal, family or household purposes",
@@ -2954,7 +2954,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1026&section=1026.2; also read https://uscode.house.gov/us/usc/t15/s1602/; https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1026&section=1026.17; https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1026&section=1026.18. 15 U.S.C. 1602(g) and 12 CFR 1026.2(a)(17)(i) (regularly extends consumer credit subject to a finance charge or payable by written agreement in more than four installments, not including a down payment, and initially payable to that person) and (a)(17)(v) (more than 25 times, or more than 5 for dwelling-secured, in the preceding or current calendar year) read; 1026.17(b) disclosures before consummation; 1026.18 content. Consistent."
     },
     {
       "id": "FED-007-009",
@@ -2964,9 +2964,9 @@
       "category": "Consumer credit",
       "requirement_type": "legal-interpretation-required",
       "citation": "15 U.S.C. 1635; 12 CFR 1026.23",
-      "official_source_url": "https://www.consumerfinance.gov/rules-policy/regulations/1026/23/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1026&section=1026.23",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Tenant is a TILA creditor and the credit is secured by the consumer's principal dwelling (e.g., contract clause granting a lien)"
@@ -2995,7 +2995,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1026&section=1026.23; also read https://uscode.house.gov/us/usc/t15/s1635/. 12 CFR 1026.23(a)(1), (a)(3) (rescind until midnight of the third business day after consummation, notice or material disclosures, whichever is last; 3-year extended right) and (c) (no disbursement, services or materials during the rescission period) and 15 U.S.C. 1635 read and consistent."
     },
     {
       "id": "FED-007-010",
@@ -3005,9 +3005,9 @@
       "category": "Consumer credit",
       "requirement_type": "regulatory",
       "citation": "16 CFR 433.2; 16 CFR Part 444",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-433",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=433",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Seller in the ordinary course of business takes or receives a consumer credit contract (e.g., in-house installment agreement) or accepts proceeds of a purchase money loan it arranged"
@@ -3022,8 +3022,8 @@
         "Volteira platform"
       ],
       "required_behavior": [
-        "Include the Holder Rule notice in the prescribed bold-face text in any consumer credit contract template",
-        "Credit Practices Rule: no confessions of judgment, waivers of exemption, wage assignments or non-purchase-money household goods security interests; cosigner notice"
+        "Include the Holder Rule 'NOTICE' (16 CFR 433.2(a), or 433.2(b) for purchase money loans) in at least ten point, bold face, type in any consumer credit contract template",
+        "Credit Practices Rule (16 CFR 444.2-444.3): no confessions of judgment or other waivers of notice and opportunity to be heard; no executory waivers of exemption except as to property subject to the security interest; no wage assignments unless revocable, a payroll-deduction or preauthorized payment plan beginning at the time of the transaction, or limited to wages already earned; no nonpossessory non-purchase-money security interests in household goods; give the prescribed 'Notice to Cosigner' before a cosigner is obligated"
       ],
       "enforcement_exposure": "FTC Act section 5 violations; civil penalties for rule violations.",
       "verification_methods": [
@@ -3038,7 +3038,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=433; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=444. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=433 and https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=444: 433.2 requires the Holder notice 'in at least ten point, bold face, type' (added the type size); 444.2(a)(3) allows wage assignments that are revocable, payroll-deduction/preauthorized payment plans from the time of the transaction, or limited to wages already earned, and 444.2(a)(2) allows exemption waivers limited to property subject to the security interest (added these exceptions). Cosigner notice is 444.3(c)."
     },
     {
       "id": "FED-007-011",
@@ -3079,7 +3079,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Retention period stated from researcher knowledge. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Retention period stated from researcher knowledge. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: nacha.org (Nacha Operating Rules, contract terms) not on an allowed host."
     },
     {
       "id": "FED-007-012",
@@ -3122,7 +3122,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Dates and phase scope from web-search summary of Nacha pages; not read directly. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Dates and phase scope from web-search summary of Nacha pages; not read directly. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: nacha.org (Nacha Operating Rules) not on an allowed host; dates and phases unconfirmed."
     },
     {
       "id": "FED-007-013",
@@ -3166,7 +3166,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Terms not read in this session. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Terms not read in this session. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: stripe.com (Stripe Services/Connected Account Agreement, contract terms) not on an allowed host."
     },
     {
       "id": "FED-008-001",
@@ -3176,9 +3176,9 @@
       "category": "Reviews",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.2",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -3216,7 +3216,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465; also read https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=465. 16 CFR 465.2(a)-(d) read: (a) writing/creating/selling fake or false reviews/testimonials; (b) purchasing reviews or disseminating testimonials the business knew or should have known were false; (c) procuring insider reviews; (d) generalized solicitations and mere review hosting excluded from (b)-(c). eCFR version history shows Part 465 effective 2024-10-21 (matches)."
     },
     {
       "id": "FED-008-002",
@@ -3226,9 +3226,9 @@
       "category": "Reviews",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.4",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -3263,7 +3263,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465; also read https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=465. 16 CFR 465.4 read: no compensation or other incentives in exchange for, or conditioned expressly or by implication on, reviews expressing a particular sentiment, positive or negative. Effective 2024-10-21 confirmed."
     },
     {
       "id": "FED-008-003",
@@ -3273,9 +3273,9 @@
       "category": "Reviews",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.5",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -3307,7 +3307,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465; also read https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=465. 16 CFR 465.5(a)-(c) read (officer/manager reviews need clear and conspicuous disclosure; testimonials by officers, managers, employees or agents; solicitation from relatives/employees without instructing disclosure). 'Immediate relative' is defined at 465.1(i) as spouse, parent, child or sibling. Effective 2024-10-21 confirmed."
     },
     {
       "id": "FED-008-004",
@@ -3317,9 +3317,9 @@
       "category": "Reviews",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.6",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -3337,7 +3337,7 @@
         "Volteira as service provider"
       ],
       "required_behavior": [
-        "Tenant website review sections must not be presented as independent reviews when controlled by the business"
+        "Do not materially misrepresent that a website, organization or entity that a tenant or Volteira controls, owns or operates provides independent reviews or opinions (other than consumer reviews) about a category of businesses, products or services that includes its own (e.g., a 'best local electricians' ranking site run by a tenant); consumer-review sections on tenant sites are governed by 16 CFR 465.7(b) (FED-008-005)"
       ],
       "enforcement_exposure": "Civil penalties per violation under 15 USC 45(m)(1)(A) (reported as up to $53,088 per violation in 2025, inflation-adjusted annually); FTC sent first warning letters under Part 465 on Dec. 22, 2025.",
       "verification_methods": [
@@ -3352,7 +3352,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465; also read https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=465. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465: 465.6 bars materially misrepresenting that a website, organization or entity the business controls, owns or operates 'provides independent reviews or opinions, other than consumer reviews, about a category of businesses, products, or services' including its own; it does not cover a business's own consumer-review section (that is 465.7(b)). Bullet rewritten to the rule's scope. Effective 2024-10-21 confirmed."
     },
     {
       "id": "FED-008-005",
@@ -3362,9 +3362,9 @@
       "category": "Reviews",
       "requirement_type": "regulatory",
       "citation": "16 CFR 465.7",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-465",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "effective_date": "2024-10-21",
       "applicability": {
         "criteria": [
@@ -3401,7 +3401,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=465; also read https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=465. 16 CFR 465.7(a)-(b) read: unfounded or groundless legal threats, physical threats, intimidation or knowingly/recklessly false public accusations to prevent or remove reviews; misrepresenting displayed reviews as most or all reviews while suppressing on rating or negative sentiment, with neutral exceptions (trade secrets; defamatory/harassing/abusive/obscene content; others' personal information; discriminatory content; clearly false content; reasonably believed fake; wholly unrelated). Effective 2024-10-21 confirmed."
     },
     {
       "id": "FED-008-006",
@@ -3411,9 +3411,9 @@
       "category": "Reviews",
       "requirement_type": "guidance",
       "citation": "16 CFR Part 255, incl. 255.2 and 255.5 (revised 2023)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-255",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=255",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Testimonials and endorsements in tenant or Volteira advertising, including case studies featuring Pacific Plains Electric"
@@ -3441,7 +3441,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Guides are FTC interpretive guidance; violations are pursued under section 5. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Guides are FTC interpretive guidance; violations are pursued under section 5. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=255. 16 CFR Part 255 (88 FR 48102, July 26, 2023) read, incl. 255.1 (endorsements must reflect honest opinions; advertiser liability for undisclosed material connections), 255.2 (consumer endorsements) and 255.5 (disclosure of material connections). Consistent."
     },
     {
       "id": "FED-008-007",
@@ -3451,9 +3451,9 @@
       "category": "Reviews",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 45b",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/45b",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45b/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Form contracts (standardized terms) with individuals, including tenant contract templates and Volteira's terms"
@@ -3485,7 +3485,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s45b/. 45b(b)(1)(A)-(C) (form-contract provisions void if they restrict covered communications, impose a penalty or fee, or require transfer of IP rights in review content other than a non-exclusive license) and 45b(c) ('It shall be unlawful for a person to offer a form contract containing a provision described as void in subsection (b)') read; 45b(a)(3)(B) excludes employer-employee and independent contractor contracts. Section text matches the register; a non-exclusive license to use review content remains permitted."
     },
     {
       "id": "FED-008-008",
@@ -3495,9 +3495,9 @@
       "category": "Pricing",
       "requirement_type": "guidance",
       "citation": "16 CFR Part 233",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-233",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=233",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Price comparisons or 'sale' claims on tenant websites, estimates, or Volteira's subscription marketing"
@@ -3526,7 +3526,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Part 233 is guidance. Part 464 scope and date from researcher knowledge. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Part 233 is guidance. Part 464 scope and date from researcher knowledge. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=233; also read https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=464. 16 CFR 233.1 (former price must be the actual, bona fide price offered to the public on a regular basis for a reasonably substantial period, in good faith) read. 16 CFR Part 464 read: covered goods or services are limited to live-event tickets and short-term lodging; eCFR version history shows it effective 2025-05-12, consistent with 'May 12, 2025'."
     },
     {
       "id": "FED-008-009",
@@ -3536,9 +3536,9 @@
       "category": "Pricing",
       "requirement_type": "guidance",
       "citation": "16 CFR 251.1",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-251",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=251",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Offers described as free conditioned on a purchase or followed by charges (free estimate then diagnostic fee; free SaaS trial converting to paid)"
@@ -3564,7 +3564,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=251. 16 CFR 251.1(c): all terms, conditions and obligations of a 'Free' offer 'should be set forth clearly and conspicuously at the outset of the offer'. Matches."
     },
     {
       "id": "FED-009-001",
@@ -3574,9 +3574,9 @@
       "category": "Subscriptions",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 8403(1)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/8403",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Charging a consumer for goods or services sold in an internet transaction through a negative option feature (automatic renewal of Volteira's SaaS subscription; tenants' recurring maintenance plans if sold online)"
@@ -3610,7 +3610,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s8403/. 8403(1): 'provides text that clearly and conspicuously discloses all material terms of the transaction before obtaining the consumer's billing information'. The listed terms are design choices for 'all material terms'. Section text checked: 15 U.S.C. 8403 has no lettered subsections; its three conditions are paragraphs (1)-(3) of a single section, so the citation form 8403(1)/(2)/(3) is correct. Negative option feature is defined by reference to 16 CFR Part 310 (TSR)."
     },
     {
       "id": "FED-009-002",
@@ -3620,9 +3620,9 @@
       "category": "Subscriptions",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 8403(2)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/8403",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Charging a consumer for goods or services sold in an internet transaction through a negative option feature (automatic renewal of Volteira's SaaS subscription; tenants' recurring maintenance plans if sold online)"
@@ -3657,7 +3657,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s8403/. 8403(2): 'obtains a consumer's express informed consent before charging the consumer's credit card, debit card, bank account, or other financial account'. Section text checked: 15 U.S.C. 8403 has no lettered subsections; its three conditions are paragraphs (1)-(3) of a single section, so the citation form 8403(1)/(2)/(3) is correct. Negative option feature is defined by reference to 16 CFR Part 310 (TSR)."
     },
     {
       "id": "FED-009-003",
@@ -3667,9 +3667,9 @@
       "category": "Subscriptions",
       "requirement_type": "statutory",
       "citation": "15 U.S.C. 8403(3)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/8403",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s8403/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Charging a consumer for goods or services sold in an internet transaction through a negative option feature (automatic renewal of Volteira's SaaS subscription; tenants' recurring maintenance plans if sold online)"
@@ -3707,7 +3707,7 @@
       "related_ids": [
         "FED-009-004"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s8403/. 8403(3): 'provides simple mechanisms for a consumer to stop recurring charges'. 'At least as easy as signup' and no forced retention calls are stricter design choices consistent with it. Section text checked: 15 U.S.C. 8403 has no lettered subsections; its three conditions are paragraphs (1)-(3) of a single section, so the citation form 8403(1)/(2)/(3) is correct. Negative option feature is defined by reference to 16 CFR Part 310 (TSR)."
     },
     {
       "id": "FED-009-004",
@@ -3716,7 +3716,7 @@
       "jurisdiction": "Federal",
       "category": "Subscriptions",
       "requirement_type": "guidance",
-      "citation": "16 CFR Part 425; Eighth Circuit vacatur of the 2024 amendments (decided July 8, 2025)",
+      "citation": "16 CFR Part 425 (original prenotification negative option rule, as restored at 91 FR 6509, Feb. 12, 2026); Eighth Circuit vacatur of the 2024 amendments (decided July 8, 2025)",
       "official_source_url": "",
       "last_verified": "",
       "source_verified": false,
@@ -3733,7 +3733,7 @@
         "Contractor tenants"
       ],
       "required_behavior": [
-        "Record that the 2024 amended rule (originally to take effect July 14, 2025) is not in force; continue to comply with ROSCA and state ARLs; monitor for any new FTC rulemaking"
+        "Record that the 2024 amended rule is not in force: per eCFR, the amended Part 425 (effective in eCFR Jan. 14, 2025, incl. § 425.6 'Click to Cancel') was removed effective Feb. 12, 2026 (91 FR 6509), leaving § 425.1 (prenotification negative option plans for goods and merchandise) and § 425.2 [Reserved]; continue to comply with ROSCA and state ARLs; monitor for any new FTC rulemaking"
       ],
       "verification_methods": [
         "legal-review"
@@ -3747,7 +3747,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Vacated on procedural grounds (no preliminary regulatory analysis). Web search on 2026-11-24 found no confirmed new FTC rulemaking; status after July 2025 not confirmed. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Vacated on procedural grounds (no preliminary regulatory analysis). Web search on 2026-11-24 found no confirmed new FTC rulemaking; status after July 2025 not confirmed. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: the Eighth Circuit decision (case law) is not on an allowed host. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=425 and https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=425: eCFR shows Part 425 now 'Source: 91 FR 6509, Feb. 12, 2026' with only § 425.1 'The rule' (prenotification plans) and § 425.2 [Reserved]; the amended §§ 425.3-425.9 (Misrepresentations, Important information, Consent, Simple cancellation ('Click to Cancel'), Relation to State laws, Exemptions, Severability) that eCFR carried from 2025-01-14 were removed on 2026-02-12. This settles the 'status after July 2025' question in the notes. The 'originally to take effect July 14, 2025' date was not confirmed (eCFR shows the amended text effective 2025-01-14; compliance dates are in the Federal Register preamble, not read), so it was replaced with the eCFR dates."
     },
     {
       "id": "FED-010-001",
@@ -3783,7 +3783,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "informational",
-      "notes": "Whether the FTC issued the directed policy statement was not confirmed by search. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Whether the FTC issued the directed policy statement was not confirmed by search. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: the Executive Order (federalregister.gov / whitehouse.gov) is not on an allowed host."
     },
     {
       "id": "FED-010-002",
@@ -3821,7 +3821,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "medium",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: the cited FTC guidance URLs returned HTTP 404 (https://www.ftc.gov/business-guidance/blog/2023/02/keep-your-ai-claims-check; the 'Operation AI Comply' press release URL also 404). 15 U.S.C. 45(a) read at https://uscode.house.gov/us/usc/t15/s45/ and is consistent with the requirement, but the cited guidance was not read."
     },
     {
       "id": "FED-010-003",
@@ -3831,9 +3831,9 @@
       "category": "AI governance",
       "requirement_type": "guidance",
       "citation": "15 U.S.C. 45(a) (deception/unfairness as applied to AI outputs)",
-      "official_source_url": "https://www.law.cornell.edu/uscode/text/15/45",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://uscode.house.gov/us/usc/t15/s45/",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "AI assistants draft or propose texts/emails/estimates sent to consumers"
@@ -3869,7 +3869,7 @@
         "FED-002-005",
         "FED-002-011"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://uscode.house.gov/us/usc/t15/s45/. 15 U.S.C. 45(a)(1) and 45(n) read; human approval, AI-output limits and send-time re-checks are compliance design consistent with the deception/unfairness standards. California bot-disclosure law is on leginfo (not read)."
     },
     {
       "id": "FED-010-004",
@@ -3907,7 +3907,7 @@
       "website_verifiable": false,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Proposal recalled from researcher knowledge (NPRM adopted Aug. 2024); current status not verified. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Proposal recalled from researcher knowledge (NPRM adopted Aug. 2024); current status not verified. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: FCC NPRM (docs.fcc.gov / federalregister.gov) not on the audit allowlist; www.fcc.gov returns HTTP 403."
     },
     {
       "id": "FED-010-005",
@@ -3948,7 +3948,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "medium",
-      "notes": "Vendor terms not read in this session. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Vendor terms not read in this session. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: Anthropic, OpenAI and xAI terms (contract terms) not on an allowed host."
     },
     {
       "id": "FED-011-001",
@@ -3958,9 +3958,9 @@
       "category": "Children's privacy",
       "requirement_type": "legal-interpretation-required",
       "citation": "15 U.S.C. 6501-6506; 16 CFR Part 312 (amended rule effective June 23, 2025; general compliance date April 22, 2026)",
-      "official_source_url": "https://www.federalregister.gov/documents/2025/04/22/2025-05904/childrens-online-privacy-protection-rule",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=312",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Website/online service directed to children under 13 (16 CFR 312.2 factors), or operator with actual knowledge it collects personal information from a child under 13"
@@ -3992,7 +3992,7 @@
       "website_verifiable": true,
       "backend_verification_required": false,
       "risk_severity": "low",
-      "notes": "Amended-rule dates from the Federal Register document surfaced by search (90 FR 16918, Apr. 22, 2025); not read directly. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Amended-rule dates from the Federal Register document surfaced by search (90 FR 16918, Apr. 22, 2025); not read directly. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=312; also read https://uscode.house.gov/us/usc/t15/s6501/; https://uscode.house.gov/us/usc/t15/s6502/; https://www.ecfr.gov/api/versioner/v1/versions/title-16.json?part=312. 15 U.S.C. 6501-6502 and 16 CFR Part 312 read: 312.3 and 6502(a)(1) apply to operators of sites directed to children or with actual knowledge of collecting personal information from a child; 312.2 'directed to children' factors. eCFR shows Part 312 'as amended at 90 FR 16977, Apr. 22, 2025' with the amended version effective 2025-06-23 (matches 'effective June 23, 2025'). The April 22, 2026 general compliance date is stated in the Federal Register preamble (federalregister.gov, not read) and was not confirmed."
     },
     {
       "id": "FED-011-002",
@@ -4001,10 +4001,10 @@
       "jurisdiction": "Federal",
       "category": "Door-to-door sales",
       "requirement_type": "legal-interpretation-required",
-      "citation": "16 CFR 429.0 (definitions); 16 CFR 429.3 (exemptions)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-429",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "16 CFR 429.0(a) (definition of 'door-to-door sale' and its exclusions (a)(1)-(6)); 16 CFR 429.3 (exemptions for motor vehicles sold at temporary places and arts or crafts sold at fairs)",
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Sale, lease or rental of consumer goods or services with a purchase price of $25 or more made at the buyer's residence (e.g., technician sells a panel upgrade during an in-home visit), or $130 or more at a seller's temporary location"
@@ -4047,7 +4047,7 @@
       "website_verifiable": false,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Exemption list paraphrased from researcher knowledge; section numbering to confirm. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Exemption list paraphrased from researcher knowledge; section numbering to confirm. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429: the exclusions listed in applicability (prior negotiations at a permanent retail location; sales with a TILA 1635 rescission right; buyer-initiated bona fide immediate personal emergency with a separate dated, signed handwritten waiver; sales entirely by mail or telephone with no other contact; buyer-requested home visit to repair or maintain personal property; real property, insurance, securities/commodities) are in the 429.0(a) definition, paragraphs (a)(1)-(6); 429.3 contains only the motor-vehicle and arts/crafts exemptions. Citation updated. Note: 429.0(a)(4) says 'entirely by mail or telephone' - it does not mention the internet; the applicability item 'mail, telephone or internet' is broader than the text. Thresholds $25 (buyer's residence) and $130 (other temporary locations) confirmed."
     },
     {
       "id": "FED-011-003",
@@ -4057,9 +4057,9 @@
       "category": "Door-to-door sales",
       "requirement_type": "regulatory",
       "citation": "16 CFR 429.1(a)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-429",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Sale, lease or rental of consumer goods or services with a purchase price of $25 or more made at the buyer's residence (e.g., technician sells a panel upgrade during an in-home visit), or $130 or more at a seller's temporary location"
@@ -4084,7 +4084,7 @@
         "Volteira as service provider"
       ],
       "required_behavior": [
-        "Furnish a fully completed receipt or copy of the contract, in the language used in the oral presentation, containing near the signature the prescribed statement of the buyer's right to cancel within three business days, in at least 10-point bold type"
+        "At the time of execution, furnish a fully completed receipt or copy of the contract, in the same language as that principally used in the oral sales presentation, showing the date of the transaction and the seller's name and address, and containing, in immediate proximity to the buyer's signature space (or on the front page of the receipt if no contract is used), in bold face type of a minimum size of 10 points, a statement in substantially this form: “You, the buyer, may cancel this transaction at any time prior to midnight of the third business day after the date of this transaction. See the attached notice of cancellation form for an explanation of this right.” (adjust the last sentence if the forms are not attached)"
       ],
       "verification_methods": [
         "document-inspection",
@@ -4099,7 +4099,7 @@
       "website_verifiable": true,
       "backend_verification_required": true,
       "risk_severity": "high",
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429: required_behavior now quotes the 429.1(a) statement exactly and states its placement ('in immediate proximity to the space reserved in the contract for the signature of the buyer or on the front page of the receipt if a contract is not used'), type size ('bold face type of a minimum size of 10 points') and the required date and seller name/address. 'Business day' (429.0(f)) is any calendar day except Sunday or a federal holiday."
     },
     {
       "id": "FED-011-004",
@@ -4108,10 +4108,10 @@
       "jurisdiction": "Federal",
       "category": "Door-to-door sales",
       "requirement_type": "regulatory",
-      "citation": "16 CFR 429.1(b)-(h) (paragraph assignments to confirm)",
-      "official_source_url": "https://www.ecfr.gov/current/title-16/part-429",
-      "last_verified": "",
-      "source_verified": false,
+      "citation": "16 CFR 429.1(b)-(i)",
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Sale, lease or rental of consumer goods or services with a purchase price of $25 or more made at the buyer's residence (e.g., technician sells a panel upgrade during an in-home visit), or $130 or more at a seller's temporary location"
@@ -4136,9 +4136,9 @@
         "Volteira as service provider"
       ],
       "required_behavior": [
-        "Provide a completed Notice of Cancellation form (in duplicate, with transaction date and cancellation deadline) and inform the buyer orally of the right to cancel",
-        "Do not misrepresent the right to cancel; do not include confessions of judgment or waivers of the right to cancel",
-        "Honor valid cancellations: within 10 business days refund all payments (including deposits/diagnostic fees tied to the sale), return trade-ins, and cancel any negotiable instrument",
+        "Furnish each buyer, when the buyer signs or agrees to buy, a completed form in duplicate captioned “NOTICE OF RIGHT TO CANCEL” or “NOTICE OF CANCELLATION” in ten point bold face type and in the contract's language (429.1(b)); before furnishing it, complete both copies with the seller's name, the address of the seller's place of business, the date of the transaction, and the cancellation deadline (not earlier than the third business day after the transaction) (429.1(c)); inform the buyer orally of the right to cancel at signing (429.1(e))",
+        "Do not include any confession of judgment or any waiver of the buyer's rights, including the right to cancel (429.1(d)); do not misrepresent the right to cancel (429.1(f))",
+        "Honor valid cancellations: within 10 business days after receipt, refund all payments made under the contract or sale (including deposits/diagnostic fees tied to the sale), return goods or property traded in, cancel and return any negotiable instrument and terminate any security interest (429.1(g)); within 10 business days notify the buyer whether the seller will repossess or abandon delivered goods (429.1(i)); do not negotiate, transfer, sell or assign any note to a third party before midnight of the fifth business day after signing (429.1(h))",
         "Electronic delivery of these notices requires ESIGN consumer consent (FED-001-002)"
       ],
       "verification_methods": [
@@ -4160,7 +4160,7 @@
         "FED-001-002",
         "FED-011-003"
       ],
-      "notes": "Whether ESIGN electronic delivery fully satisfies 'in duplicate' paper-form requirements is a legal question. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Whether ESIGN electronic delivery fully satisfies 'in duplicate' paper-form requirements is a legal question. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429. Corrected 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=429: paragraph assignments confirmed - (b) duplicate Notice of Cancellation form, (c) completing both copies, (d) no confession of judgment or waiver, (e) oral notice, (f) no misrepresentation, (g) 10-business-day refund/return/cancel, (h) no assignment of the note before midnight of the fifth business day, (i) 10-business-day notice whether goods will be repossessed or abandoned. Citation changed from '16 CFR 429.1(b)-(h) (paragraph assignments to confirm)' to '16 CFR 429.1(b)-(i)'; required_behavior now carries the paragraph letters and adds the (c) caption/completion details and the (h) and (i) duties."
     },
     {
       "id": "FED-011-005",
@@ -4170,9 +4170,9 @@
       "category": "Financial privacy",
       "requirement_type": "legal-interpretation-required",
       "citation": "15 U.S.C. 6801-6809; 12 CFR Part 1016 (Regulation P)",
-      "official_source_url": "https://www.consumerfinance.gov/rules-policy/regulations/1016/",
-      "last_verified": "",
-      "source_verified": false,
+      "official_source_url": "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1016",
+      "last_verified": "2026-11-26",
+      "source_verified": true,
       "applicability": {
         "criteria": [
           "Entity is a 'financial institution' with consumers/customers (e.g., a tenant regularly extending installment credit)"
@@ -4205,7 +4205,7 @@
       "related_ids": [
         "FED-004-003"
       ],
-      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Verified 2026-11-26 against https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-12?part=1016; also read https://uscode.house.gov/us/usc/t15/s6801/; https://uscode.house.gov/us/usc/t15/s6809/. 12 CFR 1016.1, 1016.4 (initial notice), 1016.5 (annual notice; exception at 1016.5(e)), 1016.7 and 1016.10 (opt out before disclosing NPI to nonaffiliated third parties, subject to 1016.13-1016.15 exceptions) and 1016.11 (reuse/redisclosure limits, relevant to Volteira as a recipient) read; 15 U.S.C. 6801 and 6809 read. Consistent."
     },
     {
       "id": "FED-011-006",
@@ -4247,7 +4247,7 @@
       "related_ids": [
         "FED-004-005"
       ],
-      "notes": "Absence of a general federal statute stated from researcher knowledge; FTC Health Breach Notification Rule and HIPAA are not applicable to this business model. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it."
+      "notes": "Absence of a general federal statute stated from researcher knowledge; FTC Health Breach Notification Rule and HIPAA are not applicable to this business model. Official text not read: law.cornell.edu and ecfr.gov did not resolve from this session's network on 2026-11-24 (hosts outside the session's allowed domains), so no official source was fetched. Content reflects the researcher's knowledge plus 2026-11-24 web-search summaries (mostly secondary sources); verify against the official text before relying on it. Not verified 2026-11-26: the statement that there is no general federal data breach notification statute is an absence claim that cannot be confirmed from official text; card-brand/Stripe incident terms (contract terms) are not on an allowed host. 16 CFR 314.4(j) read at https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=314 and consistent (FTC notice within 30 days of discovery for 500+ consumers, if the Safeguards Rule applies)."
     }
   ]
 }
