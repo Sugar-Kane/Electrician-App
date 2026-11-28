@@ -28,6 +28,8 @@ export type WorkflowActionState = {
   notice?: string;
   /** Set when the move landed, so the client can stop asking. */
   state?: WorkflowState;
+  /** Starting work needs the person to acknowledge there is no fully signed contract. */
+  needsContractAck?: boolean;
 };
 
 function text(formData: FormData, key: string): string {
@@ -122,6 +124,44 @@ export async function advanceJob(
           ? "The customer cancelled this contract, so the work can't start. Refund what they paid."
           : "The customer can still cancel this contract. Start the work once their right to cancel ends.",
       };
+    }
+
+    // A home improvement contract is signed by both parties before work
+    // starts (CSLB-003-001). Warned and recorded, not blocked.
+    const { data: facts } = await job.supabase
+      .from("jobs")
+      .select("category, customers ( customer_type ), contracts ( kind, contract_type, status, signed_at, contractor_signed_at, created_at )")
+      .eq("organization_id", job.organizationId)
+      .eq("id", job.id)
+      .maybeSingle();
+    const row = (facts ?? {}) as Record<string, unknown>;
+    const agreements = (Array.isArray(row.contracts) ? (row.contracts as Record<string, unknown>[]) : [])
+      .filter((contract) => contract.kind === "agreement" && contract.status !== "void")
+      .sort((a, b) => str(b.created_at).localeCompare(str(a.created_at)));
+    const latest = agreements[0];
+    const { startNeedsContractAcknowledgement } = await import("@/lib/ca-home-improvement");
+    const needsAck = startNeedsContractAcknowledgement({
+      category: str(row.category),
+      customerType: str((row.customers as Record<string, unknown> | null)?.customer_type),
+      agreement: latest
+        ? { contractType: str(latest.contract_type) || null, status: str(latest.status), signedAt: str(latest.signed_at) || null, contractorSignedAt: str(latest.contractor_signed_at) || null }
+        : null,
+    });
+    if (needsAck && text(formData, "startWithoutContract") !== "on") {
+      return {
+        error: "This job has no contract signed by you and the customer. California requires a signed home improvement contract before work starts.",
+        needsContractAck: true,
+      };
+    }
+    if (needsAck) {
+      const { recordActivity } = await import("@/lib/activity");
+      await recordActivity(job.supabase, {
+        organizationId: job.organizationId,
+        eventType: "job.started_without_contract",
+        label: "Work started without a contract signed by both parties (acknowledged)",
+        jobId: job.id,
+        metadata: { latest_contract_status: latest ? str(latest.status) : "none" },
+      }).catch(() => undefined);
     }
   }
 

@@ -285,6 +285,8 @@ export function JobWorkflow({
   const [noticeExtra, setNoticeExtra] = useState<Record<string, string>>({});
   const [asking, setAsking] = useState(false);
   const [confirmingWork, setConfirmingWork] = useState(false);
+  // The "no signed contract" question, put away for this answer once "Not yet" is pressed.
+  const [ackPutAway, setAckPutAway] = useState<WorkflowActionState | null>(null);
   const [confirmingParts, setConfirmingParts] = useState(false);
   const [nearby, setNearby] = useState<Nearby | null>(null);
   const [locationProblem, setLocationProblem] = useState("");
@@ -528,6 +530,12 @@ export function JobWorkflow({
               });
             }}
             onCancel={() => setConfirmingParts(false)}
+          />
+        ) : result.needsContractAck && ackPutAway !== result ? (
+          <ConfirmStartWithoutContract
+            pending={pending}
+            onConfirm={() => advance("working", "manual", { startWithoutContract: "on" })}
+            onCancel={() => setAckPutAway(result)}
           />
         ) : confirmingWork ? (
           <ConfirmEarlyWork
@@ -943,6 +951,32 @@ function ConfirmPartsUsed({
 }
 
 /** Starting work on a job nobody was ever marked arrived at. */
+/**
+ * Starting home improvement work with no contract signed by both parties
+ * (CSLB-003-001): said plainly, and allowed only once acknowledged, which is
+ * recorded on the job's history.
+ */
+function ConfirmStartWithoutContract({ onConfirm, onCancel, pending }: { onConfirm: () => void; onCancel: () => void; pending: boolean }) {
+  return (
+    <div className="mt-4 rounded-control border border-caution/40 bg-caution-bg p-4">
+      <p className="text-sm font-semibold">No signed contract on this job</p>
+      <p className="mt-1 text-sm leading-6 text-ink-muted">
+        California requires a home improvement contract signed by you and the customer before work starts. Have it signed on the
+        Contract card first if you can. Starting anyway is recorded on the job.
+      </p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button type="button" onClick={onCancel} disabled={pending} className={PRIMARY}>
+          Not yet
+        </button>
+        <button type="button" onClick={onConfirm} disabled={pending} className={SECONDARY}>
+          {pending ? <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden /> : null}
+          I understand, start work anyway
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ConfirmEarlyWork({
   onConfirm,
   onCancel,

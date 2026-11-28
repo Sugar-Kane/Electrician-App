@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { LicenseNotice } from "@/components/license-notice";
 import { MfaNotice } from "@/components/mfa-notice";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { TopActions } from "@/components/top-actions";
@@ -118,6 +119,7 @@ export function FieldPageShell({
               </div>
             )}
             <MfaNotice />
+            <LicenseNotice />
             {children}
           </div>
         </div>
@@ -177,6 +179,7 @@ export function FieldPageShell({
             {action ? <div className="shrink-0">{action}</div> : null}
           </header>
           <MfaNotice />
+            <LicenseNotice />
           {children}
         </div>
       </div>
