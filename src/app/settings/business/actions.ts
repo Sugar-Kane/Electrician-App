@@ -102,3 +102,51 @@ export async function saveBusinessDetails(
 
   return { error: "", notice: "Saved. Customers will see this on new messages." };
 }
+
+export type LicenseState = { error: string; notice?: string };
+
+const LICENSE_STATUS_VALUES = new Set(["active", "inactive", "expired", "suspended", "revoked"]);
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The license as CSLB's lookup shows it (compliance CSLB-001-002): status,
+ * expiry and the day it was checked. Owners and admins only; RLS decides too.
+ * "Acknowledge" lets billing go on for a week while the license is recorded
+ * as lapsed, and is kept with who pressed it.
+ */
+export async function saveLicenseStatus(_previous: LicenseState, formData: FormData): Promise<LicenseState> {
+  const { data: membership } = await activeMembership();
+  const organizationId = typeof membership?.organization_id === "string" ? membership.organization_id : "";
+  const role = typeof membership?.role === "string" ? membership.role : "";
+  if (!organizationId) return { error: "You are not a member of a business." };
+  if (role !== "owner" && role !== "admin") return { error: "Only an owner or administrator can change the license details." };
+
+  const supabase = asFlexibleClient(await createClient());
+  const { data: auth } = await supabase.auth.getUser();
+  const intent = field(formData, "intent");
+
+  if (intent === "acknowledge") {
+    const { error } = await supabase
+      .from("organizations")
+      .update({ license_acknowledged_at: new Date().toISOString(), license_acknowledged_by: auth.user?.id ?? null })
+      .eq("id", organizationId);
+    if (error) return { error: "That could not be saved." };
+    revalidatePath("/", "layout");
+    return { error: "", notice: "Acknowledged. Invoices and pay links go out for the next 7 days; update the license as soon as you can." };
+  }
+
+  const status = field(formData, "licenseStatus");
+  const expiresOn = field(formData, "licenseExpiresOn");
+  const verifiedOn = intent === "checked_today" ? new Date().toISOString().slice(0, 10) : field(formData, "licenseVerifiedOn");
+  if (status && !LICENSE_STATUS_VALUES.has(status)) return { error: "Choose the status CSLB shows." };
+  if (expiresOn && !ISO_DATE.test(expiresOn)) return { error: "Give the expiry date." };
+  if (verifiedOn && !ISO_DATE.test(verifiedOn)) return { error: "Give the date you checked it." };
+
+  const { error } = await supabase
+    .from("organizations")
+    .update({ license_status: status || null, license_expires_on: expiresOn || null, license_verified_on: verifiedOn || null })
+    .eq("id", organizationId);
+  if (error) return { error: "Those license details could not be saved." };
+  revalidatePath("/", "layout");
+  return { error: "", notice: "License details saved." };
+}

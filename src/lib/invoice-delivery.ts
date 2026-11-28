@@ -66,6 +66,14 @@ export async function deliverInvoice(input: {
   // done allows (B&P 7159.5): every sender (the screen, the assistant,
   // ChatGPT) comes through here. A preview or a paid copy asks for nothing.
   if (!preview && !paidCopy) {
+    // A license recorded as lapsed: billing waits for the owner's acknowledgement (CSLB-001-002).
+    const { licenseRefusal } = await import("@/lib/license-status-server");
+    const licenseHold = await licenseRefusal(input.organizationId);
+    if (licenseHold) {
+      const at = new Date().toISOString();
+      const asked = [...new Set(input.channels.filter((channel): channel is DeliveryChannel => channel === "sms" || channel === "email"))];
+      return (asked.length ? asked : (["sms"] as DeliveryChannel[])).map((channel) => ({ channel, to: "", ok: false, detail: licenseHold, at }));
+    }
     const allowed = await invoiceSendCheck(asFlexibleClient(database), { organizationId: input.organizationId, invoiceId: input.invoiceId });
     if (!allowed.ok) {
       const at = new Date().toISOString();

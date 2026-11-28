@@ -769,6 +769,10 @@ export async function sendPaymentRequest(itemId: string, options: { byHand: bool
   // unclaimed and goes once the period ends.
   const hold = await jobCancellationHold(asFlexibleClient(database), payment.organizationId, payment.jobId);
   if (hold) return { ok: false, message: hold };
+  // A license recorded as lapsed: nothing is asked for until the owner acknowledges it (CSLB-001-002).
+  const { licenseRefusal } = await import("@/lib/license-status-server");
+  const licenseHold = await licenseRefusal(payment.organizationId);
+  if (licenseHold) return { ok: false, message: licenseHold };
   if (!payment.stripeAccount) return { ok: false, message: "Online payments aren't set up yet. Connect Stripe in Settings first." };
   const origin = appOrigin();
   if (!origin) return { ok: false, message: "Pay links can't be sent right now." };

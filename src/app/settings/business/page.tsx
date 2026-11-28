@@ -3,6 +3,9 @@ import { ChevronRight, Clock } from "lucide-react";
 
 import { BookingPageSettings, type BookingDomain } from "@/components/booking-page-settings";
 import { BusinessDetailsForm, type BusinessDetails } from "@/components/business-details-form";
+import { LicenseStatusCard, type LicenseDetails } from "@/components/license-status-card";
+import { businessLicenseWarning } from "@/lib/license-status-server";
+import type { LicenseWarning } from "@/lib/license-status";
 import { FieldPageShell } from "@/components/field-page-shell";
 import { logoUrl } from "@/lib/branding-storage";
 import { readMarkupPercent } from "@/lib/store-price-rules";
@@ -36,6 +39,8 @@ export default async function BusinessSettingsPage() {
   };
 
   let details = empty;
+  let license: LicenseDetails = { status: "", expiresOn: "", verifiedOn: "" };
+  let licenseState: LicenseWarning = { level: "none" };
   let logo = "";
   let brandColor = "";
   let domains: BookingDomain[] = [];
@@ -51,7 +56,7 @@ export default async function BusinessSettingsPage() {
     const { data } = await supabase
       .from("organizations")
       .select(
-        "name, phone, license_number, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color, materials_markup_percent",
+        "name, phone, license_number, license_status, license_expires_on, license_verified_on, base_address_line_1, base_city, base_state, base_postal_code, timezone, slug, logo_path, brand_color, materials_markup_percent",
       )
       .eq("id", context.organizationId)
       .maybeSingle();
@@ -71,6 +76,8 @@ export default async function BusinessSettingsPage() {
       materialsMarkup: String(readMarkupPercent(row.materials_markup_percent) ?? 20),
     };
 
+    license = { status: text(row.license_status), expiresOn: text(row.license_expires_on), verifiedOn: text(row.license_verified_on) };
+    licenseState = await businessLicenseWarning(context.organizationId);
     logo = logoUrl(text(row.logo_path));
     brandColor = text(row.brand_color);
 
@@ -99,6 +106,9 @@ export default async function BusinessSettingsPage() {
       backHref="/settings"
     >
       <BusinessDetailsForm details={details} canManage={canManage} />
+      <div className="mt-4">
+        <LicenseStatusCard details={license} warning={licenseState} canManage={canManage} />
+      </div>
 
       {/*
         A pointer, not a second copy of the form. Opening hours change what

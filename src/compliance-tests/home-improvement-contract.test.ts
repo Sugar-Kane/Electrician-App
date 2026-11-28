@@ -195,3 +195,18 @@ test("CT-HIC-007: after a cancellation every payment is returned in full, to the
   assert.deepEqual(cancellationRefundSteps([{ ...paid[0]!, refundedCents: 150_000 }]), []);
   assert.equal(refundsComplete(paid.map((payment) => ({ ...payment, refundedCents: payment.amountCents }))), true);
 });
+
+test("CT-HIC-008: starting home improvement work without a contract signed by both parties asks for an acknowledgement", async () => {
+  const { startNeedsContractAcknowledgement: needs } = await import("../lib/ca-home-improvement.ts");
+  const signed = { contractType: "home_improvement", status: "signed", signedAt: "2026-11-20T00:00:00Z", contractorSignedAt: "2026-11-19T00:00:00Z" };
+  assert.equal(needs({ category: "work_order", customerType: "residential", agreement: signed }), false);
+  assert.equal(needs({ category: "work_order", customerType: "residential", agreement: null }), true);
+  assert.equal(needs({ category: "work_order", customerType: "residential", agreement: { ...signed, signedAt: null, status: "sent" } }), true);
+  assert.equal(needs({ category: "work_order", customerType: "residential", agreement: { ...signed, contractorSignedAt: null } }), true);
+  assert.equal(needs({ category: "work_order", customerType: "residential", agreement: { ...signed, status: "cancelled" } }), true);
+  // Not home improvement work: a diagnostic visit, another contract type, or a business with no contract saying otherwise.
+  assert.equal(needs({ category: "diagnostic", customerType: "residential", agreement: null }), false);
+  assert.equal(needs({ category: "work_order", customerType: "residential", agreement: { ...signed, contractType: "service_repair", signedAt: null } }), false);
+  assert.equal(needs({ category: "work_order", customerType: "commercial", agreement: null }), false);
+  assert.equal(needs({ category: "work_order", customerType: "commercial", agreement: { ...signed, signedAt: null } }), true);
+});

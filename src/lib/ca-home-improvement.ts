@@ -463,3 +463,23 @@ export function cancellationFormView(
 export function noticesAt(notices: LegalNotices | null | undefined, placement: NoticePlacement): NoticeSection[] {
   return (notices?.sections ?? []).filter((section) => section.placement === placement);
 }
+
+/**
+ * Whether starting work on this job needs the person to acknowledge there is
+ * no contract signed by both parties (B&P 7159(d): a home improvement contract
+ * is signed before work starts; compliance CSLB-003-001). Adam's decision
+ * (2026-11-27): warn and record, don't block. A diagnostic visit and work for
+ * a business are not home improvement work unless the contract says so.
+ */
+export function startNeedsContractAcknowledgement(input: {
+  category: string;
+  customerType: string;
+  agreement: { contractType: string | null; status: string; signedAt: string | null; contractorSignedAt: string | null } | null;
+}): boolean {
+  if (input.category === "diagnostic") return false;
+  const type = input.agreement?.contractType ?? null;
+  if (type && type !== "home_improvement") return false;
+  if (!type && input.customerType === "commercial") return false;
+  const agreement = input.agreement;
+  return !(agreement && agreement.status === "signed" && agreement.signedAt && agreement.contractorSignedAt);
+}

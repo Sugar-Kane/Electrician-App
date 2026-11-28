@@ -1,7 +1,7 @@
 {
   "description": "Compliance tests and the requirements they support. A passing test is evidence for the rule it exercises, not for every pathway that should call that rule; pathway coverage is assessed in the audit findings.",
   "version": "1.0.0",
-  "updated": "2026-11-26",
+  "updated": "2026-11-28",
   "classifications": [
     "automated",
     "browser-assisted",
@@ -325,6 +325,24 @@
         "SEC-001-002"
       ],
       "what": "Owners, admins and platform staff must use two-step sign-in from 2026-12-10; anyone set up is always asked for the code"
+    },
+    {
+      "id": "CT-LICENSE-001",
+      "file": "src/compliance-tests/license-status.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-001-002"
+      ],
+      "what": "A lapsed license holds invoices and pay links until acknowledged (7 days); missing or 90-day-old checks only remind"
+    },
+    {
+      "id": "CT-HIC-008",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-003-001"
+      ],
+      "what": "Starting home improvement work without a contract signed by both parties needs an acknowledgement, recorded on the job"
     }
   ]
 }
