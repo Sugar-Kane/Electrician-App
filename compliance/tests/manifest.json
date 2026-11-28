@@ -134,6 +134,15 @@
       "what": "Texting consent wording carries STOP/HELP, rates, frequency, not a condition of purchase"
     },
     {
+      "id": "CT-SMS-002",
+      "file": "src/compliance-tests/regulatory-rules.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "FED-002-005"
+      ],
+      "what": "A request to stop texts is honored however the customer words it (reply keywords, own words, Spanish), without reading job talk as an opt-out"
+    },
+    {
       "id": "CT-REFUND-001",
       "file": "src/compliance-tests/regulatory-rules.test.ts",
       "classification": "automated",
@@ -225,6 +234,97 @@
         "WEB-CSLB-*"
       ],
       "what": "Outside-in Playwright + axe audit of a public website"
+    },
+    {
+      "id": "CT-HIC-001",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-003-025",
+        "CSLB-008-001",
+        "CSLB-007-003",
+        "CSLB-007-004",
+        "CSLB-003-016",
+        "CSLB-003-017"
+      ],
+      "what": "Every home improvement notice passage matches the 2026 CSLB Law Book text word for word"
+    },
+    {
+      "id": "CT-HIC-002",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-007-002",
+        "CSLB-007-003",
+        "CSLB-007-004"
+      ],
+      "what": "Senior buyers get the five-day notice and forms; others three"
+    },
+    {
+      "id": "CT-HIC-003",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-002-001",
+        "CSLB-003-016",
+        "CSLB-003-017",
+        "CSLB-003-025",
+        "CSLB-007-003",
+        "CSLB-007-004",
+        "CSLB-002-009"
+      ],
+      "what": "A home improvement contract carries each notice in its place and type size; none when negotiated at the contractor's office"
+    },
+    {
+      "id": "CT-HIC-004",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-002-001",
+        "CSLB-003-017",
+        "CSLB-007-002"
+      ],
+      "what": "Residential defaults to home improvement; drafting needs the buyer's age and a phase per progress payment"
+    },
+    {
+      "id": "CT-HIC-005",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-007-002"
+      ],
+      "what": "Cancellation deadline: midnight after the 3rd/5th business day, Sundays and holidays skipped, in the business timezone"
+    },
+    {
+      "id": "CT-HIC-006",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-007-002",
+        "CSLB-007-007",
+        "CA-005-007",
+        "CA-005-008",
+        "CSLB-007-011"
+      ],
+      "what": "Deposits and work wait out the right to cancel; customer may cancel only within it; refund due in 10 days"
+    },
+    {
+      "id": "CT-HIC-007",
+      "file": "src/compliance-tests/home-improvement-contract.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-007-007"
+      ],
+      "what": "After a cancellation every payment is returned in full (Stripe or by hand), only once"
+    },
+    {
+      "id": "CT-MFA-001",
+      "file": "src/compliance-tests/mfa.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "SEC-001-002"
+      ],
+      "what": "Owners, admins and platform staff must use two-step sign-in from 2026-12-10; anyone set up is always asked for the code"
     }
   ]
 }

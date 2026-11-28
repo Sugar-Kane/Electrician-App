@@ -422,6 +422,13 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         keywords: ["security", "login", "sign in"],
       },
       {
+        label: "Two-step sign-in",
+        href: "/settings/security",
+        icon: "KeyRound",
+        description: "A code from your phone as well as your password",
+        keywords: ["mfa", "2fa", "two-factor", "authenticator", "security", "code"],
+      },
+      {
         label: "Volteira plan",
         href: "/account?section=subscription",
         icon: "Sparkles",

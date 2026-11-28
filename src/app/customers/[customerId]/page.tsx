@@ -208,7 +208,7 @@ export default async function CustomerPage({
           />
         ) : null}
 
-        <CustomerTextConsent hasPhone={Boolean(profile.phone)} status={textConsent} />
+        <CustomerTextConsent customerId={profile.id} hasPhone={Boolean(profile.phone)} status={textConsent} />
 
         <CustomerLanguageControl customerId={profile.id} language={profile.language} />
       </section>

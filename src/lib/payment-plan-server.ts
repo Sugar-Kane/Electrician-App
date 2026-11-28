@@ -65,6 +65,7 @@ function toItem(row: Row): PlanItemInput {
     due: (text(row.due) || "on_completion") as PlanItemInput["due"],
     dueDate: text(row.due_date) || null,
     doneAt: text(row.done_at) || null,
+    phase: text(row.phase) || null,
   };
 }
 
@@ -78,7 +79,7 @@ export async function loadJobPaymentPlan(
     jobTotalCents(database, input.organizationId, input.jobId),
     database
       .from("job_payment_plan_items")
-      .select("id, pay_token, requested_at, kind, amount_type, amount_cents, percent_bps, due, due_date, done_at, position")
+      .select("id, pay_token, requested_at, kind, amount_type, amount_cents, percent_bps, due, due_date, done_at, phase, position")
       .eq("organization_id", input.organizationId)
       .eq("job_id", input.jobId)
       .order("position", { ascending: true }),
@@ -189,6 +190,7 @@ export async function saveJobPaymentPlan(
         due: payment.due,
         due_date: dueDate,
         requested_at: same ? text(before.requested_at) || null : null,
+        phase: payment.phase?.replace(/\s+/g, " ").trim().slice(0, 300) || null,
         // Work marked done stays marked only while the payment is unchanged.
         ...doneKept(before, payment, Boolean(same)),
       };

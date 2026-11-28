@@ -595,11 +595,11 @@
     "requirement_id": "CA-005-007",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "Home solicitation contracts identified; statutory cancellation statement in required type/placement with a completed detachable Notice of Cancellation; no non-emergency work during the period.",
-    "actual": "No home-solicitation determination exists (no signing-location field), and the default template and rendered contract contain no cancellation statement or Notice of Cancellation form. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "actual": "No home-solicitation determination exists (no signing-location field), and the default template and rendered contract contain no cancellation statement or Notice of Cancellation form. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/pdf/contract-document.tsx:79"
@@ -617,23 +617,34 @@
         "location": "production information_schema.columns for public.contracts and public.organizations",
         "collected_at": "2026-11-25",
         "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Record signing context per contract and default to home-solicitation; render the statutory cancellation notice (12pt bold) next to the buyer signature and two completed Notice of Cancellation forms; block deposit requests and work scheduling until the cancellation deadline passes unless a valid emergency waiver is on file.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CA-005-008-APP",
     "requirement_id": "CA-005-008",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "Until legal opinion, provide the cancellation notice in the signed PDF, deliver a retainable copy, accept cancellation by any written means including in-app.",
-    "actual": "Signed PDF contains no cancellation notice or form; there is no in-app or email cancellation path for the customer and no cancellation status on contracts.",
+    "actual": "Signed PDF contains no cancellation notice or form; there is no in-app or email cancellation path for the customer and no cancellation status on contracts. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/pdf/contract-document.tsx:79",
       "src/app/contract/[token]/actions.ts:89"
@@ -651,12 +662,23 @@
         "location": "production information_schema.columns for public.contracts and public.organizations",
         "collected_at": "2026-11-25",
         "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Implement CA-005-007 notice in the PDF, add a 'Cancel this contract' action on the customer's link that records the notice with timestamp and notifies the business; obtain the legal opinion.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-001-001-APP",
@@ -890,11 +912,11 @@
     "requirement_id": "CSLB-002-001",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Each job/contract classified (home improvement, service and repair, commercial, new construction, subcontract); residential work defaults to home improvement and uses the 7159 template.",
-    "actual": "No contract-type classification exists. contracts.kind is only agreement|change_order; jobs.category is an operational category (diagnostic, work_order, ...). One generic template is used for every job, and it is not a 7159 contract.",
+    "actual": "No contract-type classification exists. contracts.kind is only agreement|change_order; jobs.category is an operational category (diagnostic, work_order, ...). One generic template is used for every job, and it is not a 7159 contract. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/app/jobs/[jobId]/contract-actions.ts:190",
       "src/app/jobs/[jobId]/contract-actions.ts:338",
@@ -913,12 +935,23 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Add contract_type (and property/customer type) to jobs/contracts, default residential to home_improvement, and select a type-specific locked template.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-002-002-APP",
@@ -1108,11 +1141,11 @@
     "requirement_id": "CSLB-002-009",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Default to cancellation notice and Notice of Cancellation unless tenant records negotiation at its place of business (in-home tablet and remote e-sign included).",
-    "actual": "No signing-location record and no cancellation notice or form in any contract; in-person tablet signing and remote link signing both produce the same notice-free document. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "actual": "No signing-location record and no cancellation notice or form in any contract; in-person tablet signing and remote link signing both produce the same notice-free document. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/pdf/contract-document.tsx:79",
@@ -1131,12 +1164,23 @@
         "location": "production information_schema.columns for public.contracts and public.organizations",
         "collected_at": "2026-11-25",
         "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Default every residential contract to include the cancellation notice/forms; only omit when a 'negotiated at contractor's place of business' attestation is recorded.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-003-001-APP",
@@ -1440,11 +1484,11 @@
     "requirement_id": "CSLB-003-011",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "10pt bold heading 'Home Improvement' identifying the contract type.",
-    "actual": "Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading.",
+    "actual": "Rendered document title is 'CONTRACT' and the body heading 'WORK AGREEMENT'; no 'Home Improvement' heading. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 10-point bold 'Home Improvement' heading on page 1.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/pdf/contract-document.tsx:192"
@@ -1456,23 +1500,34 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 10-point bold 'Home Improvement' heading on page 1."
   },
   {
     "finding_id": "F-CSLB-003-012-APP",
     "requirement_id": "CSLB-003-012",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "12pt bold 'completely filled in copy' statement; refuse issuance while required fields are blank.",
-    "actual": "Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) are not required, and job_date falls back to 'a date to be agreed'.",
+    "actual": "Statement missing. Partial control: unfilled placeholders block signing (sign_contract_in_app requires cardinality(unfilled)=0, inspected), but fields the default template never asks for (dates, materials, insurance) are not required, and job_date falls back to 'a date to be agreed'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 12-point bold completely-filled-in-copy statement; a contract with blanks already cannot be signed (unsignableBecause).",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/contract-signing.ts:156",
@@ -1491,26 +1546,35 @@
         "location": "production project wyyzptlciccewyxxjkyx: public.sign_contract_in_app, triggers keep_signed_contract_text / keep_signed_contract_figures / keep_contractor_signature / contracts_approve_change_order on public.contracts",
         "collected_at": "2026-11-25",
         "method": "pg_get_functiondef / pg_get_triggerdef (definitions only, no row contents)"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it. Make all 7159 required fields mandatory before send.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
-      "src/lib/contract-signing.test.ts:106"
+      "src/lib/contract-signing.test.ts:106",
+      "CT-HIC-001",
+      "CT-HIC-003"
     ],
-    "test_result": "passed"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 12-point bold completely-filled-in-copy statement; a contract with blanks already cannot be signed (unsignableBecause)."
   },
   {
     "finding_id": "F-CSLB-003-013-APP",
     "requirement_id": "CSLB-003-013",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Heading 'Contract Price' followed by the amount in dollars and cents from integer cents.",
-    "actual": "Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'.",
+    "actual": "Amount is computed from integer cents and printed with cents ('Total: $8,000.00' in the rendered contract; money tests pass), but the heading is 'PRICE' / 'Total:', not 'Contract Price'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 'Contract Price' heading followed by the amount from integer cents.",
     "affected_files": [
       "src/lib/contract-template.ts:202",
       "src/lib/contract-template.ts:143"
@@ -1528,15 +1592,23 @@
         "location": "npm test (node --test src/**/*.test.ts)",
         "collected_at": "2026-11-25",
         "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Use the statutory 'Contract Price' heading in the home-improvement template.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
     "test_ids": [
-      "src/lib/contract-template.test.ts"
+      "src/lib/contract-template.test.ts",
+      "CT-HIC-003"
     ],
-    "test_result": "passed"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the 'Contract Price' heading followed by the amount from integer cents."
   },
   {
     "finding_id": "F-CSLB-003-014-APP",
@@ -1596,11 +1668,11 @@
     "requirement_id": "CSLB-003-016",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "'Downpayment' heading, the amount, and 12pt bold 'THE DOWNPAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.'",
-    "actual": "Cap is enforced in planAmounts (passing test). But the rendered contract labels the $800 deposit 'Diagnostic fee: $800.00, due on signing' (the {{deposit}} placeholder is reused); there is no 'Downpayment' heading; the notice reads 'DOWN PAYMENT' (two words) and renders at 10pt regular, not 12pt bold.",
+    "actual": "Cap is enforced in planAmounts (passing test). But the rendered contract labels the $800 deposit 'Diagnostic fee: $800.00, due on signing' (the {{deposit}} placeholder is reused); there is no 'Downpayment' heading; the notice reads 'DOWN PAYMENT' (two words) and renders at 10pt regular, not 12pt bold. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:204",
       "src/app/jobs/[jobId]/contract-actions.ts:410",
@@ -1620,26 +1692,35 @@
         "location": "npm test (node --test src/**/*.test.ts)",
         "collected_at": "2026-11-25",
         "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Render a 'Downpayment' heading with the amount and the verbatim notice in 12pt bold from a fixed component; stop labelling a down payment as a diagnostic fee.",
-    "priority": "P0",
-    "legal_review_required": false,
+    "priority": "P2",
+    "legal_review_required": true,
     "test_ids": [
-      "src/lib/payment-plan.test.ts:14"
+      "src/lib/payment-plan.test.ts:14",
+      "CT-HIC-001",
+      "CT-HIC-003"
     ],
-    "test_result": "passed"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-003-017-APP",
     "requirement_id": "CSLB-003-017",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "'Schedule of Progress Payments' heading; each payment in dollars and cents tied to specific work/materials; 12pt bold 'Do not pay ahead of the work...' statement.",
-    "actual": "Rendered block is headed 'PAYMENT SCHEDULE' with 'Payment 2 $3,200.00 (40%) due 2026-12-05' - tied to a calendar date, not to work performed; the 'Do not pay ahead of the work' statement is absent (only 'Progress payments are for work performed or materials delivered.'), all at 10pt regular.",
+    "actual": "Rendered block is headed 'PAYMENT SCHEDULE' with 'Payment 2 $3,200.00 (40%) due 2026-12-05' - tied to a calendar date, not to work performed; the 'Do not pay ahead of the work' statement is absent (only 'Progress payments are for work performed or materials delivered.'), all at 10pt regular. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/payment-plan.ts:214",
       "src/lib/payment-plan.ts:244"
@@ -1657,15 +1738,24 @@
         "location": "npm test (node --test src/**/*.test.ts)",
         "collected_at": "2026-11-25",
         "method": "1529 tests, 1529 pass, 0 fail"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Require a work/milestone description per progress payment, use the statutory heading, add the verbatim 12pt bold statement, and disallow date-only progress payments for home-improvement contracts.",
-    "priority": "P0",
-    "legal_review_required": false,
+    "priority": "P2",
+    "legal_review_required": true,
     "test_ids": [
-      "src/lib/payment-plan.test.ts:143"
+      "src/lib/payment-plan.test.ts:143",
+      "CT-HIC-001",
+      "CT-HIC-003"
     ],
-    "test_result": "passed"
+    "test_result": "passed",
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-003-018-APP",
@@ -1755,11 +1845,11 @@
     "requirement_id": "CSLB-003-021",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "'Note about Extra Work and Change Orders' heading and statutory statement.",
-    "actual": "Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'.",
+    "actual": "Missing; the template only says extra work 'will be quoted separately and will not begin without your approval'. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes 'Note About Extra Work and Change Orders' and the statutory statement.",
     "affected_files": [
       "src/lib/contract-template.ts:209",
       "src/lib/contract-template.ts:193"
@@ -1771,12 +1861,22 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": false,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes 'Note About Extra Work and Change Orders' and the statutory statement."
   },
   {
     "finding_id": "F-CSLB-003-022-APP",
@@ -1878,11 +1978,11 @@
     "requirement_id": "CSLB-003-025",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "'Mechanics Lien Warning' heading and full statutory text verbatim.",
-    "actual": "Missing from the default template and the rendered contract; no statutory text exists anywhere in src.",
+    "actual": "Missing from the default template and the rendered contract; no statutory text exists anywhere in src. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/pdf/contract-document.tsx:79"
@@ -1894,23 +1994,34 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-003-026-APP",
     "requirement_id": "CSLB-003-026",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "12pt 'Information about the Contractors State License Board (CSLB)' notice.",
-    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "actual": "Missing. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added. UPDATE 2026-11-26: PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the CSLB information notice at 12 point.",
     "affected_files": [
       "src/lib/contract-template.ts:193"
     ],
@@ -1921,12 +2032,23 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "src/lib/ca-home-improvement.ts",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signat"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P1",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: the locked, versioned California home improvement notices (src/lib/ca-home-improvement.ts, verbatim from the 2026 CSLB Law Book and tested against it) are rendered by ContractDocument and ContractPaper as structured sections at their required sizes, frozen with the contract under the signature hash. Includes the CSLB information notice at 12 point."
   },
   {
     "finding_id": "F-CSLB-003-027-APP",
@@ -2223,11 +2345,11 @@
     "requirement_id": "CSLB-007-001",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "high",
     "confidence": "high",
     "expected": "Home solicitation contracts identified and 1689.6-1689.14 applied.",
-    "actual": "No identification; no cancellation regime.",
+    "actual": "No identification; no cancellation regime. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/app/jobs/[jobId]/contract-actions.ts:190"
     ],
@@ -2244,23 +2366,34 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "See CSLB-002-009.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-007-002-APP",
     "requirement_id": "CSLB-007-002",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Three business days (five for 65+) cancellation; senior status asked; deadline computed in business days.",
-    "actual": "No senior-buyer question, no deadline computation, no cancellation notice; deposit pay link is sent immediately after signing (after() in signContract).",
+    "actual": "No senior-buyer question, no deadline computation, no cancellation notice; deposit pay link is sent immediately after signing (after() in signContract). UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/app/contract/[token]/actions.ts:89",
       "src/app/contract/[token]/actions.ts:190"
@@ -2275,23 +2408,35 @@
       {
         "type": "source-reference",
         "location": "src/app/contract/[token]/actions.ts:190"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Ask 65+ at signing, compute and store the deadline, print the three/five-day version, and hold deposit requests and work until it passes.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-002",
+      "CT-HIC-005",
+      "CT-HIC-006"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-007-003-APP",
     "requirement_id": "CSLB-007-003",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "'Three-Day Right to Cancel' notice verbatim in 12pt bold near the owner's signature, acknowledged by signature/date.",
-    "actual": "Absent from template and rendered contract, although the e-sign consent text tells the customer the agreement includes 'any notice of your right to cancel'.",
+    "actual": "Absent from template and rendered contract, although the e-sign consent text tells the customer the agreement includes 'any notice of your right to cancel'. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/esign-consent.ts:28"
@@ -2303,23 +2448,34 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-007-004-APP",
     "requirement_id": "CSLB-007-004",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Completed 'Notice of Cancellation' form in duplicate, detachable, with transaction date and deadline; electronic send option.",
-    "actual": "Absent.",
+    "actual": "Absent. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/pdf/contract-document.tsx:79"
     ],
@@ -2330,12 +2486,23 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Render two filled Notice of Cancellation pages in the PDF and an in-app cancellation button.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-007-005-APP",
@@ -2395,11 +2562,11 @@
     "requirement_id": "CSLB-007-007",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Record a cancellation and refund all payments (including deposit via Stripe) within 10 days with an audit trail.",
-    "actual": "contracts.status has no 'cancelled by buyer' state (draft|sent|signed|void); there is no buyer cancellation record or deadline-tracked refund workflow tied to contracts.",
+    "actual": "contracts.status has no 'cancelled by buyer' state (draft|sent|signed|void); there is no buyer cancellation record or deadline-tracked refund workflow tied to contracts. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/app/contract/[token]/actions.ts:89"
     ],
@@ -2409,12 +2576,23 @@
         "location": "production information_schema.columns for public.contracts and public.organizations",
         "collected_at": "2026-11-25",
         "method": "contracts has kind (agreement|change_order) but no contract type, home-solicitation, senior-buyer, cancellation, consent-version or delivery columns; organizations licensing data is only license_number (free text) and base_address_line_1 - no license status, classifications, expiry, bond, workers' comp, CGL or verification date"
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Add buyer cancellation (status, received_at, method), a 10-day refund task with automatic Stripe refund of all payments, and audit logging.",
-    "priority": "P0",
+    "priority": "P2",
     "legal_review_required": true,
-    "test_result": "not-applicable"
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-006",
+      "CT-HIC-007"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-007-008-APP",
@@ -2499,11 +2677,11 @@
     "requirement_id": "CSLB-007-011",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Right to Cancel notice and forms included in every home-improvement contract unless place-of-business negotiation recorded; tenant cannot remove them by editing.",
-    "actual": "Notices are not included and everything printed in the body is the tenant-editable template. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added.",
+    "actual": "Notices are not included and everything printed in the body is the tenant-editable template. The default STARTER_TEMPLATE (WORK AGREEMENT / SCOPE OF WORK / PRICE / PAYMENT / ACCESS AND CONDITIONS) and the rendered synthetic contract contain no such text; the app has no fixed statutory block it appends, so tenant templates are rendered verbatim with nothing added. UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:193",
       "src/lib/pdf/contract-document.tsx:79",
@@ -2516,12 +2694,23 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P0",
-    "legal_review_required": false,
-    "test_result": "not-applicable"
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-007-012-APP",
@@ -2555,11 +2744,11 @@
     "requirement_id": "CSLB-008-001",
     "audit_id": "APP-2026-11-24",
     "target": "Volteira application",
-    "status": "RED",
+    "status": "YELLOW",
     "severity": "critical",
     "confidence": "high",
     "expected": "Full statutory Mechanics Lien Warning in every home-improvement contract.",
-    "actual": "Absent (see CSLB-003-025).",
+    "actual": "Absent (see CSLB-003-025). UPDATE 2026-11-26: PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off.",
     "affected_files": [
       "src/lib/contract-template.ts:193"
     ],
@@ -2570,12 +2759,23 @@
         "collected_at": "2026-11-25",
         "method": "STARTER_TEMPLATE filled with synthetic facts (Fixture Electric, Lic. 0000000, Test Customer, $8,000.00, deposit/installment/balance plan) via fillTemplate + contractPaymentTerms + withPaymentSchedule, rendered with the app's ContractDocument through @react-pdf renderToBuffer (loaded with jiti, no database); text extracted with pdftotext -layout; type size measured with pdftotext -bbox (20pt business name = 22.34 units, so 11.17 = 10pt, 12.29 = 11pt, 8.94 = 8pt).",
         "limitations": "Default starter template only; a tenant's own pasted template is rendered verbatim and may differ. Letterhead values supplied directly rather than read from the organizations row."
+      },
+      {
+        "type": "source-reference",
+        "location": "supabase/migrations/20261126050000_home_improvement_contracts.sql",
+        "collected_at": "2026-11-26",
+        "method": "PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien W"
       }
     ],
     "remediation": "Add a non-removable, versioned California home-improvement statutory block (rendered by ContractDocument, not part of the editable template) that is selected by contract type, with text taken verbatim from the official code after legal sign-off; refuse to issue a home-improvement contract whose template would omit it.",
-    "priority": "P0",
-    "legal_review_required": false,
-    "test_result": "not-applicable"
+    "priority": "P2",
+    "legal_review_required": true,
+    "test_result": "passed",
+    "test_ids": [
+      "CT-HIC-001",
+      "CT-HIC-003"
+    ],
+    "status_reason": "Re-graded 2026-11-26 after PR #310. PR #310: residential jobs default to a home improvement contract; the 7159 notices (Home Improvement heading and 12-point statement, Contract Price, Downpayment and Schedule of Progress Payments with their 12-point bold statements and a phase per progress payment, change-order note, Mechanics Lien Warning, CSLB information, Three/Five-Day Right to Cancel in 12-point bold above the signatures, two detachable Notice of Cancellation forms) are copied word for word from the 2026 CSLB Law Book and frozen with the contract under the signature hash; the 65+ answer and place-of-business choice are recorded; the deadline is computed at signing (business days, holidays); pay links, deposits and starting work wait until it passes; the customer can cancel from their link and the office can record one received by email, mail or in person; the owner is notified and the job shows the 10-day refund deadline with Refund all payments. Not yet exercised in a browser; the Civil Code 1689.5-1689.14 text (holidays, senior definition, the 10-day refund rule) and the layout need California counsel's sign-off."
   },
   {
     "finding_id": "F-CSLB-008-002-APP",

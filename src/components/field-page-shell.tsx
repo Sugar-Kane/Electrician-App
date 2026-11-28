@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { MfaNotice } from "@/components/mfa-notice";
 import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { TopActions } from "@/components/top-actions";
 
@@ -116,6 +117,7 @@ export function FieldPageShell({
                 {titleBadge ? <div className="mt-1.5">{titleBadge}</div> : null}
               </div>
             )}
+            <MfaNotice />
             {children}
           </div>
         </div>
@@ -174,6 +176,7 @@ export function FieldPageShell({
             </div>
             {action ? <div className="shrink-0">{action}</div> : null}
           </header>
+          <MfaNotice />
           {children}
         </div>
       </div>

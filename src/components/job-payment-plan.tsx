@@ -24,7 +24,7 @@ import type { JobPaymentPlan as Plan } from "@/lib/payment-plan-server";
  * here too, and comes off the invoice when it is sent.
  */
 
-type Row = { kind: "deposit" | "installment"; amountType: "fixed" | "percent"; value: string; due: PlanDue; dueDate: string };
+type Row = { kind: "deposit" | "installment"; amountType: "fixed" | "percent"; value: string; due: PlanDue; dueDate: string; phase: string };
 
 const DUE_CHOICES = [
   { value: "on_signing", label: "On signing" },
@@ -46,6 +46,7 @@ function rowsFrom(items: PlanItemInput[]): { rows: Row[]; finalDue: PlanDue; fin
             : "",
       due: item.due,
       dueDate: item.dueDate ?? "",
+      phase: item.phase ?? "",
     }));
   const final = items.find((item) => item.kind === "final");
   return { rows, finalDue: final?.due ?? "on_completion", finalDate: final?.dueDate ?? "" };
@@ -62,6 +63,7 @@ function toItems(rows: Row[], finalDue: PlanDue, finalDate: string): PlanItemInp
       percentBps: row.amountType === "percent" && Number.isFinite(number) ? Math.round(number * 100) : null,
       due: row.due,
       dueDate: row.due === "on_date" ? row.dueDate : null,
+      phase: row.kind === "installment" ? row.phase.trim() || null : null,
     };
   });
   items.push({ kind: "final", amountType: "fixed", due: finalDue, dueDate: finalDue === "on_date" ? finalDate : null });
@@ -246,12 +248,12 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
       setRows([]);
       setFinalDue("on_completion");
     } else if (kind === "deposit") {
-      setRows([{ kind: "deposit", amountType: "fixed", value: legalDeposit, due: "on_signing", dueDate: "" }]);
+      setRows([{ kind: "deposit", amountType: "fixed", value: legalDeposit, due: "on_signing", dueDate: "", phase: "" }]);
       setFinalDue("on_completion");
     } else {
       setRows([
-        { kind: "deposit", amountType: "fixed", value: legalDeposit, due: "on_signing", dueDate: "" },
-        { kind: "installment", amountType: "percent", value: "40", due: "on_date", dueDate: "" },
+        { kind: "deposit", amountType: "fixed", value: legalDeposit, due: "on_signing", dueDate: "", phase: "" },
+        { kind: "installment", amountType: "percent", value: "40", due: "on_date", dueDate: "", phase: "" },
       ]);
       setFinalDue("on_date");
     }
@@ -339,6 +341,16 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
                       <span />
                     )}
                   </div>
+                  {row.kind === "installment" ? (
+                    <input
+                      value={row.phase}
+                      onChange={(event) => edit(index, { phase: event.target.value })}
+                      maxLength={300}
+                      aria-label="What work this payment is for"
+                      placeholder="What work it pays for, e.g. rough-in wiring and boxes for the kitchen"
+                      className={inputClass}
+                    />
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setRows((current) => current.filter((_, at) => at !== index))}
@@ -377,7 +389,7 @@ export function JobPaymentPlan({ jobNumber, plan, locked }: { jobNumber: string;
       {editable && rows.length > 0 ? (
         <button
           type="button"
-          onClick={() => setRows((current) => [...current, { kind: "installment", amountType: "fixed", value: "", due: "on_date", dueDate: "" }])}
+          onClick={() => setRows((current) => [...current, { kind: "installment", amountType: "fixed", value: "", due: "on_date", dueDate: "", phase: "" }])}
           className="tap-target mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand"
         >
           <Plus className="h-4 w-4" aria-hidden /> Add a payment

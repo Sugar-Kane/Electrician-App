@@ -260,3 +260,37 @@ export async function declineChangeOrder(token: string, _previous: DeclineState,
   revalidatePath(`/contract/${token}`);
   return { error: "", declined: true };
 }
+
+export type CancelState = { error: string; cancelled?: boolean };
+
+/**
+ * The customer cancelling a home improvement contract from their link, within
+ * their right to cancel (compliance CA-005-007/008, CSLB-007-011). As with
+ * signing, the token is the whole of the authority and the database decides:
+ * only a signed contract that carries a right to cancel, before its deadline.
+ * The business is told at once, with the date refunds are due.
+ */
+export async function cancelContract(token: string, _previous: CancelState, form: FormData): Promise<CancelState> {
+  if (!UUID.test(token)) return { error: "That link is not valid." };
+  if (form.get("confirm") !== "on") return { error: "Tick the box to confirm you want to cancel this contract." };
+  const contract = await loadContract(token);
+  if (!contract) return { error: "We could not find that contract." };
+  const note = String(form.get("note") ?? "").trim().slice(0, 1000);
+
+  const { data: cancelledId } = await createPublicClient().rpc("cancel_contract_by_customer", { p_token: token, p_note: note });
+  if (typeof cancelledId !== "string" || !cancelledId) {
+    return { error: "This contract can no longer be cancelled here. Its cancellation period may have ended. Call the business to talk it through." };
+  }
+
+  after(async () => {
+    try {
+      const { notifyContractCancelled } = await import("@/lib/contract-cancellation-server");
+      await notifyContractCancelled({ organizationId: contract.organization_id, contractId: cancelledId });
+    } catch (error) {
+      console.error("contract cancellation notice failed", { cancelledId, error });
+    }
+  });
+
+  revalidatePath(`/contract/${token}`);
+  return { error: "", cancelled: true };
+}

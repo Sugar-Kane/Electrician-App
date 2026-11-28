@@ -1,5 +1,6 @@
 import { documentFont } from "@/components/document-font";
 import { signatureFont } from "@/components/signature-font";
+import { cancellationFormView, noticesAt, type NoticeSection, type NoticeStyle } from "@/lib/ca-home-improvement";
 import { contractBlocks, signatureSection, unwrapped } from "@/lib/contract-layout";
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import type { ContractDocumentData, ContractSignature } from "@/lib/pdf/contract-document";
@@ -34,6 +35,80 @@ type SignedLine = Pick<ContractSignature, "method" | "name" | "image" | "signedL
  * stacked on a phone and lines half again as far apart as the PDF's, and next
  * to the PDF it read as a different document.
  */
+
+/**
+ * The statutory notices at the PDF's sizes, a point to a pixel and a half:
+ * 10pt text 15px, 12pt 18px (B&P 7159(c)(2), (d)(4), (e)(5), (e)(6)(C)(i)).
+ */
+const NOTICE_CLASS: Record<NoticeStyle, string> = {
+  heading: "text-[16.5px] font-bold",
+  body: "text-[15px]",
+  large: "text-[18px] leading-[25px]",
+  large_bold: "text-[18px] leading-[25px] font-bold",
+};
+
+function Notices({ sections }: { sections: NoticeSection[] }) {
+  return (
+    <>
+      {sections.map((section) => (
+        <section key={section.id} className="mt-[21px]">
+          {section.paragraphs.map((paragraph, index) =>
+            paragraph.text ? (
+              <p key={`${section.id}-${index}`} className={`${index === 0 ? "" : "mt-[9px]"} break-words ${NOTICE_CLASS[paragraph.style]}`}>
+                {paragraph.text}
+              </p>
+            ) : null,
+          )}
+        </section>
+      ))}
+    </>
+  );
+}
+
+function FormBlank({ value, caption }: { value: string; caption: string }) {
+  return (
+    <div className="mt-3">
+      <p className="min-h-[22px] break-words border-b border-[#0f172a]">{value}</p>
+      <p className="text-[12px] text-[#64748b]">{caption}</p>
+    </div>
+  );
+}
+
+/** The Notice of Cancellation, twice, each its own sheet to print and tear off (B&P 7159(e)(6)(C)(vi)). */
+function CancellationForms({ data }: { data: ContractDocumentData }) {
+  const form = data.notices?.cancellationForm;
+  if (!form) return null;
+  const view = cancellationFormView(form, data.cancellation ?? { transactionDate: "", lastDay: "" });
+  return (
+    <>
+      {[1, 2].map((copy) => (
+        <section key={copy} aria-label={`Notice of Cancellation, copy ${copy} of 2`} className="mt-[45px] border-t-2 border-dashed border-[#64748b] pt-6">
+          <p className="text-[12px] text-[#64748b]">
+            Copy {copy} of 2 · Job #{data.job.number} · {data.business.name}
+          </p>
+          <h2 className="mt-1 text-[21px] font-bold">{view.caption}</h2>
+          <FormBlank value={view.transactionDate} caption="(Date) date of transaction" />
+          {view.statement.map((text, index) => (
+            <p key={`statement-${index}`} className="mt-3 break-words">
+              {text}
+            </p>
+          ))}
+          <p className="mt-4">{view.instruction}</p>
+          <FormBlank value={view.sellerName} caption="name of seller" />
+          <p className="mt-3">at</p>
+          <FormBlank value={view.sellerAddress} caption="address of seller's place of business" />
+          <p className="mt-3">not later than midnight of</p>
+          <FormBlank value={view.lastDay} caption="(Date)" />
+          <p className="mt-5">{view.signLine}</p>
+          <div className="grid grid-cols-[40%_52%] justify-between">
+            <FormBlank value="" caption="(Date)" />
+            <FormBlank value="" caption="(Buyer's signature)" />
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
 
 /** The PDF's section heading: 8pt bold capitals, spaced, muted. */
 const SECTION_HEADING = "mb-[7.5px] text-[12px] font-bold uppercase tracking-[0.1375em] text-[#64748b]";
@@ -230,6 +305,8 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
         </div>
       ) : null}
 
+      <Notices sections={noticesAt(data.notices, "top")} />
+
       <hr className="mt-6 border-[#cbd5e1]" />
 
       <div>
@@ -247,6 +324,10 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
           ),
         )}
       </div>
+
+      <Notices sections={noticesAt(data.notices, "terms")} />
+      {/* Immediately above the owner's signature (B&P 7159(e)(6)(C)(ii)). */}
+      <Notices sections={noticesAt(data.notices, "cancel")} />
 
       {/* The PDF's block, decided by the same rule in contract-layout.ts: the
           record of who signed and when, the business first. */}
@@ -284,6 +365,8 @@ export function ContractPaper({ data }: { data: ContractDocumentData }) {
           .filter(Boolean)
           .join("  ·  ")}
       </footer>
+
+      <CancellationForms data={data} />
     </article>
   );
 }
