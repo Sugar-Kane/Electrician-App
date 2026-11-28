@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { readMessagePhotos } from "./message-media.ts";
-import { firstTextOptsIn } from "./messaging-rules.ts";
+import { OPT_OUT_CONFIRMATION, firstTextOptsIn, readOptOut } from "./messaging-rules.ts";
 
 // Exercise the actual webhook with isolated database/carrier/model adapters.
 // No real customer texts or appointments are created by this test.
@@ -41,7 +41,7 @@ async function receive(body: string, consentError = false, media: Record<string,
     require(name: string) {
       if (name === "@/lib/message-media") return { readMessagePhotos };
       if (name === "next/server") return { NextResponse: Response };
-      if (name === "@/lib/messaging-rules") return { phoneMatches: (a: string, b: string) => a === b, firstTextOptsIn };
+      if (name === "@/lib/messaging-rules") return { phoneMatches: (a: string, b: string) => a === b, firstTextOptsIn, readOptOut, OPT_OUT_CONFIRMATION };
       if (name === "@/lib/supabase/admin") return { getSupabaseAdmin: () => database };
       if (name === "@/lib/sms-intake-runner") return { handleInboundText: async (input: Record<string, unknown>) => { intake.push(input); } };
       if (name === "@/lib/twilio") return { verifyTwilioSignature: () => true, isTwilioConfigured: () => true, twilioWebhookUrls: () => [] };
@@ -67,7 +67,7 @@ for (const body of ["YES", "Yes", "yes", " Yes! "]) {
   });
 }
 
-for (const body of ["START", "UNSTOP", "STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]) {
+for (const body of ["START", "UNSTOP"]) {
   test(`${body} remains a consent-only command`, async () => {
     const { response, writes, intake } = await receive(body);
     assert.equal(response.status, 200);
@@ -75,6 +75,36 @@ for (const body of ["START", "UNSTOP", "STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL
     assert.equal(intake.length, 0);
   });
 }
+
+for (const body of ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "REVOKE", "OPT OUT"]) {
+  test(`${body} records the opt-out, reaches no intake, and leaves the reply to Twilio`, async () => {
+    const { response, writes, intake } = await receive(body);
+    assert.equal(response.status, 200);
+    const optOuts = writes.filter((w) => w.table === "messaging_consent" && w.value.opted_out_at);
+    assert.ok(optOuts.length >= 1);
+    assert.ok(writes.filter((w) => w.table === "messaging_consent").every((w) => !w.value.opted_in_at), "an opt-out never writes an opt-in");
+    assert.equal(intake.length, 0);
+    assert.doesNotMatch(await response.text(), /<Message>/);
+  });
+}
+
+test("a customer with no consent row who says stop in their own words is recorded and told once", async () => {
+  const { response, writes, intake } = await receive("Please stop texting me");
+  assert.equal(response.status, 200);
+  // The update finds no row (none on file), so the opt-out is inserted.
+  const consent = writes.filter((w) => w.table === "messaging_consent");
+  assert.equal(consent.at(-1)?.operation, "upsert");
+  assert.ok(consent.at(-1)?.value.opted_out_at);
+  assert.equal(consent.at(-1)?.value.opt_out_source, "inbound_text");
+  assert.match(String(consent.at(-1)?.value.opt_out_proof), /Please stop texting me/);
+  assert.equal(intake.length, 0);
+  assert.match(await response.text(), new RegExp(`<Message>${OPT_OUT_CONFIRMATION}</Message>`));
+});
+
+test("a stop that cannot be recorded is retried by Twilio", async () => {
+  const { response } = await receive("remove me from your list", true);
+  assert.equal(response.status, 500);
+});
 
 test("a failed YES consent write does not start booking intake", async () => {
   const { response, intake } = await receive("YES", true);

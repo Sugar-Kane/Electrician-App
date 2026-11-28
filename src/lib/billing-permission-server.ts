@@ -19,6 +19,10 @@ export async function techniciansCanEditBilling(organizationId: string): Promise
 export async function billingRefusal(): Promise<string> {
   const context = await currentContext();
   if (!context) return "Sign in first.";
+  // Owners and admins finish two-step sign-in before moving money (SEC-001-002).
+  const { mfaRefusal } = await import("@/lib/mfa-server");
+  const mfa = await mfaRefusal();
+  if (mfa) return mfa;
   if (context.role !== "technician") return "";
   return canEditBilling(context.role, await techniciansCanEditBilling(context.organizationId)) ? "" : BILLING_LOCKED_MESSAGE;
 }

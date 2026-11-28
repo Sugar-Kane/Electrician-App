@@ -1,5 +1,7 @@
 "use client";
 
+import { recordCancellationAction, refundAllPaymentsAction, type CancellationActionState } from "@/app/jobs/[jobId]/cancellation-actions";
+import { CONTRACT_TYPES, defaultContractType, type ContractType } from "@/lib/ca-home-improvement";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -418,6 +420,7 @@ function ContractSigning({
 /** Where the newest contract stands, in the one line the folded section shows. */
 function contractStatus(contract: JobContractRecord): string {
   const order = contract.kind === "change_order";
+  if (contract.status === "cancelled") return `Cancelled by the customer · ${contract.rightToCancel?.cancelledLabel ?? ""}`;
   if (contract.signedLabel) {
     return `${order ? "Change order signed" : "Signed"} by ${contract.signatureName} · ${contract.signedLabel}`;
   }
@@ -624,9 +627,152 @@ export function ContractPage({
   );
 }
 
+/**
+ * What kind of contract this is, asked before it is drawn up. A home
+ * improvement contract (the default for residential work) carries
+ * California's notices, and the buyer's age decides whether they get three or
+ * five business days to cancel; work agreed at the business's own place of
+ * business carries no right to cancel.
+ */
+function ContractTypeFields({ customerType }: { customerType: string }) {
+  const [type, setType] = useState<ContractType>(defaultContractType(customerType));
+  const chosen = CONTRACT_TYPES.find((entry) => entry.value === type);
+  return (
+    <div className="mb-3 space-y-3">
+      <label className="block text-sm font-medium">
+        Contract type
+        <select
+          name="contractType"
+          value={type}
+          onChange={(event) => setType(event.target.value as ContractType)}
+          className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base"
+        >
+          {CONTRACT_TYPES.map((entry) => (
+            <option key={entry.value} value={entry.value}>
+              {entry.label}
+            </option>
+          ))}
+        </select>
+        {chosen ? <span className="mt-1 block text-sm font-normal text-ink-muted">{chosen.describes}</span> : null}
+      </label>
+      {type === "home_improvement" ? (
+        <>
+          <fieldset>
+            <legend className="text-sm font-medium">Is the customer 65 or older?</legend>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[
+                { value: "no", label: "No · 3 days to cancel" },
+                { value: "yes", label: "Yes · 5 days to cancel" },
+              ].map((option) => (
+                <label key={option.value} className="tap-target flex min-h-12 items-center gap-2 rounded-control border border-line px-3 text-sm">
+                  <input type="radio" name="seniorBuyer" value={option.value} required className="h-4 w-4" />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="tap-target flex min-h-12 items-center gap-2 text-sm">
+            <input type="checkbox" name="negotiatedAtBusiness" className="h-4 w-4" />
+            Agreed at our own place of business (no right to cancel)
+          </label>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+const cancellationInitial: CancellationActionState = { error: "" };
+
+/**
+ * A signed home improvement contract's right to cancel, on the job: while the
+ * customer may still cancel, no work and no payments; a cancellation the
+ * customer sent by email, mail or in person is recorded here; after one, the
+ * 10-day refund deadline and "Refund all payments".
+ */
+function RightToCancelPanel({ jobNumber, contract }: { jobNumber: string; contract: JobContractRecord | undefined }) {
+  const [recordState, record, recording] = useActionState(recordCancellationAction, cancellationInitial);
+  const [refundState, refund, refunding] = useActionState(refundAllPaymentsAction, cancellationInitial);
+  const right = contract?.rightToCancel;
+  if (!contract || !right) return null;
+
+  if (contract.status === "cancelled") {
+    return (
+      <div className={`mt-3 rounded-control border p-4 ${right.refundsCompleted ? "border-line" : "border-critical/40 bg-critical/5"}`}>
+        <p className="text-sm font-semibold">Customer cancelled on {right.cancelledLabel}</p>
+        {right.note ? <p className="mt-1 text-sm text-ink-muted">They wrote: “{right.note}”</p> : null}
+        {right.refundsCompleted ? (
+          <p className="mt-1 text-sm text-ink-muted">Everything they paid has been refunded.</p>
+        ) : (
+          <>
+            <p className={`mt-1 text-sm ${right.refundOverdue ? "font-semibold text-critical" : "text-ink-muted"}`}>
+              {right.refundOverdue ? "Overdue: " : ""}California law requires returning everything they paid by {right.refundDueLabel}. Don&apos;t start or continue the work.
+            </p>
+            <form action={refund} className="mt-3">
+              <input type="hidden" name="jobNumber" value={jobNumber} />
+              <button
+                type="submit"
+                disabled={refunding}
+                className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-60 sm:w-auto"
+              >
+                {refunding ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                Refund all payments
+              </button>
+              <p className="mt-2 text-sm text-ink-muted">Card and bank payments go back through Stripe. Cash and checks are marked returned; hand them back.</p>
+            </form>
+          </>
+        )}
+        <FormMessage error={refundState.error} notice={refundState.notice} />
+      </div>
+    );
+  }
+
+  if (!right.open) return null;
+  return (
+    <div className="mt-3 rounded-control border border-caution/40 bg-caution-bg p-4">
+      <p className="text-sm font-semibold">The customer can cancel until midnight on {right.lastDayLabel || "the end of their cancellation period"}</p>
+      <p className="mt-1 text-sm text-ink-muted">Don&apos;t start the work or take payments until then. Pay links and the deposit request wait and go out once it ends.</p>
+      <details className="mt-3">
+        <summary className="tap-target flex min-h-11 cursor-pointer items-center text-sm font-semibold">They cancelled by email, mail or in person</summary>
+        <form action={record} className="mt-2 space-y-3">
+          <input type="hidden" name="jobNumber" value={jobNumber} />
+          <input type="hidden" name="contractId" value={contract.id} />
+          <label className="block text-sm font-medium">
+            How it arrived
+            <select name="channel" defaultValue="email" className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base">
+              <option value="email">Email</option>
+              <option value="mail">Mail</option>
+              <option value="fax">Fax</option>
+              <option value="in_person">Handed over in person</option>
+              <option value="other">Other written notice</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            Date received
+            <input type="date" name="receivedOn" required className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base" />
+          </label>
+          <label className="block text-sm font-medium">
+            Note (optional)
+            <input name="note" maxLength={1000} className="mt-1 block min-h-12 w-full rounded-control border border-line bg-surface px-3 text-base" />
+          </label>
+          <button
+            type="submit"
+            disabled={recording}
+            className="tap-target inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-critical px-4 text-sm font-semibold text-critical disabled:opacity-60 sm:w-auto"
+          >
+            {recording ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
+            Record the cancellation
+          </button>
+        </form>
+      </details>
+      <FormMessage error={recordState.error} notice={recordState.notice} />
+    </div>
+  );
+}
+
 export function JobContract({
   jobNumber,
   contracts,
+  customerType = "residential",
   customerName = "",
   customerPhone = "",
   customerEmail = "",
@@ -648,6 +794,8 @@ export function JobContract({
   customerEmail?: string;
   /** What has been written on the job since the customer last signed. */
   changes?: AgreementChangeSummary;
+  /** "residential" or "commercial": residential work defaults to a home improvement contract. */
+  customerType?: string;
 }) {
   const [state, action] = useActionState(generateContract, initialState);
   const [orderState, orderAction] = useActionState(generateChangeOrder, initialState);
@@ -676,6 +824,7 @@ export function JobContract({
   const generate = (
     <form action={action}>
       <input type="hidden" name="jobNumber" value={jobNumber} />
+      <ContractTypeFields customerType={customerType} />
       <GenerateButton existing={contracts.length > 0} />
     </form>
   );
@@ -749,6 +898,8 @@ export function JobContract({
         </div>
       ) : null}
       {changeOrder}
+
+      <RightToCancelPanel jobNumber={jobNumber} contract={contracts.find((entry) => entry.kind === "agreement" && entry.rightToCancel && entry.signedAt)} />
 
       {/*
         Folded by default, like Job details and History. On most visits the

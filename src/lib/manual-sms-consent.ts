@@ -99,3 +99,61 @@ export async function recordManualSmsConsent(
   }
   return { ok: true, already: false };
 }
+
+export const STAFF_OPT_OUT_WAYS = {
+  verbal: "on a phone call or in person",
+  written: "in writing",
+  email: "by email",
+} as const;
+
+export type StaffOptOutWay = keyof typeof STAFF_OPT_OUT_WAYS;
+
+/**
+ * Record that the customer asked the business to stop texting them some way
+ * other than a text (FCC revocation rule: any reasonable means). Written
+ * through the caller's own session, so RLS decides whether they may; the
+ * database refuses to let a signed-in user undo it afterwards. Only the
+ * customer can turn texts back on, by texting START.
+ */
+export async function recordStaffOptOut(
+  database: FlexibleSupabaseClient,
+  input: { organizationId: string; customerId: string; userId: string; way: StaffOptOutWay; note: string },
+): Promise<ManualConsentResult> {
+  const existing = await readSmsConsent(database, input.organizationId, input.customerId);
+  if (existing === "unknown") return { ok: false, reason: "Their text settings could not be checked. Try again." };
+  if (existing?.optedOutAt) return { ok: true, already: true };
+
+  const note = input.note.replace(/\s+/g, " ").trim().slice(0, 300);
+  const record = {
+    opted_out_at: new Date().toISOString(),
+    opt_out_source: input.way,
+    opt_out_proof: `The customer asked ${STAFF_OPT_OUT_WAYS[input.way]} not to be texted; recorded by a team member.${note ? ` Note: ${note}` : ""}`,
+    captured_by: input.userId || null,
+  };
+
+  const { error } = existing
+    ? await database
+        .from("messaging_consent")
+        .update(record)
+        .eq("organization_id", input.organizationId)
+        .eq("customer_id", input.customerId)
+        .eq("channel", "sms")
+        .eq("scope", "transactional")
+    : await database.from("messaging_consent").upsert(
+        {
+          organization_id: input.organizationId,
+          customer_id: input.customerId,
+          channel: "sms",
+          scope: "transactional",
+          source: "admin",
+          ...record,
+        },
+        { onConflict: "customer_id,channel,scope" },
+      );
+
+  if (error) {
+    console.error("staff sms opt-out could not be saved", error);
+    return { ok: false, reason: "That could not be saved. Try again." };
+  }
+  return { ok: true, already: false };
+}

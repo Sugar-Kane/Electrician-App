@@ -1,5 +1,12 @@
 import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 
+import {
+  cancellationFormView,
+  noticesAt,
+  type LegalNotices,
+  type NoticeSection,
+  type NoticeStyle,
+} from "@/lib/ca-home-improvement";
 import { contractBlocks, signatureSection } from "@/lib/contract-layout";
 import { bodyProvidesSignatures } from "@/lib/contract-signatures";
 import type { ContractorSignature } from "@/lib/contract-signing";
@@ -51,6 +58,10 @@ export type ContractDocumentData = {
   signature?: ContractSignature;
   /** Present once the business has signed, which it does when it sends the contract. */
   contractorSignature?: ContractorSignature;
+  /** California's home improvement notices, frozen with the contract; absent for other contracts. */
+  notices?: LegalNotices | null;
+  /** What signing fills in on the Notice of Cancellation: blank before then. */
+  cancellation?: { transactionDate: string; lastDay: string };
 };
 
 /** What a signature line needs, whichever party's it is. */
@@ -94,6 +105,96 @@ function Body({ body }: { body: string }) {
         </Text>
       ))}
     </View>
+  );
+}
+
+/**
+ * The statutory notices, in the type sizes the law asks for: at least
+ * 10-point text and 10-point bold headings (B&P 7159(c)(2)), 12-point where a
+ * notice says so, 12-point bold for the right to cancel and the payment
+ * statements. Kept together with the paragraph that follows a heading.
+ */
+const NOTICE_STYLE: Record<NoticeStyle, { fontSize: number; bold: boolean }> = {
+  heading: { fontSize: 11, bold: true },
+  body: { fontSize: 10, bold: false },
+  large: { fontSize: 12, bold: false },
+  large_bold: { fontSize: 12, bold: true },
+};
+
+function Notices({ sections }: { sections: NoticeSection[] }) {
+  return (
+    <View>
+      {sections.map((section) => (
+        <View key={section.id} style={{ marginTop: 12 }}>
+          {section.paragraphs.map((paragraph, index) => {
+            const style = NOTICE_STYLE[paragraph.style];
+            return paragraph.text ? (
+              <Text
+                key={`${section.id}-${index}`}
+                minPresenceAhead={paragraph.style === "heading" ? 40 : 0}
+                style={[style.bold ? sheet.bold : {}, { fontSize: style.fontSize, marginTop: index === 0 ? 0 : 6 }]}
+              >
+                {paragraph.text}
+              </Text>
+            ) : null;
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** A blank on the form, filled when the fact is known. */
+function FormBlank({ value, caption }: { value: string; caption: string }) {
+  return (
+    <View style={{ marginTop: 10 }}>
+      <View style={{ minHeight: 16, justifyContent: "flex-end", borderBottomWidth: 1, borderBottomColor: "#0f172a" }}>
+        <Text>{value}</Text>
+      </View>
+      <Text style={[sheet.muted, { fontSize: 8 }]}>{caption}</Text>
+    </View>
+  );
+}
+
+/** One Notice of Cancellation, on a page of its own so it can be torn off (B&P 7159(e)(6)(C)(vi)). */
+function CancellationFormPage({
+  data,
+  copy,
+}: {
+  data: ContractDocumentData;
+  copy: number;
+}) {
+  const form = data.notices?.cancellationForm;
+  if (!form) return null;
+  const view = cancellationFormView(form, data.cancellation ?? { transactionDate: "", lastDay: "" });
+  return (
+    <Page size="LETTER" style={sheet.page}>
+      <Text style={[sheet.muted, { fontSize: 8, marginBottom: 6 }]}>
+        Copy {copy} of 2 · Job #{data.job.number} · {data.business.name}
+      </Text>
+      <Text style={[sheet.bold, { fontSize: 14 }]}>{view.caption}</Text>
+      <FormBlank value={view.transactionDate} caption="(Date) date of transaction" />
+      {view.statement.map((text, index) => (
+        <Text key={`statement-${index}`} style={{ marginTop: 8, fontSize: 10 }}>
+          {text}
+        </Text>
+      ))}
+      <Text style={{ marginTop: 12, fontSize: 10 }}>{view.instruction}</Text>
+      <FormBlank value={view.sellerName} caption="name of seller" />
+      <Text style={{ marginTop: 8, fontSize: 10 }}>at</Text>
+      <FormBlank value={view.sellerAddress} caption="address of seller's place of business" />
+      <Text style={{ marginTop: 8, fontSize: 10 }}>not later than midnight of</Text>
+      <FormBlank value={view.lastDay} caption="(Date)" />
+      <Text style={{ marginTop: 16, fontSize: 10 }}>{view.signLine}</Text>
+      <View style={[sheet.row, { justifyContent: "space-between" }]}>
+        <View style={{ width: "40%" }}>
+          <FormBlank value="" caption="(Date)" />
+        </View>
+        <View style={{ width: "52%" }}>
+          <FormBlank value="" caption="(Buyer's signature)" />
+        </View>
+      </View>
+    </Page>
   );
 }
 
@@ -234,9 +335,16 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
           </View>
         ) : null}
 
+        <Notices sections={noticesAt(data.notices, "top")} />
+
         <View style={[sheet.divider, { marginTop: 16 }]} />
 
         <Body body={data.body} />
+
+        <Notices sections={noticesAt(data.notices, "terms")} />
+
+        {/* Immediately above the owner's signature (B&P 7159(e)(6)(C)(ii)). */}
+        <Notices sections={noticesAt(data.notices, "cancel")} />
 
         {/*
           Unsigned, the block is left out when the business's own text already
@@ -284,6 +392,9 @@ export function ContractDocument({ data }: { data: ContractDocumentData }) {
 
         <DocumentFooter business={business} />
       </Page>
+      {/* The Notice of Cancellation, completed and in duplicate (B&P 7159(e)(6)(C)(vi)). */}
+      <CancellationFormPage data={data} copy={1} />
+      <CancellationFormPage data={data} copy={2} />
     </Document>
   );
 }

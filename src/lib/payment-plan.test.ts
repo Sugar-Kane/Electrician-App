@@ -166,7 +166,7 @@ test("the contract carries the payment schedule, and no longer says the balance 
   const next = withPaymentSchedule(body, terms.block);
   assert.match(next, /Deposit due before work begins: \$100\.00\n\nPAYMENT SCHEDULE\n1\. Deposit \$100\.00 \(10%\) due on signing\.\n2\. Balance \$900\.00/);
   // The statutory down payment notice is on any contract with a deposit.
-  assert.match(next, /THE DOWN PAYMENT MAY NOT EXCEED \$1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS\./);
+  assert.match(next, /THE DOWNPAYMENT MAY NOT EXCEED \$1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS\./);
   assert.doesNotMatch(next, /balance is due on completion of the work described above/);
   // No plan: the body is left as the template wrote it.
   assert.equal(withPaymentSchedule(body, ""), body);

@@ -2,6 +2,7 @@ import { ShieldCheck } from "lucide-react";
 
 import { AdminNav } from "@/components/admin-nav";
 import { myAdminRole, requirePlatformAdmin } from "@/lib/admin-console";
+import { requireMfa } from "@/lib/mfa-server";
 
 /**
  * The gate on the whole console.
@@ -17,6 +18,8 @@ import { myAdminRole, requirePlatformAdmin } from "@/lib/admin-console";
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requirePlatformAdmin();
+  // Volteira's own staff always use two-step sign-in here once it is required (SEC-001-002).
+  await requireMfa("/admin");
   const role = await myAdminRole();
 
   return (

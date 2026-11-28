@@ -30,6 +30,12 @@ export type PlanItemInput = {
    * any, is only when to send the reminder.
    */
   doneAt?: string | null;
+  /**
+   * The phase of work, and the materials or equipment, a progress payment is
+   * for. A home improvement contract lists it beside each payment
+   * (B&P 7159(d)(9)(B)).
+   */
+  phase?: string | null;
 };
 
 export type PlannedPayment = PlanItemInput & { cents: number };
@@ -61,7 +67,7 @@ export function maxDownPaymentCents(totalCents: number): number {
 }
 
 /** The statutory notice a contract with a down payment carries. */
-export const DOWN_PAYMENT_NOTICE = "THE DOWN PAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.";
+export const DOWN_PAYMENT_NOTICE = "THE DOWNPAYMENT MAY NOT EXCEED $1,000 OR 10 PERCENT OF THE CONTRACT PRICE, WHICHEVER IS LESS.";
 
 export function planAmounts(totalCents: number, items: PlanItemInput[]): PlanResult {
   const total = Math.max(0, whole(totalCents));

@@ -9,6 +9,7 @@ import { takeAiUse } from "@/lib/ai-allowance";
 import { draftScope } from "@/lib/claude";
 import { withContinuation, workItemLabel } from "@/lib/job-scope";
 import { jobContinuationLine } from "@/lib/job-scope-server";
+import { contractNotices, defaultContractType, homeImprovementRefusal, isContractType, type ContractType } from "@/lib/ca-home-improvement";
 import { contractPaymentTerms, withPaymentSchedule } from "@/lib/payment-plan";
 import { loadJobPaymentPlan } from "@/lib/payment-plan-server";
 import {
@@ -211,9 +212,9 @@ export async function generateContract(
     .select(
       `id, job_number, category, customer_description, scope_of_work, scheduled_start, diagnostic_fee_cents,
        diagnostic_paid, follow_up_of,
-       customers ( first_name, last_name, company_name, bill_to, address_line_1, city, state, postal_code ),
+       customers ( first_name, last_name, company_name, bill_to, customer_type, address_line_1, city, state, postal_code ),
        properties ( address_line_1, city, state, postal_code ),
-       organizations ( name, phone, timezone ),
+       organizations ( name, phone, timezone, base_address_line_1, base_city, base_state, base_postal_code ),
        invoices ( id, status, total_cents, diagnostic_credit_cents ),
        job_line_items ( kind, description, quantity, unit, unit_price_cents, invoice_id )`,
     )
@@ -418,6 +419,50 @@ export async function generateContract(
     today: formatDate(new Date().toISOString()),
   };
 
+  /*
+   * The contract type, and for a home improvement contract the statutory
+   * notices and the buyer's right to cancel (src/lib/ca-home-improvement.ts).
+   * Residential work is a home improvement contract unless the office picks
+   * another type.
+   */
+  const chosenType = String(formData.get("contractType") ?? "");
+  const contractType: ContractType = isContractType(chosenType) ? chosenType : defaultContractType(text(customer?.customer_type));
+  const seniorAnswer = String(formData.get("seniorBuyer") ?? "");
+  const seniorBuyer = seniorAnswer === "yes" ? true : seniorAnswer === "no" ? false : null;
+  const negotiatedAtBusiness = formData.get("negotiatedAtBusiness") === "on";
+  const planPayments = plan.payments ?? [];
+  const progressPayments = planPayments
+    .filter((payment) => payment.kind === "installment" && payment.due !== "on_signing")
+    .map((payment) => ({ cents: payment.cents, phase: payment.phase ?? "" }));
+  const planDown = planPayments
+    .filter((payment) => payment.kind === "deposit" || payment.due === "on_signing")
+    .reduce((sum, payment) => sum + payment.cents, 0);
+  if (contractType === "home_improvement") {
+    const refusal = homeImprovementRefusal({ seniorBuyer, progressPayments });
+    if (refusal) return { error: refusal };
+  }
+  const sellerAddress = [
+    text(organization?.base_address_line_1),
+    [text(organization?.base_city), [text(organization?.base_state), text(organization?.base_postal_code)].filter(Boolean).join(" ")]
+      .filter(Boolean)
+      .join(", "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const notices = contractNotices({
+    contractType,
+    seniorBuyer: seniorBuyer === true,
+    negotiatedAtBusiness,
+    contractPriceCents: money.totalCents,
+    downpaymentCents: planPayments.length > 0 ? planDown : money.depositCents,
+    progressPayments,
+    sellerName: text(organization?.name),
+    sellerAddress,
+  });
+  if (notices?.cancellationForm && !sellerAddress) {
+    return { error: "Add your business address in Settings → Business first. The cancellation form tells the customer where to send it." };
+  }
+
   const filledTemplate = fillTemplate(body, facts);
   // The payment schedule the customer is agreeing to, in the words themselves,
   // so the signing page and the PDF both show it.
@@ -442,6 +487,10 @@ export async function generateContract(
       deposit_cents: planTerms.depositCents > 0 ? planTerms.depositCents : money.depositCents,
       deposit_paid: planTerms.depositCents > 0 ? false : money.depositPaid,
       payment_schedule: planTerms.snapshot,
+      contract_type: contractType,
+      legal_notices: notices,
+      senior_buyer: contractType === "home_improvement" ? seniorBuyer : null,
+      negotiated_at_business: contractType === "home_improvement" && negotiatedAtBusiness,
     })
     .select("id")
     .maybeSingle();

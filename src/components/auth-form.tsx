@@ -65,6 +65,12 @@ export function AuthForm({ mode, nextPath, initialError, defaultEmail }: { mode:
       } else {
         const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) throw authError;
+        // Two-step sign-in set up: the code comes next.
+        const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (level?.nextLevel === "aal2" && level.currentLevel !== "aal2") {
+          router.replace(`/mfa?next=${encodeURIComponent(nextPath)}`);
+          return;
+        }
         router.replace(nextPath);
         router.refresh();
       }

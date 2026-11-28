@@ -8,6 +8,7 @@ import {
   documentWord,
   type ContractDocumentData,
 } from "@/lib/pdf/contract-document";
+import { readLegalNotices } from "@/lib/ca-home-improvement";
 import { documentFolderId } from "@/lib/document-folders";
 import { contractorSignature, documentSignature } from "@/lib/contract-signing";
 import { businessLetterhead, storeGeneratedPdf } from "@/lib/pdf/store";
@@ -76,6 +77,7 @@ export async function loadContractDocument(input: {
        signature_image, signed_body_hash,
        contractor_signed_at, contractor_signature_method, contractor_signature_name,
        contractor_signature_title, contractor_signature_image,
+       legal_notices, cancel_deadline,
        jobs (
          id, job_number, scheduled_start,
          customers ( first_name, last_name, company_name, phone, email, address_line_1, address_line_2, city, state, postal_code, business_address_line_1, business_address_line_2, business_city, business_state, business_postal_code, bill_to ),
@@ -143,6 +145,16 @@ export async function loadContractDocument(input: {
       },
       body: str(contract.body),
       unfilled,
+      // The statutory notices frozen with the contract, and the blanks on the
+      // cancellation form that signing fills in: the date of the transaction
+      // and the last day to cancel (the right ends at midnight that night).
+      notices: readLegalNotices(contract.legal_notices),
+      cancellation: {
+        transactionDate: dateLabel(contract.signed_at, input.timeZone),
+        lastDay: str(contract.cancel_deadline)
+          ? dateLabel(new Date(Date.parse(str(contract.cancel_deadline)) - 1).toISOString(), input.timeZone)
+          : "",
+      },
       // Present only once the customer has signed in the app, and only when
       // every part of the signature is there.
       signature: documentSignature(contract, input.timeZone),

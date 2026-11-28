@@ -258,3 +258,66 @@ function fingerprintOf(entries: string[]): string {
   }
   return `${entries.length}.${(hash >>> 0).toString(36)}`;
 }
+
+/** The reply words carriers and the FCC treat as a request to stop (47 CFR 64.1200(a)(10)), plus their Spanish counterparts. */
+const OPT_OUT_WORDS = new Set([
+  "stop", "stopall", "unsubscribe", "cancel", "end", "quit", "revoke", "optout",
+  "alto", "parar", "pare", "basta", "baja",
+]);
+
+/** The words Twilio's Advanced Opt-Out already answers itself, so Volteira must not send a second confirmation. */
+const CARRIER_HANDLED_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit", "revoke", "optout"]);
+
+/**
+ * Plain-language ways of asking not to be texted. Each needs a texting word
+ * ("text", "message") or a list word ("remove me", "unsubscribe"), so "cancel
+ * my appointment" or "stop by at 3" is never read as an opt-out.
+ */
+const OPT_OUT_PHRASES: readonly RegExp[] = [
+  /\bstop (?:all )?(?:the )?(?:texting|texts?|txting|txts?|messaging|messages|sending|contacting|sms)\b/,
+  /\b(?:dont|do not|please dont|please do not|never) (?:text|txt|message|sms|contact)\b/,
+  /\bno more (?:texts|text messages|txts|messages|texting)\b/,
+  /^(?:no|stop) (?:texts|texting|txts|messages)\b/,
+  /\b(?:remove|take|delete) (?:me|my number|this number)(?: off| from)\b/,
+  /\b(?:remove|take|delete) me\b(?: please)?$/,
+  /\bunsubscribe\b/,
+  /\bopt (?:me )?out\b/,
+  /\bwrong number\b/,
+  /\bleave me alone\b/,
+  // Spanish
+  /\bno (?:me )?(?:envie|envien|mande|manden|escriba|escriban)\b/,
+  /\bya no (?:me )?(?:envie|envien|mande|manden|escriba|escriban)\b/,
+  /\b(?:dejen|deje) de (?:enviar|mandar|escribir)\b/,
+];
+
+function normalizeForOptOut(body: string): string {
+  return body
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export type OptOutReading = { optOut: false } | { optOut: true; carrierHandled: boolean };
+
+/**
+ * Whether an inbound text asks the business to stop texting, by any
+ * reasonable means (FCC 2024 revocation rule, compliance FED-002-005): a
+ * reply word such as STOP, QUIT or REVOKE, or the customer's own words
+ * ("please stop texting me", "remove me from your list", "no me envíen más
+ * mensajes"). `carrierHandled` is true for the exact keywords Twilio already
+ * answers with its own confirmation.
+ */
+export function readOptOut(body: string): OptOutReading {
+  const words = normalizeForOptOut(body);
+  if (!words) return { optOut: false };
+  const keyword = words.replace(/ /g, "");
+  if (OPT_OUT_WORDS.has(keyword)) return { optOut: true, carrierHandled: CARRIER_HANDLED_WORDS.has(keyword) };
+  if (OPT_OUT_PHRASES.some((phrase) => phrase.test(words))) return { optOut: true, carrierHandled: false };
+  return { optOut: false };
+}
+
+/** The one text sent back after an opt-out in the customer's own words; nothing else follows it. */
+export const OPT_OUT_CONFIRMATION = "You won't get any more texts from us. Reply START if you change your mind.";

@@ -111,6 +111,20 @@ export async function advanceJob(
   const job = await loadJob(jobNumber);
   if (!job) return { error: "That job could not be found." };
 
+  // Work waits out a home improvement contract's right to cancel, and stops
+  // for good once the customer cancels (compliance CSLB-007-002).
+  if (requested === "working") {
+    const { jobCancellationHold } = await import("@/lib/contract-cancellation-server");
+    const hold = await jobCancellationHold(asFlexibleClient(await createClient()), job.organizationId, job.id);
+    if (hold) {
+      return {
+        error: hold.startsWith("The customer cancelled")
+          ? "The customer cancelled this contract, so the work can't start. Refund what they paid."
+          : "The customer can still cancel this contract. Start the work once their right to cancel ends.",
+      };
+    }
+  }
+
   // What was actually used from stock for each reserved line, as
   // `used:<line id>`; a line the form does not mention used what it asked for.
   const confirmed = new Map<string, number | null>();

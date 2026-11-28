@@ -6,6 +6,8 @@ import { ContractSigning } from "@/app/contract/[token]/contract-signing";
 import { ChangeOrderDecline } from "@/app/contract/[token]/change-order-decline";
 import { describeChange } from "@/lib/change-order-document";
 import { changeOrderSummary, signedCents, type ChangeOrderItem } from "@/lib/change-order-math";
+import { customerMayCancel, readLegalNotices } from "@/lib/ca-home-improvement";
+import { ContractCancel } from "./contract-cancel";
 import { ContractPaper } from "@/components/contract-paper";
 import { approvalSummary, type ApprovalSummary } from "@/lib/approval-summary";
 import { unsignableBecause } from "@/lib/contract-signing";
@@ -65,6 +67,10 @@ type PublicContract = {
   time_zone: string | null;
   /** A newer contract has been drafted for the job, so this link cannot sign. */
   superseded: boolean | null;
+  /** California home improvement notices frozen with the contract, if it carries them. */
+  legal_notices: unknown;
+  cancel_deadline: string | null;
+  cancelled_at: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -431,6 +437,16 @@ export default async function ContractPage({ params }: { params: Promise<{ token
     superseded: contract.superseded === true,
   });
   const signable = !contract.signed_at && !blocked;
+  const notices = readLegalNotices(contract.legal_notices);
+  const cancellable = Boolean(notices?.cancellationForm);
+  const dayLabel = (iso: string) =>
+    new Intl.DateTimeFormat("en-US", { timeZone, weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date(iso));
+  // The last day to cancel: the right ends at midnight at the end of it.
+  const deadlineLabel = contract.cancel_deadline ? dayLabel(new Date(Date.parse(contract.cancel_deadline) - 1).toISOString()) : "";
+  const mayCancel = customerMayCancel(
+    { cancellable, signedAt: contract.signed_at, cancelDeadline: contract.cancel_deadline, cancelledAt: contract.cancelled_at, status: contract.status },
+    new Date(),
+  );
 
   return (
     <main id="main-content" className="min-h-screen bg-canvas px-4 py-8 text-white sm:py-12">
@@ -487,6 +503,18 @@ export default async function ContractPage({ params }: { params: Promise<{ token
           </a>
         ) : null}
 
+        {contract.cancelled_at ? (
+          <section role="status" className="mt-6 rounded-panel border border-caution/40 bg-caution-bg p-4 text-sm leading-6 text-caution">
+            You cancelled this contract on {dayLabel(contract.cancelled_at)}. {contract.business_name} must return anything you paid within 10 days.
+          </section>
+        ) : null}
+
+        {mayCancel ? (
+          <section className="mt-6 rounded-panel border border-line bg-[#081925] p-4">
+            <ContractCancel token={token} deadlineLabel={deadlineLabel} businessName={contract.business_name} />
+          </section>
+        ) : null}
+
         {contract.signed_at ? (
           <section className="mt-6 flex items-start gap-3 rounded-panel border border-brand/30 bg-brand/10 p-4">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
@@ -525,6 +553,13 @@ export default async function ContractPage({ params }: { params: Promise<{ token
             <p className="mt-1 text-sm leading-6 text-ink-muted">
               By signing you agree to the work and the price above.
             </p>
+            {cancellable && notices ? (
+              <p className="mt-2 text-sm leading-6 text-ink-muted">
+                {notices.seniorBuyer
+                  ? `This contract gives you five business days to cancel, because ${contract.business_name} recorded that you are 65 or older.`
+                  : `This contract gives you three business days to cancel. If you are 65 or older you are entitled to five: ask ${contract.business_name} for a corrected contract before you sign.`}
+              </p>
+            ) : null}
             <div className="mt-4">
               <ContractSigning
                 token={token}
