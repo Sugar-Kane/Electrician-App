@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 
 import { fulfillPaidBooking } from "@/lib/stripe-booking";
+import { fulfillSetupBooking } from "@/lib/diagnostic-payment-server";
 import { getStripe } from "@/lib/stripe";
-import { getBookingPaymentIntent, getPublicBookingPage } from "@/lib/public-booking";
+import { getBookingPaymentIntent, getPublicBookingConfirmation, getPublicBookingPage } from "@/lib/public-booking";
 import { paymentAccountFor } from "@/lib/stripe-connect";
 
 export const metadata: Metadata = {
   title: "Diagnostic confirmed | Volteira",
+  robots: { index: false, follow: false },
 };
 
 function formatCurrency(cents: number) {
@@ -39,6 +41,8 @@ export default async function BookingConfirmationPage({
   const stripe = getStripe();
   let confirmation = null;
   let paidButUnscheduled = false;
+  // A setup Checkout: a payment method was saved and nothing was charged.
+  let methodSaved = false;
 
   // The checkout lives on the business's own Stripe account.
   const bookingPage = stripe && query.session_id?.startsWith("cs_") ? await getPublicBookingPage(slug) : null;
@@ -49,7 +53,12 @@ export default async function BookingConfirmationPage({
       const session = await stripe.checkout.sessions.retrieve(query.session_id, undefined, {
         stripeAccount: account.accountId,
       });
-      if (session.metadata?.organization_slug === slug) {
+      if (session.metadata?.organization_slug === slug && session.mode === "setup") {
+        methodSaved = true;
+        const token = session.metadata?.booking_token ?? "";
+        await fulfillSetupBooking(session, account.accountId);
+        confirmation = token ? await getPublicBookingConfirmation(token, session.id) : null;
+      } else if (session.metadata?.organization_slug === slug) {
         confirmation = await fulfillPaidBooking(session);
         // Paid, but the time could not be booked (it had started, or was
         // taken): the money is recorded and the business is told. Say so,
@@ -100,9 +109,11 @@ export default async function BookingConfirmationPage({
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-caution-bg text-caution">
             <Clock3 className="h-7 w-7" aria-hidden />
           </span>
-          <h1 className="mt-5 text-2xl font-semibold">Payment is still being confirmed</h1>
+          <h1 className="mt-5 text-2xl font-semibold">{methodSaved ? "Your appointment is still being confirmed" : "Payment is still being confirmed"}</h1>
           <p className="mt-3 text-sm leading-6 text-ink-muted">
-            If you completed checkout, refresh this page in a moment. No duplicate charge will be created.
+            {methodSaved
+              ? "If you saved your payment method, refresh this page in a moment. Nothing has been charged."
+              : "If you completed checkout, refresh this page in a moment. No duplicate charge will be created."}
           </p>
           <Link href={`/book/${encodeURIComponent(slug)}`} className="tap-target mt-6 inline-flex min-h-12 items-center justify-center rounded-control border border-line px-5 text-sm font-semibold">
             Return to booking
@@ -139,9 +150,13 @@ export default async function BookingConfirmationPage({
             <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-positive-bg text-positive">
               <CheckCircle2 className="h-9 w-9" aria-hidden />
             </span>
-            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-positive">Payment received</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-positive">{methodSaved ? "Payment method saved" : "Payment received"}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">You’re booked, {confirmation.customer_first_name}.</h1>
-            <p className="mt-3 text-sm leading-6 text-ink-muted">Your diagnostic visit is confirmed. A receipt has been sent by Stripe.</p>
+            <p className="mt-3 text-sm leading-6 text-ink-muted">
+              {methodSaved
+                ? "Your diagnostic visit is confirmed. Your payment method has been securely saved. No diagnostic payment has been collected."
+                : "Your diagnostic visit is confirmed. A receipt has been sent by Stripe."}
+            </p>
           </div>
 
           <div className="space-y-3 p-4 sm:p-6">
@@ -165,8 +180,13 @@ export default async function BookingConfirmationPage({
                 <p className="text-xs uppercase tracking-[0.12em] text-ink-faint">Diagnostic payment</p>
                 <div className="mt-1 flex items-center justify-between gap-3 text-sm font-semibold text-white">
                   <span>Job #{confirmation.job_number}</span>
-                  <span>{formatCurrency(confirmation.amount_paid_cents)}</span>
+                  <span>{methodSaved ? "Due today $0" : formatCurrency(confirmation.amount_paid_cents)}</span>
                 </div>
+                {methodSaved ? (
+                  <p className="mt-1 text-xs leading-5 text-ink-muted">
+                    {formatCurrency(confirmation.amount_paid_cents)} due upon completion of the contracted diagnostic service.
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>

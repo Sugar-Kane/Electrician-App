@@ -5760,6 +5760,622 @@
       "backend_verification_required": true,
       "risk_severity": "high",
       "notes": "SOURCE NOT VERIFIED: the official sources (leginfo.legislature.ca.gov, cslb.ca.gov, www.cslb.ca.gov) and secondary statute mirrors (california.public.law) were not reachable from the audit sandbox on 2026-11-24 (DNS refused by the session network allowlist; no allowed hosts configured). Content is based on the auditor's knowledge of the Contractors State License Law plus web-search excerpts of secondary copies (Justia, FindLaw, CSLB guides surfaced by search). Quoted headings, statement text, subdivision numbers and type-size rules MUST be confirmed word-for-word against the current official text (leginfo / 2026 CSLB Law Book) before any template relies on them. Audits must treat this requirement as BLUE until verified. Source verification 2026-11-25: NOT VERIFIED. No official_source_url, so there was nothing on an approved official host to read."
+    },
+    {
+      "id": "CSLB-DD-001",
+      "title": "California diagnostic fee is never collected before the contracted diagnostic service is completed",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Payment timing (deferred diagnostic)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code §§ 7151, 7159, 7159.5, 7159.10, 7159.14",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "No diagnostic, trip, inspection or service fee is collected, held or requested at booking for California work, whatever it is called.",
+        "Contractor settings cannot enable upfront collection for CA or for an unset jurisdiction (database trigger guard_diagnostic_payment_settings).",
+        "Payment-mode Checkout cannot attach to a deferred booking (attach_public_booking_checkout)."
+      ],
+      "enforcement_exposure": "Payment ahead of completed work on a qualifying contract is cause for discipline and a UCL predicate (B&P 7159.5, 7159.10-7159.14, 17200).",
+      "verification_methods": [
+        "automated",
+        "code-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "DD-001, DD-002, DD-008, DD-011 results",
+        "diagnostic-payment-policy.test.ts results"
+      ],
+      "automated_test_ids": [
+        "CT-DD-POLICY",
+        "CT-DD-SQL"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "CSLB-002-003",
+        "CSLB-004-001",
+        "CSLB-004-002"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-002",
+      "title": "Service and repair contract: payment only after the entire contracted work is complete",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Payment timing (deferred diagnostic)",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code §§ 7159.10, 7159.14",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "A repair under the same contract as the diagnostic defers the diagnostic fee to that work's completion (repair_contract same_contract/undetermined refuses collection).",
+        "Contract qualification is not assumed from price alone; Volteira applies the conservative rule to every CA diagnostic until a contract-type classifier exists (see CSLB-002-001)."
+      ],
+      "enforcement_exposure": "Payment ahead of completed work on a qualifying contract is cause for discipline and a UCL predicate (B&P 7159.5, 7159.10-7159.14, 17200).",
+      "verification_methods": [
+        "automated",
+        "code-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "DD-029 result",
+        "collectionRefusal tests"
+      ],
+      "automated_test_ids": [
+        "CT-DD-POLICY",
+        "CT-DD-SQL"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "CSLB-002-003",
+        "CSLB-002-004"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-003",
+      "title": "Home improvement down payment limit applies to repairs approved after a diagnostic",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Down payment",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code § 7159.5(a)(3)",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "Repair deposits stay within 10% or $1,000 (payment-plan.ts maxDownPaymentCents, PR #308); a collected diagnostic credited toward the repair counts as money already paid."
+      ],
+      "enforcement_exposure": "Payment ahead of completed work on a qualifying contract is cause for discipline and a UCL predicate (B&P 7159.5, 7159.10-7159.14, 17200).",
+      "verification_methods": [
+        "automated",
+        "code-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "CT-DEPOSIT-001 result"
+      ],
+      "automated_test_ids": [
+        "CT-DEPOSIT-001"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "CSLB-004-001",
+        "CSLB-004-002"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-004",
+      "title": "Payment method saved with a Stripe SetupIntent; no PaymentIntent or hold at booking",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Stripe authorization",
+      "requirement_type": "recommended-control",
+      "citation": "Stripe: Save and reuse payment methods; off-session payments",
+      "official_source_url": "https://docs.stripe.com/payments/save-and-reuse",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "Booking uses Checkout mode=setup on the tenant's connected account; no PaymentIntent and no authorization hold is created.",
+        "Only Stripe display metadata (brand, last 4) is stored; never card number, expiry or CVC."
+      ],
+      "enforcement_exposure": "Control failure exposes customers to unauthorized or duplicate charges.",
+      "verification_methods": [
+        "automated",
+        "code-inspection"
+      ],
+      "required_evidence": [
+        "src/lib/diagnostic-payment-server.ts startDiagnosticSetupCheckout",
+        "migration column checks"
+      ],
+      "automated_test_ids": [
+        "CT-DD-SQL"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "CSLB-DD-001"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-005",
+      "title": "Explicit off-session payment consent recorded before the card is saved",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Stripe authorization",
+      "requirement_type": "recommended-control",
+      "citation": "Stripe off-session terms; Cal. Civ. Code § 1633.7 (electronic records)",
+      "official_source_url": "https://docs.stripe.com/payments/save-and-reuse",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "An unticked checkbox with the exact authorization text (business name, amount, timing) must be ticked; the server refuses without it.",
+        "Stored: amount, currency, contractor, customer, timestamp, agreement version, text, fingerprint, language, channel, IP/user agent where available, Stripe ids.",
+        "The authorization does not replace the service contract, notices or cancellation rights."
+      ],
+      "enforcement_exposure": "Control failure exposes customers to unauthorized or duplicate charges.",
+      "verification_methods": [
+        "automated",
+        "code-inspection"
+      ],
+      "required_evidence": [
+        "DD-003, DD-004, DD-005 results",
+        "booking page screenshots"
+      ],
+      "automated_test_ids": [
+        "CT-DD-POLICY",
+        "CT-DD-SQL"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "CSLB-003-028"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-006",
+      "title": "Diagnostic completion verified before any collection",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Completion",
+      "requirement_type": "recommended-control",
+      "citation": "Recommended control supporting Cal. Bus. & Prof. Code § 7159.10",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "Completion is recorded only by complete_diagnostic_service: owner/admin or the assigned technician, with findings of at least a sentence; members cannot edit the columns directly.",
+        "claim_diagnostic_charge re-checks completion, findings, contract relationship, authorization, amount, tenant/account match, cancellation hold, prior payment and live charge under a row lock."
+      ],
+      "enforcement_exposure": "Control failure exposes customers to unauthorized or duplicate charges.",
+      "verification_methods": [
+        "automated",
+        "code-inspection"
+      ],
+      "required_evidence": [
+        "DD-014..DD-025, DD-035, DD-039 results"
+      ],
+      "automated_test_ids": [
+        "CT-DD-SQL"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "CSLB-DD-001"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-007",
+      "title": "Diagnostic credit applied once, as a prior payment, on a separate repair contract",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Credit accounting",
+      "requirement_type": "statutory",
+      "citation": "Cal. Civ. Code § 1770(a)(29); Cal. Bus. & Prof. Code § 17500",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "The credit exists only after the diagnostic was paid (diagnostic_paid) and comes off once across the diagnostic and its follow-up jobs (diagnosticCreditLeft / creditGivenCents).",
+        "Accounting treatment: prior payment applied (not a price discount); flagged for accountant and attorney review."
+      ],
+      "enforcement_exposure": "Payment ahead of completed work on a qualifying contract is cause for discipline and a UCL predicate (B&P 7159.5, 7159.10-7159.14, 17200).",
+      "verification_methods": [
+        "automated",
+        "code-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "invoice-math and follow-up-jobs tests"
+      ],
+      "automated_test_ids": [
+        "CT-DD-POLICY"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "medium",
+      "related_ids": [
+        "CA-009-004"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-008",
+      "title": "Grok voice agent describes the deferred fee correctly and cannot take payment",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "AI communications",
+      "requirement_type": "recommended-control",
+      "citation": "Cal. Bus. & Prof. Code §§ 17200, 17500, 17940-17943",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "Fee and policy read live from Volteira; scripted statements for pay-today, why-a-card, declined repairs, approved repairs, no-card, phone card refusal, failed payment.",
+        "No tool can create, confirm or capture a payment; card numbers and CVCs are redacted from speech, stored turns and logs; never called a deposit."
+      ],
+      "enforcement_exposure": "Control failure exposes customers to unauthorized or duplicate charges.",
+      "verification_methods": [
+        "automated",
+        "code-inspection"
+      ],
+      "required_evidence": [
+        "grok-voice.test.ts, booking-tool-rules.test.ts, booking-hold.test.ts results"
+      ],
+      "automated_test_ids": [
+        "CT-DD-VOICE"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "CA-006-011"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-009",
+      "title": "MCP tools cannot become a route to advance or unauthorized diagnostic payments",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "AI/MCP",
+      "requirement_type": "recommended-control",
+      "citation": "Recommended control (SEC-007)",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "collect_diagnostic_payment, complete_diagnostic and both link senders wait for the owner's approval; the same server functions and database checks as the app apply; no tool accepts an amount.",
+        "Invoices on an uncompleted deferred diagnostic cannot be sent by any route (invoiceSendCheck)."
+      ],
+      "enforcement_exposure": "Control failure exposes customers to unauthorized or duplicate charges.",
+      "verification_methods": [
+        "automated",
+        "code-inspection"
+      ],
+      "required_evidence": [
+        "mcp-approval.test.ts result",
+        "DD-015 result"
+      ],
+      "automated_test_ids": [
+        "CT-DD-MCP"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "SEC-007-008"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-010",
+      "title": "Customer-facing disclosures: fee, $0.00 due today, due on completion, credit terms",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Disclosures",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code § 7159.14(a)(8)-(9); Cal. Civ. Code § 1770(a)(29)",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "Booking page, token page, texts, emails, voice and SMS assistant state the fee, that nothing is due today and when it becomes payable, in English and Spanish, with the credit sentence only where the business offers it.",
+        "No surface calls the diagnostic fee a deposit or advance payment for a deferred business."
+      ],
+      "enforcement_exposure": "Payment ahead of completed work on a qualifying contract is cause for discipline and a UCL predicate (B&P 7159.5, 7159.10-7159.14, 17200).",
+      "verification_methods": [
+        "automated",
+        "code-inspection",
+        "legal-review"
+      ],
+      "required_evidence": [
+        "booking-confirmation.test.ts results",
+        "docs/deferred-diagnostic-screenshots"
+      ],
+      "automated_test_ids": [
+        "CT-DD-WORDING"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": true,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CSLB-007",
+        "WEB-CSLB-022"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
+    },
+    {
+      "id": "CSLB-DD-011",
+      "title": "Multi-tenant payment isolation for saved payment methods and charges",
+      "register": "california-contractors",
+      "jurisdiction": "California",
+      "category": "Security",
+      "requirement_type": "recommended-control",
+      "citation": "Recommended control (SEC-002)",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "",
+      "source_verified": false,
+      "applicability": {
+        "criteria": [
+          "California residential diagnostic, service and repair, or home improvement work booked through Volteira (any channel)"
+        ],
+        "business_types": [
+          "Licensed contractor tenants (C-10)"
+        ],
+        "transaction_types": [
+          "Diagnostic visit",
+          "Service and repair contract",
+          "Home improvement contract"
+        ]
+      },
+      "responsible_parties": [
+        "Volteira",
+        "Pacific Plains Electric",
+        "Contractor tenants"
+      ],
+      "required_behavior": [
+        "Authorizations and charges are RLS-readable by members of their own business only and writable only by service-role functions.",
+        "Stripe account and Customer ownership are verified on setup and on every charge; stripe_customers writes locked to the service role; webhook events de-duplicated by event id."
+      ],
+      "enforcement_exposure": "Control failure exposes customers to unauthorized or duplicate charges.",
+      "verification_methods": [
+        "automated",
+        "code-inspection"
+      ],
+      "required_evidence": [
+        "DD-006, DD-009, DD-019, DD-023, DD-032..DD-034 results",
+        "tenant-isolation run (75/75 local)"
+      ],
+      "automated_test_ids": [
+        "CT-DD-SQL"
+      ],
+      "manual_review_required": true,
+      "legal_review_required": false,
+      "website_verifiable": false,
+      "backend_verification_required": true,
+      "risk_severity": "critical",
+      "related_ids": [
+        "SEC-002-001",
+        "SEC-002-012"
+      ],
+      "notes": "Statutory content relies on the source verification recorded on 2026-11-25 in this register (CSLB 2026 Law Book on cslb.ca.gov; B&P 7159.10(a)(1)(A)-(D) and 7159.14(a)(1),(8),(9) confirmed). leginfo.legislature.ca.gov returned HTTP 403 to this session on 2026-11-27, so the current section text was not re-read. Interpretation (whether a diagnostic fee may be collected before completion under any contract type) requires attorney review; the implementation applies the conservative rule meanwhile. Added 2026-11-27 with the deferred diagnostic payments change."
     }
   ]
 }

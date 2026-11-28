@@ -50,7 +50,8 @@ test("a confirmation with no link is still a complete confirmation", () => {
 });
 
 test("a held appointment is never called booked in the customer's text", () => {
-  const message = customerConfirmationSms(FACTS, "held");
+  // A business allowed to collect at booking (outside California).
+  const message = customerConfirmationSms({ ...FACTS, deferred: false }, "held");
 
   assert.match(message, /time is held/i);
   assert.match(message, /pay the \$100 diagnostic fee to confirm/i);
@@ -99,8 +100,8 @@ test("the email says the same thing in both bodies", () => {
 });
 
 test("held customer and owner emails say unpaid, not booked", () => {
-  const customer = confirmationEmail(FACTS, "held");
-  const owner = ownerBookingEmail(FACTS, undefined, "held");
+  const customer = confirmationEmail({ ...FACTS, deferred: false }, "held");
+  const owner = ownerBookingEmail({ ...FACTS, deferred: false }, undefined, "held");
 
   for (const body of [customer.text, customer.html]) {
     assert.match(body, /not confirmed until the diagnostic fee is paid/i);
@@ -367,7 +368,8 @@ test("a paid booking's email is the customer's receipt, in the language they boo
   const answers = [
     { question: "Have you looked at the breaker panel? Is anything tripped, and does it reset?", answer: "No ha revisado el panel." },
   ];
-  const paid = confirmationEmail({ ...FACTS, paid: true, language: "es", intakeAnswers: answers });
+  // Paid at booking: only a business allowed upfront collection.
+  const paid = confirmationEmail({ ...FACTS, paid: true, deferred: false, language: "es", intakeAnswers: answers });
   for (const body of [paid.text, paid.html]) {
     assert.match(body, /Tarifa de diagnóstico recibida: \$100/);
     assert.match(body, /Su cita con Pacific Plains Electric está reservada/);
@@ -381,5 +383,30 @@ test("a paid booking's email is the customer's receipt, in the language they boo
     const held = confirmationEmail({ ...FACTS, language }, "held");
     assert.doesNotMatch(held.text, /received|recibida/i);
   }
-  assert.match(confirmationEmail({ ...FACTS, paid: true }).text, /Diagnostic fee received: \$100/);
+  assert.match(confirmationEmail({ ...FACTS, paid: true, deferred: false }).text, /Diagnostic fee received: \$100/);
+});
+
+test("deferred: a held booking asks for an authorization, never a payment, in both languages", () => {
+  for (const language of ["en", "es"] as const) {
+    const text = customerConfirmationSms({ ...FACTS, language }, "held");
+    const email = confirmationEmail({ ...FACTS, language }, "held");
+    for (const body of [text, email.text, email.html]) {
+      assert.doesNotMatch(body, /pay the \$100|pague la tarifa|deposit|depósito/i, language);
+      assert.match(body, language === "es" ? /hoy no se cobra/i : /nothing is charged today|no diagnostic payment is due today/i, language);
+      assert.match(body, /\$100/, language);
+    }
+    assert.doesNotMatch(email.subject, /payment needed|pago pendiente/i, language);
+  }
+});
+
+test("deferred: a confirmed text says nothing is due today and keeps the business phone", () => {
+  const message = customerConfirmationSms(FACTS);
+  assert.match(message, /No diagnostic payment is due today/);
+  assert.match(message, /\(805\) 626-7761/);
+});
+
+test("deferred: the owner's alert never calls the fee a deposit", () => {
+  const owner = ownerBookingEmail(FACTS, undefined, "held");
+  assert.doesNotMatch(owner.text, /Deposit:/);
+  assert.match(owner.text, /due on completion/);
 });

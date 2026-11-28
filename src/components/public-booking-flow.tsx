@@ -31,8 +31,10 @@ import {
   getAdaptiveSafetyQuestions,
   type SafetyAnswerMap,
 } from "@/lib/booking-safety";
-import type { PublicBookingPage, PublicBookingSlot } from "@/lib/public-booking";
+import type { PublicBookingPage, PublicBookingSlot, PublicDiagnosticPolicy } from "@/lib/public-booking";
 import { smsConsentDisclosure } from "@/lib/sms-consent";
+import { DiagnosticAuthorization } from "@/components/diagnostic-authorization";
+import type { Language } from "@/lib/diagnostic-payment-policy";
 import { Banner } from "@/components/ui/banner";
 
 const initialActionState: BookingActionState = { error: "" };
@@ -73,7 +75,7 @@ function formatTime(iso: string, timezone: string) {
   }).format(new Date(iso));
 }
 
-function CheckoutButton({ amount, disabled }: { amount: number; disabled: boolean }) {
+function CheckoutButton({ amount, disabled, deferred }: { amount: number; disabled: boolean; deferred: boolean }) {
   const { pending } = useFormStatus();
 
   return (
@@ -87,7 +89,13 @@ function CheckoutButton({ amount, disabled }: { amount: number; disabled: boolea
       ) : (
         <LockKeyhole className="h-5 w-5" aria-hidden />
       )}
-      {pending ? "Starting secure checkout…" : `Continue to pay ${formatCurrency(amount)}`}
+      {pending
+        ? deferred
+          ? "Opening secure Stripe page…"
+          : "Starting secure checkout…"
+        : deferred
+          ? "Save payment method · $0.00 today"
+          : `Continue to pay ${formatCurrency(amount)}`}
       {!pending ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
     </button>
   );
@@ -97,13 +105,20 @@ export function PublicBookingFlow({
   bookingPage,
   messagingBusinessName,
   slots,
+  diagnosticPolicy,
   checkoutCanceled,
 }: {
   bookingPage: PublicBookingPage;
   messagingBusinessName: string;
   slots: PublicBookingSlot[];
+  diagnosticPolicy: PublicDiagnosticPolicy;
   checkoutCanceled: boolean;
 }) {
+  const deferred = diagnosticPolicy.collectAfterCompletion;
+  const needsAuthorization = deferred && diagnosticPolicy.requirePaymentMethod;
+  // Never pre-checked: the customer authorizes the future charge themselves.
+  const [paymentAuthorization, setPaymentAuthorization] = useState(false);
+  const [language, setLanguage] = useState<Language>("en");
   const action = startPublicBooking.bind(null, bookingPage.slug);
   const [actionState, formAction] = useActionState(action, initialActionState);
   const [step, setStep] = useState(1);
@@ -247,6 +262,8 @@ export function PublicBookingFlow({
       <input type="hidden" name="slotEnd" value={selected?.slot_end ?? ""} />
       <input type="hidden" name="acceptedPolicy" value={acceptedPolicy ? "yes" : "no"} />
       <input type="hidden" name="smsConsent" value={smsConsent ? "yes" : "no"} />
+      <input type="hidden" name="paymentAuthorization" value={paymentAuthorization ? "yes" : "no"} />
+      <input type="hidden" name="language" value={language} />
 
       <div className="grid grid-cols-4 gap-2" aria-label={`Booking step ${step} of 4`}>
         {["Issue", "Safety", "Details", "Time"].map((label, index) => {
@@ -473,6 +490,22 @@ export function PublicBookingFlow({
               </div>
             )}
 
+            {deferred ? (
+              <div className="mt-5">
+                <DiagnosticAuthorization
+                  businessName={bookingPage.display_name}
+                  feeCents={checkoutAmount}
+                  serviceName={diagnosticPolicy.serviceName || (safety.outcome === "urgent_review" ? "Emergency Electrical Diagnostic Service" : "")}
+                  creditTowardRepairs={bookingPage.credit_diagnostic_to_repair}
+                  requirePaymentMethod={needsAuthorization}
+                  language={language}
+                  onLanguage={setLanguage}
+                  checked={paymentAuthorization}
+                  onChange={setPaymentAuthorization}
+                  name="paymentAuthorizationBox"
+                />
+              </div>
+            ) : (
             <div className="mt-5 rounded-control border border-brand/25 bg-brand/[0.06] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -487,6 +520,7 @@ export function PublicBookingFlow({
                 <p className="text-xl font-bold text-brand">{formatCurrency(checkoutAmount)}</p>
               </div>
             </div>
+            )}
 
             <label className="tap-target mt-4 flex cursor-pointer items-start gap-3 rounded-control border border-line bg-raised p-4">
               <input
@@ -501,11 +535,22 @@ export function PublicBookingFlow({
                 confirms the visit" is not agreement to a number nobody wrote
                 into the agreement.
               */}
+              {deferred ? (
+                <span className="text-sm leading-6 text-ink-muted">
+                  I agree to the {formatCurrency(checkoutAmount)} diagnostic fee, payable when the contracted diagnostic
+                  service is completed. Nothing is charged today.
+                  {bookingPage.cancellation_fee_cents > 0
+                    ? ` ${bookingPage.display_name}'s cancellation policy: canceling or rescheduling inside ${bookingPage.free_reschedule_hours} hours may cost ${formatCurrency(bookingPage.cancellation_fee_cents)}; that fee is not part of the payment authorization.`
+                    : ""}{" "}
+                  I agree that {bookingPage.display_name} may contact me by phone or email about this request.
+                </span>
+              ) : (
               <span className="text-sm leading-6 text-ink-muted">
                 I agree to the {formatCurrency(checkoutAmount)} diagnostic fee, and understand paying
                 it is what confirms the visit. Canceling or rescheduling inside {bookingPage.free_reschedule_hours} hours may retain {formatCurrency(bookingPage.cancellation_fee_cents)}.
                 I agree that {bookingPage.display_name} may contact me by phone or email about this request.
               </span>
+              )}
             </label>
 
             {/*
@@ -542,7 +587,8 @@ export function PublicBookingFlow({
             </label>
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-ink-faint">
-              <CreditCard className="h-4 w-4" aria-hidden /> Secure test payment powered by Stripe
+              <CreditCard className="h-4 w-4" aria-hidden />{" "}
+              {deferred ? "Payment method saved securely by Stripe · $0.00 charged today" : "Secure test payment powered by Stripe"}
             </div>
           </div>
         ) : null}
@@ -580,7 +626,8 @@ export function PublicBookingFlow({
           <div className="flex-1">
             <CheckoutButton
               amount={checkoutAmount}
-              disabled={!selected || !acceptedPolicy || slotsByDay.length === 0}
+              deferred={deferred}
+              disabled={!selected || !acceptedPolicy || (needsAuthorization && !paymentAuthorization) || slotsByDay.length === 0}
             />
           </div>
         )}

@@ -79,6 +79,7 @@ test("the held sentence names the amount and the link", () => {
     feeCents: 10000,
     payUrl: "https://volteira.com/booking/abc/pay",
     holdMinutes: 30,
+    deferred: false,
   });
 
   assert.match(said, /\$100 diagnostic fee/);
@@ -86,7 +87,7 @@ test("the held sentence names the amount and the link", () => {
   assert.match(said, /30 minutes/);
   // A day's hold is said in hours, not as 1440 minutes.
   assert.match(
-    holdSentence({ feeCents: 18000, payUrl: "https://volteira.com/booking/abc/pay", holdMinutes: 24 * 60 }),
+    holdSentence({ feeCents: 18000, payUrl: "https://volteira.com/booking/abc/pay", holdMinutes: 24 * 60, deferred: false }),
     /holding it for 24 hours/,
   );
 });
@@ -132,7 +133,7 @@ test("no link, no held reply — the caller falls back to the booked one", () =>
 });
 
 test("spoken, there is no URL to read out", () => {
-  const said = holdSpoken({ feeCents: 10000 });
+  const said = holdSpoken({ feeCents: 10000, deferred: false });
 
   assert.match(said, /\$100/);
   assert.match(said, /text you a link/);
@@ -142,7 +143,7 @@ test("spoken, there is no URL to read out", () => {
 });
 
 test("a held appointment is explained in Spanish to a Spanish caller", () => {
-  const said = holdSpoken({ feeCents: 10000, language: "es" });
+  const said = holdSpoken({ feeCents: 10000, language: "es", deferred: false });
 
   assert.match(said, /Le enviaré por mensaje un enlace/);
   assert.match(said, /\$100/);
@@ -201,4 +202,19 @@ test("a hold never outlasts the start of the visit it holds", () => {
   assert.equal(holdMinutesFor("2026-11-14T11:00:00Z", now), 0);
   // No window: the day's hold.
   assert.equal(holdMinutesFor(null, now), HOLD_MINUTES);
+});
+
+test("deferred (the default): the texted hold asks for an authorization and charges nothing", () => {
+  for (const language of ["en", "es"]) {
+    const said = holdSentence({ feeCents: 18000, payUrl: "https://volteira.com/booking/abc/pay", holdMinutes: 24 * 60, language });
+    assert.match(said, /\$180/);
+    assert.match(said, language === "es" ? /hoy no se cobra nada/ : /nothing is charged today/);
+    assert.doesNotMatch(said, /pay the|pague la/i);
+  }
+});
+
+test("deferred (the default): spoken, the caller is told nothing is charged today", () => {
+  assert.match(holdSpoken({ feeCents: 18000 }), /You won't be charged today/);
+  assert.match(holdSpoken({ feeCents: 18000, language: "es" }), /Hoy no se le cobrará nada/);
+  assert.doesNotMatch(holdSpoken({ feeCents: 18000 }), /\bpay\b|deposit/i);
 });

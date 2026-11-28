@@ -48,19 +48,19 @@ Parse `$ARGUMENTS` (first word). Default (no argument) = **full audit**.
 | *(none)* | all registers except `website-*` | everything below, then reports |
 | `quick` | requirements with `automated_test_ids` only | `npm test` + `node compliance/scripts/run-compliance-audit.mjs --quick`. Report says manual and legal items were **not** re-verified. |
 | `federal` | `federal` | |
-| `california` | `california` | |
-| `contractors` | `california-contractors` | include synthetic contract PDF render check |
-| `security` | `application-security` | incl. rolled-back tenant isolation SQL |
+| `california` | `california`, plus CSLB-DD-001, -002, -010 | deferred diagnostic timing: `npm test` (CT-DD-POLICY) and the DD SQL scenarios |
+| `contractors` | `california-contractors` (incl. CSLB-DD-001…011) | include synthetic contract PDF render check; run `compliance/tests/deferred-diagnostic/deferred-diagnostic-rollback.sql` (one transaction, always aborts; expect `DD_RESULTS … 0 failed`) |
+| `security` | `application-security`, CSLB-DD-011 | incl. rolled-back tenant isolation SQL and the DD SQL scenarios (DD-006, -009, -019, -023, -032…-035) |
 | `accessibility` | `website-accessibility` applied to app pages | Playwright + axe on a local build (`npm run build && npm start`) with synthetic routes |
 | `privacy` | CA-001…CA-004, FED-004, SEC-002/005 | |
-| `communications` | FED-002, FED-003, CA-006, SEC-007 consent items | |
-| `contracts` | FED-001, CA-005, CSLB-002…CSLB-008 | |
-| `invoices` | FED-006, CA-010, CSLB-005 | |
-| `payments` | FED-007, CSLB-004, Stripe/webhook SEC items | |
-| `mcp` | SEC-007, FED-010 | |
+| `communications` | FED-002, FED-003, CA-006, SEC-007 consent items, CSLB-DD-008, CSLB-DD-010 | deferred diagnostic wording in texts, emails, booking pages and the Grok voice prompt (CT-DD-WORDING, CT-DD-VOICE); grep customer copy for "deposit"/"pay the" next to the diagnostic fee |
+| `contracts` | FED-001, CA-005, CSLB-002…CSLB-008, CSLB-DD-002, -005, -007 | authorization is stored with text/version and does not replace the contract; same-contract repairs defer the fee |
+| `invoices` | FED-006, CA-010, CSLB-005, CSLB-DD-006, -007 | no invoice on an uncompleted deferred diagnostic (`invoiceSendCheck`); credit applied once |
+| `payments` | FED-007, CSLB-004, Stripe/webhook SEC items, CSLB-DD-001…006 | SetupIntent only at booking, off-session charge only via `claim_diagnostic_charge`, webhook de-duplication (`stripe_webhook_events`) |
+| `mcp` | SEC-007, FED-010, CSLB-DD-008, CSLB-DD-009 | diagnostic payment MCP tools gated by owner approval (CT-DD-MCP); voice tools have no collection route |
 | `refresh-laws` | all | `node compliance/scripts/refresh-legal-requirements.mjs`, then re-read each `official_source_url` with WebFetch; never overwrite, write a new baseline and change report |
 | `compare` | — | `node compliance/scripts/compare-audits.mjs` (latest vs previous) |
-| `release` | P0/P1 gates | `node compliance/scripts/compare-audits.mjs --release` and apply `compliance/release-gates.md`; answer READY / NOT READY with the blocking finding IDs |
+| `release` | P0/P1 gates, plus CSLB-DD-001/-006/-011 | `node compliance/scripts/compare-audits.mjs --release` and apply `compliance/release-gates.md`; answer READY / NOT READY with the blocking finding IDs. The DD SQL scenarios must report 0 failed; CSLB-DD-001/-002/-007/-010 stay at most YELLOW until the attorney review in `docs/deferred-diagnostic-payments.md` is recorded (passing tests never make a legal interpretation GREEN) |
 
 ## Full audit procedure
 

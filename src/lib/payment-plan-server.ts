@@ -1,5 +1,7 @@
 import "server-only";
 
+import { diagnosticInvoiceRefusal } from "@/lib/diagnostic-payment-policy";
+import { collectsAfterCompletion } from "@/lib/diagnostic-payment-server";
 import { lineTotalCents } from "@/lib/job-lines";
 import { diagnosticCreditLeft } from "@/lib/diagnostic-credit";
 import { doneProgressCents, paymentsOwed, planAmounts, preWorkRefusal, type PlanItemInput, type PlannedPayment } from "@/lib/payment-plan";
@@ -296,7 +298,8 @@ export async function invoiceSendCheck(
   const jobId = text(invoice?.job_id);
   if (!invoice || !jobId) return { ok: true };
   const [{ data: jobRow, error: jobError }, { data: contractRow, error: contractError }, { data: otherRows, error: otherError }] = await Promise.all([
-    database.from("jobs").select("status").eq("organization_id", input.organizationId).eq("id", jobId).maybeSingle(),
+    // Every column, so a database a migration behind still answers.
+    database.from("jobs").select("*").eq("organization_id", input.organizationId).eq("id", jobId).maybeSingle(),
     database
       .from("contracts")
       .select("total_cents")
@@ -316,6 +319,17 @@ export async function invoiceSendCheck(
   ]);
   if (jobError || contractError || otherError) return { ok: false, error: "The job could not be read. Nothing was sent." };
   if (text((jobRow as Row | null)?.status) === "completed") return { ok: true };
+  // A deferred diagnostic is never billed before it is completed (CA B&P 7159.10 / 7159.5).
+  const jobFacts = (jobRow ?? {}) as Row;
+  const diagnosticRefusal = diagnosticInvoiceRefusal({
+    deferred: await collectsAfterCompletion(input.organizationId),
+    feeCents: Number(jobFacts.diagnostic_fee_cents ?? 0),
+    followUp: Boolean(text(jobFacts.follow_up_of)),
+    diagnosticPaid: jobFacts.diagnostic_paid === true,
+    diagnosticCompletedAt: text(jobFacts.diagnostic_completed_at) || null,
+    jobCompleted: false,
+  });
+  if (diagnosticRefusal) return { ok: false, error: diagnosticRefusal };
   let plan: JobPaymentPlan;
   try {
     plan = await loadJobPaymentPlan(database, { organizationId: input.organizationId, jobId });

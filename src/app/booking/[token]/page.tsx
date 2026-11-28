@@ -14,6 +14,9 @@ import { DEFAULT_DIAGNOSTIC_FEE_CENTS } from "@/lib/diagnostic-visit";
 import { intakeQuestionIn } from "@/lib/intake-phrases";
 import { realName } from "@/lib/sms-intake";
 import { createPublicClient } from "@/lib/supabase/public";
+import { BookingAuthorizationForm } from "@/components/booking-authorization-form";
+import { revokeBookingAuthorization } from "@/app/booking/[token]/actions";
+import { DISPLAY_LABELS, displayState, type AuthorizationState } from "@/lib/diagnostic-payment-policy";
 
 /**
  * The page a customer reaches from the link in their confirmation.
@@ -50,6 +53,19 @@ type Confirmation = {
   expires_at: string | null;
 };
 
+/** The deferred diagnostic payment on this booking (get_booking_diagnostic_status). */
+type DiagnosticStatus = {
+  collect_after_completion: boolean | null;
+  require_payment_method: boolean | null;
+  credit_toward_repairs: boolean | null;
+  fee_cents: number | null;
+  authorization_state: string | null;
+  authorized_cents: number | null;
+  payment_method_brand: string | null;
+  payment_method_last4: string | null;
+  diagnostic_completed: boolean | null;
+};
+
 /** How it was booked, and in what language, from the same token. */
 type BookingLocale = {
   language: string | null;
@@ -84,14 +100,17 @@ export default async function BookingConfirmationPage({
 
   let booking: Confirmation | null = null;
   let locale: BookingLocale | null = null;
+  let diagnostic: DiagnosticStatus | null = null;
   // Checked before the round trip: a malformed token is a typo or a probe, and
   // neither is worth a database call.
   if (UUID.test(token)) {
     const supabase = createPublicClient();
-    const [{ data }, { data: localeRows }] = await Promise.all([
+    const [{ data }, { data: localeRows }, { data: diagnosticRows }] = await Promise.all([
       supabase.rpc("get_phone_booking_confirmation", { p_token: token }),
       supabase.rpc("get_booking_confirmation_locale", { p_token: token }),
+      supabase.rpc("get_booking_diagnostic_status" as never, { p_booking_token: token } as never),
     ]);
+    diagnostic = Array.isArray(diagnosticRows) && diagnosticRows.length > 0 ? (diagnosticRows[0] as DiagnosticStatus) : null;
     booking = Array.isArray(data) && data.length > 0 ? (data[0] as Confirmation) : null;
     locale = Array.isArray(localeRows) && localeRows.length > 0 ? (localeRows[0] as BookingLocale) : null;
   }
@@ -151,13 +170,37 @@ export default async function BookingConfirmationPage({
     depositPaid: booking.deposit_paid === true,
     depositCents,
     expiresAt: booking.expires_at,
+    // Read before `deferred` is worked out below; same rule (fails safe).
+    deferred: diagnostic?.collect_after_completion !== false,
   });
   const awaitingPayment = state === "awaiting_payment";
   const confirmed = state === "confirmed";
   const paymentReview = state === "payment_review";
   // A stale query string must not make a paid appointment look canceled after
   // Stripe has already finished it.
-  const notice = confirmed || paymentReview ? "" : bookingPayNotice(query.pay, language);
+  // Deferred diagnostic businesses (California, or no jurisdiction set): the
+  // page never asks for a payment before the service. If the status cannot be
+  // read, it fails safe to the deferred wording.
+  const deferred = diagnostic?.collect_after_completion !== false;
+  const authState = (diagnostic?.authorization_state ?? null) as AuthorizationState | null;
+  const completed = diagnostic?.diagnostic_completed === true;
+  const payState = displayState({ authorizationState: authState, diagnosticCompleted: completed, eligible: false });
+  const es = language === "es";
+  const deferredNotice =
+    query.pay === "revoked"
+      ? es
+        ? "Retiramos su autorización y quitamos su método de pago guardado. Su cita sigue en pie."
+        : "Your authorization was withdrawn and your saved payment method removed. Your appointment still stands."
+      : query.pay === "recovered"
+        ? es
+          ? "Gracias. Su pago se está procesando."
+          : "Thank you. Your payment is being processed."
+        : query.pay === "canceled"
+          ? es
+            ? "No se guardó ningún método de pago y no se cobró nada."
+            : "No payment method was saved and nothing was charged."
+          : "";
+  const notice = deferred ? deferredNotice : confirmed || paymentReview ? "" : bookingPayNotice(query.pay, language);
 
   const heading = confirmed
     ? copy.booked(name)
@@ -195,7 +238,13 @@ export default async function BookingConfirmationPage({
           </p>
         ) : null}
 
-        {awaitingPayment ? (
+        {awaitingPayment && deferred ? (
+          <p className="mt-5 text-sm leading-6 text-ink-muted">
+            {es
+              ? "Su horario está apartado hasta que guarde un método de pago. Hoy no se cobra nada."
+              : "Your time is held until you save a payment method. Nothing is charged today."}
+          </p>
+        ) : awaitingPayment ? (
           <p className="mt-5 text-sm leading-6 text-ink-muted">{copy.heldNote}</p>
         ) : paymentReview ? (
           <p className="mt-5 text-sm leading-6 text-ink-muted">{copy.reviewNote}</p>
@@ -259,6 +308,78 @@ export default async function BookingConfirmationPage({
           </section>
         ) : null}
 
+        {deferred ? (
+          awaitingPayment ? (
+            <BookingAuthorizationForm
+              token={token}
+              businessName={booking.business_name}
+              feeCents={depositCents}
+              creditTowardRepairs={diagnostic?.credit_toward_repairs !== false}
+              initialLanguage={language}
+            />
+          ) : (
+            <section className="mt-5 rounded-control border border-line bg-white/[0.03] p-4">
+              <h2 className="text-sm font-semibold text-ink">{DISPLAY_LABELS[payState][language]}</h2>
+              <dl className="mt-2 space-y-1 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-muted">{es ? "Servicio de diagnóstico eléctrico" : "Electrical Diagnostic Service"}</dt>
+                  <dd className="font-semibold">{money(depositCents)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-muted">
+                    {authState === "succeeded"
+                      ? es ? "Pagado" : "Paid"
+                      : completed
+                        ? es ? "A pagar ahora" : "Due Now"
+                        : es ? "A pagar al completar" : "Due Upon Completion"}
+                  </dt>
+                  <dd className="font-semibold">{money(diagnostic?.authorized_cents ?? depositCents)}</dd>
+                </div>
+              </dl>
+              {diagnostic?.payment_method_last4 && authState !== "revoked" ? (
+                <p className="mt-2 text-xs text-ink-muted">
+                  {es ? "Método guardado" : "Saved method"}: {(diagnostic.payment_method_brand ?? "card").toUpperCase()} •••• {diagnostic.payment_method_last4}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs leading-5 text-ink-muted">
+                {authState === "succeeded"
+                  ? es
+                    ? "Su pago de diagnóstico autorizado se procesó. Su recibo está disponible."
+                    : "Your authorized diagnostic payment has been processed. Your receipt is available."
+                  : (authState === "failed" || authState === "requires_action") && completed
+                    ? es
+                      ? "Su servicio de diagnóstico se completó, pero no pudimos procesar el pago. Use el botón de abajo para actualizar su método de pago de forma segura."
+                      : "Your diagnostic service is complete, but we were unable to process the payment. Use the button below to securely update your payment method."
+                  : es
+                    ? "No se ha cobrado ningún pago de diagnóstico. La tarifa se paga cuando se completa el servicio contratado."
+                    : "No diagnostic payment has been collected. The fee becomes payable once the contracted service is completed."}
+              </p>
+              {diagnostic?.credit_toward_repairs !== false && authState !== "succeeded" ? (
+                <p className="mt-2 text-xs leading-5 text-ink-faint">
+                  {es
+                    ? "Si aprueba reparaciones que califiquen, la tarifa de diagnóstico se acreditará al costo de la reparación aprobada de acuerdo con los términos de su acuerdo."
+                    : "If you approve qualifying repairs, your diagnostic fee will be credited toward the approved repair cost in accordance with the terms of your agreement."}
+                </p>
+              ) : null}
+              {(authState === "failed" || authState === "requires_action") && completed ? (
+                <a
+                  href={`/booking/${encodeURIComponent(token)}/pay`}
+                  className="tap-target mt-4 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-5 font-semibold text-on-brand"
+                >
+                  <CreditCard className="h-5 w-5" aria-hidden />
+                  {es ? "Actualizar método de pago y pagar" : "Update payment method and pay"}
+                </a>
+              ) : null}
+              {authState === "payment_method_saved" && !completed ? (
+                <form action={revokeBookingAuthorization.bind(null, token)} className="mt-4">
+                  <button type="submit" className="tap-target min-h-11 w-full rounded-control border border-line px-4 text-sm font-semibold text-ink-muted">
+                    {es ? "Retirar autorización y quitar mi método de pago" : "Withdraw authorization and remove my payment method"}
+                  </button>
+                </form>
+              ) : null}
+            </section>
+          )
+        ) : (
         <section className="mt-5 rounded-control border border-line bg-white/[0.03] p-4">
           <h2 className="text-sm font-semibold text-ink">
             {confirmed
@@ -279,7 +400,9 @@ export default async function BookingConfirmationPage({
           </p>
         </section>
 
-        {awaitingPayment ? (
+        )}
+
+        {awaitingPayment && !deferred ? (
           <a
             href={`/booking/${encodeURIComponent(token)}/pay`}
             className="tap-target mt-6 flex min-h-12 items-center justify-center gap-2 rounded-control bg-brand px-5 font-semibold text-on-brand"
@@ -293,7 +416,7 @@ export default async function BookingConfirmationPage({
           <a
             href={`tel:${booking.business_phone.replace(/[^\d+]/g, "")}`}
             className={`tap-target flex min-h-12 items-center justify-center gap-2 rounded-control px-5 font-semibold ${
-              awaitingPayment
+              awaitingPayment && !deferred
                 ? "mt-3 border border-line text-white"
                 : "mt-8 bg-brand text-on-brand"
             }`}

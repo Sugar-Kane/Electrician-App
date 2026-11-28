@@ -25,6 +25,11 @@ export const APPROVAL_TOOLS: ReadonlySet<string> = new Set([
   "mark_invoice_paid",
   "set_invoice_discount",
   "close_out_job",
+  // Deferred diagnostic payments (mcp-diagnostic-payment-tools.ts)
+  "complete_diagnostic",
+  "collect_diagnostic_payment",
+  "send_payment_method_setup_link",
+  "send_payment_recovery_link",
   // Purchases
   "prepare_supplier_order",
   "submit_supplier_order",

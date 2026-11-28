@@ -6,6 +6,8 @@ import { getJobWorkflow } from "@/lib/job-workflow-data";
 import { unbilledCents } from "@/lib/job-billing";
 import { jobProgress } from "@/lib/job-progress";
 import { DIAGNOSTIC_FEE_LINE, feeInvoiceStanding } from "@/lib/diagnostic-outcome";
+import { collectsAfterCompletion } from "@/lib/diagnostic-payment-server";
+import { currentContext } from "@/lib/request-context";
 import { jobFlow, type FlowStage } from "@/lib/job-flow";
 import { formatCents } from "@/lib/job-lines";
 import { loadJobMaterialChat } from "@/lib/material-list-server";
@@ -72,12 +74,17 @@ export async function getJobFlowStage(job: PilotJob): Promise<FlowStage | null> 
 
   const feeLine = lines.find((line) => line.description === DIAGNOSTIC_FEE_LINE);
   const feeInvoiceRow = feeLine?.invoiceId ? invoices.find((invoice) => invoice.id === feeLine.invoiceId) : undefined;
-  const feeInvoice = feeInvoiceStanding({
+  const standing = feeInvoiceStanding({
     feeCents: controls.diagnostic.feeCents,
     paidAtBooking: controls.diagnostic.paid,
     followUpOf: controls.diagnostic.followUp ? "yes" : null,
     feeInvoiceStatus: feeInvoiceRow?.status ?? null,
   });
+  // Deferred diagnostic businesses never offer "send the fee invoice" as a
+  // step before the visit: the fee is collected after completion (the
+  // Diagnostic payment panel), and billing it first would be an advance payment.
+  const context = standing === "to_bill" ? await currentContext() : null;
+  const feeInvoice = context && (await collectsAfterCompletion(context.organizationId)) ? "none" : standing;
 
   return jobFlow({
     kindOfWork: job.kindOfWork,

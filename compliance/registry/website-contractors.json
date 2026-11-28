@@ -1072,6 +1072,55 @@
       "backend_verification_required": true,
       "risk_severity": "low",
       "notes": "SOURCE NOT VERIFIED: the official text could not be fetched on 2026-11-24 because this session's network policy blocks www.cslb.ca.gov and leginfo.legislature.ca.gov (DNS resolution refused). Citation and summary come from prior knowledge and, where noted, web-search snippets of secondary sources; they were not read from the official text. Audits must mark this requirement BLUE until the official source is read and last_verified is set. Source verification 2026-11-25: verified. B&P 7169 confirmed: CSLB-developed solar energy system disclosure document, provided before completion of sale and printed on the front or cover page of every solar energy contract. Read in the CSLB 'California Contractors License Law & Reference Book' (2026 Edition), an official State of California publication on cslb.ca.gov. URL changed from https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=7169 (leginfo is not readable from this session) to the Law Book PDF read."
+    },
+    {
+      "id": "WEB-CSLB-022",
+      "title": "Deferred diagnostic disclosure on public booking pages (California)",
+      "register": "website-contractors",
+      "jurisdiction": "California",
+      "category": "Contractor advertising practices",
+      "requirement_type": "statutory",
+      "citation": "Cal. Bus. & Prof. Code §§ 7159.10, 7159.14(a)(8)-(9); Cal. Civ. Code 1770(a)(29)",
+      "official_source_url": "https://www.cslb.ca.gov/Resources/GuidesAndPublications/2026/2026_CSLB_Law_Book.pdf",
+      "last_verified": "2026-11-25",
+      "source_verified": true,
+      "applicability": {
+        "criteria": [
+          "Site books California diagnostic visits online"
+        ],
+        "business_types": [
+          "pacificplainselectric.com",
+          "Volteira booking pages"
+        ]
+      },
+      "responsible_parties": [
+        "Pacific Plains Electric",
+        "Website operator"
+      ],
+      "required_behavior": [
+        "Public pages and booking flows show the diagnostic fee, $0.00 due today and the amount due upon completion; never describe the fee as a deposit or as paid at booking.",
+        "Any 'card required' statement says the card is saved, not charged, and that the fee is charged only after the contracted diagnostic service is completed.",
+        "Credit-toward-repairs wording is conditional on approved qualifying repairs and the customer's agreement."
+      ],
+      "verification_methods": [
+        "browser-assisted",
+        "manual"
+      ],
+      "required_evidence": [
+        "Booking page screenshots (English and Spanish)",
+        "Marketing site pages mentioning the fee"
+      ],
+      "automated_test_ids": [],
+      "manual_review_required": true,
+      "legal_review_required": true,
+      "website_verifiable": true,
+      "backend_verification_required": false,
+      "risk_severity": "high",
+      "related_ids": [
+        "WEB-CSLB-007",
+        "CSLB-DD-010"
+      ],
+      "notes": "Check: search visible text for 'deposit', 'pay now', 'prepay', 'due today' near the diagnostic fee. Added 2026-11-27."
     }
   ]
 }

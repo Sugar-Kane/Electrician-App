@@ -70,6 +70,8 @@ export type IntakePhrases = {
   /** The held-booking reply, which never goes through `composeReply`. */
   holding: (business: string, slotLabel: string) => string;
   holdSentence: (fee: string, payUrl: string, minutes: number) => string;
+  /** The deferred diagnostic version: nothing is charged; a payment method is authorized. */
+  holdSentenceDeferred: (fee: string, payUrl: string, minutes: number) => string;
   questionsAt: (phone: string) => string;
 };
 
@@ -107,12 +109,14 @@ const EN: IntakePhrases = {
   emailQuestion:
     "What email should we send a copy of your booking and receipt to? You can also reply 'skip'.",
   alreadyHeld: (business, slotLabel, phone) =>
-    `${business}: thanks! We're holding ${slotLabel} for you. Use the payment link we texted you to confirm it. Need a different time? Call ${phone}.`,
+    `${business}: thanks! We're holding ${slotLabel} for you. Use the secure link we texted you to confirm it. Need a different time? Call ${phone}.`,
   alreadyBooked: (business, slotLabel, phone) =>
     `${business}: thanks! You're all set for ${slotLabel}. Need to change it? Call ${phone}.`,
   holding: (business, slotLabel) => `${business}: holding ${slotLabel} for you.`,
   holdSentence: (fee, payUrl, minutes) =>
     `To confirm this time, pay the ${fee} diagnostic fee here: ${payUrl} — we are holding it for ${minutes >= 120 ? `${Math.floor(minutes / 60)} hours` : `${minutes} minutes`}.`,
+  holdSentenceDeferred: (fee, payUrl, minutes) =>
+    `To confirm, use this secure link to review the diagnostic agreement and save a payment method: ${payUrl} — nothing is charged today, and the ${fee} diagnostic fee is due once the contracted service is completed. We're holding the time for ${minutes >= 120 ? `${Math.floor(minutes / 60)} hours` : `${minutes} minutes`}.`,
   questionsAt: (phone) => `Questions? ${phone}`,
 };
 
@@ -165,12 +169,14 @@ const ES: IntakePhrases = {
   emailQuestion:
     "¿A qué correo electrónico le enviamos una copia de su cita y su recibo? También puede responder 'omitir'.",
   alreadyHeld: (business, slotLabel, phone) =>
-    `${business}: ¡gracias! Le estamos apartando ${slotLabel}; use el enlace de pago que le enviamos por mensaje para confirmar. ¿Necesita otro horario? Llame al ${phone}.`,
+    `${business}: ¡gracias! Le estamos apartando ${slotLabel}; use el enlace seguro que le enviamos por mensaje para confirmar. ¿Necesita otro horario? Llame al ${phone}.`,
   alreadyBooked: (business, slotLabel, phone) =>
     `${business}: ¡gracias! Ya tiene su cita para ${slotLabel}; si necesita cambiarla, llame al ${phone}.`,
   holding: (business, slotLabel) => `${business}: le estamos apartando ${endSentence(slotLabel)}`,
   holdSentence: (fee, payUrl, minutes) =>
     `Para confirmar este horario, pague la tarifa de diagnóstico de ${fee} aquí: ${payUrl} — se lo apartamos por ${minutes >= 120 ? `${Math.floor(minutes / 60)} horas` : `${minutes} minutos`}.`,
+  holdSentenceDeferred: (fee, payUrl, minutes) =>
+    `Para confirmar, use este enlace seguro para revisar el acuerdo de diagnóstico y guardar un método de pago: ${payUrl} — hoy no se cobra nada, y la tarifa de diagnóstico de ${fee} se paga cuando se complete el servicio contratado. Le apartamos el horario por ${minutes >= 120 ? `${Math.floor(minutes / 60)} horas` : `${minutes} minutos`}.`,
   questionsAt: (phone) => `¿Preguntas? ${phone}`,
 };
 

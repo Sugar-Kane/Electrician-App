@@ -2,6 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 
+import { collectsAfterCompletion } from "@/lib/diagnostic-payment-server";
 import { attachCheckoutToBooking } from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
 import { readyPaymentAccount, volteiraFeeCents } from "@/lib/stripe-connect";
@@ -93,6 +94,13 @@ export async function startBookingCheckout(input: {
   if (!stripe) return { error: "Payments are not configured." };
   if (!input.origin) return { error: "This deployment has no public address." };
   if (!input.feeCents || input.feeCents <= 0) return { error: "There is nothing to pay." };
+  // Never an advance diagnostic payment where the fee waits for completion
+  // (California, or no jurisdiction set). Those bookings save a payment method
+  // instead (diagnostic-payment-server.ts); the database refuses to attach a
+  // payment checkout to them as well.
+  if (await collectsAfterCompletion(input.organizationId)) {
+    return { error: "This business collects its diagnostic fee after the service is completed." };
+  }
   // The deposit is the business's money, charged on its own Stripe account.
   const account = await readyPaymentAccount(input.organizationId);
   if (!account) return { error: "This business has not set up payments yet." };

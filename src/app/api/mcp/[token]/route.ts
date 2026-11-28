@@ -5,6 +5,7 @@ import { BOOKING_TOOLS } from "@/lib/booking-tools";
 import { BUSINESS_MCP_TOOLS } from "@/lib/mcp-business-tools";
 import { SUPPLIER_ORDER_MCP_TOOLS } from "@/lib/mcp-supplier-order-tools";
 import { PAID_INVOICE_MCP_TOOLS } from "@/lib/mcp-paid-invoice-tools";
+import { DIAGNOSTIC_PAYMENT_MCP_TOOLS } from "@/lib/mcp-diagnostic-payment-tools";
 import { CUSTOMER_MCP_TOOLS } from "@/lib/mcp-customer-tools";
 import { TEXT_HISTORY_MCP_TOOLS } from "@/lib/mcp-text-history";
 import { WORKDAY_MCP_TOOLS } from "@/lib/mcp-workday-tools";
@@ -92,7 +93,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   // Phase 2 supervised actions: offered only where VOLTEIRA_PHASE2_MCP_ENABLED is on.
   const supervised = business && supervisedMcpEnabled();
   const tools = business
-    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...CHANGE_ORDER_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...RELEASE_MCP_TOOLS, ...BOOKING_TOOLS]
+    ? [...WORKDAY_MCP_TOOLS, ...BUSINESS_MCP_TOOLS, ...PAID_INVOICE_MCP_TOOLS, ...DIAGNOSTIC_PAYMENT_MCP_TOOLS, ...CHANGE_ORDER_MCP_TOOLS, ...CUSTOMER_MCP_TOOLS, ...TEXT_HISTORY_MCP_TOOLS, ...SUPPLIER_ORDER_MCP_TOOLS, ...(supervised ? SUPERVISED_MCP_TOOLS : []), ...RELEASE_MCP_TOOLS, ...BOOKING_TOOLS]
     : BOOKING_TOOLS;
 
   const reply = await handleMcpRequest(body, {

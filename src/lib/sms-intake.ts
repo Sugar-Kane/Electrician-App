@@ -88,6 +88,15 @@ export type IntakeContext = {
   diagnosticFee: string;
   /** The same fee in cents, for anything that has to charge it. */
   diagnosticFeeCents: number;
+  /**
+   * The fee waits for completion of the contracted diagnostic service
+   * (California, or no jurisdiction set): nothing is collected at booking. Read
+   * from the business's settings with the law on top
+   * (diagnostic-payment-policy.ts). Absent is treated as deferred.
+   */
+  diagnosticDeferred?: boolean;
+  /** Whether the business credits the diagnostic fee toward approved repairs. */
+  creditTowardRepairs?: boolean;
   serviceArea: string;
   /** The business's own clock, so nobody has to guess what "today" means. */
   nowLabel: string;
@@ -698,7 +707,11 @@ export function buildIntakeSystemPrompt(context: IntakeContext): string {
     // The phone's order (feeUpFront): the visit, then its price, then the
     // questions. A conversation that opens with the website text has already
     // done this; one the customer starts has not.
-    `Before the first intake question, the conversation must have offered the visit and told them its price. If no earlier message in this conversation has, your first reply does it, in one short text, then asks whether they'd like to go ahead: we'd be happy to send an electrician out; booking takes a ${context.diagnosticFee} diagnostic deposit; it covers the trip and finding the problem; small fixes like a bulb or a switch are usually included; if it needs more work, the ${context.diagnosticFee} goes toward it. Their yes starts the intake questions. Don't explain the fee again after that.`,
+    `Before the first intake question, the conversation must have offered the visit and told them its price. If no earlier message in this conversation has, your first reply does it, in one short text, then asks whether they'd like to go ahead: ${
+      context.diagnosticDeferred !== false
+        ? `we'd be happy to send an electrician out; our electrical diagnostic service is ${context.diagnosticFee}; we securely save a payment method when scheduling, but they won't be charged until the contracted diagnostic service is completed; it covers the trip and finding the problem; small fixes like a bulb or a switch are usually included${context.creditTowardRepairs !== false ? `; if they approve qualifying repairs, the ${context.diagnosticFee} is credited toward the approved repair cost` : ""}. Never call it a deposit and never ask for card details by text: the secure link does that.`
+        : `we'd be happy to send an electrician out; booking takes a ${context.diagnosticFee} diagnostic deposit; it covers the trip and finding the problem; small fixes like a bulb or a switch are usually included; if it needs more work, the ${context.diagnosticFee} goes toward it.`
+    } Their yes starts the intake questions. Don't explain the fee again after that.`,
     "",
     "Write like a person texting: short, warm, plain. Vary how you acknowledge an answer, and never start a message with the business's name.",
     "Never ask for anything the customer has already told you in this conversation, the street address included. Read the whole conversation before each reply. What they texted wins over the website form.",

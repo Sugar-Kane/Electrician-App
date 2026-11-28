@@ -10,7 +10,7 @@ import {
 import { PublicBookingFlow } from "@/components/public-booking-flow";
 import { brandTheme } from "@/lib/branding";
 import { logoUrl } from "@/lib/branding-storage";
-import type { PublicBookingPage, PublicBookingSlot } from "@/lib/public-booking";
+import type { PublicBookingPage, PublicBookingSlot, PublicDiagnosticPolicy } from "@/lib/public-booking";
 
 /**
  * The booking page, wherever it is reached from.
@@ -30,13 +30,16 @@ export function BookingPage({
   bookingPage,
   messagingBusinessName,
   slots,
+  diagnosticPolicy,
   checkoutCanceled,
 }: {
   bookingPage: PublicBookingPage;
   messagingBusinessName: string;
   slots: PublicBookingSlot[];
+  diagnosticPolicy: PublicDiagnosticPolicy;
   checkoutCanceled: boolean;
 }) {
+  const deferred = diagnosticPolicy.collectAfterCompletion;
   const theme = brandTheme(bookingPage.brand_color);
   const logo = logoUrl(bookingPage.logo_path);
 
@@ -96,14 +99,18 @@ export function BookingPage({
         <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,.72fr)_minmax(520px,1.28fr)] lg:items-start">
           <section className="lg:sticky lg:top-8">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
-              Paid diagnostic booking
+              {deferred ? "Diagnostic booking · $0 due today" : "Paid diagnostic booking"}
             </p>
             <h1 className="mt-4 max-w-lg text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               Get the right electrician onsite without guessing at the repair.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-ink-muted">
-              Describe the issue, complete a brief safety check, and choose an arrival window. The
-              diagnostic fee is credited toward approved repair work.
+              Describe the issue, complete a brief safety check, and choose an arrival window.
+              {bookingPage.credit_diagnostic_to_repair
+                ? deferred
+                  ? " If you approve qualifying repairs, the diagnostic fee is credited toward the approved repair cost under your agreement."
+                  : " The diagnostic fee is credited toward approved repair work."
+                : ""}
             </p>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
@@ -135,12 +142,13 @@ export function BookingPage({
 
             <div className="mt-7 rounded-control border border-positive/15 bg-positive-bg p-4 text-sm leading-6 text-ink-muted">
               <p className="flex items-center gap-2 font-semibold text-ink">
-                <CheckCircle2 className="h-4 w-4 text-positive" aria-hidden /> No repair is charged
-                today
+                <CheckCircle2 className="h-4 w-4 text-positive" aria-hidden />{" "}
+                {deferred ? "Nothing is charged today" : "No repair is charged today"}
               </p>
               <p className="mt-2">
-                Only the diagnostic visit is paid during booking. Any repair scope is reviewed with
-                you onsite and is due after completed work.
+                {deferred
+                  ? "You save a payment method securely with Stripe when you book. The diagnostic fee is charged only after the contracted diagnostic service is completed. Any repair scope is reviewed with you onsite, with its own price and terms, before any work."
+                  : "Only the diagnostic visit is paid during booking. Any repair scope is reviewed with you onsite and is due after completed work."}
               </p>
             </div>
           </section>
@@ -149,13 +157,14 @@ export function BookingPage({
             bookingPage={bookingPage}
             messagingBusinessName={messagingBusinessName}
             slots={slots}
+            diagnosticPolicy={diagnosticPolicy}
             checkoutCanceled={checkoutCanceled}
           />
         </div>
 
         <footer className="mt-8 border-t border-line py-6 text-center text-xs text-ink-faint">
           Booking powered by Volteira · Your information is used to schedule service, verify the
-          service area, and process payment securely with Stripe.
+          service area, and {deferred ? "save your payment method securely with Stripe" : "process payment securely with Stripe"}.
         </footer>
       </div>
     </main>

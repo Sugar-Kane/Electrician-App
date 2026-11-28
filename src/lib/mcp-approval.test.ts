@@ -66,3 +66,13 @@ test("a ChatGPT request is approved only by an owner, and never from ChatGPT", (
   assert.equal(mayApproveFromChatGpt("send_contract", false), false);
   assert.equal(mayApproveFromChatGpt("add_job_note", false), true);
 });
+
+test("diagnostic payment tools that move money or reach a customer wait for the owner's approval", () => {
+  for (const name of ["complete_diagnostic", "collect_diagnostic_payment", "send_payment_method_setup_link", "send_payment_recovery_link"]) {
+    assert.equal(needsVolteiraApproval(name, { confirmed: true }), true, name);
+    assert.equal(needsVolteiraApproval(name, { confirmed: false }), false, name);
+  }
+  for (const name of ["get_diagnostic_payment_status", "list_payment_exceptions"]) {
+    assert.equal(needsVolteiraApproval(name, { confirmed: true }), false, name);
+  }
+});

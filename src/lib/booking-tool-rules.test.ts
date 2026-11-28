@@ -629,3 +629,26 @@ test("Maya only says a link was sent when the send succeeded", async () => {
   assert.match(sent.text, /Sent by text to the number ending in 1234/);
   assert.match(sent.text, /Do not say it has arrived/);
 });
+
+test("payment status: failure is only said when the backend recorded one", async () => {
+  const { diagnosticStatusReply } = await import("./booking-tool-rules.ts");
+  const base = { verified: true, found: true, slotLabel: "Tue 8–10", bookingStatus: "confirmed", diagnosticCompleted: false };
+  for (const state of ["payment_method_saved", "setup_pending", "processing", ""]) {
+    assert.doesNotMatch(diagnosticStatusReply({ ...base, authorizationState: state }).text, /FAILED|unsuccessful/, state);
+  }
+  assert.match(diagnosticStatusReply({ ...base, authorizationState: "failed", diagnosticCompleted: true }).text, /unsuccessful/);
+  // A saved card is never told to the caller as a payment.
+  assert.match(diagnosticStatusReply({ ...base, authorizationState: "payment_method_saved" }).text, /Nothing has been charged/);
+  // An unverified caller learns nothing about anyone's booking.
+  const unverified = diagnosticStatusReply({ ...base, verified: false, authorizationState: "failed" });
+  assert.equal(unverified.isError, true);
+  assert.doesNotMatch(unverified.text, /Tue 8–10|failed for/);
+});
+
+test("payment policy reply: nothing due today, the configured fee, never a deposit", async () => {
+  const { diagnosticPolicyReply } = await import("./booking-tool-rules.ts");
+  const reply = diagnosticPolicyReply({ fee: "$180", deferred: true, credit: true, requirePaymentMethod: true }).text;
+  assert.match(reply, /\$180/);
+  assert.match(reply, /Due today: nothing/);
+  assert.match(reply, /not a deposit/);
+});

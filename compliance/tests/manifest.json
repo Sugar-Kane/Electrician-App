@@ -1,7 +1,7 @@
 {
   "description": "Compliance tests and the requirements they support. A passing test is evidence for the rule it exercises, not for every pathway that should call that rule; pathway coverage is assessed in the audit findings.",
   "version": "1.0.0",
-  "updated": "2026-11-26",
+  "updated": "2026-11-27",
   "classifications": [
     "automated",
     "browser-assisted",
@@ -325,6 +325,61 @@
         "SEC-001-002"
       ],
       "what": "Owners, admins and platform staff must use two-step sign-in from 2026-12-10; anyone set up is always asked for the code"
+    },
+    {
+      "id": "CT-DD-POLICY",
+      "file": "src/lib/diagnostic-payment-policy.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-DD-001",
+        "CSLB-DD-002",
+        "CSLB-DD-005",
+        "CSLB-DD-006",
+        "CSLB-DD-007",
+        "CSLB-DD-009"
+      ],
+      "what": "Jurisdiction override, $0 due today, authorization text EN/ES, every collection refusal, out-of-order states, redaction, no invoice before completion"
+    },
+    {
+      "id": "CT-DD-SQL",
+      "file": "compliance/tests/deferred-diagnostic/deferred-diagnostic-rollback.sql",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-DD-001",
+        "CSLB-DD-002",
+        "CSLB-DD-004",
+        "CSLB-DD-005",
+        "CSLB-DD-006",
+        "CSLB-DD-011"
+      ],
+      "what": "DD-001..DD-039 rolled-back database scenarios: CA guard, advance checkout refused, tenant/account/customer ownership, premature/duplicate/over-amount charges, roles, revocation, cancellation, cancellation hold, RLS"
+    },
+    {
+      "id": "CT-DD-VOICE",
+      "file": "src/lib/grok-voice.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-DD-008"
+      ],
+      "what": "Configured fee in prompt, no deposit wording, card refusal script, no payment-collection tool; booking-tool-rules and booking-hold deferred wording"
+    },
+    {
+      "id": "CT-DD-MCP",
+      "file": "src/lib/mcp-approval.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-DD-009"
+      ],
+      "what": "Diagnostic payment MCP tools that move money or reach customers wait for owner approval"
+    },
+    {
+      "id": "CT-DD-WORDING",
+      "file": "src/lib/booking-confirmation.test.ts",
+      "classification": "automated",
+      "requirements": [
+        "CSLB-DD-010"
+      ],
+      "what": "Deferred held/confirmed texts and emails in EN/ES never ask for payment or call the fee a deposit"
     }
   ]
 }

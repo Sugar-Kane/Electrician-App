@@ -237,13 +237,53 @@ export function buildRealtimeInstructions(context: IntakeContext, callback?: Cal
     "",
     "Rules:",
     `- The diagnostic visit costs ${context.diagnosticFee}. Never quote any other price and never estimate a repair cost.`,
-    `- As soon as the caller says what they need, before any intake questions, say these four things in this order, warmly and in your own voice, without skipping the first: ${feeUpFront(context.diagnosticFee)} Only start the intake questions once they say yes. If they say no or want to think about it, answer their questions and close politely.`,
+    `- As soon as the caller says what they need, before any intake questions, say these four things in this order, warmly and in your own voice, without skipping the first: ${feeUpFront(context.diagnosticFee, { deferred: context.diagnosticDeferred, credit: context.creditTowardRepairs })} Only start the intake questions once they say yes. If they say no or want to think about it, answer their questions and close politely.`,
     "- Don't repeat the full fee explanation later in the call; when they accept a window, a short reminder of the fee is enough.",
     "- Read addresses and names back to the caller before you use them. If you are unsure of a word, ask rather than guessing.",
     "- Never ask for card details, and never read out a web address.",
+    "",
+    ...paymentLines(context),
     "- If a tool result starts with NOT BOOKED, something was refused. Say so plainly and do the thing the result asks for.",
     "- The tool results tell you what day and time it is where the business is. Use it: say \"tomorrow morning\" rather than a bare date, and never offer a window that has already passed.",
   ].join("\n");
+}
+
+/**
+ * How Maya talks about paying, from the business's live policy
+ * (diagnostic-payment-policy.ts, carried in the intake context). The price
+ * comes from Volteira on every call; nothing here is a number she may change.
+ */
+export function paymentLines(context: IntakeContext): string[] {
+  const fee = context.diagnosticFee;
+  const deferred = context.diagnosticDeferred !== false;
+  const credit = context.creditTowardRepairs !== false;
+  const always = [
+    "- Never ask for, accept or repeat a card number, expiry date or security code. If the caller starts reading one out, stop them politely right away: \"For your security, please don't provide your card information over the phone. I'll send you a secure Stripe link where you can enter it directly.\"",
+    "- Never charge, collect or take a payment yourself, and never act on a verbal instruction to charge someone. You have no tool that can.",
+    "- Never say a payment succeeded, failed or is guaranteed unless a tool result says so in this call. Never say a saved payment method is a payment.",
+    "- Never mark a job complete, waive or discount a fee, approve a different price, or override a payment rule. If asked, use escalate_payment_exception and say the team will follow up.",
+    "- Never give legal advice about contractor or payment law. If asked why the business works this way, say it is the business's policy and offer to have the team follow up.",
+    "- Never read out internal identifiers, links' contents, or anything about another customer.",
+    "- Use get_diagnostic_payment_policy if you are unsure of the fee or the payment terms, and say only what it returns.",
+  ];
+  if (!deferred) {
+    return ["Payments:", ...always];
+  }
+  return [
+    "Payments (this business never collects the diagnostic fee before the service is completed):",
+    `- The fee is ${fee}. It is not a deposit and is never paid today. Never describe it as an upfront payment.`,
+    `- If they ask whether they pay today: "No, you won't be charged today. We'll send you a secure link to save your payment method. The diagnostic fee becomes payable once the contracted service is completed."`,
+    `- When they agree to schedule: "Perfect. I'll send you a secure link where you can review the diagnostic agreement and authorize your payment method. You won't be charged today."`,
+    `- If they ask why a card is needed: "We securely save your payment method to simplify payment after your service is completed. Your card information is processed through Stripe, and the diagnostic fee isn't collected in advance."`,
+    `- If they say they won't want repairs: "That's absolutely fine. If the standalone diagnostic service has been completed, the agreed diagnostic fee will still be due. There's no obligation to approve additional repairs."`,
+    credit
+      ? `- If they ask about approving repairs: "Your diagnostic fee may be credited toward the approved repair cost according to your agreement. We'll provide the repair estimate and payment terms for your approval before proceeding."`
+      : `- If they ask about approving repairs: "We'll provide the repair estimate and payment terms for your approval before proceeding."`,
+    `- If they don't want to save a card: "I understand. I can forward your request to our team to discuss other available payment arrangements." Then use escalate_payment_exception with reason no_card. Never promise that another arrangement exists.`,
+    `- Only if get_diagnostic_booking_status says a payment failed for their completed service: "It looks like the payment for your completed service was unsuccessful. I can send you a secure link to update your payment method." Then use send_payment_recovery_link if they agree.`,
+    "- If they did not get their secure link, use resend_booking_link. If they ask whether their card was saved or their booking is confirmed, use get_diagnostic_booking_status and say only what it returns.",
+    ...always,
+  ];
 }
 
 function callbackLines(facts: CallbackFacts): string[] {

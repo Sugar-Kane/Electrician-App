@@ -6,6 +6,8 @@ import { PLATFORM_FEE_BASIS_POINTS } from "@/lib/invoice-math";
 import { currentContext } from "@/lib/request-context";
 import { refreshPaymentAccount } from "@/lib/stripe-connect";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { DiagnosticSettingsForm } from "./diagnostic-settings-form";
+import { settingsFromRow } from "@/lib/diagnostic-payment-policy";
 
 export const metadata: Metadata = { title: "Get paid online | Volteira" };
 
@@ -50,12 +52,22 @@ export default async function PaymentsSettingsPage({
   ]).size;
   const feePercent = `${PLATFORM_FEE_BASIS_POINTS / 100}%`;
 
+  const [{ data: settingsRow }, { data: organization }] = context
+    ? await Promise.all([
+        getSupabaseAdmin().from("service_settings").select("*").eq("organization_id", context.organizationId).maybeSingle(),
+        getSupabaseAdmin().from("organizations").select("name, base_state").eq("id", context.organizationId).maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }];
+  const business = (organization ?? {}) as Record<string, unknown>;
+  const baseState = typeof business.base_state === "string" ? business.base_state : "";
+  const diagnosticSettings = settingsFromRow(settingsRow as Record<string, unknown> | null, baseState);
+
   return (
     <FieldPageShell
       backHref="/settings"
       title="Get paid online"
       eyebrow="Settings"
-      description="Let customers pay invoices and booking deposits by card or bank transfer."
+      description="Let customers pay invoices by card or bank transfer, and set how diagnostic fees are authorized and collected."
     >
       {context ? (
         <PaymentsCard
@@ -64,6 +76,15 @@ export default async function PaymentsSettingsPage({
           canManage={context.role === "owner"}
           notice={query.payments}
           feePercent={feePercent}
+        />
+      ) : null}
+
+      {context ? (
+        <DiagnosticSettingsForm
+          settings={diagnosticSettings}
+          businessName={typeof business.name === "string" ? business.name : "Your business"}
+          canEdit={context.role === "owner" || context.role === "admin"}
+          baseState={baseState}
         />
       ) : null}
 

@@ -181,5 +181,29 @@ test("the session is given the booking tools and only the booking tools", () => 
     "book_visit",
     "log_non_service_call",
     "request_callback",
+    "get_diagnostic_payment_policy",
+    "get_diagnostic_booking_status",
+    "send_payment_recovery_link",
+    "escalate_payment_exception",
   ]);
+});
+
+test("deferred payments: the prompt quotes the configured fee and never asks for a deposit", () => {
+  const prompt = buildRealtimeInstructions({ ...CONTEXT, diagnosticFee: "$180", diagnosticDeferred: true, creditTowardRepairs: true });
+  assert.match(prompt, /Our electrical diagnostic service is \$180\. We securely collect a payment method when scheduling your appointment, but you won't be charged until the contracted diagnostic service is completed\./);
+  assert.match(prompt, /No, you won't be charged today\./);
+  assert.match(prompt, /please don't provide your card information over the phone/);
+  assert.doesNotMatch(prompt, /require a \$180 deposit/);
+  // A different business's fee is a different number, read from its settings.
+  assert.match(buildRealtimeInstructions({ ...CONTEXT, diagnosticFee: "$95", diagnosticDeferred: true }), /diagnostic service is \$95\./);
+});
+
+test("deferred payments: no credit sentence where the business gives none", () => {
+  const prompt = buildRealtimeInstructions({ ...CONTEXT, diagnosticFee: "$180", diagnosticDeferred: true, creditTowardRepairs: false });
+  assert.doesNotMatch(prompt, /credited toward the approved repair cost/);
+});
+
+test("the voice agent has no tool that can collect a payment", () => {
+  const names = BOOKING_TOOL_NAMES.join(" ");
+  assert.doesNotMatch(names, /collect|charge|capture|payment_intent|refund/);
 });
