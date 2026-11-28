@@ -130,8 +130,8 @@ completion); job screen, `line-actions.ts`, `job-flow-server.ts`; payments setti
 
 ## 4. Database migration
 
-`20261127010000_deferred_diagnostic_payments.sql` — sorts after every file in `main` **and** after
-PR #310's four migrations that production already ran (`20261126040000`–`070000`). It touches none
+`20261127010000_deferred_diagnostic_payments.sql` — sorts after every file in `main`, including
+PR #310's four migrations (`20261126040000`–`070000`, merged 2026-11-28 and already run in production). It touches none
 of #310's functions. It adds settings columns + CA guard trigger; job completion columns + guard
 trigger; `diagnostic_payment_authorizations` and `diagnostic_charges` (RLS: members read own
 business, nobody signed-in writes); makes `payments.provider_checkout_session_id` nullable (an
@@ -202,9 +202,9 @@ logic once; there is deliberately no "apply credit" tool that could apply one tw
 
 | Suite | Result |
 |---|---|
-| `npm test` (whole unit suite) | **1575 passed, 0 failed** (was 1562; 9 existing tests updated for the intended wording change, legacy paths pinned with `deferred: false`) |
+| `npm test` (whole unit suite) | **1589 passed, 0 failed** after merging `main` with PR #310 (1575 before the merge; was 1562; 9 existing tests updated for the intended wording change, legacy paths pinned with `deferred: false`) |
 | Deferred SQL scenarios, local replay of `main` migrations | **39/39** (DD-039 vacuous: #310 absent, reported as such) |
-| Deferred SQL scenarios, replay incl. PR #310 migrations | **39/39** (DD-039 real) |
+| Deferred SQL scenarios, replay incl. PR #310 migrations (now in `main`) | **39/39** (DD-039 real) |
 | Tenant-isolation suite (existing), local, on top of the new migration | **75/75** |
 | `npx tsc --noEmit` | clean |
 | `npm run build` | succeeds |
@@ -303,8 +303,8 @@ Plan (nothing is refunded, re-charged, cancelled or altered automatically):
 
 ## 12. Deployment checklist
 
-1. Merge or rebase onto PR #310 first if it lands first (no conflicts in migrations; overlapping
-   app files: `payment-plan-server.ts`, `jobs/[jobId]/page.tsx`).
+1. PR #310 is merged into `main` and merged into this branch (only the test manifest conflicted;
+   resolved by keeping both sides' entries).
 2. Attorney sign-off on section 10 questions 1–3 (or accept the conservative behaviour as is).
 3. Stripe test mode: add the webhook events (section 5); run the card matrix on a preview deploy
    with a test-mode key; confirm webhooks reconcile and `stripe_webhook_events` de-duplicates.
