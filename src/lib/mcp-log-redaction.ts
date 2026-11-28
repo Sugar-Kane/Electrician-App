@@ -42,6 +42,8 @@ export function scrubLogText(text: string, limit = MAX_LOGGED_RESULT): string {
   const masked = withoutLinks
     .replace(UUID_PATTERN, (id) => `\u0000${ids.push(id) - 1}\u0000`)
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
+    // Stripe object ids, client secrets and API keys: never kept in a log.
+    .replace(/\b(?:seti|pi|pm|cus|cs|acct|ch|re|sk|rk|whsec)_[A-Za-z0-9_]{6,}\b/g, "[stripe]")
     // Card-like runs of 13–19 digits, with or without spaces and dashes.
     .replace(/\b(?:\d[ -]?){13,19}\b/g, "[number]")
     // Phone numbers: optional +1, area code, then 7 digits, in the usual shapes.

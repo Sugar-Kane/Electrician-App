@@ -23,7 +23,13 @@ import {
   slotList,
   unreachableCaller,
   checkSpokenAddress,
+  diagnosticPolicyReply,
+  diagnosticStatusReply,
 } from "@/lib/booking-tool-rules";
+import { loadDiagnosticPolicy, sendRecoveryLink } from "@/lib/diagnostic-payment-server";
+import { redactPaymentSecrets } from "@/lib/diagnostic-payment-policy";
+import { slotLabel as formatSlot } from "@/lib/schedule-labels";
+import { sendOwnerSms } from "@/lib/twilio";
 import {
   resendBookingLink,
   sendBookingConfirmations,
@@ -247,6 +253,111 @@ async function callbackOnTheLine(input: {
   return callbackForCaller(rows, phone, now, inbound);
 }
 
+/** The caller's most recent live booking, only once the caller is verified. */
+async function callersBooking(input: { database: Database; session: McpSession; args: Record<string, unknown> }) {
+  const phone = callerPhone(input.args);
+  const { data: organization } = await input.database
+    .from("organizations")
+    .select("phone, timezone")
+    .eq("id", input.session.organizationId)
+    .maybeSingle();
+  const customerId = await verifiedCustomer({ ...input, phone, business: String(organization?.phone ?? ""), calledBack: false });
+  if (!customerId) return { verified: false as const };
+  const { data } = await input.database
+    .from("booking_requests")
+    .select("public_token, status, arrival_window_start, arrival_window_end")
+    .eq("organization_id", input.session.organizationId)
+    .eq("customer_id", customerId)
+    .in("status", ["awaiting_payment", "confirmed", "scheduled", "needs_review"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const row = data as Record<string, unknown> | null;
+  return {
+    verified: true as const,
+    customerId,
+    timeZone: String(organization?.timezone ?? "America/Los_Angeles"),
+    booking: row
+      ? {
+          token: String(row.public_token ?? ""),
+          status: String(row.status ?? ""),
+          start: typeof row.arrival_window_start === "string" ? row.arrival_window_start : "",
+          end: typeof row.arrival_window_end === "string" ? row.arrival_window_end : "",
+        }
+      : null,
+  };
+}
+
+/**
+ * The payment tools the voice agent has. Read-only, a link sender, and an
+ * escalation: none of them can create, confirm or capture a payment, and none
+ * return a Stripe identifier, a link or another customer's details.
+ */
+async function diagnosticPaymentTool(input: {
+  database: Database;
+  session: McpSession;
+  name: string;
+  args: Record<string, unknown>;
+  fee: string;
+  owner: { phone: string };
+  messagingServiceSid: string;
+}): Promise<ToolResult | null> {
+  if (input.name === "get_diagnostic_payment_policy") {
+    const policy = await loadDiagnosticPolicy(input.session.organizationId);
+    return diagnosticPolicyReply({
+      fee: input.fee,
+      deferred: policy.collectAt === "after_completion",
+      credit: policy.creditTowardRepairs,
+      requirePaymentMethod: policy.requirePaymentMethod,
+    });
+  }
+  if (input.name !== "get_diagnostic_booking_status" && input.name !== "send_payment_recovery_link" && input.name !== "escalate_payment_exception") {
+    return null;
+  }
+  const caller = await callersBooking(input);
+  if (input.name === "escalate_payment_exception") {
+    const reason = typeof input.args.reason === "string" ? input.args.reason.slice(0, 40) : "other";
+    const summary = redactPaymentSecrets(typeof input.args.summary === "string" ? input.args.summary : "").slice(0, 400);
+    await recordActivity(input.database, {
+      organizationId: input.session.organizationId,
+      eventType: "diagnostic.payment_exception",
+      label: "Payment question passed to the team by the voice assistant",
+      customerId: caller.verified ? caller.customerId : null,
+      metadata: { reason, note: summary, via: "voice" },
+    });
+    if (input.owner.phone && input.messagingServiceSid) {
+      await sendOwnerSms({
+        organizationId: input.session.organizationId,
+        to: input.owner.phone,
+        body: `Payment question from a caller (${reason.replace(/_/g, " ")}): ${summary || "no details"}. Please follow up.`.slice(0, 320),
+        messagingServiceSid: input.messagingServiceSid,
+      }).catch(() => undefined);
+    }
+    return { text: `Passed to the team. Say: "I've forwarded your request to our team, and someone will follow up with you." Promise nothing else about payment.` };
+  }
+  if (!caller.verified) return diagnosticStatusReply({ verified: false, found: false, slotLabel: "", bookingStatus: "", authorizationState: "", diagnosticCompleted: false });
+  if (!caller.booking?.token) return diagnosticStatusReply({ verified: true, found: false, slotLabel: "", bookingStatus: "", authorizationState: "", diagnosticCompleted: false });
+
+  const { data } = await input.database.rpc("get_booking_diagnostic_status" as never, { p_booking_token: caller.booking.token } as never);
+  const status = (Array.isArray(data) ? data[0] : null) as Record<string, unknown> | null;
+  const state = typeof status?.authorization_state === "string" ? status.authorization_state : "";
+  if (input.name === "send_payment_recovery_link") {
+    const sent = await sendRecoveryLink(caller.booking.token);
+    return sent.sent
+      ? { text: `Sent. Say: "I've sent a secure link to update your payment method. It's on its way." Never say the payment went through.` }
+      : { isError: true, text: `NOT SENT. ${sent.reason ?? "There is no failed payment on record."} Do not tell them a payment failed. Offer escalate_payment_exception if they have a question.` };
+  }
+  const label = caller.booking.start && caller.booking.end ? formatSlot(caller.booking.start, caller.booking.end, caller.timeZone) : "";
+  return diagnosticStatusReply({
+    verified: true,
+    found: true,
+    slotLabel: label,
+    bookingStatus: caller.booking.status,
+    authorizationState: state,
+    diagnosticCompleted: status?.diagnostic_completed === true,
+  });
+}
+
 export async function runBookingTool(input: {
   database: Database;
   session: McpSession;
@@ -256,7 +367,7 @@ export async function runBookingTool(input: {
   // First thing on every call, so it answers before any schedule is loaded.
   if (input.name === "look_up_caller") return lookUpCaller(input);
 
-  const { context, timeZone, owner, organizationSlug, diagnosticMinutes, baseState } =
+  const { context, timeZone, owner, organizationSlug, diagnosticMinutes, baseState, messagingServiceSid } =
     await loadIntakeContext({
     database: input.database,
     organizationId: input.session.organizationId,
@@ -267,6 +378,8 @@ export async function runBookingTool(input: {
 
   if (input.name === "log_non_service_call") return logNonServiceCall(input);
   if (input.name === "resend_booking_link") return resendLink(input);
+  const payment = await diagnosticPaymentTool({ ...input, fee: context.diagnosticFee, owner, messagingServiceSid });
+  if (payment) return payment;
 
   // The safety net for a sales call the model filed as a callback anyway: the
   // owner is not texted about it and nothing is saved as a request.

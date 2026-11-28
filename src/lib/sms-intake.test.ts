@@ -487,7 +487,7 @@ test("with a visit already held, more texts never hold again or send a second pa
   for (const tool of ["confirm_visit", "propose_visit"]) {
     const action = decideIntakeAction({ decision: { tool, input: accept }, customerText: "[photo]", context: held });
     assert.equal(action.kind, "ask", tool);
-    assert.match(action.reply, /payment link we texted you/);
+    assert.match(action.reply, /secure link we texted you/);
     assert.match(action.reply, /8:00 AM-10:00 AM/);
     assert.doesNotMatch(action.reply, /https?:\/\//);
   }
@@ -498,7 +498,7 @@ test("with a visit already held, more texts never hold again or send a second pa
     context: held,
   });
   assert.equal(spanish.kind, "ask");
-  assert.match(spanish.reply, /enlace de pago que le enviamos/);
+  assert.match(spanish.reply, /enlace seguro que le enviamos/);
 });
 
 test("a text booking asks where to email the customer's copy, and carries the address", () => {

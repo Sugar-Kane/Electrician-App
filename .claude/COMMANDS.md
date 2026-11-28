@@ -39,8 +39,8 @@ in a session's skill list or invoked.
 | Required integrations | Supabase MCP (database checks, rolled back only), Vercel MCP (deployment id); optional Stripe MCP, Playwright (library, local) |
 | Output | `compliance/application-audits/<date>/` (report.md, report.json, dashboard.html, findings/) |
 | Can modify | Writes only under `compliance/`. Read-only toward app code, production data and deployments. |
-| Created / last verified | 2026-11-24 / 2026-11-24 (seen in session skill list) |
-| Version | 1.0.0 |
+| Created / last verified | 2026-11-24 / 2026-11-27 (seen in session skill list) |
+| Version | 1.1.0 (2026-11-27: deferred diagnostic payment checks CSLB-DD-001…011 in `california`, `contractors`, `contracts`, `invoices`, `payments`, `communications`, `security`, `mcp`, `release`) |
 | Known limitations | Legal sources must be reachable for `refresh-laws`; without them requirements stay BLUE. Not legal advice. |
 
 ### `/website-compliance`
@@ -56,8 +56,8 @@ in a session's skill list or invoked.
 | Required integrations | Node 20+, Playwright + Chromium, axe-core; network access to the audited site |
 | Output | `compliance/website-audits/<domain>/<timestamp>/` in this repo, or `./website-audits/` elsewhere |
 | Can modify | Writes only its output folder. Never submits forms, books, signs, pays or logs in. |
-| Created / last verified | 2026-11-24 / 2026-11-24 (seen in session skill list) |
-| Version | 1.0.0 |
+| Created / last verified | 2026-11-24 / 2026-11-27 (seen in session skill list) |
+| Version | 1.1.0 (2026-11-27: WEB-CSLB-022 deferred diagnostic fee disclosure check) |
 | Known limitations | Automated accessibility checks are partial; no assistive-technology testing. Backend obligations show as BLUE. The global copy is not installed on Adam's machine by this session. |
 
 ### `/command-registry`

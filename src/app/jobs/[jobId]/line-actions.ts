@@ -491,6 +491,23 @@ export async function sendDiagnosticFeeInvoice(jobNumber: string): Promise<LineA
   if (context.status === "canceled") return { error: "This job is canceled." };
   const { supabase, organizationId, jobId, billedJob } = context;
 
+  // Deferred diagnostic businesses (California): the fee is never billed before
+  // the contracted diagnostic service is completed. This was a first-step
+  // action, before the visit; there it would be an advance payment request.
+  const { collectsAfterCompletion } = await import("@/lib/diagnostic-payment-server");
+  if (await collectsAfterCompletion(organizationId)) {
+    const { data: completion } = await supabase
+      .from("jobs")
+      .select("diagnostic_completed_at, status")
+      .eq("organization_id", organizationId)
+      .eq("id", jobId)
+      .maybeSingle();
+    const done = completion as Record<string, unknown> | null;
+    if (!done?.diagnostic_completed_at && done?.status !== "completed") {
+      return { error: "The diagnostic fee can be billed only after the diagnostic is completed. Mark it complete first." };
+    }
+  }
+
   const { data: feeLines } = await supabase
     .from("job_line_items")
     .select("id, invoice_id, invoices ( id, status )")

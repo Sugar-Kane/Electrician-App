@@ -263,6 +263,7 @@ export async function handleInboundText(input: {
             feeCents: recorded.feeCents,
             payUrl: recorded.payUrl,
             holdMinutes: holdMinutesFor(action.slot.start),
+            deferred: context.diagnosticDeferred !== false,
             businessPhone: context.businessPhone,
             language: action.language,
           })

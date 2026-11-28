@@ -16,6 +16,12 @@ import { emailButton } from "./email-layout.ts";
 
 export type BookingFacts = {
   paid?: boolean;
+  /**
+   * The diagnostic fee waits for completion (diagnostic-payment-policy.ts).
+   * Absent means deferred: the wording must never ask for an advance payment
+   * unless the business is explicitly allowed to take one.
+   */
+  deferred?: boolean;
   businessName: string;
   businessPhone: string;
   contactName: string;
@@ -123,8 +129,58 @@ const CUSTOMER_COPY = {
   },
 };
 
-function customerCopy(language: string | undefined) {
-  return language === "es" ? CUSTOMER_COPY.es : CUSTOMER_COPY.en;
+/**
+ * The deferred diagnostic wording: a held booking is confirmed by authorizing
+ * a saved payment method, nothing is charged today, and the fee is due once
+ * the contracted diagnostic service is completed.
+ */
+const DEFERRED_COPY = {
+  en: {
+    smsPay: (fee: string) =>
+      `. Nothing is charged today. To confirm, review the diagnostic agreement and securely save a payment method; the ${fee} fee is due once the service is completed`,
+    smsCredited: (phone: string) => ` Questions? Call ${phone}.`,
+    smsFee: (fee: string, paid: boolean) =>
+      paid
+        ? `. We received your ${fee} diagnostic payment.`
+        : `. No diagnostic payment is due today; the ${fee} fee is due upon completion.`,
+    held: (biz: string) =>
+      `Your requested time with ${biz} is being held. It is confirmed once you authorize a saved payment method. No diagnostic payment is due today.`,
+    heldHtml: (biz: string) =>
+      `Your requested time with ${biz} is being held. <strong>It is confirmed once you authorize a saved payment method.</strong> No diagnostic payment is due today.`,
+    received: (fee: string) => `Your authorized diagnostic payment of ${fee} has been processed.`,
+    pay: () => "Review the agreement and save a payment method",
+    payHow: (fee: string) =>
+      `Please use the secure link below to authorize your payment method. Your diagnostic fee (${fee}) will not be collected until the contracted service is completed.`,
+    payHowText: (fee: string) =>
+      `Please use this secure link to authorize your payment method for your scheduled electrical diagnostic service. Your diagnostic fee (${fee}) will not be collected until the contracted service is completed.`,
+    subjectHeld: (slot: string) => `Authorize your payment method to confirm: ${slot}`,
+  },
+  es: {
+    smsPay: (fee: string) =>
+      `. Hoy no se cobra nada. Para confirmar, revise el acuerdo de diagnóstico y guarde un método de pago de forma segura; la tarifa de ${fee} se paga al completar el servicio`,
+    smsCredited: (phone: string) => ` ¿Preguntas? Llame al ${phone}.`,
+    smsFee: (fee: string, paid: boolean) =>
+      paid
+        ? `. Recibimos su pago de diagnóstico de ${fee}.`
+        : `. Hoy no se cobra ningún pago de diagnóstico; la tarifa de ${fee} se paga al completar.`,
+    held: (biz: string) =>
+      `Su horario con ${biz} está apartado. Queda confirmado cuando autorice un método de pago guardado. Hoy no se cobra ningún pago de diagnóstico.`,
+    heldHtml: (biz: string) =>
+      `Su horario con ${biz} está apartado. <strong>Queda confirmado cuando autorice un método de pago guardado.</strong> Hoy no se cobra ningún pago de diagnóstico.`,
+    received: (fee: string) => `Se procesó su pago de diagnóstico autorizado de ${fee}.`,
+    pay: () => "Revisar el acuerdo y guardar un método de pago",
+    payHow: (fee: string) =>
+      `Use el enlace seguro de abajo para autorizar su método de pago. La tarifa de diagnóstico (${fee}) no se cobrará hasta que se complete el servicio contratado.`,
+    payHowText: (fee: string) =>
+      `Use este enlace seguro para autorizar su método de pago para su servicio de diagnóstico eléctrico programado. La tarifa de diagnóstico (${fee}) no se cobrará hasta que se complete el servicio contratado.`,
+    subjectHeld: (slot: string) => `Autorice su método de pago para confirmar: ${slot}`,
+  },
+};
+
+function customerCopy(language: string | undefined, deferred = true) {
+  const base = language === "es" ? CUSTOMER_COPY.es : CUSTOMER_COPY.en;
+  if (!deferred) return base;
+  return { ...base, ...(language === "es" ? DEFERRED_COPY.es : DEFERRED_COPY.en) };
 }
 
 export type BookingMessageState = "confirmed" | "held" | "needs_review";
@@ -153,7 +209,7 @@ export function customerConfirmationSms(
   state: BookingMessageState = "confirmed",
 ): string {
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
-  const copy = customerCopy(facts.language);
+  const copy = customerCopy(facts.language, facts.deferred !== false);
   const parts =
     state === "held"
       ? [
@@ -257,7 +313,7 @@ export function ownerBookingEmail(
     ...(answers.length > 0 ? ["What they said on the call:"] : []),
     ...answers.flatMap((entry) => [`  ${squash(entry.question)}`, `    ${squash(entry.answer)}`]),
     "",
-    `Deposit: ${facts.diagnosticFee}`,
+    `${facts.deferred !== false ? "Diagnostic fee (due on completion, nothing charged at booking)" : "Deposit"}: ${facts.diagnosticFee}`,
     jobUrl ? `Open the job: ${jobUrl}` : "",
   ].filter((line) => line !== "");
 
@@ -285,7 +341,7 @@ export function ownerBookingEmail(
           "</ul>",
         ]
       : []),
-    `<p><strong>Deposit:</strong> ${escapeHtml(facts.diagnosticFee)}</p>`,
+    `<p><strong>${facts.deferred !== false ? "Diagnostic fee (due on completion)" : "Deposit"}:</strong> ${escapeHtml(facts.diagnosticFee)}</p>`,
     jobUrl ? `<p>${emailButton(jobUrl, "Open the job")}</p>` : "",
   ]
     .filter(Boolean)
@@ -601,7 +657,7 @@ export function confirmationEmail(
   facts: BookingFacts,
   state: BookingMessageState = "confirmed",
 ): EmailBody {
-  const copy = customerCopy(facts.language);
+  const copy = customerCopy(facts.language, facts.deferred !== false);
   const address = [facts.addressLine1, facts.city].filter(Boolean).join(", ");
   const greeting = copy.hi(facts.contactName ? squash(facts.contactName) : "");
   const paid = state === "confirmed" && facts.paid === true;

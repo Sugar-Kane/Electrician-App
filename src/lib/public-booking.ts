@@ -247,3 +247,42 @@ export async function getPublicBookingConfirmation(
   if (error) return null;
   return ((data as PublicBookingConfirmation[] | null)?.[0] ?? null);
 }
+
+/** What a booking page needs to say about when the diagnostic fee is paid. */
+export type PublicDiagnosticPolicy = {
+  collectAfterCompletion: boolean;
+  requirePaymentMethod: boolean;
+  creditTowardRepairs: boolean;
+  serviceName: string;
+  jurisdiction: string;
+};
+
+/**
+ * The deferred-payment policy for a booking page. When it cannot be read the
+ * page fails safe: nothing due today and a payment method required, which is
+ * the California rule.
+ */
+export async function getPublicDiagnosticPolicy(slug: string): Promise<PublicDiagnosticPolicy> {
+  const safe: PublicDiagnosticPolicy = {
+    collectAfterCompletion: true,
+    requirePaymentMethod: true,
+    creditTowardRepairs: true,
+    serviceName: "",
+    jurisdiction: "",
+  };
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase.rpc("get_public_diagnostic_policy" as never, { p_slug: slug } as never);
+    const row = (Array.isArray(data) ? data[0] : null) as Record<string, unknown> | null;
+    if (error || !row) return safe;
+    return {
+      collectAfterCompletion: row.collect_after_completion !== false,
+      requirePaymentMethod: row.require_payment_method !== false,
+      creditTowardRepairs: row.credit_toward_repairs !== false,
+      serviceName: typeof row.service_description === "string" ? row.service_description : "",
+      jurisdiction: typeof row.jurisdiction === "string" ? row.jurisdiction : "",
+    };
+  } catch {
+    return safe;
+  }
+}

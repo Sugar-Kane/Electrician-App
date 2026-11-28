@@ -15,6 +15,12 @@ import {
   releaseBookingCheckoutSetup,
 } from "@/lib/public-booking";
 import { readyPaymentAccount } from "@/lib/stripe-connect";
+import {
+  confirmWithoutPaymentMethod,
+  loadDiagnosticPolicy,
+  recordDiagnosticAuthorization,
+  startDiagnosticSetupCheckout,
+} from "@/lib/diagnostic-payment-server";
 import { checkServiceArea } from "@/lib/service-area";
 import { smsConsentRecord } from "@/lib/sms-consent";
 import { createPublicClient, getMessagingBusinessName } from "@/lib/supabase/public";
@@ -25,6 +31,11 @@ export type BookingActionState = {
   distanceMiles?: number | null;
   checkoutUrl?: string;
 };
+
+function clientIp(requestHeaders: Headers): string | null {
+  const forwarded = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return (forwarded || requestHeaders.get("x-real-ip") || "").slice(0, 64) || null;
+}
 
 type CreatedIntake = {
   intake_id: string;
@@ -80,6 +91,8 @@ export async function startPublicBooking(
   const safetyAnswers = parseSafetyAnswers(getText(formData, "safetyAnswers", 4_000));
   const acceptedPolicy = formData.get("acceptedPolicy") === "yes";
   const smsConsent = formData.get("smsConsent") === "yes";
+  const paymentAuthorized = formData.get("paymentAuthorization") === "yes";
+  const language = formData.get("language") === "es" ? "es" : "en";
 
   if (customerType !== "residential" && customerType !== "commercial") {
     return { error: "Choose residential or commercial service." };
@@ -108,6 +121,14 @@ export async function startPublicBooking(
 
   const bookingPage = await getPublicBookingPage(slug);
   if (!bookingPage) return { error: "This booking page is not currently available." };
+
+  // The law over the contractor's preference, read on the server (never from
+  // the form): in California nothing is collected at booking.
+  const policy = await loadDiagnosticPolicy(bookingPage.organization_id);
+  const deferred = policy.collectAt === "after_completion";
+  if (deferred && policy.requirePaymentMethod && !paymentAuthorized) {
+    return { error: "Tick the box to authorize saving your payment method. Nothing is charged today." };
+  }
 
   // Resolved the same way the form resolved it, so the retained proof matches
   // the business named on the checkbox the customer actually ticked.
@@ -222,7 +243,8 @@ export async function startPublicBooking(
       });
   }
 
-  const requestOrigin = getRequestOrigin(await headers());
+  const requestHeaders = await headers();
+  const requestOrigin = getRequestOrigin(requestHeaders);
   if (!requestOrigin) {
     return { error: "Secure checkout could not be started. Please try again." };
   }
@@ -236,6 +258,56 @@ export async function startPublicBooking(
   const heldUntil = holdUntil(slotStart);
   if (!(await prepareBookingCheckout(intake.booking_token, heldUntil))) {
     return { error: "That arrival window could not be held. Choose another available time." };
+  }
+
+  if (deferred && !policy.requirePaymentMethod) {
+    // The business takes bookings without a saved card: confirmed now, the
+    // fee billed after completion. Nothing is charged or saved.
+    try {
+      await confirmWithoutPaymentMethod(intake.booking_token);
+    } catch {
+      return { error: "We couldn’t confirm the appointment. Please try again." };
+    }
+    return { error: "", checkoutUrl: `${requestOrigin}/booking/${encodeURIComponent(intake.booking_token)}` };
+  }
+
+  if (deferred) {
+    // The authorization is written down before Stripe is involved, with the
+    // exact words shown, their version, the amount and when it was given.
+    const authorization = await recordDiagnosticAuthorization({
+      bookingToken: intake.booking_token,
+      via: "web",
+      language,
+      businessName: bookingPage.display_name,
+      feeCents: intake.fee_cents,
+      ip: clientIp(requestHeaders),
+      userAgent: requestHeaders.get("user-agent"),
+    });
+    if ("error" in authorization) {
+      await releaseBookingCheckoutSetup(intake.booking_token).catch(() => undefined);
+      return { error: authorization.error };
+    }
+    const setup = await startDiagnosticSetupCheckout({
+      bookingToken: intake.booking_token,
+      authorizationId: authorization.id,
+      authorizationText: authorization.text,
+      organizationId: bookingPage.organization_id,
+      slug: bookingPage.slug,
+      businessName: bookingPage.display_name,
+      feeCents: intake.fee_cents,
+      email,
+      name: `${firstName} ${lastName}`.trim(),
+      phone,
+      origin: requestOrigin,
+      expiresAt: heldUntil,
+      language,
+    });
+    if ("error" in setup) {
+      console.error("booking: payment method setup could not be started", setup.error);
+      await releaseBookingCheckoutSetup(intake.booking_token).catch(() => undefined);
+      return { error: "Secure payment method setup could not be started. Please try again." };
+    }
+    return { error: "", checkoutUrl: setup.url };
   }
 
   // The same checkout the texted pay link starts. One place decides what is

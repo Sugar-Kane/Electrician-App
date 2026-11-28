@@ -70,3 +70,8 @@ test("checkout outcomes are explained without claiming payment failed", () => {
   assert.match(bookingPayNotice("expired"), /another time/i);
   assert.equal(bookingPayNotice(undefined), "");
 });
+
+test("a deferred booking confirmed by a saved payment method is confirmed, not unpaid", () => {
+  assert.equal(bookingPageState({ status: "confirmed", depositPaid: false, depositCents: 18_000, deferred: true }), "confirmed");
+  assert.equal(bookingPageState({ status: "confirmed", depositPaid: false, depositCents: 18_000 }), "contact_business");
+});

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { bookingNeedsReviewReply, holdSpoken } from "@/lib/booking-hold";
+import { redactPaymentSecrets } from "@/lib/diagnostic-payment-policy";
 import { readInboundText } from "@/lib/claude";
 import {
   findOrCreateCustomerByPhone,
@@ -88,7 +89,9 @@ export async function POST(request: Request) {
   const callSid = params.CallSid ?? "";
   const from = params.From ?? "";
   const to = params.To ?? "";
-  const speech = (params.SpeechResult ?? "").trim();
+  // A caller who reads out a card number or security code anyway: it never
+  // reaches the model, the stored turns or a log (diagnostic-payment-policy.ts).
+  const speech = redactPaymentSecrets((params.SpeechResult ?? "").trim());
   const step = url.searchParams.get("step") ?? "";
 
   if (!callSid || !from || !to) return apologise();
@@ -314,8 +317,8 @@ export async function POST(request: Request) {
           })
         : recorded.payUrl && recorded.feeCents && action.kind === "book"
         ? action.language === "es"
-          ? `Le he apartado ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "es-US")}. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language })}`
-          : `I have ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "en-US")} held for you. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language })}`
+          ? `Le he apartado ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "es-US")}. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language, deferred: context.diagnosticDeferred !== false })}`
+          : `I have ${slotLabel(action.slot.start, action.slot.end, timeZone, new Date().toISOString(), "en-US")} held for you. ${holdSpoken({ feeCents: recorded.feeCents, language: action.language, deferred: context.diagnosticDeferred !== false })}`
         : voiceStep.say;
 
     await database

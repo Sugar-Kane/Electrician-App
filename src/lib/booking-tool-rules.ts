@@ -272,6 +272,72 @@ export const BOOKING_TOOLS: McpTool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "get_diagnostic_payment_policy",
+    title: "The diagnostic fee and when it is paid",
+    description:
+      "The business's diagnostic fee and payment terms, read live from Volteira: the fee, whether anything is due today, when the fee becomes payable, and whether it is credited toward approved repairs. Use it whenever you are unsure, and say only what it returns. It never charges anything.",
+    inputSchema: { type: "object", properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: "get_diagnostic_booking_status",
+    title: "Booking and payment method status",
+    description:
+      "For a caller asking about their booking: whether it is confirmed or still waiting on their payment method, and whether the payment for a completed service went through. Read-only. Tell them only what the result says; never guess a payment status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        caller_phone: {
+          type: "string",
+          description: "The caller ID number you were given for this call. Never a number the caller says out loud.",
+        },
+      },
+      required: ["caller_phone"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "send_payment_recovery_link",
+    title: "Send a secure link after a failed payment",
+    description:
+      "Only after get_diagnostic_booking_status said the payment for their completed service failed or needs their bank's confirmation, and they agreed: texts and emails them a secure Stripe link to update their payment method and pay. It refuses when no payment failed. You cannot charge anyone; this only sends the link.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        caller_phone: {
+          type: "string",
+          description: "The caller ID number you were given for this call. Never a number the caller says out loud.",
+        },
+      },
+      required: ["caller_phone"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "escalate_payment_exception",
+    title: "Pass a payment question to the team",
+    description:
+      "Forward a payment question you cannot answer to the business: a caller who does not want to save a card, asks for a different arrangement, a discount or a waiver, disputes a charge, or asks something about payment that no tool answers. It records the request and alerts the team. Promise only that the team will follow up.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        caller_phone: {
+          type: "string",
+          description: "The caller ID number you were given for this call. Never a number the caller says out loud.",
+        },
+        reason: {
+          type: "string",
+          enum: ["no_card", "alternative_arrangement", "discount_or_waiver", "dispute", "other"],
+        },
+        summary: {
+          type: "string",
+          description: "One or two sentences in your own words. Never a card number, expiry date or security code.",
+        },
+      },
+      required: ["caller_phone", "reason", "summary"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const BOOKING_TOOL_NAMES = BOOKING_TOOLS.map((tool) => tool.name);
@@ -670,17 +736,38 @@ export function checkSpokenAddress(input: {
  * deposit, then what it buys, then the question. In that order, so the price
  * is never the first thing a caller hears.
  */
-export function feeUpFront(fee: string): string {
+export type FeeWording = {
+  /** Nothing collected until the contracted diagnostic is complete. Defaults to true. */
+  deferred?: boolean;
+  /** The business credits the fee toward approved repairs. Defaults to true. */
+  credit?: boolean;
+};
+
+export function feeUpFront(fee: string, wording: FeeWording = {}): string {
+  if (wording.deferred !== false) {
+    const credit =
+      wording.credit !== false
+        ? " If you decide to move forward with qualifying repairs, your diagnostic fee will be credited toward the approved repair cost."
+        : "";
+    return [
+      `1. Offer the visit first: "We'd be happy to send an electrician out to take a look."`,
+      `2. Then the fee, exactly this way: "Our electrical diagnostic service is ${fee}. We securely collect a payment method when scheduling your appointment, but you won't be charged until the contracted diagnostic service is completed.${credit}"`,
+      `3. Then what it provides: ${diagnosticFeeCovers(fee, wording)}`,
+      `4. Then ask: "Would you like to go ahead and get a visit booked?"`,
+      `Never call the fee a deposit, never say it is paid up front or today, and never say saving a card guarantees or completes a payment.`,
+    ].join(" ");
+  }
   return [
     `1. Offer the visit first: "We'd be happy to send an electrician out to take a look."`,
     `2. Then the deposit: "I do want to let you know up front, to book the visit we require a ${fee} deposit."`,
-    `3. Then what it provides: ${diagnosticFeeCovers(fee)}`,
+    `3. Then what it provides: ${diagnosticFeeCovers(fee, wording)}`,
     `4. Then ask: "Would you like to go ahead and get a visit booked?"`,
   ].join(" ");
 }
 
-export function diagnosticFeeCovers(fee: string): string {
-  return `"The ${fee} diagnostic visit covers the trip out and the electrician finding the problem. If it turns out to be something small he can fix right there, like a light bulb or swapping a switch, that's usually taken care of within the visit. If it needs more work than that, he'll go over the cost with you before doing anything, and the ${fee} goes toward that work." Never promise that a particular repair is included; the electrician decides that on site.`;
+export function diagnosticFeeCovers(fee: string, wording: FeeWording = {}): string {
+  const toward = wording.credit !== false ? `, and the ${fee} goes toward that work` : "";
+  return `"The ${fee} diagnostic visit covers the trip out and the electrician finding the problem. If it turns out to be something small he can fix right there, like a light bulb or swapping a switch, that's usually taken care of within the visit. If it needs more work than that, he'll go over the cost with you before doing anything${toward}." Never promise that a particular repair is included; the electrician decides that on site.`;
 }
 
 export type ResendAttempt = { channel: "sms" | "email"; to: string; ok: boolean; detail: string };
@@ -814,7 +901,9 @@ export function describeOutcome(input: {
           "Say this back to the customer, in your own voice, all of it:",
           `1. The window and the address, so they can correct you.`,
           input.held
-            ? `2. "I'm holding that time. It's confirmed once the ${context.diagnosticFee} diagnostic fee is paid."`
+            ? context.diagnosticDeferred !== false
+              ? `2. "I'm holding that time. I'll send you a secure link where you can review the diagnostic agreement and authorize your payment method. You won't be charged today."`
+              : `2. "I'm holding that time. It's confirmed once the ${context.diagnosticFee} diagnostic fee is paid."`
             : `2. "The ${context.diagnosticFee} diagnostic visit is all set."`,
           // What the fee covers was said at the start of the call, before they
           // agreed to book (feeUpFront). Saying it again here was twenty
@@ -822,8 +911,8 @@ export function describeOutcome(input: {
           // line it was given, conditions and all.
           input.alreadyExisted
             ? `3. This booking was already made earlier, and its link went out then. Ask whether they received it; if they did not, use resend_booking_link and tell them only what its result says.`
-            : `3. "Your booking${input.held ? " and payment" : ""} link is on its way ${delivery}." Say "on its way", never that it has arrived.`,
-          "Do not explain again what the fee covers: you did that before they agreed to book. Do not promise a repair price, and do not take card details on this call.",
+            : `3. "Your ${input.held ? (context.diagnosticDeferred !== false ? "secure booking" : "booking and payment") : "booking"} link is on its way ${delivery}." Say "on its way", never that it has arrived.`,
+          "Do not explain again what the fee covers: you did that before they agreed to book. Do not promise a repair price, and do not take card details on this call. A saved payment method is not a payment: never say the fee is paid, guaranteed or charged.",
           // The goodbye is spelled out here because a rule in the instructions
           // was not enough: on a test call she hung up on "Nope" with no
           // goodbye at all. Tool results are what she follows most closely.
@@ -853,4 +942,65 @@ export function describeOutcome(input: {
   }
 
   return { isError: true, text: `NOT BOOKED. Unknown tool: ${input.name}` };
+}
+
+
+/** What get_diagnostic_payment_policy tells the voice agent. Words only, no ids. */
+export function diagnosticPolicyReply(input: { fee: string; deferred: boolean; credit: boolean; requirePaymentMethod: boolean }): ToolResult {
+  if (!input.deferred) {
+    return { text: `The diagnostic visit is ${input.fee}. This business takes it when the visit is booked, by the secure link. Never take card details on the call.` };
+  }
+  return {
+    text: [
+      `Diagnostic fee: ${input.fee}. Due today: nothing. Due: once the contracted diagnostic service is completed.`,
+      input.requirePaymentMethod
+        ? "A payment method is saved through a secure Stripe link when the visit is booked; saving it charges nothing."
+        : "No payment method is needed to book; the fee is billed after the service.",
+      input.credit
+        ? "If the customer approves qualifying repairs, the diagnostic fee is credited toward the approved repair cost according to their agreement."
+        : "The fee is not credited toward repairs.",
+      "It is not a deposit. Never quote any other amount, and never take card details on the call.",
+    ].join(" "),
+  };
+}
+
+export type DiagnosticStatusFacts = {
+  verified: boolean;
+  found: boolean;
+  slotLabel: string;
+  /** booking_requests.status */
+  bookingStatus: string;
+  /** diagnostic_payment_authorizations.state, or empty */
+  authorizationState: string;
+  diagnosticCompleted: boolean;
+};
+
+/** What get_diagnostic_booking_status tells the voice agent. Only facts the backend holds. */
+export function diagnosticStatusReply(facts: DiagnosticStatusFacts): ToolResult {
+  if (!facts.verified) {
+    return { isError: true, text: "NOT FOUND. This number could not be matched to a customer, so nothing about any booking can be shared. Offer to have the team call them back with request_callback." };
+  }
+  if (!facts.found) return { text: "No upcoming booking was found for this caller. Offer to book a visit." };
+  const when = facts.slotLabel ? ` for ${facts.slotLabel}` : "";
+  switch (facts.authorizationState) {
+    case "succeeded":
+      return { text: `The payment for their completed diagnostic${when} went through. Their receipt is available from the link they were sent.` };
+    case "failed":
+      return { text: `PAYMENT FAILED for their completed service${when}. Say: "It looks like the payment for your completed service was unsuccessful. I can send you a secure link to update your payment method." If they agree, use send_payment_recovery_link.` };
+    case "requires_action":
+      return { text: `Their bank wants them to confirm the payment for their completed service${when}. Offer to send the secure link with send_payment_recovery_link.` };
+    case "processing":
+      return { text: `The payment for their completed service${when} is processing. Do not say it succeeded or failed.` };
+    case "payment_method_saved":
+      return { text: `Their visit${when} is confirmed and their payment method is saved. Nothing has been charged${facts.diagnosticCompleted ? " yet" : ""}; the fee is due once the contracted diagnostic service is completed.` };
+    case "setup_pending":
+    case "":
+      return facts.bookingStatus === "awaiting_payment"
+        ? { text: `Their time${when} is held, waiting on their payment method authorization. Nothing is charged today. Offer to resend the secure link with resend_booking_link.` }
+        : { text: `Their visit${when} is ${facts.bookingStatus === "needs_review" ? "waiting for the team to finish scheduling it" : "booked"}. No payment has been taken.` };
+    case "revoked":
+      return { text: `They withdrew their payment authorization. Their visit${when} still stands; the team will arrange payment after the service. Use escalate_payment_exception if they have questions.` };
+    default:
+      return { text: `Their booking${when} is no longer active. Offer to book a new visit or have the team call them.` };
+  }
 }

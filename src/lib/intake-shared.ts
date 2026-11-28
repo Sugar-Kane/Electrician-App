@@ -2,6 +2,8 @@ import "server-only";
 
 import { recordActivity } from "@/lib/activity";
 import { startBookingCheckout } from "@/lib/booking-checkout";
+import { loadDiagnosticPolicy } from "@/lib/diagnostic-payment-server";
+import { effectiveDiagnosticPolicy, settingsFromRow } from "@/lib/diagnostic-payment-policy";
 import { decideHold, holdUntil, liveVisit, payLinkFor, type ConversationVisitRow, type LiveVisit } from "@/lib/booking-hold";
 import type { CallbackFacts } from "@/lib/grok-voice";
 import {
@@ -193,7 +195,7 @@ export async function loadIntakeContext(input: {
 }): Promise<LoadedContext> {
   const { database, organizationId } = input;
 
-  const [{ data: organization }, { data: settings }, { data: messaging }] = await Promise.all([
+  const [{ data: organization }, { data: settingsRow }, { data: messaging }] = await Promise.all([
     database
       .from("organizations")
       .select("name, phone, slug, timezone, base_city, base_state, owner_notification_email, owner_notification_phone")
@@ -201,7 +203,7 @@ export async function loadIntakeContext(input: {
       .maybeSingle(),
     database
       .from("service_settings")
-      .select("diagnostic_fee_cents, diagnostic_minutes, automatic_booking_radius_miles")
+      .select("*")
       .eq("organization_id", organizationId)
       .maybeSingle(),
     database
@@ -211,6 +213,11 @@ export async function loadIntakeContext(input: {
       .maybeSingle(),
   ]);
 
+  // Every column, so a database a migration behind still loads; the deferred
+  // payment columns are read defensively (settingsFromRow) and fail safe.
+  const settings = settingsRow as
+    | ({ diagnostic_fee_cents?: number; diagnostic_minutes?: number; automatic_booking_radius_miles?: number } & Record<string, unknown>)
+    | null;
   const timeZone = text(organization?.timezone) || DEFAULT_TIMEZONE;
   const slug = text(organization?.slug);
 
@@ -293,6 +300,10 @@ export async function loadIntakeContext(input: {
         typeof settings?.diagnostic_fee_cents === "number"
           ? settings.diagnostic_fee_cents
           : DEFAULT_DIAGNOSTIC_FEE_CENTS,
+      diagnosticDeferred:
+        effectiveDiagnosticPolicy(settingsFromRow(settings, text(organization?.base_state))).collectAt ===
+        "after_completion",
+      creditTowardRepairs: settings?.credit_diagnostic_to_repair !== false,
       serviceArea: `${settings?.automatic_booking_radius_miles ?? 50} miles of ${[text(organization?.base_city), text(organization?.base_state)].filter(Boolean).join(", ") || "the shop"}`,
       nowLabel: nowLabel(nowIso, timeZone),
       isFirstReply: input.isFirstReply,
@@ -788,9 +799,14 @@ export async function recordBookingRequest(input: {
    * leaves a request for a person; it never turns a fee-bearing visit into an
    * unpaid confirmed job.
    */
+  // The law over the contractor's preference (diagnostic-payment-policy.ts).
+  const diagnosticPolicy = await loadDiagnosticPolicy(input.organizationId);
+  const deferred = diagnosticPolicy.collectAt === "after_completion";
   const decision = decideHold({
     intent: "book",
-    depositCents: input.depositCents,
+    // A business that books without a saved card in deferred mode confirms
+    // the visit straight away; the fee is billed after completion.
+    depositCents: deferred && !diagnosticPolicy.requirePaymentMethod ? 0 : input.depositCents,
     // The business's own Stripe account must be ready to take the deposit.
     paymentsAvailable: Boolean(await readyPaymentAccount(input.organizationId)),
   });
@@ -850,7 +866,12 @@ export async function recordBookingRequest(input: {
       // Already held by another reply: one hold, one payment link.
       if (!holding) return { requestId, publicToken, alreadyExisted: true };
 
-      const checkout = await startBookingCheckout({
+      // Deferred: no Checkout yet. The link opens the booking page, where the
+      // customer reads and ticks the authorization, then saves a card in
+      // Stripe (setup mode). Nothing is charged.
+      const checkout = deferred
+        ? ({ url: payUrl } as const)
+        : await startBookingCheckout({
         bookingToken: publicToken!,
         feeCents: decision.feeCents,
         email: input.email,
@@ -868,7 +889,9 @@ export async function recordBookingRequest(input: {
       await recordActivity(input.database, {
         organizationId: input.organizationId,
         eventType: "booking.hold_placed",
-        label: "Appointment held, waiting on the diagnostic fee",
+        label: deferred
+          ? "Appointment held, waiting on the customer's payment method authorization (nothing charged)"
+          : "Appointment held, waiting on the diagnostic fee",
         customerId: input.customerId,
         bookingRequestId: requestId,
         metadata: {

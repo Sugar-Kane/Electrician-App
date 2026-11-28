@@ -23,11 +23,16 @@ export function bookingPageState(input: {
   expiresAt?: string | null;
   /** Injectable for deterministic tests; production uses the current time. */
   nowMs?: number;
+  /**
+   * A deferred diagnostic: the booking was confirmed by a saved payment
+   * method, and its fee is due only after completion. Confirmed means confirmed.
+   */
+  deferred?: boolean;
 }): BookingPageState {
   const status = (input.status ?? "").trim().toLowerCase();
   const confirmed = status === "confirmed" || status === "scheduled";
 
-  if (confirmed && (input.depositPaid || input.depositCents <= 0)) return "confirmed";
+  if (confirmed && (input.depositPaid || input.depositCents <= 0 || input.deferred)) return "confirmed";
   if (input.depositPaid) return confirmed ? "confirmed" : "payment_review";
   if (status === "awaiting_payment") {
     const expiry = input.expiresAt ? Date.parse(input.expiresAt) : Number.NaN;

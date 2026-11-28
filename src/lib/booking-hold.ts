@@ -113,10 +113,16 @@ export function holdSentence(input: {
   holdMinutes: number;
   /** The customer's, settled by the intake. English when nobody said. */
   language?: string;
+  /**
+   * The fee waits for completion (diagnostic-payment-policy.ts). Defaults to
+   * true: a caller that forgets must never ask for an advance payment.
+   */
+  deferred?: boolean;
 }): string {
   if (!input.payUrl || input.feeCents <= 0) return "";
 
-  return phrasesFor(input.language ?? "en").holdSentence(
+  const phrases = phrasesFor(input.language ?? "en");
+  return (input.deferred === false ? phrases.holdSentence : phrases.holdSentenceDeferred)(
     feeLabel(input.feeCents),
     input.payUrl,
     input.holdMinutes,
@@ -139,6 +145,7 @@ export function heldReply(input: {
   holdMinutes: number;
   businessPhone: string;
   language?: string;
+  deferred?: boolean;
 }): string {
   const ask = holdSentence(input);
   if (!ask) return "";
@@ -157,8 +164,16 @@ export function heldReply(input: {
  * A URL read down a phone line is not a link, it is a spelling test. The caller
  * is told what is about to arrive and why, and the link goes by text.
  */
-export function holdSpoken(input: { feeCents: number; language?: string }): string {
+export function holdSpoken(input: { feeCents: number; language?: string; deferred?: boolean }): string {
   if (input.feeCents <= 0) return "";
+
+  // Deferred (the default): the caller authorizes a saved payment method by
+  // a secure link; nothing is charged on the call or today.
+  if (input.deferred !== false) {
+    return input.language === "es"
+      ? "Perfecto. Le enviaré un enlace seguro donde puede revisar el acuerdo de diagnóstico y autorizar su método de pago. Hoy no se le cobrará nada."
+      : "Perfect. I'll send you a secure link where you can review the diagnostic agreement and authorize your payment method. You won't be charged today.";
+  }
 
   if (input.language === "es") {
     return (

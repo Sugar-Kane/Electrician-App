@@ -1,10 +1,12 @@
 import type Stripe from "stripe";
 
+import { handleDiagnosticStripeEvent } from "@/lib/diagnostic-payment-server";
 import { handleInvoiceCheckoutEvent } from "@/lib/invoice-online-pay";
 import { handleRefundEvent } from "@/lib/invoice-refund-server";
 import { handlePlanCheckoutEvent } from "@/lib/job-prepayment-pay";
 import { fulfillPaidBooking, releaseExpiredBooking } from "@/lib/stripe-booking";
 import { getStripe } from "@/lib/stripe";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { syncPaymentAccount } from "@/lib/stripe-connect";
 import {
   fulfillSubscriptionCheckout,
@@ -38,7 +40,30 @@ function verify(stripe: Stripe, rawBody: string, signature: string): Stripe.Even
   return null;
 }
 
-export async function POST(request: Request) {
+/**
+ * Replay protection. Each event id is processed once: a duplicate delivery of
+ * one already processed is acknowledged and skipped, a retry of one that
+ * failed runs again. Every handler below is idempotent as well, so a database
+ * that cannot record the event still processes it rather than dropping money.
+ */
+async function claimEvent(event: Stripe.Event): Promise<boolean> {
+  const object = event.data.object as { id?: string };
+  const { data, error } = await getSupabaseAdmin().rpc("claim_stripe_webhook_event" as never, {
+    p_event_id: event.id,
+    p_event_type: event.type,
+    p_stripe_account_id: event.account ?? null,
+    p_object_id: typeof object?.id === "string" ? object.id : null,
+  } as never);
+  return error ? true : data === true;
+}
+
+async function finishEvent(eventId: string, status: "processed" | "failed", detail?: string) {
+  await getSupabaseAdmin()
+    .rpc("finish_stripe_webhook_event" as never, { p_event_id: eventId, p_status: status, p_error: detail ?? null } as never)
+    .then(() => undefined, () => undefined);
+}
+
+export async function POST(request: Request): Promise<Response> {
   const stripe = getStripe();
   const signature = request.headers.get("stripe-signature");
 
@@ -54,6 +79,35 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid Stripe signature." }, { status: 400 });
   }
   const connectedAccount = event.account ?? undefined;
+
+  if (!(await claimEvent(event))) {
+    return Response.json({ received: true, duplicate: true });
+  }
+  const result = await dispatch(event, connectedAccount);
+  await finishEvent(event.id, result.status < 400 ? "processed" : "failed", result.status < 400 ? undefined : `HTTP ${result.status}`);
+  return result;
+}
+
+async function dispatch(event: Stripe.Event, connectedAccount: string | undefined): Promise<Response> {
+  // Deferred diagnostic payments: setup Checkouts, off-session charges and
+  // their recovery links (diagnostic-payment-server.ts). Tagged by metadata,
+  // so nothing else is claimed here.
+  if (
+    connectedAccount &&
+    (event.type.startsWith("payment_intent.") ||
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.expired" ||
+      event.type === "payment_method.detached")
+  ) {
+    try {
+      if (await handleDiagnosticStripeEvent(event, connectedAccount)) {
+        return Response.json({ received: true });
+      }
+    } catch (error) {
+      console.error("diagnostic payment webhook failed", { type: event.type, message: String(error).slice(0, 300) });
+      return Response.json({ error: "Diagnostic payment update failed." }, { status: 500 });
+    }
+  }
 
   // A business's Stripe account changed: setup finished, details overdue, or
   // charges turned off.

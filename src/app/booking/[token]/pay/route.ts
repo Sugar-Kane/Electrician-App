@@ -8,6 +8,8 @@ import {
 } from "@/lib/public-booking";
 import { getStripe } from "@/lib/stripe";
 import { paymentAccountFor } from "@/lib/stripe-connect";
+import { collectsAfterCompletion, startDiagnosticRecovery } from "@/lib/diagnostic-payment-server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 /**
  * The link a text message carries.
@@ -49,6 +51,25 @@ export async function GET(
 
   const intent = await getBookingPaymentIntent(token);
   if (!intent) return back("unavailable");
+
+  /*
+   * Deferred diagnostic businesses (California): this link never takes an
+   * advance payment. Before the visit it opens the booking page, where the
+   * customer reads and ticks the authorization and saves a card with Stripe.
+   * After a completed diagnostic whose saved-card charge failed, it is the
+   * secure link to pay that completed bill.
+   */
+  if (await collectsAfterCompletion(intent.organization_id)) {
+    const { data } = await getSupabaseAdmin().rpc("get_booking_diagnostic_status" as never, { p_booking_token: token } as never);
+    const status = (Array.isArray(data) ? data[0] : null) as Record<string, unknown> | null;
+    const state = typeof status?.authorization_state === "string" ? status.authorization_state : "";
+    if ((state === "failed" || state === "requires_action") && status?.diagnostic_completed === true) {
+      const recovery = await startDiagnosticRecovery(token, origin);
+      if ("url" in recovery) return Response.redirect(recovery.url, 303);
+      return back("unavailable");
+    }
+    return Response.redirect(`${origin}/booking/${encodeURIComponent(token)}#authorize`, 303);
+  }
 
   // Already settled, one way or another. Both land on the booking page, which
   // is the screen that can actually say what state it is in.

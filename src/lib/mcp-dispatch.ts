@@ -10,6 +10,7 @@ import { isChangeOrderTool, runChangeOrderTool } from "@/lib/mcp-change-order-to
 import { isCustomerTool, runCustomerTool } from "@/lib/mcp-customer-tools";
 import { logMcpCall } from "@/lib/mcp-log";
 import { isPaidInvoiceTool, runPaidInvoiceTool } from "@/lib/mcp-paid-invoice-tools";
+import { isDiagnosticPaymentTool, runDiagnosticPaymentTool } from "@/lib/mcp-diagnostic-payment-tools";
 import type { ToolResult } from "@/lib/mcp-protocol";
 import { isReleaseTool, runReleaseTool } from "@/lib/mcp-release-tools";
 import type { McpSession } from "@/lib/mcp-session-token";
@@ -131,6 +132,13 @@ export async function dispatchTool(context: DispatchContext, name: string, args:
       name,
       args,
     });
+  }
+  if (business && isDiagnosticPaymentTool(name)) {
+    // The connected owner, verified for this connection, and their role read
+    // fresh: the database checks both again for anything that moves money.
+    const actorUserId = await connectionUserId(database, session.organizationId, connectedBy);
+    const actorRole = actorUserId ? await businessConnectionLookups(database).memberRole(session.organizationId, actorUserId) : null;
+    return runDiagnosticPaymentTool({ database: asFlexibleClient(database), organizationId: session.organizationId, actorUserId, actorRole, name, args });
   }
   if (business && isTextHistoryTool(name)) {
     return runTextHistoryTool({

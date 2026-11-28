@@ -59,7 +59,12 @@ Parse `$ARGUMENTS`: every token that is a URL is a site; the remaining word (if 
 5. **Manual pass with your own judgement**, using the screenshots and `observations.json`:
    read the privacy policy (CalOPPA elements, effective date, DNT disclosure, CCPA sections if
    applicable), terms, the phone-consent wording, fee and pricing statements, review and
-   testimonial claims, licence/insured claims. For contractor sites, check the printed licence
+   testimonial claims, licence/insured claims. For a California contractor that books
+   diagnostic visits (WEB-CSLB-022): the diagnostic fee must be shown with $0.00 due today and
+   the amount due upon completion; flag RED any "deposit", "pay now", "prepay" or "due today"
+   wording next to the diagnostic fee, or a booking flow that charges at booking; a card
+   requirement must say the card is saved, not charged; credit-toward-repair wording must be
+   conditional on approved repairs and the agreement. Never complete the booking to check. For contractor sites, check the printed licence
    number on the official CSLB lookup (https://www.cslb.ca.gov) — name, status, classification,
    bond, workers' comp — and record the URL and date. Update the matching findings in
    `findings.json` (keep the schema; GREEN only with evidence you actually saw; leave BLUE where

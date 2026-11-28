@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { BookingPage } from "@/components/booking-page";
-import { getPublicBookingPage, getPublicBookingSlots } from "@/lib/public-booking";
+import { getPublicBookingPage, getPublicBookingSlots, getPublicDiagnosticPolicy } from "@/lib/public-booking";
 import { getMessagingBusinessName } from "@/lib/supabase/public";
 
 export const metadata: Metadata = {
   title: "Book an electrical diagnostic | Volteira",
-  description: "Request and securely pay for an onsite electrical diagnostic.",
+  description: "Book an onsite electrical diagnostic. Nothing is charged today in California; the diagnostic fee is due when the service is completed.",
 };
 
 /**
@@ -24,9 +24,10 @@ export default async function PublicBookingPageRoute({
   searchParams: Promise<{ checkout?: string }>;
 }) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
-  const [bookingPage, slots] = await Promise.all([
+  const [bookingPage, slots, diagnosticPolicy] = await Promise.all([
     getPublicBookingPage(slug),
     getPublicBookingSlots(slug),
+    getPublicDiagnosticPolicy(slug),
   ]);
 
   if (!bookingPage) notFound();
@@ -41,6 +42,7 @@ export default async function PublicBookingPageRoute({
       bookingPage={bookingPage}
       messagingBusinessName={messagingBusinessName}
       slots={slots}
+      diagnosticPolicy={diagnosticPolicy}
       checkoutCanceled={query.checkout === "canceled"}
     />
   );

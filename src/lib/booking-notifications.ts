@@ -123,6 +123,7 @@ function factsFor(input: BookingNotification): BookingFacts {
 
   return {
     paid: input.notificationPhase === "payment",
+    deferred: input.context.diagnosticDeferred !== false,
     businessName: input.context.businessName,
     businessPhone: input.context.businessPhone,
     contactName: input.contactName,
